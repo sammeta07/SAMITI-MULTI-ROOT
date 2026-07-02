@@ -1,0 +1,76 @@
+<mat-toolbar class="samiti-header" role="banner">
+  <div class="brand">
+    <span class="logo">S<span class="accent">AM</span>ITI</span>
+  </div>
+
+  <span class="spacer"></span>
+
+<!-- Global Search Pill - Hidden after login -->
+  @if (!isLoggedIn()) {
+  <div class="search-pill" [class.pill-active]="isSearchFocused()" role="search" aria-label="Search">
+    <div class="pill-left">
+      <mat-icon class="pill-search-icon" aria-hidden="true">search</mat-icon>
+      <input
+        #pillInput
+        class="pill-input"
+        type="text"
+        placeholder="Group ID / Event ID / Program ID"
+        autocomplete="off"
+        aria-label="Enter Group ID, Event ID or Program ID"
+        (focus)="onSearchFocus()"
+        (blur)="onSearchBlur()"
+        (input)="onSearchInput($event)"
+      />
+    </div>
+    @if (hasSearchText()) {
+    <button
+      type="button"
+      class="pill-clear"
+      aria-label="Clear search"
+      (mousedown)="clearSearch()"
+    >
+      <mat-icon>close</mat-icon>
+    </button>
+    }
+  </div>
+  }
+
+  <span class="spacer"></span>
+
+  <!-- Location chip -->
+  <button
+    class="location-btn"
+    type="button"
+    matTooltip="Your current location"
+    matTooltipPosition="below"
+  >
+    <mat-icon>{{ isLoading() ? 'sync' : 'my_location' }}</mat-icon>
+    <span class="location-text">{{ locationName() }}</span>
+  </button>
+
+<!-- Auth actions -->
+  <div class="actions">
+    @if (!isLoggedIn()) {
+      <button class="btn-outline" type="button" (click)="openRegisterDialog()">
+        <mat-icon aria-hidden="true">person_add</mat-icon>
+        Register
+      </button>
+      <button class="btn-accent" type="button" (click)="openLoginDialog()">
+        <mat-icon aria-hidden="true">login</mat-icon>
+        Login
+      </button>
+    } @else {
+      <button class="btn-accent" type="button" (click)="logout()">
+        <mat-icon aria-hidden="true">logout</mat-icon>
+        Logout
+      </button>
+<button class="user-avatar-btn" type="button" matTooltip="{{userName()}}" aria-label="My Account" (click)="openAccountDialog()">
+        @if (userPhoto()) {
+          <img [src]="userPhoto()" alt="User photo" class="avatar-img" />
+        } @else {
+          <span class="avatar-initials">{{ userInitials() }}</span>
+        }
+      </button>
+    }
+  </div>
+</mat-toolbar>

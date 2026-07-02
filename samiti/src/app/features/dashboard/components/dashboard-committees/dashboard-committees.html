@@ -1,0 +1,238 @@
+<div class="my-committees-feature-workspace">
+  
+  <!-- 🏷️ MODULE COMPACT HEADER STRIP -->
+  <header class="workspace-compact-header">
+    <div class="workspace-title-block">
+      <mat-icon class="title-accent-icon">corporate_fare</mat-icon>
+      <div class="title-meta-text">
+        <h2>My Committees Panel</h2>
+        <p>Comprehensive overview of your active administrative clusters and profiles</p>
+      </div>
+    </div>
+  </header>
+
+  <!-- 🥞 MODERN TABS STRUCTURAL SHELL FOR DENSE CONTENT FILTER -->
+  <div class="committees-tabs-shell">
+    <mat-tab-group class="samiti-dashboard-tabs" animationDuration="200ms">
+      
+      <!-- 👑 TAB A: ADMINISTRATIVE COUNCILS -->
+      <mat-tab>
+        <ng-template mat-tab-label>
+          <mat-icon class="tab-icon-red">shield</mat-icon>
+          <span>Admin Controls</span>
+          <span class="tab-badge-count bg-red-badge">{{ adminCommittees().length }}</span>
+        </ng-template>
+
+        <main class="committees-scrollable-workspace">
+          @if (isLoading()) {
+            <div class="feedback-utility-box loader-wrapper">
+              <div class="compact-spinner"></div>
+              <p>Syncing administrative councils data...</p>
+            </div>
+          }
+          @else {
+            @if (adminCommittees().length > 0) {
+              <div class="large-panels-details-stack">
+                @for (com of adminCommittees(); track com.committee_id) {
+                  <div class="premium-detail-board-card admin-panel-skin">
+                    
+                    <div class="board-top-block-row">
+                      <div class="board-brand-avatar-box">
+                        @if (com.logo) { <img [src]="com.logo" alt="logo" class="b-avatar-img" /> }
+                        @else { <div class="b-avatar-fallback bg-red-grad">{{ com.committee_name.charAt(0).toUpperCase() }}</div> }
+                      </div>
+                      
+                      <!-- 🚀 FIXED: Cleaned up extra badge and alpha-code tag strings completely -->
+                      <div class="board-primary-identity-block">
+                        <div class="b-title-row">
+                          <h3 class="b-headline-text">{{ com.committee_name }}</h3>
+                        </div>
+                        <div class="b-geo-strip">
+                          <mat-icon>place</mat-icon> <span>{{ com.area || 'Global Region' }}</span>
+                          <span class="b-dot-spacer"></span>
+                          <mat-icon>calendar_today</mat-icon> <span>Established Since {{ com.since }}</span>
+                        </div>
+                      </div>
+                      
+                      <div class="board-quick-actions-aside justify-center-y">
+                        <span class="premium-verified-badge"><mat-icon>verified</mat-icon>Admin Active</span>
+                      </div>
+                    </div>
+
+                    <div class="board-body-description">
+                      <p>{{ com.description || 'No corporate description details updated for this registry cluster.' }}</p>
+                    </div>
+
+                    <div class="board-aggregates-teaser-row-grid">
+                      <div class="teaser-sub-column-box">
+                        <div class="teaser-sub-header">
+                          <mat-icon class="icon-adm">shield_person</mat-icon>
+                          <span class="teaser-title">Council Admins ({{ com.admins_count }})</span>
+                          <button type="button" class="teaser-view-all-link text-red" (click)="openAllAdminsDialog(com.committee_id, com.committee_name)">View All</button>
+                        </div>
+                        <div class="teaser-profiles-flat-list">
+                          @for (adm of com.admins_brief; track adm.user_id) {
+                            <div class="teaser-profile-inline-row">
+                              <div class="t-mini-avatar">
+                                @if (adm.photo) { <img [src]="adm.photo" alt="avatar"> }
+                                @else { <span>{{ adm.name.charAt(0).toUpperCase() }}</span> }
+                              </div>
+                              <div class="t-profile-meta">
+                                <span class="p-name">{{ adm.name }}</span>
+                                <span class="p-sub">{{ adm.email }}</span>
+                              </div>
+                            </div>
+                          }
+                        </div>
+                      </div>
+
+                      <div class="teaser-sub-column-box">
+                        <div class="teaser-sub-header">
+                          <mat-icon class="icon-mem">diversity_3</mat-icon>
+                          <span class="teaser-title">Enrolled Members ({{ com.members_count }})</span>
+                          <button type="button" class="teaser-view-all-link text-blue" (click)="openAllMembersDialog(com.committee_id, com.committee_name)">View All</button>
+                        </div>
+                        <div class="teaser-profiles-flat-list">
+                          @for (mem of com.members_brief; track mem.user_id) {
+                            <div class="teaser-profile-inline-row">
+                              <div class="t-mini-avatar">
+                                @if (mem.photo) { <img [src]="mem.photo" alt="avatar"> }
+                                @else { <span>{{ mem.name.charAt(0).toUpperCase() }}</span> }
+                              </div>
+                              <div class="t-profile-meta">
+                                <span class="p-name">{{ mem.name }}</span>
+                                <span class="p-sub">{{ mem.email }}</span>
+                              </div>
+                            </div>
+                          } @empty {
+                            <div class="teaser-empty-slate-text">No active outer members registered yet.</div>
+                          }
+                        </div>
+                      </div>
+                    </div>
+
+                  </div>
+                }
+              </div>
+            } @else {
+              <div class="minimal-empty-state-card alert-dashed-red">
+                <mat-icon class="me-card-icon color-red">shield_alert</mat-icon>
+                <p>You do not hold administrative privilege execution controls on any active samiti groups.</p>
+              </div>
+            }
+          }
+        </main>
+      </mat-tab>
+
+      <!-- 👥 TAB B: REGISTERED MEMBERSHIPS -->
+      <mat-tab>
+        <ng-template mat-tab-label>
+          <mat-icon class="tab-icon-blue">groups</mat-icon>
+          <span>Memberships</span>
+          <span class="tab-badge-count bg-blue-badge">{{ memberCommittees().length }}</span>
+        </ng-template>
+
+        <main class="committees-scrollable-workspace">
+          @if (isLoading()) {
+            <div class="feedback-utility-box loader-wrapper">
+              <div class="compact-spinner"></div>
+              <p>Syncing membership layers...</p>
+            </div>
+          }
+          @else {
+            @if (memberCommittees().length > 0) {
+              <div class="large-panels-details-stack">
+                @for (com of memberCommittees(); track com.committee_id) {
+                  <div class="premium-detail-board-card member-panel-skin">
+                    
+                    <div class="board-top-block-row">
+                      <div class="board-brand-avatar-box">
+                        @if (com.logo) { <img [src]="com.logo" alt="logo" class="b-avatar-img" /> }
+                        @else { <div class="b-avatar-fallback bg-blue-grad">{{ com.committee_name.charAt(0).toUpperCase() }}</div> }
+                      </div>
+                      
+                      <!-- 🚀 FIXED: Cleaned up extra badge and alpha-code tag strings completely -->
+                      <div class="board-primary-identity-block">
+                        <div class="b-title-row">
+                          <h3 class="b-headline-text">{{ com.committee_name }}</h3>
+                        </div>
+                        <div class="b-geo-strip">
+                          <mat-icon>place</mat-icon> <span>{{ com.area || 'Global Region' }}</span>
+                          <span class="b-dot-spacer"></span>
+                          <mat-icon>calendar_today</mat-icon> <span>Established Since {{ com.since }}</span>
+                        </div>
+                      </div>
+                      
+                      <div class="board-quick-actions-aside justify-center-y">
+                        <span class="premium-verified-badge"><mat-icon>verified</mat-icon> Active Member</span>
+                      </div>
+                    </div>
+
+                    <div class="board-body-description">
+                      <p>{{ com.description || 'No corporate description details updated for this registry cluster.' }}</p>
+                    </div>
+
+                    <div class="board-aggregates-teaser-row-grid">
+                      <div class="teaser-sub-column-box">
+                        <div class="teaser-sub-header">
+                          <mat-icon class="icon-adm">shield_person</mat-icon>
+                          <span class="teaser-title">Council Admins ({{ com.admins_count }})</span>
+                          <button type="button" class="teaser-view-all-link text-red" (click)="openAllAdminsDialog(com.committee_id, com.committee_name)">View All</button>
+                        </div>
+                        <div class="teaser-profiles-flat-list">
+                          @for (adm of com.admins_brief; track adm.user_id) {
+                            <div class="teaser-profile-inline-row">
+                              <div class="t-mini-avatar">
+                                @if (adm.photo) { <img [src]="adm.photo" alt="avatar"> }
+                                @else { <span>{{ adm.name.charAt(0).toUpperCase() }}</span> }
+                              </div>
+                              <div class="t-profile-meta">
+                                <span class="p-name">{{ adm.name }}</span>
+                                <span class="p-sub">{{ adm.email }}</span>
+                              </div>
+                            </div>
+                          }
+                        </div>
+                      </div>
+
+                      <div class="teaser-sub-column-box">
+                        <div class="teaser-sub-header">
+                          <mat-icon class="icon-mem">diversity_3</mat-icon>
+                          <span class="teaser-title">Enrolled Members ({{ com.members_count }})</span>
+                          <button type="button" class="teaser-view-all-link text-blue" (click)="openAllMembersDialog(com.committee_id, com.committee_name)">View All</button>
+                        </div>
+                        <div class="teaser-profiles-flat-list">
+                          @for (mem of com.members_brief; track mem.user_id) {
+                            <div class="teaser-profile-inline-row">
+                              <div class="t-mini-avatar">
+                                @if (mem.photo) { <img [src]="mem.photo" alt="avatar"> }
+                                @else { <span>{{ mem.name.charAt(0).toUpperCase() }}</span> }
+                              </div>
+                              <div class="t-profile-meta">
+                                <span class="p-name">{{ mem.name }}</span>
+                                <span class="p-sub">{{ mem.email }}</span>
+                              </div>
+                            </div>
+                          } @empty {
+                            <div class="teaser-empty-slate-text">No active outer members registered yet.</div>
+                          }
+                        </div>
+                      </div>
+                    </div>
+
+                  </div>
+                }
+              </div>
+            } @else {
+              <div class="minimal-empty-state-card alert-dashed-blue">
+                <mat-icon class="me-card-icon color-blue">explore</mat-icon>
+                <p>You haven't joined any neighboring community committees as a registered member yet.</p>
+              </div>
+            }
+          }
+        </main>
+      </mat-tab>
+
+    </mat-tab-group>
+  </div>
+</div>

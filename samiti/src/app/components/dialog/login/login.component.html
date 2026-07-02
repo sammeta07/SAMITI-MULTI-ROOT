@@ -1,0 +1,105 @@
+<div class="drawer-layout-shell">
+  
+  <mat-toolbar class="drawer-synchronized-header">
+    <div class="drawer-title-group">
+      <mat-icon class="mode-indicator-icon">
+        {{ isForgotPassword ? 'lock_reset' : 'vpn_key' }}
+      </mat-icon>
+      <h2>{{ isForgotPassword ? 'Reset Password' : 'Account Login' }}</h2>
+    </div>
+    
+    <button mat-icon-button type="button" class="drawer-close-btn" (click)="onCancel()" aria-label="Close dialog">
+      <mat-icon>close</mat-icon>
+    </button>
+  </mat-toolbar>
+
+  <div class="dialog-body">
+    
+    @if (!isForgotPassword) {
+      <div class="view-state-stack">
+        <div class="login-instruction-banner">
+          <mat-icon>info</mat-icon>
+          <span>Please enter your authorized credentials to continue.</span>
+        </div>
+
+        <form class="login-form">
+          <div class="form-row-full">
+            <mat-form-field appearance="outline" class="samiti-custom-field">
+              <mat-label>Email Address</mat-label>
+              <input matInput [(ngModel)]="email" name="email" placeholder="Ex. user@example.com" required email>
+              <mat-icon matPrefix>email</mat-icon>
+            </mat-form-field>
+          </div>
+
+          <div class="form-row-full">
+            <mat-form-field appearance="outline" class="samiti-custom-field">
+              <mat-label>Password</mat-label>
+              <input matInput [type]="hidePassword ? 'password' : 'text'" [(ngModel)]="password" name="password" required>
+              <mat-icon matPrefix>lock</mat-icon>
+              <button mat-icon-button matSuffix (click)="hidePassword = !hidePassword" [attr.aria-label]="'Hide password'" [attr.aria-pressed]="hidePassword" type="button" class="field-visibility-toggle">
+                <mat-icon>{{hidePassword ? 'visibility_off' : 'visibility'}}</mat-icon>
+              </button>
+            </mat-form-field>
+          </div>
+
+          <div class="form-bottom-row">
+            <mat-checkbox [(ngModel)]="rememberMe" name="rememberMe" class="samiti-checkbox">
+              Remember me
+            </mat-checkbox>
+            <button mat-button type="button" class="forgot-link-btn" (click)="isForgotPassword = true">
+              Forgot password?
+            </button>
+          </div>
+        </form>
+      </div>
+    }
+
+    @if (isForgotPassword) {
+      <div class="view-state-stack">
+        <div class="login-instruction-banner">
+          <mat-icon>mail_lock</mat-icon>
+          <span>Enter your registered email and we'll transmit a secure reset link.</span>
+        </div>
+
+        <form class="login-form">
+          <div class="form-row-full">
+            <mat-form-field appearance="outline" class="samiti-custom-field">
+              <mat-label>Email Address</mat-label>
+              <input matInput [(ngModel)]="resetEmail" name="resetEmail" placeholder="Ex. user@example.com" required email>
+              <mat-icon matPrefix>email</mat-icon>
+            </mat-form-field>
+          </div>
+
+          @if (resetEmailSent) {
+            <div class="reset-success-banner">
+              <mat-icon>check_circle</mat-icon>
+              <span>Reset authorization matrix dispatched! Verify your inbox logs.</span>
+            </div>
+          }
+        </form>
+      </div>
+    }
+  </div>
+
+  <footer class="drawer-action-footer">
+    @if (!isForgotPassword) {
+      <button mat-button type="button" class="btn-cancel-flat" (click)="onCancel()">Cancel</button>
+      <button mat-flat-button type="button" class="submit-action-btn" (click)="onSubmit()" [disabled]="!email || !password">
+        <mat-icon>login</mat-icon>
+        <span>Login</span>
+      </button>
+    }
+
+    @if (isForgotPassword) {
+      <button mat-button type="button" class="btn-back-flat" (click)="isForgotPassword = false; resetEmailSent = false">
+        <mat-icon>arrow_back</mat-icon>
+        <span>Back to Login</span>
+      </button>
+      <button mat-flat-button type="button" class="submit-action-btn dispatch-btn" (click)="onForgotPassword()" [disabled]="!resetEmail || resetEmailSent">
+        <mat-icon>send</mat-icon>
+        <span>Send Link</span>
+      </button>
+    }
+  </footer>
+
+</div>

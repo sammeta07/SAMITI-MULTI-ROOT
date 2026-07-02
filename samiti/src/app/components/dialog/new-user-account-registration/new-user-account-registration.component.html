@@ -1,0 +1,236 @@
+<div class="drawer-layout-shell">
+  
+  <mat-toolbar class="drawer-synchronized-header">
+    <div class="drawer-title-group">
+      <mat-icon class="mode-indicator-icon">person_add</mat-icon>
+      <h2>New User Registration</h2>
+    </div>
+    
+    <button mat-icon-button type="button" class="drawer-close-btn" (click)="onCancel()" aria-label="Close dialog">
+      <mat-icon>close</mat-icon>
+    </button>
+  </mat-toolbar>
+
+  <div class="dialog-body">
+    <form class="register-form" #registerForm="ngForm" (ngSubmit)="onSubmit(registerForm)" novalidate autocomplete="off">
+
+      <div class="profile-photo-section">
+        <input
+          #profilePhotoInput
+          type="file"
+          hidden
+          accept="image/*"
+          (change)="onProfilePhotoSelected($event)"
+        >
+
+        <button
+          type="button"
+          class="profile-photo-picker"
+          (click)="profilePhotoInput.click()"
+          [attr.aria-label]="profilePhotoPreviewUrl() ? 'Change profile photo' : 'Add profile photo'"
+        >
+          @if (profilePhotoPreviewUrl()) {
+            <img [src]="profilePhotoPreviewUrl()" alt="Profile photo preview" class="profile-photo-preview">
+            <span class="photo-edit-overlay" aria-hidden="true">
+              <mat-icon>edit</mat-icon>
+            </span>
+          } @else {
+            <mat-icon>add_a_photo</mat-icon>
+            <span>Add photo</span>
+          }
+        </button>
+
+        <div class="profile-photo-copy">
+          <strong>Profile photo</strong>
+          <span>Optional. Add a clear photo so people can identify this account quickly.</span>
+        </div>
+      </div>
+      
+      <div class="form-row-full">
+        <mat-form-field appearance="outline" class="samiti-custom-field">
+          <mat-label>Full Name</mat-label>
+          <input
+            matInput
+            [(ngModel)]="name"
+            name="name"
+            placeholder="Ex. John Doe"
+            required
+            minlength="2"
+            maxlength="80"
+            pattern="^[A-Za-z][-A-Za-z .']{1,79}$"
+            #nameModel="ngModel"
+          >
+          <mat-icon matPrefix>person</mat-icon>
+          @if (nameModel.invalid && (nameModel.dirty || nameModel.touched)) {
+            <mat-error>
+              {{ nameModel.hasError('required')
+                ? 'Full Name is required.'
+                : (nameModel.hasError('minlength') || nameModel.hasError('maxlength')
+                  ? 'Full Name must be 2-80 characters long.'
+                  : 'Full Name can contain letters only (no numbers).') }}
+            </mat-error>
+          }
+        </mat-form-field>
+      </div>
+
+      <div class="form-row-split-grid">
+        <mat-form-field appearance="outline" class="samiti-custom-field">
+          <mat-label>Email</mat-label>
+          <input
+            matInput
+            [(ngModel)]="email"
+            name="email"
+            placeholder="Ex. user@example.com"
+            required
+            email
+            maxlength="255"
+            pattern="^[^\s@]+@[^\s@]+\.[^\s@]{2,}$"
+            #emailModel="ngModel"
+            autocapitalize="none"
+            autocomplete="email"
+          >
+          <mat-icon matPrefix>email</mat-icon>
+          @if (emailModel.invalid && (emailModel.dirty || emailModel.touched)) {
+            <mat-error>Enter a valid email address.</mat-error>
+          }
+        </mat-form-field>
+
+        <mat-form-field appearance="outline" class="samiti-custom-field">
+          <mat-label>Mobile Number</mat-label>
+          <input
+            matInput
+            [(ngModel)]="mobile"
+            name="mobile"
+            placeholder="Ex. 9876543210"
+            required
+            type="tel"
+            inputmode="tel"
+            maxlength="10"
+            minlength="10"
+            pattern="^\d{10}$"
+            #mobileModel="ngModel"
+            autocomplete="tel"
+          >
+          <mat-icon matPrefix>phone</mat-icon>
+          @if (mobileModel.invalid && (mobileModel.dirty || mobileModel.touched)) {
+            <mat-error>
+              {{ mobileModel.hasError('required')
+                ? 'Mobile Number is required.'
+                : (hasMobileInvalidCharacters
+                  ? 'Mobile Number accepts digits only. No letters, spaces, or symbols.'
+                  : 'Mobile Number must be exactly 10 digits.') }}
+            </mat-error>
+          }
+        </mat-form-field>
+      </div>
+
+      <div class="custom-outline-field">
+        <span class="custom-label"><mat-icon>wc</mat-icon> Gender*</span>
+        <mat-radio-group [(ngModel)]="gender" name="gender" required #genderModel="ngModel">
+          <mat-radio-button value="male">Male</mat-radio-button>
+          <mat-radio-button value="female">Female</mat-radio-button>
+          <mat-radio-button value="other">Other</mat-radio-button>
+        </mat-radio-group>
+        @if (genderModel.invalid && (genderModel.dirty || genderModel.touched)) {
+          <div class="field-inline-error">Please select a gender option.</div>
+        }
+      </div>
+
+      <div class="form-row-full">
+        <mat-form-field appearance="outline" class="samiti-custom-field readonly-date-field" (click)="picker.open()">
+          <mat-label>Date of Birth</mat-label>
+          <input
+            matInput
+            [matDatepicker]="picker"
+            [(ngModel)]="dateOfBirth"
+            name="dateOfBirth"
+            required
+            [max]="maxDate"
+            readonly
+            inputmode="none"
+            class="readonly-date-input"
+            #dateOfBirthModel="ngModel"
+            autocomplete="bday"
+          >
+          <mat-icon matPrefix>cake</mat-icon>
+          <mat-datepicker-toggle matSuffix [for]="picker"></mat-datepicker-toggle>
+          <mat-datepicker #picker></mat-datepicker>
+          @if (dateOfBirth && dateOfBirth > maxDate) {
+            <mat-error>Date of birth cannot be in the future.</mat-error>
+          } @else if (dateOfBirthModel.invalid && (dateOfBirthModel.dirty || dateOfBirthModel.touched)) {
+            <mat-error>Date of birth is required.</mat-error>
+          }
+        </mat-form-field>
+      </div>
+
+      <div class="form-row-split-grid">
+        <mat-form-field appearance="outline" class="samiti-custom-field">
+          <mat-label>Password</mat-label>
+          <input
+            matInput
+            [type]="hidePassword ? 'password' : 'text'"
+            [(ngModel)]="password"
+            name="password"
+            required
+            minlength="8"
+            maxlength="64"
+            #passwordModel="ngModel"
+            autocomplete="new-password"
+          >
+          <mat-icon matPrefix>lock</mat-icon>
+          <button mat-icon-button matSuffix (click)="hidePassword = !hidePassword" [attr.aria-label]="'Hide password'"
+            [attr.aria-pressed]="hidePassword" type="button" class="field-visibility-toggle">
+            <mat-icon>{{hidePassword ? 'visibility_off' : 'visibility'}}</mat-icon>
+          </button>
+          @if ((passwordModel.dirty || passwordModel.touched) && !isPasswordValid) {
+            <mat-error>Password must be 8-64 chars and include letters and numbers. Example: Abcd1234</mat-error>
+          }
+        </mat-form-field>
+
+        <mat-form-field appearance="outline" class="samiti-custom-field">
+          <mat-label>Confirm Password</mat-label>
+          <input
+            matInput
+            [type]="hideConfirmPassword ? 'password' : 'text'"
+            [(ngModel)]="confirmPassword"
+            name="confirmPassword"
+            required
+            #confirmPasswordModel="ngModel"
+            autocomplete="new-password"
+          >
+          <mat-icon matPrefix>lock_outline</mat-icon>
+          <button mat-icon-button matSuffix (click)="hideConfirmPassword = !hideConfirmPassword"
+            [attr.aria-label]="'Hide confirm password'" [attr.aria-pressed]="hideConfirmPassword" type="button" class="field-visibility-toggle">
+            <mat-icon>{{hideConfirmPassword ? 'visibility_off' : 'visibility'}}</mat-icon>
+          </button>
+          @if (confirmPasswordModel.invalid && (confirmPasswordModel.dirty || confirmPasswordModel.touched)) {
+            <mat-error>Confirm your password.</mat-error>
+          } @else if (confirmPassword && !passwordsMatch) {
+            <mat-error>Password confirmation does not match.</mat-error>
+          }
+        </mat-form-field>
+      </div>
+
+      @if (confirmPassword && !passwordsMatch) {
+        <div class="password-mismatch-banner">
+          <mat-icon>error_outline</mat-icon>
+          <span>Passwords do not match.</span>
+        </div>
+      }
+    </form>
+  </div>
+
+  <footer class="drawer-action-footer">
+    <button mat-button type="button" class="btn-cancel-flat" (click)="onCancel()">Cancel</button>
+    
+    <button mat-flat-button 
+            type="button" 
+            class="submit-action-btn" 
+            [disabled]="!isFormValid || isSubmitting()" 
+            (click)="onSubmit(registerForm)">
+      <mat-icon>person_add</mat-icon>
+      <span>{{ isSubmitting() ? 'Registering...' : 'Register Account' }}</span>
+    </button>
+  </footer>
+
+</div>

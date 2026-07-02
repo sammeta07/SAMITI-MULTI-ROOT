@@ -1,0 +1,104 @@
+<div class="drawer-layout-shell">
+  
+  <mat-toolbar class="drawer-synchronized-header">
+    <div class="drawer-title-group">
+      <mat-icon class="mode-indicator-icon">
+        {{ isEditMode ? 'edit_note' : 'group_add' }}
+      </mat-icon>
+      <h2>{{ isEditMode ? 'Edit Committee Profile' : 'Create New Group' }}</h2>
+    </div>
+    
+    <button mat-icon-button type="button" class="drawer-close-btn" (click)="onCancel()" aria-label="Close dialog">
+      <mat-icon>close</mat-icon>
+    </button>
+  </mat-toolbar>
+
+  <div class="dialog-body">
+    <form class="create-committee-form" #committeeForm="ngForm">
+      <div class="form-row-full">
+        <div class="logo-upload-section">
+          @if (committeeLogoPreviewUrl) {
+            <div class="logo-preview-container">
+              <img [src]="committeeLogoPreviewUrl" alt="Committee Logo" class="logo-preview-image">
+              <button mat-icon-button type="button" class="remove-logo-btn" (click)="clearCommitteeLogoSelection()" title="Remove logo">
+                <mat-icon>close</mat-icon>
+              </button>
+            </div>
+          } @else {
+            <div class="logo-upload-placeholder">
+              <mat-icon>image</mat-icon>
+              <span>Upload group logo (single image)</span>
+            </div>
+          }
+
+          <input #committeeLogoInput type="file" hidden accept="image/*" (change)="onCommitteeLogoFileSelected($event)">
+          <button mat-stroked-button type="button" class="upload-logo-btn" (click)="committeeLogoInput.click()">
+            <mat-icon>upload_file</mat-icon>Upload Logo
+          </button>
+        </div>
+      </div>
+      
+      <div class="form-row-full">
+        <mat-form-field appearance="outline" class="samiti-custom-field">
+          <mat-label>Group Name</mat-label>
+          <input matInput [(ngModel)]="committeeName" name="committeeName" placeholder="Ex. Rudra Boys Club" required>
+          <mat-icon matPrefix>gavel</mat-icon>
+        </mat-form-field>
+      </div>
+
+      <div class="form-row-split-grid">
+        <mat-form-field appearance="outline" class="samiti-custom-field">
+          <mat-label>Since (Year)</mat-label>
+          <input matInput [(ngModel)]="sinceYear" name="sinceYear" type="number" placeholder="Ex. 1980" required>
+          <mat-icon matPrefix>calendar_today</mat-icon>
+        </mat-form-field>
+
+        <mat-form-field appearance="outline" class="samiti-custom-field">
+          <mat-label>Area / Location</mat-label>
+          <input matInput [(ngModel)]="areaLocation" name="areaLocation" placeholder="Ex. Zone-1, BMY, Charoda" required>
+          <mat-icon matPrefix>place</mat-icon>
+        </mat-form-field>
+      </div>
+
+      <div class="contact-numbers-section">
+        <span class="section-label-tag"><mat-icon>contact_phone</mat-icon> Core Association Contacts</span>
+        <div class="form-row-split-grid">
+          <mat-form-field appearance="outline" class="samiti-custom-field">
+            <mat-label>Primary Contact</mat-label>
+            <input matInput [(ngModel)]="primaryContact" name="primaryContact" placeholder="Ex. 9876543210" required type="tel">
+            <mat-icon matPrefix>phone</mat-icon>
+          </mat-form-field>
+
+          <mat-form-field appearance="outline" class="samiti-custom-field">
+            <mat-label>Secondary Contact (Optional)</mat-label>
+            <input matInput [(ngModel)]="secondaryContact" name="secondaryContact" placeholder="Ex. 9876543211" type="tel">
+            <mat-icon matPrefix>phone</mat-icon>
+          </mat-form-field>
+        </div>
+      </div>
+
+      <div class="form-row-full">
+        <mat-form-field appearance="outline" class="samiti-custom-field">
+          <mat-label>Description</mat-label>
+          <textarea matInput [(ngModel)]="description" name="description" placeholder="Describe the committee's purpose and activities..." required rows="4"></textarea>
+          <mat-icon matPrefix>description</mat-icon>
+        </mat-form-field>
+      </div>
+      
+    </form>
+  </div>
+
+  <footer class="drawer-action-footer">
+    <button mat-button type="button" class="btn-cancel-flat" (click)="onCancel()">Cancel</button>
+    
+    <button mat-flat-button 
+            type="button" 
+            class="submit-action-btn" 
+          [disabled]="!isFormValid || isUploadingCommitteeLogo" 
+            (click)="onSubmit()">
+      <mat-icon>{{ isEditMode ? 'save_as' : 'check_circle' }}</mat-icon>
+          <span>{{ isUploadingCommitteeLogo ? 'Uploading Logo...' : (isEditMode ? 'Save Changes' : 'Create Group') }}</span>
+    </button>
+  </footer>
+
+</div>

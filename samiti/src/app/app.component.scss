@@ -1,0 +1,11 @@
+.container {
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+  
+  .app-main {
+    flex: 1;
+    overflow: hidden;
+    background: var(--clr-surface);
+  }
+}

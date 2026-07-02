@@ -1,0 +1,74 @@
+<div class="event-details-workspace drawer-layout-shell">
+
+  @if (isLoading()) {
+    <div class="spinner-loading-overlay">
+      <mat-progress-spinner mode="indeterminate" diameter="40"></mat-progress-spinner>
+      <span>Loading event details...</span>
+    </div>
+  } @else if (eventData()) {
+    <div class="scrollable-workspace-body">
+      <div class="premium-header-section">
+        <div class="header-content-wrapper">
+          <div class="header-left">
+            <div class="event-avatar-premium">
+              @if (eventData()?.eventBanner || eventData()?.bannerImages?.length) {
+                <img [src]="eventData()?.eventBanner || eventData()?.bannerImages?.[0]" [alt]="eventData()?.eventName" class="avatar-image" />
+              } @else {
+                <div class="avatar-letter">{{ eventData()?.eventName?.charAt(0) || 'E' }}</div>
+              }
+            </div>
+
+            <div class="header-info-stack">
+              <h1>{{ eventData()?.eventName }}</h1>
+              <div class="info-badges">
+                <span class="badge-item"><mat-icon>event</mat-icon>{{ eventData()?.status }}</span>
+                <span class="badge-item"><mat-icon>category</mat-icon>{{ eventData()?.type || 'N/A' }}</span>
+                <span class="badge-item"><mat-icon>visibility</mat-icon>{{ eventData()?.visibility }}</span>
+              </div>
+            </div>
+          </div>
+
+          <div class="header-actions">
+            <button mat-stroked-button class="action-btn back-btn" (click)="goBackToDashboardHome()">
+              <mat-icon>arrow_back</mat-icon>Back
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <div class="content-grid">
+        <div class="info-card">
+          <div class="info-card-header">
+            <mat-icon>info</mat-icon>
+            <span>Overview</span>
+          </div>
+
+          <div class="info-grid">
+            <div class="info-row"><span>Event ID</span><strong>{{ eventData()?.eventId }}</strong></div>
+            <div class="info-row"><span>Committee ID</span><strong>{{ eventData()?.committeeId || 'N/A' }}</strong></div>
+            <div class="info-row"><span>Start Date</span><strong>{{ eventData()?.startDate || 'N/A' }}</strong></div>
+            <div class="info-row"><span>End Date</span><strong>{{ eventData()?.endDate || 'N/A' }}</strong></div>
+            <div class="info-row"><span>Created By</span><strong>{{ eventData()?.createdBy }}</strong></div>
+            <div class="info-row"><span>Updated By</span><strong>{{ eventData()?.updatedBy || 'N/A' }}</strong></div>
+            <div class="info-row"><span>Created At</span><strong>{{ eventData()?.createdAt || 'N/A' }}</strong></div>
+          </div>
+        </div>
+
+        <div class="info-card description-card">
+          <div class="info-card-header">
+            <mat-icon>description</mat-icon>
+            <span>Description</span>
+          </div>
+          <p>{{ eventData()?.description || 'No description available.' }}</p>
+        </div>
+      </div>
+    </div>
+  } @else {
+    <div class="empty-state-card">
+      <mat-icon>event_busy</mat-icon>
+      <h3>No Event Selected</h3>
+      <p>Select an event from the navigation tree to view its details.</p>
+    </div>
+  }
+
+</div>

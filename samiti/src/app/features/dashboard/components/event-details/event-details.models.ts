@@ -1,0 +1,17 @@
+export interface EventDetailsPayload {
+  id: number;
+  eventId: number;
+  committeeId?: number | null;
+  eventName: string;
+  description?: string | null;
+  eventBanner?: string | null;
+  bannerImages: string[];
+  status: string;
+  type?: string | null;
+  visibility: string;
+  startDate?: string | null;
+  endDate?: string | null;
+  createdBy: number;
+  updatedBy?: number | null;
+  createdAt?: string | null;
+}

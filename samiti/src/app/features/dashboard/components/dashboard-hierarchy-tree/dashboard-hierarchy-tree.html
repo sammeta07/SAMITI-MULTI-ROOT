@@ -1,0 +1,130 @@
+<div class="samiti-tree-container">
+
+  @if (isLoading()) {
+    <div class="spinner-loading-overlay">
+      <mat-progress-spinner mode="indeterminate" diameter="25"></mat-progress-spinner>
+      <span>Mapping matrix hierarchy records...</span>
+    </div>
+  } @else {
+    <div class="tree-scroll-viewport">
+
+      <div class="sidebar-global-static-menu-deck">
+        <div class="node-interactive-strip static-menu-item" 
+             [class.is-selected]="activeStaticMenu() === 'home'"
+             (click)="onSelectStaticMenu('home')">
+          <div class="node-logo-avatar-wrapper static-avatar color-home">
+            <mat-icon class="type-indicator-icon">home</mat-icon>
+          </div>
+          <span class="node-label-txt bold-text">Home</span>
+        </div>
+        <div class="node-interactive-strip static-menu-item" 
+             [class.is-selected]="activeStaticMenu() === 'requests'"
+             (click)="onSelectStaticMenu('requests')">
+          <div class="node-logo-avatar-wrapper static-avatar color-requests">
+            <mat-icon class="type-indicator-icon">ballot</mat-icon>
+          </div>
+          <span class="node-label-txt bold-text">Requests</span>
+        </div>
+      </div>
+
+      <hr class="sidebar-deck-divider" />
+      <span class="tree-section-caption-tag">COMMITTEES</span>
+
+      <mat-tree [dataSource]="dataSource" [childrenAccessor]="childrenAccessor" class="samiti-fluent-tree">
+
+        <mat-nested-tree-node *matTreeNodeDef="let node" class="tree-flat-node-row leaf-node-spec"
+          [class.is-selected]="isNodeSelected(node)">
+
+          <div class="tree-node-guide-stub-horizontal"></div>
+
+          <div class="node-interactive-strip" (click)="onNodeClick(node)"
+            [ngClass]="['type-' + node.type, isNodeSelected(node) ? 'is-selected' : '']">
+            
+            <div class="node-logo-avatar-wrapper branch-leaf-avatar" [ngClass]="'color-' + node.type">
+              <mat-icon class="type-indicator-icon">
+                @if (node.type === 'program') { integration_instructions }
+                @else { assignment_turned_in }
+              </mat-icon>
+            </div>
+
+            <span class="node-label-txt">{{ node.name }}</span>
+
+            @if (node.status) {
+              <span class="status-badge-tag" [ngClass]="node.status.toLowerCase()">{{ node.status }}</span>
+            }
+          </div>
+
+          <div class="node-actions-right-aligned">
+            <button mat-icon-button [matMenuTriggerFor]="actionMenu" [matMenuTriggerData]="{ currentTarget: node }"
+              class="node-three-dots-btn" (click)="$event.stopPropagation()">
+              <mat-icon>more_vert</mat-icon>
+            </button>
+          </div>
+        </mat-nested-tree-node>
+
+        <mat-nested-tree-node *matTreeNodeDef="let node; when: hasChild" [isExpanded]="isNodeExpanded(node)">
+          <div class="tree-flat-node-row parent-node-spec" [class.is-selected]="isNodeSelected(node)">
+            
+            <div class="tree-node-guide-stub-horizontal" *ngIf="node.type !== 'role'"></div>
+
+            <div class="node-interactive-strip" (click)="onNodeClick(node)"
+              [ngClass]="['type-' + node.type, isNodeExpanded(node) ? 'is-active-expanded' : '', isNodeSelected(node) ? 'is-selected' : '']">
+              
+              <div class="node-logo-avatar-wrapper" [ngClass]="['type-' + node.type]">
+                @if (node.type === 'group' && node.logo) {
+                  <img [src]="node.logo" [alt]="node.name" class="brand-image-node" (error)="node.logo = null" />
+                } @else {
+                  <mat-icon class="type-indicator-icon">
+                    @switch (node.type) {
+                      @case ('role') { admin_panel_settings }
+                      @case ('group') { groups }
+                      @case ('event') { event_available }
+                      @default { folder }
+                    }
+                  </mat-icon>
+                }
+              </div>
+
+              <span class="node-label-txt" [class.bold-text]="node.type !== 'role'">{{ node.name }}</span>
+            </div>
+
+            <div class="node-actions-right-aligned gap-control-wrapper">
+              <button mat-icon-button class="toggle-expansion-flat-btn" (click)="toggleNodeExpansion(node, $event)">
+                <mat-icon class="mat-icon-rtl-mirror">
+                  {{ isNodeExpanded(node) ? 'expand_more' : 'chevron_right' }}
+                </mat-icon>
+              </button>
+
+              <button mat-icon-button [matMenuTriggerFor]="actionMenu" [matMenuTriggerData]="{ currentTarget: node }"
+                class="node-three-dots-btn" (click)="$event.stopPropagation()">
+                <mat-icon>more_vert</mat-icon>
+              </button>
+            </div>
+          </div>
+
+          <div role="group" class="tree-nested-recursion-shell"
+               [class.samiti-tree-invisible]="!isNodeExpanded(node)">
+            <ng-container matTreeNodeOutlet></ng-container>
+          </div>
+        </mat-nested-tree-node>
+
+      </mat-tree>
+
+      <mat-menu #actionMenu="matMenu" xPosition="before" class="samiti-compact-context-menu">
+        <ng-template matMenuContent let-activeNode="currentTarget">
+          <button mat-menu-item (click)="executeAction('view', activeNode, $event)">
+            <mat-icon>visibility</mat-icon> <span>View Records</span>
+          </button>
+          <button mat-menu-item (click)="executeAction('edit', activeNode, $event)">
+            <mat-icon>edit_note</mat-icon> <span>Modify Details</span>
+          </button>
+          <hr class="menu-divider-line" />
+          <button mat-menu-item class="delete-action-item" (click)="executeAction('delete', activeNode, $event)">
+            <mat-icon>delete_sweep</mat-icon> <span>Purge Node</span>
+          </button>
+        </ng-template>
+      </mat-menu>
+
+    </div>
+  }
+</div>

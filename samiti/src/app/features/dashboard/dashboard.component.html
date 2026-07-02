@@ -1,0 +1,26 @@
+<div class="samiti-workspace-shell">
+  
+  <aside class="workspace-sidebar" #sidebarEl>
+    <div class="sidebar-top-stack">
+      <div class="sidebar-action-box">
+        <button mat-flat-button class="create-samiti-action-btn" type="button" (click)="openCreateCommitteeFromSidebar()">
+          <mat-icon>group_add</mat-icon>
+          <span>Create Group</span>
+        </button>
+      </div>
+    </div>
+    <div class="sidebar-tree-wrapper">
+      <app-dashboard-hierarchy-tree></app-dashboard-hierarchy-tree>
+    </div>
+  </aside>
+
+  <div class="workspace-layout-resizer" (mousedown)="initSidebarResize($event)"></div>
+
+  <div class="workspace-main-container">
+    <section class="workspace-dynamic-content-area">
+      <div class="content-view-scroller">
+        <router-outlet></router-outlet>
+      </div>
+    </section>
+  </div>
+</div>

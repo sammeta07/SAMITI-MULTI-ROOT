@@ -1,0 +1,473 @@
+<div class="home-page" [class.dashboard-mode]="isLoggedIn">
+  <div class="home-body">
+
+    <section class="committees-col" aria-label="Committees Management Panel">
+      <div class="col-search-bar">
+        <div class="col-header-row">
+          <div class="col-title-container">
+            <mat-icon class="col-icon">gavel</mat-icon>
+            <div class="col-title-wrapper">
+              <h2 class="col-title">Groups</h2>
+            </div>
+          </div>
+
+          <div class="section-search-pill">
+            <mat-icon class="ssp-icon">search</mat-icon>
+            <input class="ssp-input" type="text" placeholder="Search Committees via GraphQL…" />
+            <span class="ssp-divider"></span>
+            <mat-icon class="ssp-km-icon">radar</mat-icon>
+            <select class="ssp-select" name="committeeRadius" [(ngModel)]="selectedCommitteeRadius"
+              (change)="onRadiusChange($event)">
+              @for (radius of radiusOptions; track radius) {
+              <option [value]="radius">{{ radius }} km</option>
+              }
+            </select>
+          </div>
+        </div>
+      </div>
+
+      <div class="committees-tabs-shell">
+        <div class="committees-tabs-header-actions">
+          @if (selectedTabIndex === 0) {
+          <button mat-button type="button" class="expand-collapse-btn" (click)="expandNearby()">Expand All</button>
+          <button mat-button type="button" class="expand-collapse-btn" (click)="collapseNearby()">Collapse All</button>
+          } @else if (selectedTabIndex === 1) {
+          <button mat-button type="button" class="expand-collapse-btn" (click)="expandFavourites()">Expand All</button>
+          <button mat-button type="button" class="expand-collapse-btn" (click)="collapseFavourites()">Collapse All</button>
+          }
+        </div>
+        <mat-tab-group class="committees-tabs" animationDuration="200ms" [(selectedIndex)]="selectedTabIndex">
+          <mat-tab>
+            <ng-template mat-tab-label>
+              <mat-icon>adjust</mat-icon>
+              <span>Near By</span>
+              <span class="tab-badge">{{ nearbyGroups.length }}</span>
+            </ng-template>
+
+            <div class="committees-scroll">
+              <mat-accordion #nearbyAccordion="matAccordion" [multi]="true" class="custom-clean-accordion">
+@for (committee of nearbyGroups; track committee.id) {
+                
+                <mat-expansion-panel id="nearby-committee-{{ committee.id }}" [hideToggle]="false"
+                  [class.panel-role-admin]="committee.isCommitteeAdmin && committee.membershipStatus === 'ACCEPTED'"
+                  [class.panel-role-member]="!committee.isCommitteeAdmin && committee.membershipStatus === 'ACCEPTED'"
+                  [class.panel-role-pending]="committee.membershipStatus === 'PENDING'"
+                  [class.panel-role-none]="isLoggedIn && !committee.membershipStatus">
+                  
+                  <mat-expansion-panel-header>
+                    <div class="committee-card-grid">
+
+                      <div class="card-logo-area">
+                        @if (committee.committeeLogo) {
+                        <img [src]="committee.committeeLogo" alt="{{ committee.committeeName }} logo" class="committee-avatar" />
+                        } @else {
+                        <!-- <div class="committee-avatar-fallback">{{ committee.committeeName.charAt(0).toUpperCase() }}</div> -->
+                        <div class="committee-avatar-fallback">{{ committee.committeeName.charAt(0).toUpperCase() }}</div>
+                        }
+                      </div>
+
+                      <div class="card-main-info-area">
+                        <div class="card-title-row">
+                          <h3 class="committee-display-name">{{ committee.committeeName }}</h3>
+                          @if (isLoggedIn) {
+                          <button mat-icon-button type="button" class="fav-heart-toggle-btn"
+                            (click)="toggleFavouriteCommittee(committee.id, $event)">
+                            <mat-icon [class.is-fav-active]="committee.isFavourite">
+                              {{ committee.isFavourite ? 'favorite' : 'favorite_border' }}
+                            </mat-icon>
+                          </button>
+                          }
+                        </div>
+
+                        <div class="card-location-row">
+                          <mat-icon class="geo-pin-icon">place</mat-icon>
+                          <span class="location-text-trim">{{ committee.address }}</span>
+                        </div>
+
+                        <div class="card-badges-row">
+                          <span class="meta-pill text-muted-badge">Since {{ committee.establishedYear }}</span>
+                          <span class="badge-separator-dot"></span>
+                          <span class="meta-pill phone-contact-badge">
+                            <mat-icon>phone</mat-icon>
+                            {{ committee.contactNumbers }}
+                             <!-- {{ committee.contactNumbers.join(', ') }} -->
+                          </span>
+                        </div>
+                      </div>
+
+                      <div class="card-actions-identity-area">
+                        <div class="identity-top-row">
+                          <div class="committee-id-pill">
+                            <span>ID: {{ committee.id }}</span>
+                            <button mat-icon-button type="button" class="copy-id-btn"
+                              (click)="copyCommitteeId(committee.id.toString(), $event, tooltip)" #tooltip="matTooltip"
+                              matTooltip="Copy Committee ID" matTooltipPosition="above">
+                              @if (copiedCommitteeId === committee.id.toString()) {
+                              <mat-icon class="copy-icon-success">done_all</mat-icon>
+                              } @else {
+                              <mat-icon>content_copy</mat-icon>
+                              }
+                            </button>
+                          </div>
+                        </div>
+
+                        <div class="proximity-display-row">
+                          <span class="spatial-distance-metric">{{ committee.distanceKm }} km</span>
+                          <mat-icon class="compass-pointer-icon">near_me</mat-icon>
+                        </div>
+
+                        <div class="committee-action-footer">
+
+                          @if (committee.isCommitteeAdmin && committee.membershipStatus === 'ACCEPTED') {
+                          <span class="badge-pill admin-pill">ADMIN</span>
+                          }
+
+                          @else if (!committee.isCommitteeAdmin && committee.membershipStatus === 'ACCEPTED') {
+                          <span class="badge-pill member-pill">MEMBER</span>
+                          }
+
+                          @else if (committee.membershipStatus === 'PENDING') {
+                          <div class="pending-action-group">
+                            <span class="badge-pill pending-pill">PENDING</span>
+                            <button mat-button type="button" class="cancel-request-btn"
+                              (click)="cancelRequest(committee.id, $event)">
+                              <mat-icon>close</mat-icon>
+                              <span>Cancel</span>
+                            </button>
+                          </div>
+                          }
+
+                          @else if (isLoggedIn) {
+                          <button mat-flat-button type="button" class="join-committee-btn"
+                            (click)="joinCommittee(committee.id, $event)">
+                            <mat-icon>group_add</mat-icon>
+                            <span>Join</span>
+                          </button>
+                          }
+
+                        </div>
+                      </div>
+
+                      <div class="card-paragraph-summary-area">
+                        <p class="summary-paragraph-text" [matTooltip]="committee.description"
+                          matTooltipPosition="above">
+                          {{ committee.description }}
+                        </p>
+                      </div>
+
+                    </div>
+                  </mat-expansion-panel-header>
+
+                  <div class="expansion-inner-content-wrapper">
+                    @if (committee.events.length > 0) {
+                      <div class="committee-events-shell">
+                        @for (event of committee.events; track event.eventId) {
+                          <div class="event-card">
+                            <div class="event-card-banner">
+                              @if (event.eventBanner) {
+                                <img [src]="event.eventBanner" alt="{{ event.eventName }}" class="event-banner-img" />
+                              } @else {
+                                <div class="event-banner-placeholder">
+                                  <mat-icon>event</mat-icon>
+                                </div>
+                              }
+                              <span class="event-status-badge event-status-{{ event.status | lowercase }}">{{ event.status }}</span>
+                            </div>
+                            <div class="event-card-body">
+                              <h4 class="event-card-title">{{ event.eventName }}</h4>
+                              <div class="event-card-meta">
+                                @if (event.startDate) {
+                                  <span class="event-meta-chip">
+                                    <mat-icon>calendar_today</mat-icon>{{ event.startDate }}
+                                  </span>
+                                }
+                                @if (event.endDate) {
+                                  <span class="event-meta-chip">
+                                    <mat-icon>event_available</mat-icon>{{ event.endDate }}
+                                  </span>
+                                }
+                              </div>
+                            </div>
+                          </div>
+                        }
+                      </div>
+                    } @else {
+                      <div class="committee-events-empty">
+                        <mat-icon>event_busy</mat-icon>
+                        <p>No events available for this group.</p>
+                      </div>
+                    }
+                  </div>
+                </mat-expansion-panel>
+                }
+              </mat-accordion>
+
+              @if (nearbyGroups.length === 0) {
+              <div class="col-empty">
+                <mat-icon>gavel</mat-icon>
+                <p>No committees found within {{selectedCommitteeRadius}} km.</p>
+              </div>
+              }
+            </div>
+          </mat-tab>
+
+          @if (isLoggedIn) {
+          <mat-tab>
+            <ng-template mat-tab-label>
+              <mat-icon>favorite</mat-icon>
+              <span>Favourites</span>
+              <span class="tab-badge">{{ favouriteGroups.length }}</span>
+            </ng-template>
+
+            <div class="committees-scroll">
+              <mat-accordion #favouriteAccordion="matAccordion" [multi]="true" class="custom-clean-accordion">
+                @for (committee of favouriteGroups; track committee.id) {
+                <mat-expansion-panel id="favourite-committee-{{ committee.id }}" [hideToggle]="false"
+                  [class.panel-role-admin]="committee.isCommitteeAdmin && committee.membershipStatus === 'ACCEPTED'"
+                  [class.panel-role-member]="!committee.isCommitteeAdmin && committee.membershipStatus === 'ACCEPTED'"
+                  [class.panel-role-pending]="committee.membershipStatus === 'PENDING'"
+                  [class.panel-role-none]="isLoggedIn && !committee.membershipStatus">
+
+                  <mat-expansion-panel-header>
+                    <div class="committee-card-grid">
+
+                      <div class="card-logo-area">
+                        @if (committee.committeeLogo) {
+                        <img [src]="committee.committeeLogo" alt="{{ committee.committeeName }} logo" class="committee-avatar" />
+                        } @else {
+                        <div class="committee-avatar-fallback">{{ committee.committeeName.charAt(0).toUpperCase() }}</div>
+                        }
+                      </div>
+
+                      <div class="card-main-info-area">
+                        <div class="card-title-row">
+                          <h3 class="committee-display-name">{{ committee.committeeName }}</h3>
+                          @if (isLoggedIn) {
+                          <button mat-icon-button type="button" class="fav-heart-toggle-btn"
+                            (click)="toggleFavouriteCommittee(committee.id, $event)">
+                            <mat-icon [class.is-fav-active]="committee.isFavourite">
+                              {{ committee.isFavourite ? 'favorite' : 'favorite_border' }}
+                            </mat-icon>
+                          </button>
+                          }
+                        </div>
+
+                        <div class="card-location-row">
+                          <mat-icon class="geo-pin-icon">place</mat-icon>
+                          <span class="location-text-trim">{{ committee.address }}</span>
+                        </div>
+
+                        <div class="card-badges-row">
+                          <span class="meta-pill text-muted-badge">Since {{ committee.establishedYear }}</span>
+                          <span class="badge-separator-dot"></span>
+                          <span class="meta-pill phone-contact-badge">
+                            <mat-icon>phone</mat-icon>
+                            {{ committee.contactNumbers }}
+                          </span>
+                        </div>
+                      </div>
+
+                      <div class="card-actions-identity-area">
+                        <div class="identity-top-row">
+                          <div class="committee-id-pill">
+                            <span>ID: {{ committee.id }}</span>
+                            <button mat-icon-button type="button" class="copy-id-btn"
+                              (click)="copyCommitteeId(committee.id.toString(), $event, tooltip)" #tooltip="matTooltip"
+                              matTooltip="Copy Committee ID" matTooltipPosition="above">
+                              @if (copiedCommitteeId === committee.id.toString()) {
+                              <mat-icon class="copy-icon-success">done_all</mat-icon>
+                              } @else {
+                              <mat-icon>content_copy</mat-icon>
+                              }
+                            </button>
+                          </div>
+                        </div>
+
+                        <div class="proximity-display-row">
+                          <span class="spatial-distance-metric">{{ committee.distanceKm }} km</span>
+                          <mat-icon class="compass-pointer-icon">near_me</mat-icon>
+                        </div>
+
+                        <div class="committee-action-footer">
+
+                          @if (committee.isCommitteeAdmin && committee.membershipStatus === 'ACCEPTED') {
+                          <span class="badge-pill admin-pill">ADMIN</span>
+                          }
+
+                          @else if (!committee.isCommitteeAdmin && committee.membershipStatus === 'ACCEPTED') {
+                          <span class="badge-pill member-pill">MEMBER</span>
+                          }
+
+                          @else if (committee.membershipStatus === 'PENDING') {
+                          <div class="pending-action-group">
+                            <span class="badge-pill pending-pill">PENDING</span>
+                            <button mat-button type="button" class="cancel-request-btn"
+                              (click)="cancelRequest(committee.id, $event)">
+                              <mat-icon>close</mat-icon>
+                              <span>Cancel</span>
+                            </button>
+                          </div>
+                          }
+
+                          @else if (isLoggedIn) {
+                          <button mat-flat-button type="button" class="join-committee-btn"
+                            (click)="joinCommittee(committee.id, $event)">
+                            <mat-icon>group_add</mat-icon>
+                            <span>Join</span>
+                          </button>
+                          }
+
+                        </div>
+                      </div>
+
+                      <div class="card-paragraph-summary-area">
+                        <p class="summary-paragraph-text" [matTooltip]="committee.description"
+                          matTooltipPosition="above">
+                          {{ committee.description }}
+                        </p>
+                      </div>
+
+                    </div>
+                  </mat-expansion-panel-header>
+
+                  <div class="expansion-inner-content-wrapper">
+                    @if (committee.events.length > 0) {
+                      <div class="committee-events-shell">
+                        @for (event of committee.events; track event.eventId) {
+                          <div class="event-card">
+                            <div class="event-card-banner">
+                              @if (event.eventBanner) {
+                                <img [src]="event.eventBanner" alt="{{ event.eventName }}" class="event-banner-img" />
+                              } @else {
+                                <div class="event-banner-placeholder">
+                                  <mat-icon>event</mat-icon>
+                                </div>
+                              }
+                              <span class="event-status-badge event-status-{{ event.status | lowercase }}">{{ event.status }}</span>
+                            </div>
+                            <div class="event-card-body">
+                              <h4 class="event-card-title">{{ event.eventName }}</h4>
+                              <div class="event-card-meta">
+                                @if (event.startDate) {
+                                  <span class="event-meta-chip">
+                                    <mat-icon>calendar_today</mat-icon>{{ event.startDate }}
+                                  </span>
+                                }
+                                @if (event.endDate) {
+                                  <span class="event-meta-chip">
+                                    <mat-icon>event_available</mat-icon>{{ event.endDate }}
+                                  </span>
+                                }
+                              </div>
+                            </div>
+                          </div>
+                        }
+                      </div>
+                    } @else {
+                      <div class="committee-events-empty">
+                        <mat-icon>event_busy</mat-icon>
+                        <p>No events available for this group.</p>
+                      </div>
+                    }
+                  </div>
+                </mat-expansion-panel>
+                }
+              </mat-accordion>
+
+              @if (favouriteGroups.length === 0) {
+              <div class="col-empty">
+                <mat-icon>favorite_border</mat-icon>
+                <p>Mark committees as favourite to track them here.</p>
+              </div>
+              }
+            </div>
+          </mat-tab>
+          }
+        </mat-tab-group>
+      </div>
+    </section>
+
+    <aside class="sidebar-col" aria-label="Programs and Events Sidebar">
+      <div class="col-search-bar">
+        <div class="col-header-row">
+          <div class="col-title-container">
+            <mat-icon class="col-icon">apps</mat-icon>
+            <h2 class="col-title">Programs</h2>
+          </div>
+
+          <div class="section-search-pill">
+            <mat-icon class="ssp-icon">search</mat-icon>
+            <input class="ssp-input" type="text" placeholder="Search Programs…" />
+            <span class="ssp-divider"></span>
+            <mat-icon class="ssp-km-icon">radar</mat-icon>
+            <select class="ssp-select" name="programRadius" [(ngModel)]="selectedCommitteeRadius"
+              (change)="onRadiusChange($event)">
+              @for (radius of radiusOptions; track radius) {
+              <option [value]="radius">{{ radius }} km</option>
+              }
+            </select>
+          </div>
+        </div>
+      </div>
+
+      <mat-tab-group class="sidebar-tabs" animationDuration="200ms">
+        <mat-tab>
+          <ng-template mat-tab-label>
+            <mat-icon>apps</mat-icon>
+            <span>All</span>
+            <span class="tab-badge">0</span>
+          </ng-template>
+          <div class="sidebar-scroll">
+            <div class="sidebar-empty">
+              <mat-icon>apps_outage</mat-icon>
+              <p>No programs available within {{selectedCommitteeRadius}} km.</p>
+            </div>
+          </div>
+        </mat-tab>
+
+        @if (isLoggedIn) {
+        <mat-tab>
+          <ng-template mat-tab-label>
+            <mat-icon>favorite</mat-icon>
+            <span>Favourites</span>
+            <span class="tab-badge">0</span>
+          </ng-template>
+          <div class="sidebar-scroll">
+            <div class="sidebar-empty">
+              <mat-icon>favorite_border</mat-icon>
+              <p>Mark programs as favourite to see them here.</p>
+            </div>
+          </div>
+        </mat-tab>
+        }
+
+        <mat-tab>
+          <ng-template mat-tab-label>
+            <mat-icon>sports_cricket</mat-icon>
+            <span>Cricket</span>
+          </ng-template>
+          <div class="sidebar-scroll">
+            <div class="sidebar-empty">
+              <mat-icon>sports_cricket</mat-icon>
+              <p>No cricket programs available.</p>
+            </div>
+          </div>
+        </mat-tab>
+
+        <mat-tab>
+          <ng-template mat-tab-label>
+            <mat-icon>sports_soccer</mat-icon>
+            <span>Football</span>
+          </ng-template>
+          <div class="sidebar-scroll">
+            <div class="sidebar-empty">
+              <mat-icon>sports_soccer</mat-icon>
+              <p>No football programs available.</p>
+            </div>
+          </div>
+        </mat-tab>
+      </mat-tab-group>
+    </aside>
+
+  </div>
+</div>

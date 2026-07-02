@@ -1,0 +1,32 @@
+<h2 mat-dialog-title>Promote Member</h2>
+<mat-dialog-content>
+  <p>
+    You are about to promote <strong>{{ data.userName }}</strong> in
+    <strong>{{ data.committeeName }}</strong>.
+  </p>
+  <p>Current role: <strong>{{ data.currentRole }}</strong></p>
+
+  <mat-form-field appearance="outline" class="full-width">
+    <mat-label>Select new role</mat-label>
+    <mat-select [(ngModel)]="selectedRole" required>
+      @for (role of availableRoles; track role.value) {
+        <mat-option [value]="role.value">{{ role.label }}</mat-option>
+      }
+    </mat-select>
+  </mat-form-field>
+</mat-dialog-content>
+<mat-dialog-actions align="end">
+  <button mat-button (click)="onCancel()" [disabled]="isLoading()">Cancel</button>
+  <button
+    mat-raised-button
+    color="primary"
+    (click)="onConfirm()"
+    [disabled]="isLoading() || !selectedRole()"
+  >
+    @if (isLoading()) {
+      <mat-spinner diameter="20"></mat-spinner>
+    } @else {
+      Promote
+    }
+  </button>
+</mat-dialog-actions>

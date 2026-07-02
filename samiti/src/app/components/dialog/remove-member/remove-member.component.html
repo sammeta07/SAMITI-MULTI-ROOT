@@ -1,0 +1,15 @@
+<h2 mat-dialog-title>Remove Member</h2>
+<mat-dialog-content>
+  <p>Are you sure you want to remove <strong>{{ data.userName }}</strong> from <strong>{{ data.committeeName }}</strong>?</p>
+  <p class="warning-text">This member will be removed from the committee and will lose all their privileges.</p>
+</mat-dialog-content>
+<mat-dialog-actions align="end">
+  <button mat-button (click)="onCancel()" [disabled]="isLoading()">Cancel</button>
+  <button mat-raised-button color="warn" (click)="onConfirm()" [disabled]="isLoading()">
+    @if (isLoading()) {
+      <mat-spinner diameter="20"></mat-spinner>
+    } @else {
+      Remove
+    }
+  </button>
+</mat-dialog-actions>

@@ -1,0 +1,145 @@
+<div class="drawer-layout-shell">
+  
+  <mat-toolbar class="drawer-synchronized-header">
+    <div class="drawer-title-group">
+      <mat-icon class="mode-indicator-icon">analytics</mat-icon>
+      <h2>User Information Desk</h2>
+    </div>
+    
+    <button mat-icon-button type="button" class="drawer-close-btn" (click)="onClose()" aria-label="Close dialog">
+      <mat-icon>close</mat-icon>
+    </button>
+  </mat-toolbar>
+
+  <div class="dialog-body">
+    @if (userData()) {
+      
+      <div class="user-profile-summary-card">
+        <div class="user-avatar-axis-center">
+          <div class="dynamic-profile-circle">
+            @if (userData()?.profile?.profile_photo) {
+              <img [src]="userData()?.profile?.profile_photo" alt="Profile Photo" class="img-avatar-fluid">
+            } @else {
+              <span class="initials alpha-char-bold">
+                {{ userData()?.profile?.name?.charAt(0)?.toUpperCase() || 'U' }}
+              </span>
+            }
+          </div>
+        </div>
+        <div class="profile-title-text-center">
+          <h3>{{ userData()?.profile?.name }}</h3>
+          <span class="joined-date-tag">System Participant Since {{ userData()?.profile?.created_at | date:'mediumDate' }}</span>
+        </div>
+      </div>
+
+      <div class="samiti-clean-info-grid margin-top-deck">
+        
+        <div class="grid-data-row">
+          <div class="info-icon-wrapper color-email"><mat-icon>email</mat-icon></div>
+          <div class="info-content text-frame-block">
+            <span class="info-label">Email Address</span>
+            <span class="info-value text-emphasis-bold">{{ userData()?.profile?.email || 'Not set' }}</span>
+          </div>
+        </div>
+
+        <div class="grid-data-row">
+          <div class="info-icon-wrapper color-mobile"><mat-icon>phone</mat-icon></div>
+          <div class="info-content text-frame-block">
+            <span class="info-label">Mobile Track Link</span>
+            <span class="info-value text-emphasis-bold">{{ userData()?.profile?.mobile || 'Not set' }}</span>
+          </div>
+        </div>
+
+        <div class="form-row-split-grid">
+          <div class="grid-data-row flex-1">
+            <div class="info-icon-wrapper color-birth"><mat-icon>cake</mat-icon></div>
+            <div class="info-content text-frame-block">
+              <span class="info-label">Date of Birth</span>
+              <span class="info-value text-emphasis-bold">{{ userData()?.profile?.date_of_birth || 'Not set' }}</span>
+            </div>
+          </div>
+
+          <div class="grid-data-row flex-1">
+            <div class="info-icon-wrapper color-gender"><mat-icon>wc</mat-icon></div>
+            <div class="info-content text-frame-block">
+              <span class="info-label">Gender Category</span>
+              <span class="info-value text-emphasis-bold text-capitalize">{{ userData()?.profile?.gender || 'Not set' }}</span>
+            </div>
+          </div>
+        </div>
+
+      </div>
+
+      <div class="analytics-header-title-tag margin-top-deck">
+        <mat-icon>assignment_turned_in</mat-icon> Operational KPI Activity Tracker
+      </div>
+
+      <div class="kpi-metrics-grid-row">
+        <div class="kpi-score-card bg-assigned">
+          <span class="kpi-count">{{ userData()?.kpi_metrics?.tasks_summary?.total_assigned || 0 }}</span>
+          <span class="kpi-label">Total Tasks</span>
+        </div>
+        <div class="kpi-score-card bg-completed">
+          <span class="kpi-count">{{ userData()?.kpi_metrics?.tasks_summary?.completed || 0 }}</span>
+          <span class="kpi-label">Completed</span>
+        </div>
+        <div class="kpi-score-card bg-pending">
+          <span class="kpi-count">{{ userData()?.kpi_metrics?.tasks_summary?.pending || 0 }}</span>
+          <span class="kpi-label">Pending</span>
+        </div>
+        <div class="kpi-score-card bg-overdue">
+          <span class="kpi-count">{{ userData()?.kpi_metrics?.tasks_summary?.critical_overdue || 0 }}</span>
+          <span class="kpi-label">Overdue</span>
+        </div>
+      </div>
+
+      <div class="analytics-header-title-tag margin-top-deck">
+        <mat-icon>corporate_fare</mat-icon> Committee Affiliations Matrix ({{ userData()?.associations?.committees?.length || 0 }})
+      </div>
+
+      <div class="committees-affiliation-vertical-stack">
+        @for (club of userData()?.associations?.committees || []; track club.committee_id) {
+          <div class="affiliation-item-card">
+            <div class="club-left-vector">
+              <div class="club-mini-avatar">
+                {{ club.committee_name.charAt(0).toUpperCase() || 'C' }}
+              </div>
+              <div class="club-meta-block">
+                <strong>{{ club.committee_name }}</strong>
+                <span class="id-sub-spec">System Node ID Reference: #{{ club.committee_id }}</span>
+              </div>
+            </div>
+            
+            <div class="club-right-rank-badge">
+              @if (club.is_committee_admin === 1) {
+                <span class="rank-badge role-admin">
+                  <mat-icon>shield</mat-icon> Administrator
+                </span>
+              } @else {
+                <span class="rank-badge role-member">
+                  <mat-icon>person</mat-icon> Active Member
+                </span>
+              }
+            </div>
+          </div>
+        } @empty {
+          <div class="empty-affiliation-placeholder">
+            <mat-icon>folder_off</mat-icon>
+            <span>This user hasn't enrolled into any active committee panels yet.</span>
+          </div>
+        }
+      </div>
+
+    } @else {
+      <div class="spinner-loading-overlay-inside">
+        <mat-progress-spinner mode="indeterminate" diameter="32"></mat-progress-spinner>
+        <span>Compiling relational activity data...</span>
+      </div>
+    }
+  </div>
+
+  <footer class="drawer-action-footer">
+    <button mat-button type="button" class="btn-cancel-flat" (click)="onClose()">Dismiss Desk</button>
+  </footer>
+
+</div>

@@ -1,0 +1,25 @@
+mat-dialog-content {
+  p {
+    margin: 0;
+    padding: 8px 0;
+
+    &:first-of-type {
+      padding-top: 0;
+    }
+  }
+
+  .warning-text {
+    color: #f44336;
+    font-size: 14px;
+  }
+}
+
+mat-dialog-actions {
+  button {
+    margin-left: 8px;
+
+    mat-spinner {
+      display: inline-block;
+    }
+  }
+}

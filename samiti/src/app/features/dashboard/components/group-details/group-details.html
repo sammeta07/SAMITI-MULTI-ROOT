@@ -1,0 +1,193 @@
+<div class="group-details-workspace drawer-layout-shell">
+
+  @if (isLoading()) {
+  <div class="spinner-loading-overlay">
+    <mat-progress-spinner mode="indeterminate" diameter="40"></mat-progress-spinner>
+    <span>Loading group configuration payload...</span>
+  </div>
+  } @else if (groupData()) {
+
+  <div class="dialog-body scrollable-workspace-body">
+    <div class="header-actions committee-top-actions">
+      @if (isCurrentUserMember()) {
+      @if (shouldShowAdminRequestStatusBadge()) {
+      <span class="status-badge-pill" [ngClass]="loggedInUserAdminRequestStatus() ? loggedInUserAdminRequestStatus()!.toLowerCase() + '-pill-badge' : 'pending-pill-badge'">
+        {{ loggedInUserAdminRequestStatus() }}
+      </span>
+      }
+      @if (canShowRequestAdminRoleButton()) {
+      <button mat-stroked-button class="action-btn" (click)="onRequestAdminRole()" [disabled]="isSubmittingAdminRoleRequest()">
+        <mat-icon>admin_panel_settings</mat-icon>
+        @if (isSubmittingAdminRoleRequest()) {
+          Submitting Request...
+        } @else {
+          Request Admin Role
+        }
+      </button>
+      }
+
+      @if (canShowCancelAdminRoleRequestButton()) {
+      <button mat-stroked-button class="action-btn delete-btn" (click)="onCancelAdminRoleRequest()" [disabled]="isCancellingAdminRoleRequest()">
+        <mat-icon>cancel</mat-icon>
+        @if (isCancellingAdminRoleRequest()) {
+          Cancelling...
+        } @else {
+          Cancel Request
+        }
+      </button>
+      }
+      }
+      @if (isCurrentUserAdmin()) {
+      <button mat-stroked-button class="action-btn edit-profile-action-btn" (click)="onEditCommitteeProfile()">
+        <mat-icon>edit</mat-icon>
+        Edit Committee
+      </button>
+
+      <button mat-stroked-button class="action-btn delete-workspace-action-btn" (click)="onDeleteCommitteeWorkspace()">
+        <mat-icon>delete</mat-icon>
+        Delete Committee
+      </button>
+      }
+      <button mat-stroked-button class="action-btn create-event-btn" (click)="onCreateEvent()" [disabled]="!isCurrentUserAdmin()">
+        <mat-icon>add_event</mat-icon>Create Event
+      </button>
+    </div>
+    
+    <!-- PREMIUM HEADER SECTION -->
+    <div class="premium-header-section">
+      <div class="header-content-wrapper">
+        <div class="header-left">
+          <div class="group-avatar-premium">
+            @if (groupData()?.logo) {
+            <img [src]="groupData()?.logo" [alt]="groupData()?.committeeName" class="avatar-image" />
+            } @else {
+            <div class="avatar-letter">{{ groupData()?.committeeName?.charAt(0) || 'C' }}</div>
+            }
+          </div>
+          
+          <div class="header-info-stack">
+            <h1>{{ groupData()?.committeeName }}</h1>
+            <div class="info-badges">
+              <span class="badge-item">
+                <mat-icon>place</mat-icon> {{ groupData()?.area }}
+              </span>
+              <span class="badge-item">
+                <mat-icon>calendar_month</mat-icon> Est. {{ groupData()?.since }}
+              </span>
+            </div>
+          </div>
+        </div>
+
+      </div>
+
+      @if (groupData()?.contactNumbers?.length) {
+      <div class="contacts-bar">
+        @for (phone of groupData()?.contactNumbers; track phone) {
+        <a [href]="'tel:' + phone" class="contact-link">
+          <mat-icon>phone</mat-icon> {{ phone }}
+        </a>
+        }
+      </div>
+      }
+    </div>
+
+    <!-- DESCRIPTION SECTION -->
+    @if (groupData()?.description) {
+    <div class="description-section">
+      <p>{{ groupData()?.description }}</p>
+    </div>
+    }
+
+    <!-- MAIN CONTENT GRID -->
+    <div class="content-grid">
+
+      <!-- ADMINS ROSTER CARD -->
+      <div class="roster-card admin-card">
+        <div class="roster-card-header">
+          <span class="header-title">
+            <mat-icon class="icon-admin">shield_admin</mat-icon>
+            <span class="title-text">Admins</span>
+            <span class="count-badge">{{ adminsList().length }}</span>
+          </span>
+        </div>
+
+        <div class="roster-content">
+          @for (admin of adminsList(); track admin.id) {
+          <div class="member-card">
+            <div class="member-avatar admin">{{ admin.name.charAt(0).toUpperCase() }}</div>
+            <div class="member-info">
+              <div class="member-name">{{ admin.name }}</div>
+              <div class="member-email">{{ admin.email }}</div>
+            </div>
+            <div class="member-actions">
+              <button mat-icon-button class="icon-btn view-btn" title="View" (click)="onViewMember(admin.id)">
+                <mat-icon>visibility</mat-icon>
+              </button>
+            </div>
+          </div>
+          } @empty {
+          <div class="empty-state">No administrators</div>
+          }
+        </div>
+      </div>
+
+      <!-- MEMBERS ROSTER CARD -->
+      <div class="roster-card members-card">
+        <div class="roster-card-header">
+          <span class="header-title">
+            <mat-icon class="icon-member">groups</mat-icon>
+            <span class="title-text">Members</span>
+            <span class="count-badge">{{ membersList().length }}</span>
+          </span>
+
+          @if (membersList().length > 15) {
+          <div class="search-box">
+            <mat-icon>search</mat-icon>
+            <input type="text" placeholder="Search..." [ngModel]="searchQuery()" (ngModelChange)="searchQuery.set($event)" />
+            @if (searchQuery()) {
+            <button type="button" (mousedown)="clearSearch()">
+              <mat-icon>close</mat-icon>
+            </button>
+            }
+          </div>
+          }
+        </div>
+
+        <div class="roster-content">
+          @for (member of filteredMembersList(); track member.id) {
+          <div class="member-card">
+            <div class="member-avatar member">{{ member.name.charAt(0).toUpperCase() }}</div>
+            <div class="member-info">
+              <div class="member-name">{{ member.name }}</div>
+              <div class="member-email">{{ member.email }}</div>
+            </div>
+            <div class="member-actions">
+              <button mat-icon-button class="icon-btn view-btn" title="View" (click)="onViewMember(member.id)">
+                <mat-icon>visibility</mat-icon>
+              </button>
+            </div>
+          </div>
+          } @empty {
+            @if (searchQuery()) {
+            <div class="empty-state">No results for "{{ searchQuery() }}"</div>
+            } @else {
+            <div class="empty-state">No members</div>
+            }
+          }
+        </div>
+      </div>
+
+    </div>
+
+  </div>
+  } @else {
+  <div class="dialog-body">
+    <div class="empty-state-card">
+      <mat-icon>folder_off</mat-icon>
+      <h3>No Workspace Active</h3>
+      <p>Select a specific group from the navigation tree menu to interact with panel logs.</p>
+    </div>
+  </div>
+  }
+
+</div>

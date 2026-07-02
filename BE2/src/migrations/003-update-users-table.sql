@@ -1,0 +1,23 @@
+-- Migration: Update users table for normalized registration data
+-- Date: 2026-07-01
+
+ALTER TABLE users
+  MODIFY COLUMN id INT NOT NULL AUTO_INCREMENT,
+  MODIFY COLUMN name VARCHAR(255) NOT NULL,
+  MODIFY COLUMN email VARCHAR(255) NOT NULL,
+  MODIFY COLUMN password VARCHAR(255) NOT NULL,
+  MODIFY COLUMN date_of_birth DATE NOT NULL,
+  MODIFY COLUMN gender VARCHAR(20) NOT NULL,
+  MODIFY COLUMN mobile VARCHAR(10) NOT NULL,
+  MODIFY COLUMN base_role VARCHAR(50) NOT NULL DEFAULT 'AUTH_USER',
+  MODIFY COLUMN profile_photo VARCHAR(255) NULL,
+  MODIFY COLUMN fcm_token VARCHAR(255) NULL,
+  MODIFY COLUMN created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  MODIFY COLUMN updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP;
+
+ALTER TABLE users
+  ADD UNIQUE KEY uq_users_email (email),
+  ADD UNIQUE KEY uq_users_mobile (mobile),
+  ADD CONSTRAINT chk_users_mobile_digits CHECK (mobile REGEXP '^[0-9]{10}$'),
+  ADD CONSTRAINT chk_users_gender CHECK (gender IN ('male', 'female', 'other')),
+  ADD CONSTRAINT chk_users_email_trimmed CHECK (email = LOWER(TRIM(email)));

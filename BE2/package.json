@@ -1,0 +1,39 @@
+{
+  "name": "be2",
+  "version": "1.0.0",
+  "description": "Fastify + TypeScript + MySQL Backend",
+  "main": "dist/index.js",
+  "scripts": {
+    "build": "tsc",
+    "start": "node dist/index.js",
+    "dev": "nodemon --delay 1 src/index.ts",
+    "dev:watch": "tsc --watch",
+    "verify:cloudinary": "ts-node verify-cloudinary-upload.ts",
+    "migrate:media:cloudinary": "ts-node migrate-local-media-to-cloudinary.ts"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "@fastify/cookie": "^11.0.2",
+    "@fastify/cors": "^11.2.0",
+    "@fastify/jwt": "^10.0.0",
+    "@fastify/mysql": "^5.0.2",
+    "@fastify/static": "^9.1.3",
+    "bcrypt": "^6.0.0",
+    "cloudinary": "^2.10.0",
+    "dotenv": "^17.2.3",
+    "fastify": "^5.6.2",
+    "graphql": "^16.14.2",
+    "mercurius": "^16.9.0",
+    "mysql2": "^3.22.5",
+    "sharp": "^0.35.2"
+  },
+  "devDependencies": {
+    "@types/bcrypt": "^5.0.2",
+    "@types/node": "^22.0.0",
+    "nodemon": "^3.1.11",
+    "ts-node": "^10.9.2",
+    "typescript": "^5.6.2"
+  }
+}

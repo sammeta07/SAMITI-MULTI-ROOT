@@ -1,0 +1,267 @@
+:host {
+  display: flex;
+  flex-direction: column;
+  background: #ffffff;
+  height: 100%;
+  width: 100%;
+  overflow: hidden;
+  box-sizing: border-box;
+}
+
+/* 🧼 Angular Material Overlay Bounds Overrides */
+::ng-deep {
+  .mat-mdc-dialog-surface,
+  .mat-mdc-dialogContainer {
+    border-radius: 0 !important;
+    box-shadow: -4px 0 24px rgba(15, 23, 42, 0.08) !important;
+  }
+}
+
+.drawer-layout-shell {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  width: 100%;
+  background: #ffffff;
+}
+
+/* 🧭 FIXED TOOLBAR HEIGHT SYNCHRONIZATION WITH MAT-TOOLBAR */
+.drawer-synchronized-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0 20px !important;
+  
+  /* 🚀 STRICT HEIGHT LOCK: Forces exact sync matching your 59.99px core toolbar axis */
+  height: 60px !important; 
+  min-height: 60px !important;
+  
+  background: #ffffff !important;
+  border-bottom: 1px solid #e2e8f0;
+  flex-shrink: 0;
+  box-sizing: border-box;
+
+  .drawer-title-group {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+
+    .mode-indicator-icon {
+      color: #f97316;
+      font-size: 1.35rem; width: 1.35rem; height: 1.35rem;
+      display: inline-flex;
+      align-items: center;
+    }
+
+    h2 {
+      margin: 0;
+      font-size: 1.05rem;
+      font-weight: 700;
+      color: #0f172a;
+      letter-spacing: -0.2px;
+      line-height: 1;
+    }
+  }
+
+  .drawer-close-btn {
+    color: #64748b !important;
+    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+    
+    &:hover {
+      background: rgba(239, 68, 68, 0.08) !important;
+      color: #ef4444 !important;
+      transform: rotate(90deg);
+    }
+  }
+}
+
+/* 🥞 DENSE SYSTEM SCROLLABLE WORKSPACE BODY */
+.dialog-body {
+  flex-grow: 1;
+  padding: 24px;
+  overflow-y: auto;
+  background: #f8fafc; /* Subtle contrast elevation behind fields */
+  box-sizing: border-box;
+  &::-webkit-scrollbar { width: 5px; }
+  &::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 99px; }
+}
+
+.create-committee-form {
+  display: flex;
+  flex-direction: column;
+  gap: 16px; /* Row layout padding parameters */
+}
+
+/* 🧱 FLUENT GRID FORM FLOW SYSTEM */
+.form-row-full {
+  width: 100%;
+}
+
+.logo-upload-section {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  background: #f1f5f9;
+  border: 2px dashed #cbd5e1;
+  border-radius: 8px;
+  padding: 12px;
+}
+
+.logo-preview-container {
+  position: relative;
+  width: 120px;
+  height: 120px;
+  border-radius: 10px;
+  overflow: hidden;
+
+  .logo-preview-image {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+  }
+
+  .remove-logo-btn {
+    position: absolute;
+    top: 6px;
+    right: 6px;
+    background: rgba(0, 0, 0, 0.5);
+    color: #fff !important;
+  }
+}
+
+.logo-upload-placeholder {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: #64748b;
+
+  mat-icon {
+    color: #94a3b8;
+  }
+}
+
+.upload-logo-btn {
+  align-self: flex-start;
+  color: #f97316 !important;
+  border-color: #f97316 !important;
+}
+
+.form-row-split-grid {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  width: 100%;
+
+  .samiti-custom-field {
+    flex: 1;
+    min-width: 0; /* Prevents overflow inside flex row */
+  }
+}
+
+/* 🛠️ MATERIAL FORM FIELDS DESIGN OVERRIDES */
+.samiti-custom-field {
+  width: 100%;
+  
+  ::ng-deep {
+    .mat-mdc-text-field-wrapper {
+      background: #ffffff !important;
+      transition: all 0.15s ease;
+    }
+    
+    .mat-mdc-form-field-flex .mat-mdc-form-field-prefix mat-icon {
+      color: #94a3b8;
+      font-size: 1.1rem;
+      margin-right: 4px;
+    }
+
+    /* Focus Shadow Indication Rules */
+    &.mdc-text-field--focused {
+      .mat-mdc-text-field-wrapper {
+        box-shadow: 0 4px 12px rgba(249, 115, 22, 0.06) !important;
+      }
+      .mat-mdc-form-field-prefix mat-icon {
+        color: #f97316; // Prefix icon switches to accent theme on selection
+      }
+    }
+  }
+}
+
+.contact-numbers-section {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  padding: 14px;
+  box-sizing: border-box;
+
+  .section-label-tag {
+    font-size: 0.72rem;
+    font-weight: 700;
+    color: #475569;
+    letter-spacing: 0.2px;
+    text-transform: uppercase;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    border-bottom: 1px dashed #e2e8f0;
+    padding-bottom: 6px;
+    margin-bottom: 4px;
+
+    mat-icon { font-size: 0.95rem; width: 0.95rem; height: 0.95rem; color: #64748b; }
+  }
+}
+
+/* 🥞 DENSE DRAWER ACTION FOOTER STRIP */
+.drawer-action-footer {
+  padding: 12px 20px;
+  background: #ffffff;
+  border-top: 1px solid #e2e8f0;
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+  gap: 10px;
+  flex-shrink: 0;
+  box-sizing: border-box;
+
+  .btn-cancel-flat {
+    height: 32px;
+    padding: 0 16px !important;
+    font-size: 0.75rem !important;
+    font-weight: 700 !important;
+    color: #64748b !important;
+    border-radius: 6px !important;
+    &:hover { background: #f1f5f9 !important; }
+  }
+
+  .submit-action-btn {
+    height: 34px;
+    padding: 0 16px !important;
+    background-color: #22c55e !important; // Success Green Emerald
+    color: #ffffff !important;
+    font-size: 0.75rem !important;
+    font-weight: 700 !important;
+    border-radius: 6px !important;
+    display: inline-flex !important;
+    align-items: center !important;
+    gap: 4px !important;
+    box-shadow: 0 2px 6px rgba(34, 197, 94, 0.2) !important;
+    transition: all 0.2s ease !important;
+
+    mat-icon { font-size: 1.05rem !important; width: 1.05rem; height: 1.05rem; }
+
+    &:hover:not([disabled]) {
+      background-color: #16a34a !important;
+      transform: translateY(-1px);
+      box-shadow: 0 4px 12px rgba(22, 163, 74, 0.3) !important;
+    }
+
+    &[disabled] {
+      background-color: #e2e8f0 !important;
+      color: #94a3b8 !important;
+      box-shadow: none !important;
+      cursor: not-allowed;
+    }
+  }
+}

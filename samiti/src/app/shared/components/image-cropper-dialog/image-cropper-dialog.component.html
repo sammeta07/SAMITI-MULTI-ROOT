@@ -1,0 +1,43 @@
+<h2 mat-dialog-title>{{ dialogTitle }}</h2>
+
+<mat-dialog-content>
+  <p class="crop-instruction">Adjust the crop frame. Selected region will be exported exactly as shown.</p>
+  <p class="crop-aspect-hint">{{ getAspectRatioHint() }}</p>
+  @if (getMinimumCropHint()) {
+    <p class="crop-minimum-hint">{{ getMinimumCropHint() }}</p>
+  }
+
+  @if (!hasImageLoadFailed) {
+    <div class="crop-stage">
+      <image-cropper
+        class="library-cropper"
+        [imageFile]="data.file"
+        [maintainAspectRatio]="data.maintainAspectRatio ?? false"
+        [aspectRatio]="data.aspectRatio ?? 1"
+        [cropperMinWidth]="data.cropperMinWidth ?? 0"
+        [cropperMinHeight]="data.cropperMinHeight ?? 0"
+        [containWithinAspectRatio]="false"
+        [imageQuality]="95"
+        format="png"
+        (imageCropped)="onImageCropped($event)"
+        (loadImageFailed)="onImageLoadFailed()"
+      ></image-cropper>
+    </div>
+  } @else {
+    <div class="crop-failure-message">Unable to load this image for cropping. Please select a different file.</div>
+  }
+</mat-dialog-content>
+
+<mat-dialog-actions align="end">
+  <button mat-button type="button" (click)="cancelSelection()">Cancel</button>
+  <button mat-stroked-button type="button" (click)="useOriginalImage()">Use Original</button>
+  <button
+    mat-flat-button
+    color="primary"
+    type="button"
+    [disabled]="!croppedImageBlob || hasImageLoadFailed"
+    (click)="cropAndSelect()"
+  >
+    Crop And Select
+  </button>
+</mat-dialog-actions>

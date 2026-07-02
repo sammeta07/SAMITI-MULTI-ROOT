@@ -1,0 +1,156 @@
+.cdk-overlay-container, body {
+  .notifier-container {
+    position: fixed !important;
+    top: 1rem !important;
+    right: 1rem !important;
+    width: min(520px, calc(100vw - 2rem)) !important;
+    display: flex !important;
+    flex-direction: column !important;
+    gap: 0.65rem !important;
+    z-index: 99999 !important; /* Dialogs are usually 1000, so this easily wins */
+    pointer-events: none !important;
+  }
+}
+
+.notifier-toast {
+  position: relative;
+  overflow: hidden;
+  pointer-events: auto;
+  display: flex;
+  align-items: flex-start;
+  gap: 0.75rem;
+  border-radius: 10px;
+  border: 1px solid transparent;
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.14);
+  background: #ffffff;
+  color: #1e293b;
+  padding: 0.75rem 0.75rem 0.75rem 0.9rem;
+}
+
+.toast-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  font-size: 14px;
+  font-weight: 700;
+  flex-shrink: 0;
+}
+
+.icon-success {
+  background: #86efac;
+  color: #166534;
+}
+
+.icon-error {
+  background: #fca5a5;
+  color: #991b1b;
+}
+
+.icon-warn {
+  background: #fcd34d;
+  color: #92400e;
+}
+
+.icon-info {
+  background: #93c5fd;
+  color: #1e40af;
+}
+
+.toast-content {
+  min-width: 0;
+  flex: 1;
+}
+
+.toast-title {
+  margin: 0 0 0.2rem 0;
+  font-size: 0.9rem;
+  font-weight: 700;
+}
+
+.toast-message {
+  margin: 0;
+  font-size: 0.86rem;
+  line-height: 1.35;
+  color: #334155;
+  word-break: break-word;
+}
+
+.toast-actions {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.25rem;
+}
+
+.toast-action-btn {
+  border: 0;
+  background: transparent;
+  color: #475569;
+  cursor: pointer;
+  font-size: 1rem;
+  line-height: 1;
+  padding: 0.2rem 0.4rem;
+  border-radius: 6px;
+  opacity: 0.7;
+  transition: opacity 0.2s, background 0.2s;
+}
+
+.toast-action-btn:hover {
+  opacity: 1;
+  background: rgba(148, 163, 184, 0.2);
+}
+
+.toast-progress {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  height: 3px;
+  width: 100%;
+  background: currentColor;
+  opacity: 0.3;
+  transform-origin: left;
+  animation: progress linear forwards;
+}
+
+.toast-progress.paused {
+  animation-play-state: paused !important;
+}
+
+.notifier-toast:hover .toast-progress {
+  animation-play-state: paused;
+}
+
+@keyframes progress {
+  from {
+    transform: scaleX(1);
+  }
+  to {
+    transform: scaleX(0);
+  }
+}
+
+.type-success {
+  border-color: #86efac;
+  background: #f0fdf4;
+  color: #166534;
+}
+
+.type-error {
+  border-color: #fca5a5;
+  background: #fef2f2;
+  color: #991b1b;
+}
+
+.type-warn {
+  border-color: #fcd34d;
+  background: #fffbeb;
+  color: #92400e;
+}
+
+.type-info {
+  border-color: #93c5fd;
+  background: #eff6ff;
+  color: #1e40af;
+}

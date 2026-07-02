@@ -1,0 +1,396 @@
+<div class="requests-feature-container">
+  
+  <header class="feature-compact-header-wrapper">
+    <div class="tabs-navigation-bar">
+      <button type="button" class="tab-link-btn" [class.active-tab]="activeTab() === 'sent'" (click)="switchTab('sent')">
+        <mat-icon>call_made</mat-icon>
+        <span>Sent Requests</span>
+      </button>
+
+      <button type="button" class="tab-link-btn" [class.active-tab]="activeTab() === 'received'" (click)="switchTab('received')">
+        <mat-icon>call_received</mat-icon>
+        <span>Received Requests</span>
+      </button>
+
+      <button type="button" class="tab-link-btn" [class.active-tab]="activeTab() === 'history'" (click)="switchTab('history')">
+        <mat-icon>history_toggle_off</mat-icon>
+        <span>History</span>
+      </button>
+    </div>
+  </header>
+
+  <main class="requests-scrollable-workspace">
+    
+    @if (isLoading()) {
+      <div class="feedback-utility-box loader-wrapper">
+        <div class="compact-spinner"></div>
+        <p>Syncing requests workspace...</p>
+      </div>
+    }
+    
+    @else {
+      
+      @if (activeTab() === 'received') {
+        @if (receivedMemberRequests().length > 0 || receivedAdminRequests().length > 0) {
+          @if (receivedMemberRequests().length > 0) {
+            <div class="received-subsection-head">
+              <h3><mat-icon>person</mat-icon> Member role requests</h3>
+            </div>
+            <div class="dense-table-container">
+              <table class="samiti-high-scale-table">
+                <thead>
+                  <tr>
+                    <th>Committee Name</th>
+                    <th>Address</th>
+                    <th>Email Address</th>
+                    <th>Contact No</th>
+                    <th>Gender</th>
+                    <th>Requested Date</th>
+                    <th>Resolution Date</th>
+                    <th class="text-center">Actions</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  @for (req of receivedMemberRequests(); track req.committee_id + '-' + req.user_details.user_id + '-' + req.request_type) {
+                    <tr>
+                      <td>
+                        <div class="table-profile-cell committee-title-cell">
+                          <mat-icon class="committee-logo-icon">groups</mat-icon>
+                          <span class="user-fullname-bold">{{ req.committee_name }}</span>
+                        </div>
+                      </td>
+                      <td><span class="table-text-normal">{{ req.area || 'N/A' }}</span></td>
+                      <td><span class="table-dim-text">{{ req.user_details.email }}</span></td>
+                      <td><span class="table-text-normal">{{ req.user_details.mobile || 'N/A' }}</span></td>
+                      <td><span class="font-capitalize table-text-normal">{{ req.user_details.gender }}</span></td>
+                      <td><span class="table-dim-text">{{ req.request_sent_time | date:'short' }}</span></td>
+                      <td><span class="table-dim-text font-style-italic">Pending</span></td>
+                      <td>
+                        <div class="table-action-cell">
+                          <button type="button" class="row-action-btn row-reject" (click)="rejectRequest(req.committee_id, req.user_details.user_id)">
+                            <mat-icon>close</mat-icon><span>Reject</span>
+                          </button>
+                          <button type="button" class="row-action-btn row-approve" (click)="approveRequest(req.committee_id, req.user_details.user_id)">
+                            <mat-icon>check</mat-icon><span>Accept</span>
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  }
+                </tbody>
+              </table>
+            </div>
+          }
+
+          @if (receivedAdminRequests().length > 0) {
+            <div class="received-subsection-head">
+              <h3><mat-icon>admin_panel_settings</mat-icon> Admin role requests</h3>
+            </div>
+            <div class="dense-table-container">
+              <table class="samiti-high-scale-table">
+                <thead>
+                  <tr>
+                    <th>Committee Name</th>
+                    <th>Address</th>
+                    <th>Email Address</th>
+                    <th>Contact No</th>
+                    <th>Gender</th>
+                    <th>Requested Date</th>
+                    <th>Resolution Date</th>
+                    <th class="text-center">Actions</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  @for (req of receivedAdminRequests(); track req.committee_id + '-' + req.user_details.user_id + '-' + req.request_type) {
+                    <tr>
+                      <td>
+                        <div class="table-profile-cell committee-title-cell">
+                          <mat-icon class="committee-logo-icon">groups</mat-icon>
+                          <span class="user-fullname-bold">{{ req.committee_name }}</span>
+                        </div>
+                      </td>
+                      <td><span class="table-text-normal">{{ req.area || 'N/A' }}</span></td>
+                      <td><span class="table-dim-text">{{ req.user_details.email }}</span></td>
+                      <td><span class="table-text-normal">{{ req.user_details.mobile || 'N/A' }}</span></td>
+                      <td><span class="font-capitalize table-text-normal">{{ req.user_details.gender }}</span></td>
+                      <td><span class="table-dim-text">{{ req.request_sent_time | date:'short' }}</span></td>
+                      <td><span class="table-dim-text font-style-italic">Pending</span></td>
+                      <td>
+                        <div class="table-action-cell">
+                          <button type="button" class="row-action-btn row-reject" (click)="rejectRequest(req.committee_id, req.user_details.user_id)">
+                            <mat-icon>close</mat-icon><span>Reject</span>
+                          </button>
+                          <button type="button" class="row-action-btn row-approve" (click)="approveRequest(req.committee_id, req.user_details.user_id)">
+                            <mat-icon>check</mat-icon><span>Accept</span>
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  }
+                </tbody>
+              </table>
+            </div>
+          }
+        } @else {
+          <div class="feedback-utility-box empty-state-wrapper">
+            <mat-icon class="empty-vector-icon">person_add_disabled</mat-icon>
+            <h3>No Received Requests</h3>
+          </div>
+        }
+      }
+
+      @if (activeTab() === 'history') {
+        @if (historyMemberRequests().length > 0 || historyAdminRequests().length > 0) {
+          @if (historyMemberRequests().length > 0) {
+            <div class="received-subsection-head">
+              <h3><mat-icon>person</mat-icon> Member role requests</h3>
+            </div>
+            <div class="dense-table-container">
+              <table class="samiti-high-scale-table">
+                <thead>
+                  <tr>
+                    <th>Committee Name</th>
+                    <th>Profile</th>
+                    <th>Email Address</th>
+                    <th>Mobile Number</th>
+                    <th>Requested Date</th>
+                    <th>Resolution Date</th>
+                    <th>Current Status</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  @for (log of historyMemberRequests(); track log.committee_id + '-' + log.user_details.user_id + '-' + log.request_type + '-' + log.action_at_time) {
+                    <tr [class.row-state-accept]="log.status === 'ACCEPTED'" [class.row-state-reject]="log.status === 'REJECTED'">
+                      <td>
+                        <div class="table-profile-cell committee-title-cell">
+                          <mat-icon class="committee-logo-icon">groups</mat-icon>
+                          <span class="user-fullname-bold">{{ log.committee_name }}</span>
+                        </div>
+                      </td>
+                      <td>
+                        <div class="table-profile-cell">
+                          <div class="mini-avatar">
+                            @if (log.user_details.photo) { <img [src]="log.user_details.photo" alt="profile"> }
+                            @else { <span>{{ log.user_details.name.charAt(0).toUpperCase() }}</span> }
+                          </div>
+                          <span class="user-fullname-bold text-capitalize">{{ log.user_details.name }}</span>
+                        </div>
+                      </td>
+                      <td><span class="table-dim-text">{{ log.user_details.email }}</span></td>
+                      <td><span class="table-text-normal">{{ log.user_details.mobile || 'N/A' }}</span></td>
+                      <td>
+                        @if (log.request_sent_time) {
+                          <span class="table-dim-text">{{ log.request_sent_time | date:'medium' }}</span>
+                        } @else {
+                          <span class="table-dim-text font-style-italic">Unavailable</span>
+                        }
+                      </td>
+                      <td><span class="table-dim-text font-weight-700">{{ log.action_at_time | date:'medium' }}</span></td>
+                      <td>
+                        <span class="log-badge-status" [ngClass]="log.status === 'ACCEPTED' ? 'bg-green' : 'bg-red'">
+                          {{ log.status === 'ACCEPTED' ? 'ACCEPTED' : 'REJECTED' }}
+                        </span>
+                      </td>
+                    </tr>
+                  }
+                </tbody>
+              </table>
+            </div>
+          }
+
+          @if (historyAdminRequests().length > 0) {
+            <div class="received-subsection-head">
+              <h3><mat-icon>admin_panel_settings</mat-icon> Admin role requests</h3>
+            </div>
+            <div class="dense-table-container">
+              <table class="samiti-high-scale-table">
+                <thead>
+                  <tr>
+                    <th>Committee Name</th>
+                    <th>Profile</th>
+                    <th>Email Address</th>
+                    <th>Mobile Number</th>
+                    <th>Requested Date</th>
+                    <th>Resolution Date</th>
+                    <th>Current Status</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  @for (log of historyAdminRequests(); track log.committee_id + '-' + log.user_details.user_id + '-' + log.request_type + '-' + log.action_at_time) {
+                    <tr [class.row-state-accept]="log.status === 'ACCEPTED'" [class.row-state-reject]="log.status === 'REJECTED'">
+                      <td>
+                        <div class="table-profile-cell committee-title-cell">
+                          <mat-icon class="committee-logo-icon">groups</mat-icon>
+                          <span class="user-fullname-bold">{{ log.committee_name }}</span>
+                        </div>
+                      </td>
+                      <td>
+                        <div class="table-profile-cell">
+                          <div class="mini-avatar">
+                            @if (log.user_details.photo) { <img [src]="log.user_details.photo" alt="profile"> }
+                            @else { <span>{{ log.user_details.name.charAt(0).toUpperCase() }}</span> }
+                          </div>
+                          <span class="user-fullname-bold text-capitalize">{{ log.user_details.name }}</span>
+                        </div>
+                      </td>
+                      <td><span class="table-dim-text">{{ log.user_details.email }}</span></td>
+                      <td><span class="table-text-normal">{{ log.user_details.mobile || 'N/A' }}</span></td>
+                      <td>
+                        @if (log.request_sent_time) {
+                          <span class="table-dim-text">{{ log.request_sent_time | date:'medium' }}</span>
+                        } @else {
+                          <span class="table-dim-text font-style-italic">Unavailable</span>
+                        }
+                      </td>
+                      <td><span class="table-dim-text font-weight-700">{{ log.action_at_time | date:'medium' }}</span></td>
+                      <td>
+                        <span class="log-badge-status" [ngClass]="log.status === 'ACCEPTED' ? 'bg-green' : 'bg-red'">
+                          {{ log.status === 'ACCEPTED' ? 'ACCEPTED' : 'REJECTED' }}
+                        </span>
+                      </td>
+                    </tr>
+                  }
+                </tbody>
+              </table>
+            </div>
+          }
+        } @else {
+          <div class="feedback-utility-box empty-state-wrapper">
+            <mat-icon class="empty-vector-icon">manage_history</mat-icon>
+            <h3>Log Book Empty</h3>
+            <p>You haven't accepted or rejected any registration requests yet.</p>
+          </div>
+        }
+      }
+
+     @if (activeTab() === 'sent') {
+        @if (sentMemberRequests().length > 0 || sentAdminRequests().length > 0) {
+          @if (sentMemberRequests().length > 0) {
+            <div class="received-subsection-head">
+              <h3><mat-icon>person</mat-icon> Member role requests <mat-icon class="sent-heading-inline-icon">call_received</mat-icon></h3>
+            </div>
+            <div class="dense-table-container">
+              <table class="samiti-high-scale-table">
+                <thead>
+                  <tr>
+                    <th>Committee Name</th>
+                    <th>Address</th>
+                    <th>Established Since</th>
+                    <th>Requested Date</th>
+                    <th>Resolution Date</th>
+                    <th>Current Status</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  @for (sent of sentMemberRequests(); track sent.committee_id + '-' + sent.request_sent_time + '-' + sent.request_type) {
+                    <tr [class.row-state-accept]="sent.status === 'ACCEPTED'" [class.row-state-reject]="sent.status === 'REJECTED'">
+                      <td>
+                        <div class="table-profile-cell committee-title-cell">
+                          <mat-icon class="committee-logo-icon">groups</mat-icon>
+                          <span class="user-fullname-bold">{{ sent.committee_name }}</span>
+                        </div>
+                      </td>
+                      <td><span class="table-text-normal">{{ sent.area || 'N/A' }}</span></td>
+                      <td><span class="table-dim-text">Est. {{ sent.since }}</span></td>
+                      <td><span class="table-dim-text">{{ sent.request_sent_time | date:'d MMMM yyyy, h:mm a' }}</span></td>
+                      <td>
+                        @if (sent.status !== 'PENDING' && sent.resolved_at_time) {
+                          <span class="table-text-normal">
+                            {{ sent.resolved_at_time | date:'d MMMM yyyy, h:mm a' }}
+                          </span>
+                        } @else {
+                          <span class="table-dim-text font-style-italic">Awaiting Admin Review</span>
+                        }
+                      </td>
+
+                      <td>
+                        <div class="sent-status-stack">
+                          <span class="status-badge-pill" [ngClass]="sent.status.toLowerCase() + '-pill-badge'">
+                            {{ sent.status }}
+                          </span>
+                          @if (sent.status === 'PENDING') {
+                            <button type="button" class="row-action-btn row-reject sent-cancel-btn" (click)="cancelSentRequest(sent.committee_id, sent.committee_name)">
+                              <mat-icon>cancel</mat-icon><span>Cancel</span>
+                            </button>
+                          }
+                        </div>
+                      </td>
+                    </tr>
+                  }
+                </tbody>
+              </table>
+            </div>
+          }
+
+          @if (sentAdminRequests().length > 0) {
+            <div class="received-subsection-head">
+              <h3><mat-icon>admin_panel_settings</mat-icon> Admin role requests <mat-icon class="sent-heading-inline-icon">call_received</mat-icon></h3>
+            </div>
+            <div class="dense-table-container">
+              <table class="samiti-high-scale-table">
+                <thead>
+                  <tr>
+                    <th>Committee Name</th>
+                    <th>Address</th>
+                    <th>Established Since</th>
+                    <th>Requested Date</th>
+                    <th>Resolution Date</th>
+                    <th>Current Status</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  @for (sent of sentAdminRequests(); track sent.committee_id + '-' + sent.request_sent_time + '-' + sent.request_type) {
+                    <tr [class.row-state-accept]="sent.status === 'ACCEPTED'" [class.row-state-reject]="sent.status === 'REJECTED'">
+                      <td>
+                        <div class="table-profile-cell committee-title-cell">
+                          <mat-icon class="committee-logo-icon">groups</mat-icon>
+                          <span class="user-fullname-bold">{{ sent.committee_name }}</span>
+                        </div>
+                      </td>
+                      <td><span class="table-text-normal">{{ sent.area || 'N/A' }}</span></td>
+                      <td><span class="table-dim-text">Est. {{ sent.since }}</span></td>
+                      <td><span class="table-dim-text">{{ sent.request_sent_time | date:'d MMMM yyyy, h:mm a' }}</span></td>
+                      <td>
+                        @if (sent.status !== 'PENDING' && sent.resolved_at_time) {
+                          <span class="table-text-normal">
+                            {{ sent.resolved_at_time | date:'d MMMM yyyy, h:mm a' }}
+                          </span>
+                        } @else {
+                          <span class="table-dim-text font-style-italic">Awaiting Admin Review</span>
+                        }
+                      </td>
+
+                      <td>
+                        <div class="sent-status-stack">
+                          <span class="status-badge-pill" [ngClass]="sent.status.toLowerCase() + '-pill-badge'">
+                            {{ sent.status }}
+                          </span>
+                        </div>
+                      </td>
+                    </tr>
+                  }
+                </tbody>
+              </table>
+            </div>
+          } @else {
+            <div class="received-subsection-head">
+              <h3><mat-icon>admin_panel_settings</mat-icon> Admin role requests <mat-icon class="sent-heading-inline-icon">call_received</mat-icon></h3>
+            </div>
+            <div class="feedback-utility-box empty-state-wrapper">
+              <mat-icon class="empty-vector-icon">admin_panel_settings</mat-icon>
+              <h3>No Admin Role Requests</h3>
+              <p>There are no admin role requests to display right now.</p>
+            </div>
+          }
+        } @else {
+          <div class="feedback-utility-box empty-state-wrapper">
+            <mat-icon class="empty-vector-icon">outbox</mat-icon>
+            <h3>No Sent Requests</h3>
+            <p>Explore nearby committees inside global maps feed list to send join requests.</p>
+          </div>
+        }
+      }
+
+    }
+  </main>
+</div>

@@ -1,0 +1,25 @@
+.samiti-footer {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0.75rem 1.5rem;
+  background: var(--clr-navy);
+  color: var(--clr-text-light);
+  font-size: 0.78rem;
+  letter-spacing: 0.02em;
+}
+
+.footer-right {
+  display: flex;
+  gap: 1rem;
+
+  a {
+    color: var(--clr-text-light);
+    text-decoration: none;
+    transition: color 0.2s;
+
+    &:hover {
+      color: var(--clr-accent);
+    }
+  }
+}

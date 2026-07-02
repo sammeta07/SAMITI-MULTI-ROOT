@@ -1,0 +1,142 @@
+<div class="drawer-layout-shell">
+  
+  <mat-toolbar class="drawer-synchronized-header">
+    <div class="drawer-title-group">
+      <mat-icon class="mode-indicator-icon">add_event</mat-icon>
+      <h2>Create New Event</h2>
+    </div>
+    
+    <button mat-icon-button type="button" class="drawer-close-btn" (click)="onCancel()" aria-label="Close dialog">
+      <mat-icon>close</mat-icon>
+    </button>
+  </mat-toolbar>
+
+  <div class="dialog-body">
+    <form class="create-event-form">
+      
+      <!-- EVENT BANNER UPLOAD -->
+      <div class="form-row-full">
+        <div class="banner-upload-section">
+          @if (bannerPreviewUrls().length > 0) {
+            <div class="banner-preview-grid">
+              @for (bannerPreviewUrl of bannerPreviewUrls(); track bannerPreviewUrl; let index = $index) {
+                <div class="banner-preview-container">
+                  <img [src]="bannerPreviewUrl" alt="Event Banner" class="banner-image">
+                  <button mat-icon-button type="button" class="remove-banner-btn" (click)="clearBanner(index)" title="Remove banner">
+                    <mat-icon>close</mat-icon>
+                  </button>
+                </div>
+              }
+            </div>
+          } @else {
+            <div class="banner-upload-placeholder">
+              <mat-icon>image_not_supported</mat-icon>
+              <span>No banner selected</span>
+            </div>
+          }
+          
+          <input type="file" #bannerInput hidden accept="image/*" multiple (change)="onBannerSelected($event)">
+          <button mat-stroked-button type="button" class="upload-btn" (click)="bannerInput.click()">
+            <mat-icon>upload_file</mat-icon>Upload Banner Images
+          </button>
+          @if (bannerPreviewUrls().length > 1) {
+            <div class="field-helper-caption">
+              {{ bannerPreviewUrls().length }} images selected. First uploaded image will be used as event banner.
+            </div>
+          }
+        </div>
+      </div>
+
+      <!-- EVENT NAME -->
+      <div class="form-row-full">
+        <mat-form-field appearance="outline" class="samiti-custom-field">
+          <mat-label>Event Name</mat-label>
+          <input matInput [(ngModel)]="eventName" name="eventName" placeholder="Ex. Annual Celebration" required>
+          <mat-icon matPrefix>event</mat-icon>
+        </mat-form-field>
+      </div>
+
+      <!-- DESCRIPTION -->
+      <div class="form-row-full">
+        <mat-form-field appearance="outline" class="samiti-custom-field">
+          <mat-label>Description</mat-label>
+          <textarea matInput [(ngModel)]="description" name="description" placeholder="Enter event description..." rows="3"></textarea>
+          <mat-icon matPrefix>description</mat-icon>
+        </mat-form-field>
+      </div>
+
+      <!-- STATUS & TYPE -->
+      <div class="form-row-split-grid">
+        <mat-form-field appearance="outline" class="samiti-custom-field">
+          <mat-label>Status</mat-label>
+          <mat-select [(ngModel)]="status" name="status" required>
+            @for (s of statuses; track s) {
+              <mat-option [value]="s">{{ s }}</mat-option>
+            }
+          </mat-select>
+          <mat-icon matPrefix>info</mat-icon>
+        </mat-form-field>
+
+        <mat-form-field appearance="outline" class="samiti-custom-field">
+          <mat-label>Event Type</mat-label>
+          <mat-select [(ngModel)]="type" name="type">
+            @for (t of eventTypes; track t) {
+              <mat-option [value]="t">{{ t | titlecase }}</mat-option>
+            }
+          </mat-select>
+          <mat-icon matPrefix>category</mat-icon>
+        </mat-form-field>
+      </div>
+
+      <!-- START DATE & END DATE -->
+      <div class="form-row-split-grid">
+        <mat-form-field appearance="outline" class="samiti-custom-field">
+          <mat-label>Start Date</mat-label>
+          <input matInput [matDatepicker]="startDatePicker" [(ngModel)]="startDate" name="startDate" required>
+          <mat-icon matPrefix>calendar_today</mat-icon>
+          <mat-datepicker-toggle matSuffix [for]="startDatePicker"></mat-datepicker-toggle>
+          <mat-datepicker #startDatePicker></mat-datepicker>
+        </mat-form-field>
+
+        <mat-form-field appearance="outline" class="samiti-custom-field">
+          <mat-label>End Date</mat-label>
+          <input matInput [matDatepicker]="endDatePicker" [(ngModel)]="endDate" name="endDate">
+          <mat-icon matPrefix>calendar_today</mat-icon>
+          <mat-datepicker-toggle matSuffix [for]="endDatePicker"></mat-datepicker-toggle>
+          <mat-datepicker #endDatePicker></mat-datepicker>
+        </mat-form-field>
+      </div>
+
+      <!-- VISIBILITY TOGGLE -->
+      <div class="visibility-section">
+        <div class="visibility-control">
+          <div class="visibility-label-group">
+            <mat-icon>visibility</mat-icon>
+            <span class="visibility-label">Event Visibility</span>
+          </div>
+          <mat-slide-toggle [(ngModel)]="visibility" name="visibility" 
+                           [checked]="visibility === 'VISIBLE'"
+                           (change)="visibility = $event.checked ? 'VISIBLE' : 'HIDDEN'">
+            {{ visibility === 'VISIBLE' ? 'Visible' : 'Hidden' }}
+          </mat-slide-toggle>
+        </div>
+        <span class="visibility-hint">{{ visibility === 'VISIBLE' ? 'Event will be shown to all members' : 'Event will be hidden from members' }}</span>
+      </div>
+
+    </form>
+  </div>
+
+  <footer class="drawer-action-footer">
+    <button mat-button type="button" class="btn-cancel-flat" (click)="onCancel()">Cancel</button>
+    
+    <button mat-flat-button 
+            type="button" 
+            class="submit-action-btn" 
+            [disabled]="!isFormValid || isSubmitting()"
+            (click)="onSubmit()">
+      <mat-icon>add_event</mat-icon>
+      <span>Create Event</span>
+    </button>
+  </footer>
+
+</div>
