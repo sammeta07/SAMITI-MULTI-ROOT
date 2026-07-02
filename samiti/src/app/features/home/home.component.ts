@@ -14,7 +14,7 @@ import { AuthService } from '../../core/services/auth.service';
 import { CreateCommitteeDialogComponent } from '../../components/dialog/create-committee/create-committee.component';
 import { ConfirmDialogService } from '../../components/dialog/confirm/confirm-dialog.service';
 import { ConfirmDialogData } from '../../components/dialog/confirm/confirm-dialog.models';
-import { CommitteeListResponseGuestUser, CommitteeListRequestBackend, CommitteeAuthItem, CommitteesList, JoinComitteeRequestBody, JoinCommitteeApiResponse, ToggleCommitteeFavouriteResponse, CancelRequestApiResponse } from './home.models';
+import { CommitteeListResponseGuestUser, CommitteeListRequestBackend, CommitteeAuthItem, CommitteesList, JoinCommitteeRequestBody, JoinCommitteeApiResponse, ToggleCommitteeFavouriteResponse, CancelRequestApiResponse } from './home.models';
 
 @Component({
   selector: 'app-home',
@@ -149,7 +149,7 @@ constructor() {
         return; // User cancelled the join request
       }
 
-      const body:JoinComitteeRequestBody={
+      const body:JoinCommitteeRequestBody={
         committeeId: committee.id,
         role: 'COMMITTEE_MEMBER'
       }

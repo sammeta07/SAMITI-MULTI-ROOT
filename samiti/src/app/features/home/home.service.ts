@@ -3,7 +3,7 @@ import { inject, Injectable, signal } from '@angular/core';
 import { map } from 'rxjs/operators';
 import { CommitteeListResponseGuestUser, CommitteeListRequestBackend, JoinCommitteeApiResponse, CancelRequestApiResponse, ToggleCommitteeFavouriteResponse, SubmitCommitteeMembershipRequestInput } from './home.models';
 import { environment } from '../../../environments/environment';
-import { JoinComitteeRequestBody } from './home.models';
+import { JoinCommitteeRequestBody } from './home.models';
 
 interface GraphQLErrorPayload {
   message: string;
@@ -121,7 +121,7 @@ export class HomeService {
         );
     }
 
-    joinCommittee(body: JoinComitteeRequestBody) {
+    joinCommittee(body: JoinCommitteeRequestBody) {
         const url = this.graphqlUrl;
         const submitCommitteeMembershipRequestInput: SubmitCommitteeMembershipRequestInput = {
           committeeId: body.committeeId,

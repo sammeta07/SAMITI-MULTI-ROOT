@@ -87,7 +87,7 @@ export interface SubmitCommitteeMembershipRequestInput {
   requestRole: CommitteeMembershipRequestRole;
 }
 
-export interface JoinComitteeRequestBody {
+export interface JoinCommitteeRequestBody {
   committeeId: number;
   role: CommitteeMembershipRequestRole;
 }
