@@ -1,8 +1,22 @@
 # MY-MULTI-ROOT
 
-This repository stores the VS Code multi-root workspace definition for the `samiti` and `BE2` projects.
+This repository stores a VS Code multi-root workspace plus the project links for `samiti` and `BE2`.
 
-The project source code remains in their existing repositories:
+The projects are included as Git submodules so the whole stack can be opened from a single repository and used in GitHub Codespaces.
 
-- `samiti`
-- `BE2`
+- `samiti` frontend: https://github.com/sammeta07/samiti
+- `BE2` backend: https://github.com/sammeta07/BE2
+
+## Getting started
+
+Clone with submodules:
+
+```bash
+git clone --recurse-submodules <repo-url>
+```
+
+Or, after cloning:
+
+```bash
+git submodule update --init --recursive
+```

@@ -1,0 +1,6 @@
+[submodule "samiti"]
+	path = samiti
+	url = https://github.com/sammeta07/samiti.git
+[submodule "BE2"]
+	path = BE2
+	url = https://github.com/sammeta07/BE2.git

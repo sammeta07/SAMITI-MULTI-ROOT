@@ -1,0 +1,13 @@
+{
+  "name": "my-multi-root",
+  "image": "mcr.microsoft.com/devcontainers/typescript-node:1-22-bookworm",
+  "postCreateCommand": "git submodule update --init --recursive && cd samiti && npm install && cd ../BE2 && npm install",
+  "customizations": {
+    "vscode": {
+      "extensions": [
+        "Angular.ng-template",
+        "ms-vscode.vscode-typescript-next"
+      ]
+    }
+  }
+}
