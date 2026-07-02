@@ -1,13 +1,32 @@
 {
-  "name": "my-multi-root",
+  "name": "samiti-multi-root",
   "image": "mcr.microsoft.com/devcontainers/typescript-node:1-22-bookworm",
-  "postCreateCommand": "git submodule update --init --recursive && cd samiti && npm install && cd ../BE2 && npm install",
+  "workspaceFolder": "/workspaces/${localWorkspaceFolderBasename}",
+  "forwardPorts": [3000, 4200],
+  "portsAttributes": {
+    "3000": {
+      "label": "BE2 GraphQL API",
+      "onAutoForward": "notify"
+    },
+    "4200": {
+      "label": "Samiti Angular App",
+      "onAutoForward": "openPreview"
+    }
+  },
+  "postCreateCommand": "bash .devcontainer/setup-workspace.sh",
+  "postStartCommand": "bash .devcontainer/start-workspace.sh",
   "customizations": {
     "vscode": {
       "extensions": [
         "Angular.ng-template",
-        "ms-vscode.vscode-typescript-next"
-      ]
+        "ms-vscode.vscode-typescript-next",
+        "dbaeumer.vscode-eslint",
+        "esbenp.prettier-vscode",
+        "ms-azuretools.vscode-docker"
+      ],
+      "settings": {
+        "terminal.integrated.defaultProfile.linux": "bash"
+      }
     }
   }
 }
