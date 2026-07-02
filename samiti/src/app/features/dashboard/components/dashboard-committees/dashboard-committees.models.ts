@@ -6,13 +6,13 @@
 // 1. Committee Interface - Core entity representation
 // ============================================================================
 export interface Committee {
-  committee_id: number;
-  committee_name: string;
+  committeeId: number;
+  committeeName: string;
   logo: string | null;
   address: string;
-  establish_year: number;
-  is_admin_privilege: boolean;
-  membership_status: 'ACCEPTED' | 'PENDING' | 'REJECTED';
+  establishYear: number;
+  isAdminPrivilege: boolean;
+  membershipStatus: 'ACCEPTED' | 'PENDING' | 'REJECTED';
 }
 
 // ============================================================================
@@ -24,7 +24,7 @@ export type UserCommitteesResponse = Committee[];
 // 3. Committee Action Payload - For edit/delete operations
 // ============================================================================
 export interface CommitteeActionPayload {
-  committee_id: number;
+  committeeId: number;
   action: 'edit' | 'delete';
 }
 
@@ -35,20 +35,20 @@ export type CommitteeActionResponse = Record<string, any>;
 
 // 🚀 Frontend Data Stream Structure Type Definition matching Backend JSON Packets
 export interface MyCommitteeItem {
-  committee_id: number;
-  committee_name: string;
-  establish_year: number;
+  committeeId: number;
+  committeeName: string;
+  establishYear: number;
   address: string;
   logo: string | null;
-  membership_status: 'ACCEPTED' | string;
-  is_admin_privilege: boolean;
+  membershipStatus: 'ACCEPTED' | string;
+  isAdminPrivilege: boolean;
 }
 
 // Global API Standard Base Wrapper format mapping
 export type MyCommitteesApiResponse = MyCommitteeItem[];
 
 export interface BriefUserMeta {
-  user_id: number;
+  userId: number;
   name: string;
   email: string;
   mobile: string | null;
@@ -56,19 +56,19 @@ export interface BriefUserMeta {
 }
 
 export interface MyCommitteeDetailedItem {
-  committee_id: number;
-  committee_code: string;
-  committee_name: string;
-  establish_year: number;
+  committeeId: number;
+  committeeCode: string;
+  committeeName: string;
+  establishYear: number;
   address: string;
   logo: string | null;
   description: string;
-  membership_status: string;
-  is_admin_privilege: boolean;
-  admins_count: number;
-  members_count: number;
-  admins_brief: BriefUserMeta[];
-  members_brief: BriefUserMeta[];
+  membershipStatus: string;
+  isAdminPrivilege: boolean;
+  adminsCount: number;
+  membersCount: number;
+  adminsBrief: BriefUserMeta[];
+  membersBrief: BriefUserMeta[];
 }
 
 export type MyCommitteesDetailedApiResponse = MyCommitteeDetailedItem[];

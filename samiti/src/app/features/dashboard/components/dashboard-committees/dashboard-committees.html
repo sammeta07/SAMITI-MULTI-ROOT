@@ -33,24 +33,24 @@
           @else {
             @if (adminCommittees().length > 0) {
               <div class="large-panels-details-stack">
-                @for (com of adminCommittees(); track com.committee_id) {
+                @for (com of adminCommittees(); track com.committeeId) {
                   <div class="premium-detail-board-card admin-panel-skin">
                     
                     <div class="board-top-block-row">
                       <div class="board-brand-avatar-box">
                         @if (com.logo) { <img [src]="com.logo" alt="logo" class="b-avatar-img" /> }
-                        @else { <div class="b-avatar-fallback bg-red-grad">{{ com.committee_name.charAt(0).toUpperCase() }}</div> }
+                        @else { <div class="b-avatar-fallback bg-red-grad">{{ com.committeeName.charAt(0).toUpperCase() }}</div> }
                       </div>
                       
                       <!-- 🚀 FIXED: Cleaned up extra badge and alpha-code tag strings completely -->
                       <div class="board-primary-identity-block">
                         <div class="b-title-row">
-                          <h3 class="b-headline-text">{{ com.committee_name }}</h3>
+                          <h3 class="b-headline-text">{{ com.committeeName }}</h3>
                         </div>
                         <div class="b-geo-strip">
                           <mat-icon>place</mat-icon> <span>{{ com.address || 'Global Region' }}</span>
                           <span class="b-dot-spacer"></span>
-                          <mat-icon>calendar_today</mat-icon> <span>Established Since {{ com.establish_year }}</span>
+                          <mat-icon>calendar_today</mat-icon> <span>Established Since {{ com.establishYear }}</span>
                         </div>
                       </div>
                       
@@ -67,11 +67,11 @@
                       <div class="teaser-sub-column-box">
                         <div class="teaser-sub-header">
                           <mat-icon class="icon-adm">shield_person</mat-icon>
-                          <span class="teaser-title">Council Admins ({{ com.admins_count }})</span>
-                          <button type="button" class="teaser-view-all-link text-red" (click)="openAllAdminsDialog(com.committee_id, com.committee_name)">View All</button>
+                          <span class="teaser-title">Council Admins ({{ com.adminsCount }})</span>
+                          <button type="button" class="teaser-view-all-link text-red" (click)="openAllAdminsDialog(com.committeeId, com.committeeName)">View All</button>
                         </div>
                         <div class="teaser-profiles-flat-list">
-                          @for (adm of com.admins_brief; track adm.user_id) {
+                          @for (adm of com.adminsBrief; track adm.userId) {
                             <div class="teaser-profile-inline-row">
                               <div class="t-mini-avatar">
                                 @if (adm.photo) { <img [src]="adm.photo" alt="avatar"> }
@@ -89,11 +89,11 @@
                       <div class="teaser-sub-column-box">
                         <div class="teaser-sub-header">
                           <mat-icon class="icon-mem">diversity_3</mat-icon>
-                          <span class="teaser-title">Enrolled Members ({{ com.members_count }})</span>
-                          <button type="button" class="teaser-view-all-link text-blue" (click)="openAllMembersDialog(com.committee_id, com.committee_name)">View All</button>
+                          <span class="teaser-title">Enrolled Members ({{ com.membersCount }})</span>
+                          <button type="button" class="teaser-view-all-link text-blue" (click)="openAllMembersDialog(com.committeeId, com.committeeName)">View All</button>
                         </div>
                         <div class="teaser-profiles-flat-list">
-                          @for (mem of com.members_brief; track mem.user_id) {
+                          @for (mem of com.membersBrief; track mem.userId) {
                             <div class="teaser-profile-inline-row">
                               <div class="t-mini-avatar">
                                 @if (mem.photo) { <img [src]="mem.photo" alt="avatar"> }
@@ -142,24 +142,24 @@
           @else {
             @if (memberCommittees().length > 0) {
               <div class="large-panels-details-stack">
-                @for (com of memberCommittees(); track com.committee_id) {
+                @for (com of memberCommittees(); track com.committeeId) {
                   <div class="premium-detail-board-card member-panel-skin">
                     
                     <div class="board-top-block-row">
                       <div class="board-brand-avatar-box">
                         @if (com.logo) { <img [src]="com.logo" alt="logo" class="b-avatar-img" /> }
-                        @else { <div class="b-avatar-fallback bg-blue-grad">{{ com.committee_name.charAt(0).toUpperCase() }}</div> }
+                        @else { <div class="b-avatar-fallback bg-blue-grad">{{ com.committeeName.charAt(0).toUpperCase() }}</div> }
                       </div>
                       
                       <!-- 🚀 FIXED: Cleaned up extra badge and alpha-code tag strings completely -->
                       <div class="board-primary-identity-block">
                         <div class="b-title-row">
-                          <h3 class="b-headline-text">{{ com.committee_name }}</h3>
+                          <h3 class="b-headline-text">{{ com.committeeName }}</h3>
                         </div>
                         <div class="b-geo-strip">
                           <mat-icon>place</mat-icon> <span>{{ com.address || 'Global Region' }}</span>
                           <span class="b-dot-spacer"></span>
-                          <mat-icon>calendar_today</mat-icon> <span>Established Since {{ com.establish_year }}</span>
+                          <mat-icon>calendar_today</mat-icon> <span>Established Since {{ com.establishYear }}</span>
                         </div>
                       </div>
                       
@@ -176,11 +176,11 @@
                       <div class="teaser-sub-column-box">
                         <div class="teaser-sub-header">
                           <mat-icon class="icon-adm">shield_person</mat-icon>
-                          <span class="teaser-title">Council Admins ({{ com.admins_count }})</span>
-                          <button type="button" class="teaser-view-all-link text-red" (click)="openAllAdminsDialog(com.committee_id, com.committee_name)">View All</button>
+                          <span class="teaser-title">Council Admins ({{ com.adminsCount }})</span>
+                          <button type="button" class="teaser-view-all-link text-red" (click)="openAllAdminsDialog(com.committeeId, com.committeeName)">View All</button>
                         </div>
                         <div class="teaser-profiles-flat-list">
-                          @for (adm of com.admins_brief; track adm.user_id) {
+                          @for (adm of com.adminsBrief; track adm.userId) {
                             <div class="teaser-profile-inline-row">
                               <div class="t-mini-avatar">
                                 @if (adm.photo) { <img [src]="adm.photo" alt="avatar"> }
@@ -198,11 +198,11 @@
                       <div class="teaser-sub-column-box">
                         <div class="teaser-sub-header">
                           <mat-icon class="icon-mem">diversity_3</mat-icon>
-                          <span class="teaser-title">Enrolled Members ({{ com.members_count }})</span>
-                          <button type="button" class="teaser-view-all-link text-blue" (click)="openAllMembersDialog(com.committee_id, com.committee_name)">View All</button>
+                          <span class="teaser-title">Enrolled Members ({{ com.membersCount }})</span>
+                          <button type="button" class="teaser-view-all-link text-blue" (click)="openAllMembersDialog(com.committeeId, com.committeeName)">View All</button>
                         </div>
                         <div class="teaser-profiles-flat-list">
-                          @for (mem of com.members_brief; track mem.user_id) {
+                          @for (mem of com.membersBrief; track mem.userId) {
                             <div class="teaser-profile-inline-row">
                               <div class="t-mini-avatar">
                                 @if (mem.photo) { <img [src]="mem.photo" alt="avatar"> }

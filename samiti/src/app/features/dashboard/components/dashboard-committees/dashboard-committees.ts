@@ -22,11 +22,11 @@ export class DashboardCommittees implements OnInit {
   readonly allMyCommittees = signal<MyCommitteeDetailedItem[]>([]);
 
   readonly adminCommittees = computed(() => {
-    return this.allMyCommittees().filter(c => c.is_admin_privilege === true);
+    return this.allMyCommittees().filter(c => c.isAdminPrivilege === true);
   });
 
   readonly memberCommittees = computed(() => {
-    return this.allMyCommittees().filter(c => c.is_admin_privilege === false);
+    return this.allMyCommittees().filter(c => c.isAdminPrivilege === false);
   });
 
   ngOnInit() {

@@ -36,9 +36,9 @@ export class DashboardCommitteesService {
         variables: {
           input: {
             committeeName: payload.name,
-            establishYear: payload.establish_year,
+            establishYear: payload.establishYear ?? payload.establish_year,
             address: payload.address,
-            contactNumbers: payload.contact_numbers,
+            contactNumbers: payload.contactNumbers ?? payload.contact_numbers,
             description: payload.description,
             latitude: payload.latitude,
             longitude: payload.longitude,
