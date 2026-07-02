@@ -54,7 +54,7 @@
           <div class="info-icon-wrapper color-name"><mat-icon>person</mat-icon></div>
           <div class="info-content text-frame-block">
             <span class="info-label">Name</span>
-            <span class="info-value text-emphasis-bold">{{ (name | textFormat:'title') || 'Not set' }}</span>
+            <span class="info-value text-emphasis-bold">{{ (name | textFormatPipe:'title') || 'Not set' }}</span>
           </div>
         </div>
 
@@ -86,7 +86,7 @@
           <div class="info-icon-wrapper color-gender"><mat-icon>wc</mat-icon></div>
           <div class="info-content text-frame-block">
             <span class="info-label">Gender Demographics</span>
-            <span class="info-value text-emphasis-bold">{{ (gender | textFormat:'title') || 'Not set' }}</span>
+            <span class="info-value text-emphasis-bold">{{ (gender | textFormatPipe:'title') || 'Not set' }}</span>
           </div>
         </div>
         

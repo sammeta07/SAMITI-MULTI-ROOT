@@ -14,8 +14,8 @@ import { MatProgressSpinner } from '@angular/material/progress-spinner';
 import { MatToolbar } from '@angular/material/toolbar';
 import { ImageAssetService } from '../../../core/services/image-asset.service';
 import { ImageCropperDialogComponent } from '../../../shared/components/image-cropper-dialog/image-cropper-dialog.component';
-import { TextFormatPipe } from '../../../shared/pipe/text-format.pipe';
-import { TextFormatService } from '../../../shared/services/text-format.service';
+import { TextFormatPipe } from '../../../shared/pipe/text-format-pipe.pipe';
+import { TextFormatService } from '../../../shared/services/text-format-service.service';
 
 @Component({
   selector: 'app-account-dialog',

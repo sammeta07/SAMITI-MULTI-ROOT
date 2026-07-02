@@ -4,7 +4,7 @@ import { Observable } from 'rxjs';
 import { map } from 'rxjs/operators';
 import { environment } from '../../../../environments/environment';
 import { AccountUpdatePayload, AccountUpdateResponse } from './account.models';
-import { TextFormatService } from '../../../shared/services/text-format.service';
+import { TextFormatService } from '../../../shared/services/text-format-service.service';
 
 interface GraphQLErrorPayload {
   message: string;

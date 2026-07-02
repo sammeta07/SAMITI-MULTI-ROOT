@@ -4,7 +4,7 @@ import { Observable } from 'rxjs';
 import { map } from 'rxjs/operators';
 import { environment } from '../../../../environments/environment';
 import { LoginPayload, LoginResponse } from './login.models';
-import { TextFormatService } from '../../../shared/services/text-format.service';
+import { TextFormatService } from '../../../shared/services/text-format-service.service';
 
 @Injectable({
   providedIn: 'root',

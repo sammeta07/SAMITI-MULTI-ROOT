@@ -1,10 +1,10 @@
 import { Pipe, PipeTransform } from '@angular/core';
-import { TextFormatService } from '../services/text-format.service';
+import { TextFormatService } from '../services/text-format-service.service';
 
 export type TextFormatMode = 'title' | 'lower' | 'email' | 'mobile' | 'gender';
 
 @Pipe({
-  name: 'textFormat',
+  name: 'textFormatPipe',
   standalone: true,
   pure: true
 })

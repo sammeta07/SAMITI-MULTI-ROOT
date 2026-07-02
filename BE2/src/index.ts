@@ -72,14 +72,27 @@ fastify.register(mercurius, {
 
 // Start server listening across network bounds
 const start = async () => {
-  try {
-    const port = Number(process.env.PORT) || 3000;
-    await fastify.listen({ port, host: '0.0.0.0' });
-    console.log(`🚀 Pure GraphQL Server running at http://localhost:${port}/graphql`);
-    console.log(`📊 GraphiQL Playground active at http://localhost:${port}/graphiql`);
-  } catch (err) {
-    fastify.log.error(err);
-    process.exit(1);
+  const defaultPort = Number(process.env.PORT) || 3000;
+  const maxAttempts = 20;
+
+  for (let attempt = 0; attempt < maxAttempts; attempt += 1) {
+    const port = defaultPort + attempt;
+
+    try {
+      await fastify.listen({ port, host: '0.0.0.0' });
+      if (port !== defaultPort) {
+        fastify.log.warn(`Port ${defaultPort} was busy, server started on ${port} instead.`);
+      }
+      console.log(`🚀 Pure GraphQL Server running at http://localhost:${port}/graphql`);
+      console.log(`📊 GraphiQL Playground active at http://localhost:${port}/graphiql`);
+      return;
+    } catch (err) {
+      const listenError = err as NodeJS.ErrnoException;
+      if (listenError.code !== 'EADDRINUSE' || attempt === maxAttempts - 1) {
+        fastify.log.error(err);
+        process.exit(1);
+      }
+    }
   }
 };
 
