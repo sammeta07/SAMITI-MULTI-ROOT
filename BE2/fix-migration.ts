@@ -1,16 +1,12 @@
 import mysql from 'mysql2/promise';
 import dotenv from 'dotenv';
+import { getMysqlConfig } from './src/config/mysql';
 
 dotenv.config();
 
 async function fixMigration() {
   try {
-    const connection = await mysql.createConnection({
-      host: process.env.MYSQL_HOST || 'localhost',
-      user: process.env.MYSQL_USER || 'root',
-      password: process.env.MYSQL_PASSWORD || 'root',
-      database: process.env.MYSQL_DATABASE || 'samiti'
-    });
+    const connection = await mysql.createConnection(getMysqlConfig());
 
     console.log('✅ Connected to MySQL');
 

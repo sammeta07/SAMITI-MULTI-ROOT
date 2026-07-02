@@ -1,12 +1,7 @@
 import mysql from 'mysql2/promise';
+import { getMysqlConfig } from './config/mysql';
 
-const dbConfig = {
-  host: 'localhost',
-  port: 3306,
-  user: 'root',
-  password: 'root',
-  database: 'samiti'
-};
+const dbConfig = getMysqlConfig();
 
 async function getSchemaInfo() {
   const connection = await mysql.createConnection(dbConfig);

@@ -2,6 +2,7 @@ import mysql from 'mysql2/promise';
 import fs from 'fs';
 import path from 'path';
 import dotenv from 'dotenv';
+import { getMysqlConfig } from './src/config/mysql';
 
 // Load environment variables
 dotenv.config();
@@ -39,14 +40,7 @@ async function executeSqlStatementsFromFile(connection: mysql.Connection, migrat
 
 async function runMigration() {
   try {
-    const connection = await mysql.createConnection({
-      host: process.env.MYSQL_HOST || 'localhost',
-      port: Number(process.env.MYSQL_PORT) || 3306,
-      user: process.env.MYSQL_USER || 'root',
-      password: process.env.MYSQL_PASSWORD || 'root',
-      database: process.env.MYSQL_DATABASE || 'samiti',
-      ssl: process.env.MYSQL_SSL === 'true' ? { rejectUnauthorized: false } : undefined
-    });
+    const connection = await mysql.createConnection(getMysqlConfig());
 
     console.log('✅ Connected to MySQL database');
 

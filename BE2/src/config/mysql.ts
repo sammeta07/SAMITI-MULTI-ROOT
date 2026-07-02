@@ -1,3 +1,12 @@
+export interface MysqlConfig {
+  host: string;
+  port: number;
+  user: string;
+  password: string;
+  database: string;
+  ssl?: { rejectUnauthorized: boolean };
+}
+
 function requireEnv(name: string): string {
   const value = process.env[name]?.trim();
   if (!value) {
@@ -9,7 +18,7 @@ function requireEnv(name: string): string {
   return value;
 }
 
-export function getDbConfig() {
+export function getMysqlConfig(): MysqlConfig {
   return {
     host: requireEnv('MYSQL_HOST'),
     port: Number(process.env.MYSQL_PORT) || 3306,
@@ -18,15 +27,4 @@ export function getDbConfig() {
     database: requireEnv('MYSQL_DATABASE'),
     ssl: process.env.MYSQL_SSL === 'true' ? { rejectUnauthorized: false } : undefined
   };
-}
-
-export const dbConfig = getDbConfig();
-
-export interface DbOptions {
-  host: string;
-  port: number;
-  user: string;
-  password: string;
-  database: string;
-  ssl?: object;
 }
