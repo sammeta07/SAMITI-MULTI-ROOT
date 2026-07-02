@@ -1,7 +1,24 @@
 import mysql from 'mysql2/promise';
-import { getMysqlConfig } from './config/mysql';
 
-const dbConfig = getMysqlConfig();
+function requireEnv(name: string): string {
+  const value = process.env[name]?.trim();
+  if (!value) {
+    throw new Error(
+      `Missing required environment variable ${name}. Copy .env.example to .env and set your MySQL credentials before running this script.`
+    );
+  }
+
+  return value;
+}
+
+const dbConfig = {
+  host: requireEnv('MYSQL_HOST'),
+  port: Number(process.env.MYSQL_PORT) || 3306,
+  user: process.env.MYSQL_USER?.trim() || 'root',
+  password: process.env.MYSQL_PASSWORD || '',
+  database: requireEnv('MYSQL_DATABASE'),
+  ssl: process.env.MYSQL_SSL === 'true' ? { rejectUnauthorized: false } : undefined
+};
 
 async function getSchemaInfo() {
   const connection = await mysql.createConnection(dbConfig);
