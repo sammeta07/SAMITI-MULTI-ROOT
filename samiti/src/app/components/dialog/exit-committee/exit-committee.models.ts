@@ -14,7 +14,6 @@ export interface ExitCommitteePayload {
 }
 
 export interface ExitCommitteeResponse {
-  statusCode: number;
-  message: string;
-  data?: any;
+  committeeId: number;
+  exitedAt: string;
 }

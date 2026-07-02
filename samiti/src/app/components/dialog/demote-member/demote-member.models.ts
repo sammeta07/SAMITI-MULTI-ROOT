@@ -17,7 +17,8 @@ export interface DemoteMemberPayload {
 }
 
 export interface DemoteMemberResponse {
-  statusCode: number;
-  message: string;
-  data?: any;
+  userId: number;
+  committeeId: number;
+  role: string;
+  updatedAt: string;
 }

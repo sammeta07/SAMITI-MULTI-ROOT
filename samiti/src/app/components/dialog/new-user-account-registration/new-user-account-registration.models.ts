@@ -13,19 +13,15 @@ export interface NewUserAccountRegistrationPayload {
 }
 
 export interface NewUserAccountRegistrationResponse {
-  statusCode: number;
-  message: string;
-  data: {
-    id: number;
-    email: string;
-    name: string;
-    mobile: string;
-    dateOfBirth: string;
-    gender: string;
-    baseRole: string | null;
-    profilePhoto: string | null;
-    fcmToken: string | null;
-    createdAt: string | null;
-    updatedAt: string | null;
-  };
+  id: number;
+  email: string;
+  name: string;
+  mobile: string;
+  dateOfBirth: string;
+  gender: string;
+  baseRole: string | null;
+  profilePhoto: string | null;
+  fcmToken: string | null;
+  createdAt: string | null;
+  updatedAt: string | null;
 }

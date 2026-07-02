@@ -60,13 +60,11 @@ export class PromoteMemberDialogComponent {
       .subscribe({
         next: (response) => {
           this.isLoading.set(false);
-          if (response && response.statusCode === 200) {
+          if (response) {
             this.notifier.success(
-              response.message || `Member promoted to ${this.getRoleLabel(this.selectedRole())}!`
+              `Member promoted to ${this.getRoleLabel(this.selectedRole())}!`
             );
             this.dialogRef.close({ confirmed: true });
-          } else {
-            this.notifier.error(response.message || 'Failed to promote member.');
           }
         },
         error: (err) => {

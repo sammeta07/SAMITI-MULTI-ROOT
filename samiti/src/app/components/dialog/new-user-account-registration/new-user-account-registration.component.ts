@@ -298,7 +298,7 @@ export class NewUserAccountRegistrationDialogComponent {
       body.profilePhoto = await this.uploadSelectedProfilePhoto();
 
       const result: NewUserAccountRegistrationResponse = await firstValueFrom(this.registerService.register(body));
-      const registeredUserName = this.normalizeText(result.data?.name || body.name);
+      const registeredUserName = this.normalizeText(result.name || body.name);
       this.notifier.success(
         `Hi, ${registeredUserName}! You have registered successfully. Please log in to continue.`,
         'Registration Complete'

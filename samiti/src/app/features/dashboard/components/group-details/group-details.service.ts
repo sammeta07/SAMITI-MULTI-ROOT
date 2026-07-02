@@ -59,9 +59,7 @@ export class GroupDetailsService {
   public submitCommitteeMembershipRequest(committeeId: number, requestRole: CommitteeMembershipRequestRole): Observable<SubmitCommitteeMembershipRequestPayload> {
     const query = `mutation SubmitCommitteeMembershipRequest($committeeId: Int!, $requestRole: CommitteeMembershipRequestRole!) {
       submitCommitteeMembershipRequest(committeeId: $committeeId, requestRole: $requestRole) {
-        statusCode
-        status
-        message
+        id
       }
     }`;
 
@@ -94,9 +92,7 @@ export class GroupDetailsService {
   public cancelCommitteeMembershipRequest(committeeId: number): Observable<CancelCommitteeMembershipRequestPayload> {
     const query = `mutation CancelCommitteeMembershipRequest($committeeId: Int!) {
       cancelCommitteeMembershipRequest(committeeId: $committeeId) {
-        statusCode
-        status
-        message
+        id
       }
     }`;
 

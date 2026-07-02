@@ -32,12 +32,7 @@ interface UploadedImageAssetMetadata {
   byteSize: number;
 }
 
-interface ImageAssetBatchUploadPayload {
-  statusCode: number;
-  status: string;
-  message: string;
-  data: UploadedImageAssetMetadata[];
-}
+type ImageAssetBatchUploadPayload = UploadedImageAssetMetadata[];
 
 interface GraphQLResponseEnvelope<TData> {
   data?: TData;
@@ -62,17 +57,12 @@ export class ImageAssetService {
 
   private readonly uploadImageAssetBatchMutationDocument = `mutation UploadImageAssetBatch($input: ImageAssetBatchUploadInput!) {
     uploadImageAssetBatch(input: $input) {
-      statusCode
-      status
-      message
-      data {
-        storageRelativePath
-        publicRelativeUrl
-        publicAbsoluteUrl
-        width
-        height
-        byteSize
-      }
+      storageRelativePath
+      publicRelativeUrl
+      publicAbsoluteUrl
+      width
+      height
+      byteSize
     }
   }`;
 
@@ -123,9 +113,7 @@ export class ImageAssetService {
   }
 
   private executeImageBatchUploadMutation(input: ImageAssetBatchUploadInput): Observable<UploadedImageAssetMetadata[]> {
-    return this.http.post<GraphQLResponseEnvelope<{ uploadImageAssetBatch: ImageAssetBatchUploadPayload }>>(
-      this.graphqlUrl,
-      {
+    return this.http.post<GraphQLResponseEnvelope<{ uploadImageAssetBatch: ImageAssetBatchUploadPayload }>>(this.graphqlUrl, {
         query: this.uploadImageAssetBatchMutationDocument,
         variables: { input }
       },
@@ -137,11 +125,11 @@ export class ImageAssetService {
         }
 
         const uploadPayload = responseEnvelope.data?.uploadImageAssetBatch;
-        if (!uploadPayload || uploadPayload.statusCode !== 200) {
-          throw new Error(uploadPayload?.message || 'Image upload service returned an invalid response.');
+        if (!uploadPayload || !Array.isArray(uploadPayload)) {
+          throw new Error('Image upload service returned an invalid response.');
         }
 
-        return uploadPayload.data;
+        return uploadPayload;
       })
     );
   }

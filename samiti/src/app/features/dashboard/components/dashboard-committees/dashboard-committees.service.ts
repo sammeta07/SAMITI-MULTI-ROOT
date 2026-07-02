@@ -15,22 +15,17 @@ export class DashboardCommitteesService {
   public createCommittee(payload: any): Observable<any> {
     const query = `mutation CreateCommittee($input: CreateCommitteeInput!) {
       createCommittee(input: $input) {
-        statusCode
-        status
-        message
-        data {
-          id
-          committeeName
-          since
-          area
-          contactNumbers
-          description
-          latitude
-          longitude
-          logo
-          createdBy
-          createdAt
-        }
+        id
+        committeeName
+        since
+        area
+        contactNumbers
+        description
+        latitude
+        longitude
+        logo
+        createdBy
+        createdAt
       }
     }`;
 

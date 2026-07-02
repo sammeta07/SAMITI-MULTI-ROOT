@@ -4,7 +4,7 @@ import { MatDialogModule, MatDialogRef, MAT_DIALOG_DATA } from '@angular/materia
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
-import { ExitCommitteeDialogData, ExitCommitteeDialogResponse } from './exit-committee.models';
+import { ExitCommitteeDialogData, ExitCommitteeDialogResponse, ExitCommitteeResponse } from './exit-committee.models';
 import { ExitCommitteeDialogService } from './exit-committee.service';
 import { NotifierService } from '../../../shared/notifier/notifier.service';
 
@@ -36,14 +36,10 @@ export class ExitCommitteeDialogComponent {
   onConfirm(): void {
     this.isLoading.set(true);
     this.exitCommitteeService.exitCommittee(this.data.committeeId).subscribe({
-      next: (response) => {
+      next: (response: ExitCommitteeResponse) => {
         this.isLoading.set(false);
-        if (response && response.statusCode === 200) {
-          this.notifier.success(response.message || 'Successfully left the committee!');
-          this.dialogRef.close({ confirmed: true });
-        } else {
-          this.notifier.error(response.message || 'Failed to exit committee.');
-        }
+        this.notifier.success('Successfully left the committee!');
+        this.dialogRef.close({ confirmed: true });
       },
       error: (err) => {
         this.isLoading.set(false);

@@ -36,16 +36,8 @@ export interface CommitteeDetailsPayload {
   members: CommitteeRosterMember[];
 }
 
-export interface SubmitCommitteeMembershipRequestPayload {
-  statusCode: number;
-  status: string;
-  message: string;
-}
+export type SubmitCommitteeMembershipRequestPayload = Record<string, any>;
 
-export interface CancelCommitteeMembershipRequestPayload {
-  statusCode: number;
-  status: string;
-  message: string;
-}
+export type CancelCommitteeMembershipRequestPayload = Record<string, any>;
 
 export type CommitteeMembershipRequestRole = 'COMMITTEE_MEMBER' | 'COMMITTEE_ADMIN';

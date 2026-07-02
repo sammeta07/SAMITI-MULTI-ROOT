@@ -1,11 +1,6 @@
 export type ItemCategory = 'committee' | 'event' | 'program';
 
-export interface CancelRequestApiResponse {
-  error?: string;
-  message: string;
-  status: string;
-  statusCode: number;
-}
+export type CancelRequestApiResponse = Record<string, any>;
 
 export interface CommitteeListRequestBackend {
   distanceKm: number;
@@ -63,22 +58,12 @@ export interface CommitteeAuthItem extends CommitteeGuestItem {
 // Union used in component
 export type CommitteesList = CommitteeGuestItem | CommitteeAuthItem;
 
-export interface CommitteeListResponse {
-  data: CommitteesList[];
-  message: string;
-  status: string;
-  statusCode: number;
-}
+export type CommitteeListResponse = CommitteesList[];
 
 // Keep for backward compat — same as CommitteeListResponse
 export type CommitteeListResponseGuestUser = CommitteeListResponse;
 
-export interface JoinCommitteeApiResponse {
-  error?: string;
-  message: string;
-  status: string;
-  statusCode: number;
-}
+export type JoinCommitteeApiResponse = Record<string, any>;
 
 export type CommitteeMembershipRequestRole = 'COMMITTEE_MEMBER' | 'COMMITTEE_ADMIN';
 
@@ -93,9 +78,6 @@ export interface JoinCommitteeRequestBody {
 }
 
 export interface ToggleCommitteeFavouriteResponse {
-  statusCode: number;
-  status: string;
-  message: string;
   committeeId: number;
   isFavourite: number;
 }

@@ -201,16 +201,11 @@ export class GroupDetailsComponent implements OnInit {
 
         this.groupDetailsService.submitCommitteeMembershipRequest(committeeId, 'COMMITTEE_ADMIN').subscribe({
         next: (response: SubmitCommitteeMembershipRequestPayload) => {
-          if (response.statusCode !== 200) {
-            this.notifier.error(response.message || 'Failed to submit admin role request');
-            return;
-          }
-
           this.loggedInUserAdminRequestStatus.set('PENDING');
           this.loggedInUserAdminStatusActionBy.set(null);
           this.loggedInUserAdminStatusActionAt.set(null);
-          this.notifier.success(response.message || 'Admin role request submitted successfully');
-            this.fetchCommitteeDetailsPayload(String(committeeId));
+          this.notifier.success('Admin role request submitted successfully');
+          this.fetchCommitteeDetailsPayload(String(committeeId));
         },
         error: (error: unknown) => {
           const err = error as { message?: string; error?: { message?: string } };
@@ -255,16 +250,11 @@ export class GroupDetailsComponent implements OnInit {
 
         this.groupDetailsService.cancelCommitteeMembershipRequest(committeeId).subscribe({
         next: (response: CancelCommitteeMembershipRequestPayload) => {
-          if (response.statusCode !== 200) {
-            this.notifier.error(response.message || 'Failed to cancel admin role request');
-            return;
-          }
-
           this.loggedInUserAdminRequestStatus.set(null);
           this.loggedInUserAdminStatusActionBy.set(null);
           this.loggedInUserAdminStatusActionAt.set(null);
-          this.notifier.success(response.message || 'Admin role request cancelled successfully');
-            this.fetchCommitteeDetailsPayload(String(committeeId));
+          this.notifier.success('Admin role request cancelled successfully');
+          this.fetchCommitteeDetailsPayload(String(committeeId));
         },
         error: (error: unknown) => {
           const err = error as { message?: string; error?: { message?: string } };

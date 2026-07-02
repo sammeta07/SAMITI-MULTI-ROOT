@@ -15,8 +15,8 @@ interface GraphQLResponseEnvelope<TData> {
 }
 
 interface CommitteeListGraphQLPayload {
-  committeesListGuestUser: CommitteeListResponseGuestUser['data'];
-  committeesListAuthUser: CommitteeListResponseGuestUser['data'];
+  committeesListGuestUser: CommitteeListResponseGuestUser;
+  committeesListAuthUser: CommitteeListResponseGuestUser;
 }
 
 

@@ -15,7 +15,7 @@ export interface RemoveMemberPayload {
 }
 
 export interface RemoveMemberResponse {
-  statusCode: number;
-  message: string;
-  data?: any;
+  userId: number;
+  committeeId: number;
+  removedAt: string;
 }

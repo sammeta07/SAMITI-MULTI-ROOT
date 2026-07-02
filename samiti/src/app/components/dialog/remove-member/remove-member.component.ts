@@ -4,7 +4,7 @@ import { MatDialogModule, MatDialogRef, MAT_DIALOG_DATA } from '@angular/materia
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
-import { RemoveMemberDialogData, RemoveMemberDialogResponse } from './remove-member.models';
+import { RemoveMemberDialogData, RemoveMemberDialogResponse, RemoveMemberResponse } from './remove-member.models';
 import { RemoveMemberDialogService } from './remove-member.service';
 import { NotifierService } from '../../../shared/notifier/notifier.service';
 
@@ -36,14 +36,10 @@ export class RemoveMemberDialogComponent {
   onConfirm(): void {
     this.isLoading.set(true);
     this.removeMemberService.removeMember(this.data.userId, this.data.committeeId).subscribe({
-      next: (response) => {
+      next: (response: RemoveMemberResponse) => {
         this.isLoading.set(false);
-        if (response && response.statusCode === 200) {
-          this.notifier.success(response.message || 'Member removed successfully!');
-          this.dialogRef.close({ confirmed: true });
-        } else {
-          this.notifier.error(response.message || 'Failed to remove member.');
-        }
+        this.notifier.success('Member removed successfully!');
+        this.dialogRef.close({ confirmed: true });
       },
       error: (err) => {
         this.isLoading.set(false);

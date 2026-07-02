@@ -17,22 +17,19 @@ export interface PromoteMemberPayload {
 }
 
 export interface PromoteMemberResponse {
-  statusCode: number;
-  message: string;
-  data?: any;
+  userId: number;
+  committeeId: number;
+  role: string;
+  updatedAt: string;
 }
 
 export interface MemberDataResponse {
-  statusCode: number;
-  message: string;
-  data?: {
-    user_id: string;
-    name: string;
-    email: string;
-    mobile: string;
-    role: string;
-    photo?: string;
-    date_of_birth?: string;
-    gender?: string;
-  };
+  user_id: string;
+  name: string;
+  email: string;
+  mobile: string;
+  role: string;
+  photo?: string;
+  date_of_birth?: string;
+  gender?: string;
 }

@@ -16,9 +16,7 @@ interface GraphQLResponseEnvelope<TData> {
 }
 
 interface RegistrationValidationResponse {
-  statusCode: number;
   isValid: boolean;
-  message: string;
 }
 
 @Injectable({
@@ -35,9 +33,7 @@ export class NewUserAccountRegistrationService {
   validateRegistration(body: NewUserAccountRegistrationPayload): Observable<RegistrationValidationResponse> {
     const query = `mutation ValidateNewUserAccountRegistration($input: NewUserAccountRegistrationInput!) {
       validateNewUserAccountRegistration(input: $input) {
-        statusCode
         isValid
-        message
       }
     }`;
 
@@ -64,7 +60,7 @@ export class NewUserAccountRegistrationService {
 
         const payload = res.data?.validateNewUserAccountRegistration;
         if (!payload || !payload.isValid) {
-          throw new Error(payload?.message || 'Registration validation failed.');
+          throw new Error('Registration validation failed.');
         }
 
         return payload;
@@ -75,21 +71,17 @@ export class NewUserAccountRegistrationService {
   register(body: NewUserAccountRegistrationPayload): Observable<NewUserAccountRegistrationResponse> {
     const query = `mutation SubmitNewUserAccountRegistration($input: NewUserAccountRegistrationInput!) {
       submitNewUserAccountRegistration(input: $input) {
-        statusCode
-        message
-        data {
-          id
-          name
-          email
-          mobile
-          dateOfBirth
-          gender
-          baseRole
-          profilePhoto
-          fcmToken
-          createdAt
-          updatedAt
-        }
+        id
+        name
+        email
+        mobile
+        dateOfBirth
+        gender
+        baseRole
+        profilePhoto
+        fcmToken
+        createdAt
+        updatedAt
       }
     }`;
 

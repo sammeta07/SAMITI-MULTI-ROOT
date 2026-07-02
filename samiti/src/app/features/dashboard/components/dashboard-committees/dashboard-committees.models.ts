@@ -18,12 +18,7 @@ export interface Committee {
 // ============================================================================
 // 2. User Committees Response - API response for user's joined committees
 // ============================================================================
-export interface UserCommitteesResponse {
-  statusCode: number;
-  status: 'success' | 'error';
-  message: string;
-  data: Committee[];
-}
+export type UserCommitteesResponse = Committee[];
 
 // ============================================================================
 // 3. Committee Action Payload - For edit/delete operations
@@ -36,12 +31,7 @@ export interface CommitteeActionPayload {
 // ============================================================================
 // 4. Committee Action Response - API response for committee actions
 // ============================================================================
-export interface CommitteeActionResponse {
-  statusCode: number;
-  status: 'success' | 'error';
-  message: string;
-  data?: any;
-}
+export type CommitteeActionResponse = Record<string, any>;
 
 // 🚀 Frontend Data Stream Structure Type Definition matching Backend JSON Packets
 export interface MyCommitteeItem {
@@ -55,12 +45,7 @@ export interface MyCommitteeItem {
 }
 
 // Global API Standard Base Wrapper format mapping
-export interface MyCommitteesApiResponse {
-  statusCode: number;
-  status: string;
-  message: string;
-  data: MyCommitteeItem[];
-}
+export type MyCommitteesApiResponse = MyCommitteeItem[];
 
 export interface BriefUserMeta {
   user_id: number;
@@ -86,9 +71,4 @@ export interface MyCommitteeDetailedItem {
   members_brief: BriefUserMeta[];
 }
 
-export interface MyCommitteesDetailedApiResponse {
-  statusCode: number;
-  status: string;
-  message: string;
-  data: MyCommitteeDetailedItem[];
-}
+export type MyCommitteesDetailedApiResponse = MyCommitteeDetailedItem[];

@@ -59,18 +59,16 @@ export class DemoteMemberDialogComponent {
       .subscribe({
         next: (response) => {
           this.isLoading.set(false);
-          if (response && response.statusCode === 200) {
+          if (response) {
             this.notifier.success(
-              response.message || `Member demoted to ${this.getRoleLabel(this.selectedRole())}!`
+              `Member demoted to ${this.getRoleLabel(this.selectedRole())}!`
             );
             this.dialogRef.close({ confirmed: true });
-          } else {
-            this.notifier.error(response.message || 'Failed to demote member.');
           }
         },
         error: (err) => {
           this.isLoading.set(false);
-          this.notifier.error(err?.error?.message || 'Failed to demote member. Please try again.');
+          this.notifier.error(err?.message || 'Failed to demote member. Please try again.');
         },
       });
   }
