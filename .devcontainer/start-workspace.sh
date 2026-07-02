@@ -4,13 +4,18 @@ set -euo pipefail
 LOG_DIR="/tmp/samiti-workspace-logs"
 mkdir -p "$LOG_DIR"
 
+port_is_listening() {
+  local port="$1"
+  ss -ltn 2>/dev/null | grep -q ":$port "
+}
+
 start_if_missing() {
   local port="$1"
   local workdir="$2"
   local command="$3"
   local logfile="$4"
 
-  if lsof -iTCP:"$port" -sTCP:LISTEN >/dev/null 2>&1; then
+  if port_is_listening "$port"; then
     echo "Port $port already in use, skipping $command"
     return
   fi
