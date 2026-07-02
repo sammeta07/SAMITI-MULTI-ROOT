@@ -199,7 +199,7 @@ export class GroupDetailsComponent implements OnInit {
 
       this.isSubmittingAdminRoleRequest.set(true);
 
-        this.groupDetailsService.submitCommitteeMembershipRequest(committeeId, 'COMITTEE_ADMIN').subscribe({
+        this.groupDetailsService.submitCommitteeMembershipRequest(committeeId, 'COMMITTEE_ADMIN').subscribe({
         next: (response: SubmitCommitteeMembershipRequestPayload) => {
           if (response.statusCode !== 200) {
             this.notifier.error(response.message || 'Failed to submit admin role request');

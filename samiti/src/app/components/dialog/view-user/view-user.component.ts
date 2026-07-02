@@ -36,8 +36,8 @@ export class ViewUserDialogComponent implements OnInit {
 
   public readonly isLoading = signal<boolean>(false);
   
-  // 🚀 FIXED: Renamed to userData to bind cleanly and perfectly with your high-density HTML template selectors
-  public readonly userData = signal<MemberDetailsResponse['data'] | null>(null);
+  // 🚀 FIXED: userData now holds the complete MemberDetailsResponse (camelCase GraphQL data)
+  public readonly userData = signal<MemberDetailsResponse | null>(null);
 
   // Search filter signals for the template query framework overlay controls
   public readonly searchQuery = signal<string>('');
@@ -48,9 +48,9 @@ export class ViewUserDialogComponent implements OnInit {
     const data = this.userData();
     if (!data) return [];
     const queryStr = this.searchQuery().toLowerCase().trim();
-    const members = data.kpi_metrics?.tasks_summary?.listing || [];
+    const members = data.kpiMetrics?.tasksSummary?.listing || [];
     if (!queryStr) return members;
-    return members.filter(m => m.task_title?.toLowerCase().includes(queryStr));
+    return members.filter(m => m.taskTitle?.toLowerCase().includes(queryStr));
   });
 
   ngOnInit(): void {
@@ -62,9 +62,9 @@ export class ViewUserDialogComponent implements OnInit {
     
     this.viewUserService.getMemberDetails(this.data.userId, this.data.committeeId).subscribe({
       next: (response: MemberDetailsResponse) => {
-        if (response && response.statusCode === 200 && response.data) {
+        if (response) {
           // Injects the multi-relational data object cleanly matching model attributes
-          this.userData.set(response.data);
+          this.userData.set(response);
         }
         this.isLoading.set(false);
       },

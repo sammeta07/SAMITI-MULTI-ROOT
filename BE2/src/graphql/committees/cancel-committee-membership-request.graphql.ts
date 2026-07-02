@@ -2,9 +2,6 @@ import { execute, query } from '../../config/db';
 
 export const cancelCommitteeMembershipRequestTypes = `
   type CancelCommitteeMembershipRequestPayload {
-    statusCode: Int!
-    status: String!
-    message: String!
     committeeId: Int!
     cancelledByUserId: Int!
     cancelledAtDateTime: String!
@@ -69,9 +66,6 @@ export const cancelCommitteeMembershipRequestResolvers = {
 
       if (existingMembershipRows.length === 0) {
         return {
-          statusCode: 200,
-          status: 'success',
-          message: 'No membership request found for this committee',
           committeeId,
           cancelledByUserId: loggedInUserId,
           cancelledAtDateTime: new Date().toISOString(),
@@ -86,9 +80,6 @@ export const cancelCommitteeMembershipRequestResolvers = {
 
       if (!hasPendingAdminRoleRequest && !hasPendingMembershipRequest) {
         return {
-          statusCode: 200,
-          status: 'success',
-          message: 'Only pending requests can be cancelled',
           committeeId,
           cancelledByUserId: loggedInUserId,
           cancelledAtDateTime: new Date().toISOString(),
@@ -126,9 +117,6 @@ export const cancelCommitteeMembershipRequestResolvers = {
       }
 
       return {
-        statusCode: 200,
-        status: 'success',
-        message: hasPendingAdminRoleRequest ? 'Admin role request cancelled successfully' : 'Join request cancelled successfully',
         committeeId,
         cancelledByUserId: loggedInUserId,
         cancelledAtDateTime: new Date().toISOString(),

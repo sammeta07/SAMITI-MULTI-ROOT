@@ -7,78 +7,66 @@ export const committeeMembershipRequestsTypes = `
   }
 
   enum CommitteeMembershipRequestType {
-    COMITTEE_MEMBER
-    COMITTEE_ADMIN
+    COMMITTEE_MEMBER
+    COMMITTEE_ADMIN
   }
 
   type CommitteeMembershipRequesterUserDetails {
-    user_id: Int!
+    userId: Int!
     name: String!
     email: String!
     mobile: String
-    date_of_birth: String
+    dateOfBirth: String
     gender: String
     photo: String
   }
 
   type ReceivedCommitteeMembershipRequestItem {
-    committee_id: Int!
-    committee_name: String!
+    committeeId: Int!
+    committeeName: String!
     area: String
-    request_type: CommitteeMembershipRequestType!
-    request_sent_time: String
-    user_details: CommitteeMembershipRequesterUserDetails!
+    requestType: CommitteeMembershipRequestType!
+    requestSentTime: String
+    userDetails: CommitteeMembershipRequesterUserDetails!
   }
 
   type SentCommitteeMembershipRequestItem {
-    committee_id: Int!
-    committee_name: String!
-    request_type: CommitteeMembershipRequestType!
+    committeeId: Int!
+    committeeName: String!
+    requestType: CommitteeMembershipRequestType!
     area: String
     since: Int
     status: String!
-    request_sent_time: String
-    resolved_by_name: String
-    resolved_by_email: String
-    resolved_by_photo: String
-    resolved_at_time: String
+    requestSentTime: String
+    resolvedByName: String
+    resolvedByEmail: String
+    resolvedByPhoto: String
+    resolvedAtTime: String
   }
 
   type ActionTakenOnCommitteeMembershipRequestItem {
-    committee_id: Int!
-    committee_name: String!
-    request_type: CommitteeMembershipRequestType!
-    request_sent_time: String
-    action_at_time: String
+    committeeId: Int!
+    committeeName: String!
+    requestType: CommitteeMembershipRequestType!
+    requestSentTime: String
+    actionAtTime: String
     status: String!
-    user_details: CommitteeMembershipRequesterUserDetails!
+    userDetails: CommitteeMembershipRequesterUserDetails!
   }
 
   type ReceivedCommitteeMembershipRequestsResponse {
-    statusCode: Int!
-    status: String!
-    message: String!
     data: [ReceivedCommitteeMembershipRequestItem!]!
   }
 
   type SentCommitteeMembershipRequestsResponse {
-    statusCode: Int!
-    status: String!
-    message: String!
     data: [SentCommitteeMembershipRequestItem!]!
   }
 
   type ActionTakenOnCommitteeMembershipRequestsResponse {
-    statusCode: Int!
-    status: String!
-    message: String!
     data: [ActionTakenOnCommitteeMembershipRequestItem!]!
   }
 
   type TakeActionOnCommitteeMembershipRequestResponse {
-    statusCode: Int!
-    status: String!
-    message: String!
     committeeId: Int!
     targetUserId: Int!
     updatedMembershipStatus: String!
@@ -131,8 +119,8 @@ export const committeeMembershipRequestsResolvers = {
             c.committee_name,
             c.area,
             CASE
-              WHEN cm.admin_status = 'PENDING' THEN 'COMITTEE_ADMIN'
-              ELSE 'COMITTEE_MEMBER'
+              WHEN cm.admin_status = 'PENDING' THEN 'COMMITTEE_ADMIN'
+              ELSE 'COMMITTEE_MEMBER'
             END AS request_type,
             DATE_FORMAT(
               CASE
@@ -172,21 +160,18 @@ export const committeeMembershipRequestsResolvers = {
       );
 
       return {
-        statusCode: 200,
-        status: 'success',
-        message: 'Received committee membership requests fetched successfully',
         data: rows.map((row) => ({
-          committee_id: Number(row.committee_id),
-          committee_name: row.committee_name,
+          committeeId: Number(row.committee_id),
+          committeeName: row.committee_name,
           area: row.area,
-          request_type: row.request_type === 'COMITTEE_ADMIN' ? 'COMITTEE_ADMIN' : 'COMITTEE_MEMBER',
-          request_sent_time: row.request_sent_time,
-          user_details: {
-            user_id: Number(row.user_id),
+          requestType: row.request_type === 'COMMITTEE_ADMIN' ? 'COMMITTEE_ADMIN' : 'COMMITTEE_MEMBER',
+          requestSentTime: row.request_sent_time,
+          userDetails: {
+            userId: Number(row.user_id),
             name: row.name,
             email: row.email,
             mobile: row.mobile,
-            date_of_birth: row.date_of_birth,
+            dateOfBirth: row.date_of_birth,
             gender: row.gender,
             photo: row.photo
           }
@@ -203,8 +188,8 @@ export const committeeMembershipRequestsResolvers = {
             c.id AS committee_id,
             c.committee_name,
             CASE
-              WHEN cm.admin_status IS NOT NULL THEN 'COMITTEE_ADMIN'
-              ELSE 'COMITTEE_MEMBER'
+              WHEN cm.admin_status IS NOT NULL THEN 'COMMITTEE_ADMIN'
+              ELSE 'COMMITTEE_MEMBER'
             END AS request_type,
             c.area,
             c.since,
@@ -279,21 +264,18 @@ export const committeeMembershipRequestsResolvers = {
       );
 
       return {
-        statusCode: 200,
-        status: 'success',
-        message: 'Sent committee membership requests fetched successfully',
         data: rows.map((row) => ({
-          committee_id: Number(row.committee_id),
-          committee_name: row.committee_name,
-          request_type: row.request_type === 'COMITTEE_ADMIN' ? 'COMITTEE_ADMIN' : 'COMITTEE_MEMBER',
+          committeeId: Number(row.committee_id),
+          committeeName: row.committee_name,
+          requestType: row.request_type === 'COMMITTEE_ADMIN' ? 'COMMITTEE_ADMIN' : 'COMMITTEE_MEMBER',
           area: row.area,
           since: row.since ? Number(row.since) : null,
           status: String(row.status || 'PENDING'),
-          request_sent_time: row.request_sent_time,
-          resolved_by_name: row.resolved_by_name,
-          resolved_by_email: row.resolved_by_email,
-          resolved_by_photo: row.resolved_by_photo,
-          resolved_at_time: row.resolved_at_time
+          requestSentTime: row.request_sent_time,
+          resolvedByName: row.resolved_by_name,
+          resolvedByEmail: row.resolved_by_email,
+          resolvedByPhoto: row.resolved_by_photo,
+          resolvedAtTime: row.resolved_at_time
         }))
       };
     },
@@ -307,8 +289,8 @@ export const committeeMembershipRequestsResolvers = {
             c.id AS committee_id,
             c.committee_name,
             CASE
-              WHEN cm.admin_status IS NOT NULL THEN 'COMITTEE_ADMIN'
-              ELSE 'COMITTEE_MEMBER'
+              WHEN cm.admin_status IS NOT NULL THEN 'COMMITTEE_ADMIN'
+              ELSE 'COMMITTEE_MEMBER'
             END AS request_type,
             DATE_FORMAT(
               CASE
@@ -354,22 +336,19 @@ export const committeeMembershipRequestsResolvers = {
       );
 
       return {
-        statusCode: 200,
-        status: 'success',
-        message: 'Action-taken committee membership requests fetched successfully',
         data: rows.map((row) => ({
-          committee_id: Number(row.committee_id),
-          committee_name: row.committee_name,
-          request_type: row.request_type === 'COMITTEE_ADMIN' ? 'COMITTEE_ADMIN' : 'COMITTEE_MEMBER',
-          request_sent_time: row.request_sent_time,
-          action_at_time: row.action_at_time,
+          committeeId: Number(row.committee_id),
+          committeeName: row.committee_name,
+          requestType: row.request_type === 'COMMITTEE_ADMIN' ? 'COMMITTEE_ADMIN' : 'COMMITTEE_MEMBER',
+          requestSentTime: row.request_sent_time,
+          actionAtTime: row.action_at_time,
           status: String(row.status),
-          user_details: {
-            user_id: Number(row.user_id),
+          userDetails: {
+            userId: Number(row.user_id),
             name: row.name,
             email: row.email,
             mobile: row.mobile,
-            date_of_birth: row.date_of_birth,
+            dateOfBirth: row.date_of_birth,
             gender: row.gender,
             photo: row.photo
           }
@@ -458,11 +437,6 @@ export const committeeMembershipRequestsResolvers = {
       }
 
       return {
-        statusCode: 200,
-        status: 'success',
-        message: hasPendingAdminRequest
-          ? (decisionAction === 'ACCEPTED' ? 'Admin role request accepted successfully' : 'Admin role request rejected successfully')
-          : (decisionAction === 'ACCEPTED' ? 'Membership request accepted successfully' : 'Membership request rejected successfully'),
         committeeId,
         targetUserId,
         updatedMembershipStatus: resolvedDecisionStatus

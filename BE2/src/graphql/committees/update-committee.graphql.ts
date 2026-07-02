@@ -189,9 +189,6 @@ export const updateCommitteeResolvers = {
           : [];
 
       return {
-        statusCode: 200,
-        status: 'success',
-        message: 'Committee updated successfully',
         data: {
           id: Number(updated.id),
           committeeName: updated.committee_name,

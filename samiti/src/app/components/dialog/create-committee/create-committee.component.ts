@@ -182,10 +182,6 @@ export class CreateCommitteeDialogComponent implements OnInit {
   private executeGroupCreation(payload: any): void {
     this.createCommitteeService.createCommittee(payload).subscribe({
       next: (response) => {
-        if (response && response.statusCode !== 200 && response.statusCode !== 201) {
-          this.notifier.error(response.message || 'Creation rejected by server module.');
-          return;
-        }
         const rawUserName =
           localStorage.getItem('name') ||
           JSON.parse(localStorage.getItem('userData') || '{}')?.name ||
@@ -199,17 +195,13 @@ export class CreateCommitteeDialogComponent implements OnInit {
         );
         this.dialogRef.close(true);
       },
-      error: (err) => this.notifier.error(err?.error?.message || 'Server network exception.')
+      error: (err) => this.notifier.error(err?.message || 'Server network exception.')
     });
   }
 
   private executeGroupUpdate(payload: any): void {
     this.createCommitteeService.updateCommittee(payload).subscribe({
       next: (response) => {
-        if (response && response.statusCode !== 200) {
-          this.notifier.error(response.message || 'Update rejected by server module.');
-          return;
-        }
         const rawUserName =
           localStorage.getItem('name') ||
           JSON.parse(localStorage.getItem('userData') || '{}')?.name ||
@@ -223,7 +215,7 @@ export class CreateCommitteeDialogComponent implements OnInit {
         );
         this.dialogRef.close(true);
       },
-      error: (err) => this.notifier.error(err?.error?.message || 'Server network exception.')
+      error: (err) => this.notifier.error(err?.message || 'Server network exception.')
     });
   }
 

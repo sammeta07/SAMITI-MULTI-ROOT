@@ -40,61 +40,58 @@ export const userRelationalAnalyticsTypes = `
     name: String!
     email: String!
     mobile: String!
-    date_of_birth: String!
+    dateOfBirth: String!
     gender: String!
-    profile_photo: String
-    created_at: String!
+    profilePhoto: String
+    createdAt: String!
   }
 
   type UserCommitteeAffiliationRelationalSnapshot {
-    committee_id: Int!
-    committee_name: String!
+    committeeId: Int!
+    committeeName: String!
     logo: String
-    is_committee_admin: Int!
+    isCommitteeAdmin: Int!
   }
 
   type UserProgramOwnershipRelationalSnapshot {
-    program_id: Int!
-    program_name: String!
+    programId: Int!
+    programName: String!
     status: String
-    committee_id: Int!
+    committeeId: Int!
   }
 
   type UserTaskKpiLineItemRelationalSnapshot {
-    task_id: Int!
-    task_title: String!
+    taskId: Int!
+    taskTitle: String!
     status: String!
-    due_date: String!
+    dueDate: String!
     priority: String!
   }
 
   type UserTasksKpiRelationalSummarySnapshot {
-    total_assigned: Int!
+    totalAssigned: Int!
     completed: Int!
     pending: Int!
-    critical_overdue: Int!
+    criticalOverdue: Int!
     listing: [UserTaskKpiLineItemRelationalSnapshot!]!
   }
 
   type UserAssociationsRelationalAnalyticsSnapshot {
     committees: [UserCommitteeAffiliationRelationalSnapshot!]!
-    programs_owned: [UserProgramOwnershipRelationalSnapshot!]!
+    programsOwned: [UserProgramOwnershipRelationalSnapshot!]!
   }
 
   type UserKpiMetricsRelationalAnalyticsSnapshot {
-    tasks_summary: UserTasksKpiRelationalSummarySnapshot!
+    tasksSummary: UserTasksKpiRelationalSummarySnapshot!
   }
 
   type UserRelationalAnalyticsByIdData {
     profile: UserProfileRelationalAnalyticsSnapshot!
     associations: UserAssociationsRelationalAnalyticsSnapshot!
-    kpi_metrics: UserKpiMetricsRelationalAnalyticsSnapshot!
+    kpiMetrics: UserKpiMetricsRelationalAnalyticsSnapshot!
   }
 
   type UserRelationalAnalyticsByIdPayload {
-    statusCode: Int!
-    status: String!
-    message: String!
     data: UserRelationalAnalyticsByIdData
   }
 `;
@@ -159,9 +156,6 @@ export const userRelationalAnalyticsResolvers = {
 
       if (userProfileRows.length === 0) {
         return {
-          statusCode: 404,
-          status: 'error',
-          message: 'User analytics reference not found.',
           data: null
         };
       }
@@ -216,45 +210,42 @@ export const userRelationalAnalyticsResolvers = {
       ).length;
 
       return {
-        statusCode: 200,
-        status: 'success',
-        message: 'Relational user analytics synchronized successfully through GraphQL.',
         data: {
           profile: {
             id: userProfileSnapshot.id,
             name: userProfileSnapshot.name,
             email: userProfileSnapshot.email,
             mobile: userProfileSnapshot.mobile || '',
-            date_of_birth: userProfileSnapshot.date_of_birth || '',
+            dateOfBirth: userProfileSnapshot.date_of_birth || '',
             gender: userProfileSnapshot.gender || '',
-            profile_photo: userProfileSnapshot.profile_photo,
-            created_at: userProfileSnapshot.created_at
+            profilePhoto: userProfileSnapshot.profile_photo,
+            createdAt: userProfileSnapshot.created_at
           },
           associations: {
             committees: userCommitteeAffiliationSnapshotRows.map((row) => ({
-              committee_id: Number(row.committee_id),
-              committee_name: row.committee_name,
+              committeeId: Number(row.committee_id),
+              committeeName: row.committee_name,
               logo: row.logo,
-              is_committee_admin: Number(row.is_committee_admin)
+              isCommitteeAdmin: Number(row.is_committee_admin)
             })),
-            programs_owned: userProgramOwnershipSnapshotRows.map((row) => ({
-              program_id: Number(row.program_id),
-              program_name: row.program_name,
+            programsOwned: userProgramOwnershipSnapshotRows.map((row) => ({
+              programId: Number(row.program_id),
+              programName: row.program_name,
               status: row.status,
-              committee_id: Number(row.committee_id)
+              committeeId: Number(row.committee_id)
             }))
           },
-          kpi_metrics: {
-            tasks_summary: {
-              total_assigned: userTaskKpiLineItemRows.length,
+          kpiMetrics: {
+            tasksSummary: {
+              totalAssigned: userTaskKpiLineItemRows.length,
               completed: completedTaskCount,
               pending: pendingTaskCount,
-              critical_overdue: overdueTaskCount,
+              criticalOverdue: overdueTaskCount,
               listing: userTaskKpiLineItemRows.map((row) => ({
-                task_id: Number(row.task_id),
-                task_title: row.task_title,
+                taskId: Number(row.task_id),
+                taskTitle: row.task_title,
                 status: row.status || 'PENDING',
-                due_date: row.due_date,
+                dueDate: row.due_date,
                 priority: row.priority || 'NORMAL'
               }))
             }

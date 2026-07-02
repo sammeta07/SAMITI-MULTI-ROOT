@@ -5,17 +5,23 @@ import { map } from 'rxjs/operators';
 import { CreateCommitteePayload, CreateCommitteeResponse, UpdateCommitteePayload } from './create-committee.models';
 import { environment } from '../../../../environments/environment';
 
+interface GraphQLErrorPayload {
+  message: string;
+}
+
+interface GraphQLResponseEnvelope<TData> {
+  data?: TData;
+  errors?: GraphQLErrorPayload[];
+}
+
 @Injectable({ providedIn: 'root' })
 export class CreateCommitteeService {
     private readonly http = inject(HttpClient);
         private readonly graphqlUrl = environment.graphqlUrl;
 
-createCommittee(body: CreateCommitteePayload): Observable<CreateCommitteeResponse> {
+createCommittee(body: CreateCommitteePayload): Observable<any> {
                 const query = `mutation CreateCommittee($input: CreateCommitteeInput!) {
                     createCommittee(input: $input) {
-                        statusCode
-                        status
-                        message
                         data {
                             id
                             committeeName
@@ -32,7 +38,7 @@ createCommittee(body: CreateCommitteePayload): Observable<CreateCommitteeRespons
                     }
                 }`;
 
-                return this.http.post<{ data: { createCommittee: any } }>(this.graphqlUrl, {
+                return this.http.post<GraphQLResponseEnvelope<{ createCommittee: any }>>(this.graphqlUrl, {
                     query,
                     variables: {
                         input: {
@@ -48,36 +54,17 @@ createCommittee(body: CreateCommitteePayload): Observable<CreateCommitteeRespons
                     }
                 }).pipe(
                     map((res) => {
-                        const payload = res.data.createCommittee;
-                        return {
-                            statusCode: payload.statusCode,
-                            status: payload.status,
-                            message: payload.message,
-                            data: {
-                                id: payload.data.id,
-                                committee_code: `CMT_${payload.data.id}`,
-                                name: payload.data.committeeName,
-                                since: payload.data.since,
-                                area: payload.data.area,
-                                contact_numbers: payload.data.contactNumbers,
-                                description: payload.data.description,
-                                logo: payload.data.logo,
-                                distance: 0,
-                                is_favourite: false,
-                                created_at: payload.data.createdAt,
-                                created_by: payload.data.createdBy
-                            }
-                        };
+                        if (res.errors?.length) {
+                            throw new Error(res.errors[0].message || 'Failed to create committee');
+                        }
+                        return res.data?.createCommittee?.data;
                     })
                 );
     }
 
-updateCommittee(body: UpdateCommitteePayload): Observable<CreateCommitteeResponse> {
+updateCommittee(body: UpdateCommitteePayload): Observable<any> {
                 const query = `mutation UpdateCommittee($input: UpdateCommitteeInput!) {
                     updateCommittee(input: $input) {
-                        statusCode
-                        status
-                        message
                         data {
                             id
                             committeeName
@@ -94,7 +81,7 @@ updateCommittee(body: UpdateCommitteePayload): Observable<CreateCommitteeRespons
                     }
                 }`;
 
-                return this.http.post<{ data: { updateCommittee: any } }>(this.graphqlUrl, {
+                return this.http.post<GraphQLResponseEnvelope<{ updateCommittee: any }>>(this.graphqlUrl, {
                     query,
                     variables: {
                         input: {
@@ -111,26 +98,10 @@ updateCommittee(body: UpdateCommitteePayload): Observable<CreateCommitteeRespons
                     }
                 }).pipe(
                     map((res) => {
-                        const payload = res.data.updateCommittee;
-                        return {
-                            statusCode: payload.statusCode,
-                            status: payload.status,
-                            message: payload.message,
-                            data: {
-                                id: payload.data.id,
-                                committee_code: `CMT_${payload.data.id}`,
-                                name: payload.data.committeeName,
-                                since: payload.data.since,
-                                area: payload.data.area,
-                                contact_numbers: payload.data.contactNumbers,
-                                description: payload.data.description,
-                                logo: payload.data.logo,
-                                distance: 0,
-                                is_favourite: false,
-                                created_at: payload.data.createdAt,
-                                created_by: payload.data.createdBy
-                            }
-                        };
+                        if (res.errors?.length) {
+                            throw new Error(res.errors[0].message || 'Failed to update committee');
+                        }
+                        return res.data?.updateCommittee?.data;
                     })
                 );
     }

@@ -1,65 +1,52 @@
 // Domain types for Dashboard Requests feature
+// Force recompile: v2
 
-export type CommitteeMembershipRequestType = 'COMITTEE_MEMBER' | 'COMITTEE_ADMIN';
+export type CommitteeMembershipRequestType = 'COMMITTEE_MEMBER' | 'COMMITTEE_ADMIN';
 
 export interface CommitteeMembershipRequesterUserDetails {
-  user_id: number;
+  userId: number;
   name: string;
   email: string;
   mobile: string;
-  date_of_birth: string;
+  dateOfBirth: string;
   gender: string;
   photo: string | null;
 }
 
 export interface ReceivedCommitteeMembershipRequestItem {
-  committee_id: number;
-  committee_name: string;
+  committeeId: number;
+  committeeName: string;
   area: string | null;
-  request_type: CommitteeMembershipRequestType;
-  request_sent_time: string;
-  user_details: CommitteeMembershipRequesterUserDetails;
+  requestType: CommitteeMembershipRequestType;
+  requestSentTime: string;
+  userDetails: CommitteeMembershipRequesterUserDetails;
 }
 
 export interface SentCommitteeMembershipRequestItem {
-  committee_id: number;
-  committee_name: string;
-  request_type: CommitteeMembershipRequestType;
+  committeeId: number;
+  committeeName: string;
+  requestType: CommitteeMembershipRequestType;
   area: string;
   since: number;
   status: 'PENDING' | 'ACCEPTED' | 'REJECTED';
-  request_sent_time: string;
-  resolved_by_name: string | null;
-  resolved_by_email: string | null;
-  resolved_by_photo: string | null;
-  resolved_at_time: string | null;
-}
-
-export interface ReceivedCommitteeMembershipRequestsResponse {
-  statusCode: number;
-  status: string;
-  message: string;
-  data: ReceivedCommitteeMembershipRequestItem[];
-}
-
-export interface SentCommitteeMembershipRequestsResponse {
-  statusCode: number;
-  status: string;
-  message: string;
-  data: SentCommitteeMembershipRequestItem[];
+  requestSentTime: string;
+  resolvedByName: string | null;
+  resolvedByEmail: string | null;
+  resolvedByPhoto: string | null;
+  resolvedAtTime: string | null;
 }
 
 export interface TakeActionOnCommitteeMembershipRequestResponse {
-  statusCode: number;
-  status: string;
-  message: string;
-  error?: string;
+  committeeId: number;
+  targetUserId: number;
+  actionAtTime: string;
 }
 
 export interface CancelSubmittedCommitteeMembershipRequestResponse {
-  statusCode: number;
-  status: string;
-  message: string;
+  committeeId: number;
+  cancelledByUserId: number;
+  cancelledAtDateTime: string;
+  membershipStatus: string;
 }
 
 export interface TakeActionOnCommitteeMembershipRequestBody {
@@ -69,18 +56,11 @@ export interface TakeActionOnCommitteeMembershipRequestBody {
 }
 
 export interface ActionTakenOnCommitteeMembershipRequestItem {
-  committee_id: number;
-  committee_name: string;
-  request_type: CommitteeMembershipRequestType;
-  request_sent_time: string | null;
-  action_at_time: string;
+  committeeId: number;
+  committeeName: string;
+  requestType: CommitteeMembershipRequestType;
+  requestSentTime: string | null;
+  actionAtTime: string;
   status: 'ACCEPTED' | 'REJECTED';
-  user_details: CommitteeMembershipRequesterUserDetails;
-}
-
-export interface ActionTakenOnCommitteeMembershipRequestsResponse {
-  statusCode: number;
-  status: string;
-  message: string;
-  data: ActionTakenOnCommitteeMembershipRequestItem[];
+  userDetails: CommitteeMembershipRequesterUserDetails;
 }

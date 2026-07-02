@@ -32,48 +32,45 @@ export class ViewUserDialogService {
     });
   }
 
-  getMemberDetails(userId: string, committeeId: string): Observable<MemberDetailsResponse> {
+  getMemberDetails(userId: string, committeeId: string): Observable<any> {
     const userRelationalAnalyticsByUserIdQueryDocument = `query UserRelationalAnalyticsByUserId($userId: Int!, $committeeId: Int) {
       userRelationalAnalyticsByUserId(userId: $userId, committeeId: $committeeId) {
-        statusCode
-        status
-        message
         data {
           profile {
             id
             name
             email
             mobile
-            date_of_birth
+            dateOfBirth
             gender
-            profile_photo
-            created_at
+            profilePhoto
+            createdAt
           }
           associations {
             committees {
-              committee_id
-              committee_name
+              committeeId
+              committeeName
               logo
-              is_committee_admin
+              isCommitteeAdmin
             }
-            programs_owned {
-              program_id
-              program_name
+            programsOwned {
+              programId
+              programName
               status
-              committee_id
+              committeeId
             }
           }
-          kpi_metrics {
-            tasks_summary {
-              total_assigned
+          kpiMetrics {
+            tasksSummary {
+              totalAssigned
               completed
               pending
-              critical_overdue
+              criticalOverdue
               listing {
-                task_id
-                task_title
+                taskId
+                taskTitle
                 status
-                due_date
+                dueDate
                 priority
               }
             }
@@ -97,12 +94,7 @@ export class ViewUserDialogService {
           throw new Error(graphQlResponseEnvelope.errors[0].message || 'Failed to load user analytics');
         }
 
-        const userRelationalAnalyticsPayload = graphQlResponseEnvelope.data?.userRelationalAnalyticsByUserId;
-        if (!userRelationalAnalyticsPayload) {
-          throw new Error('Invalid user analytics response payload');
-        }
-
-        return userRelationalAnalyticsPayload;
+        return graphQlResponseEnvelope.data?.userRelationalAnalyticsByUserId!;
       })
     );
   }

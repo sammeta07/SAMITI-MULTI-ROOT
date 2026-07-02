@@ -30,27 +30,27 @@ export class DashboardRequests implements OnInit {
   readonly isLoading = signal<boolean>(false);
 
   readonly receivedMemberRequests = computed(() =>
-    this.requests().filter((request) => request.request_type === 'COMITTEE_MEMBER')
+    this.requests().filter((request) => request.requestType === 'COMMITTEE_MEMBER')
   );
 
   readonly receivedAdminRequests = computed(() =>
-    this.requests().filter((request) => request.request_type === 'COMITTEE_ADMIN')
+    this.requests().filter((request) => request.requestType === 'COMMITTEE_ADMIN')
   );
 
   readonly historyMemberRequests = computed(() =>
-    this.resolvedHistory().filter((request) => request.request_type === 'COMITTEE_MEMBER')
+    this.resolvedHistory().filter((request) => request.requestType === 'COMMITTEE_MEMBER')
   );
 
   readonly historyAdminRequests = computed(() =>
-    this.resolvedHistory().filter((request) => request.request_type === 'COMITTEE_ADMIN')
+    this.resolvedHistory().filter((request) => request.requestType === 'COMMITTEE_ADMIN')
   );
 
   readonly sentMemberRequests = computed(() =>
-    this.sentRequests().filter((request) => request.request_type === 'COMITTEE_MEMBER')
+    this.sentRequests().filter((request) => request.requestType === 'COMMITTEE_MEMBER')
   );
 
   readonly sentAdminRequests = computed(() =>
-    this.sentRequests().filter((request) => request.request_type === 'COMITTEE_ADMIN')
+    this.sentRequests().filter((request) => request.requestType === 'COMMITTEE_ADMIN')
   );
 
   // 🚀 Track individual api loaders inside parallel streams
@@ -90,7 +90,7 @@ export class DashboardRequests implements OnInit {
   getReceivedRequests() {
     this.requestsService.getReceivedCommitteeMembershipRequestsForAdminCommittees().subscribe({
       next: (response) => {
-        this.requests.set(response && response.data ? [...response.data] : []);
+        this.requests.set(response ?? []);
         this.isIncomingLoading = false;
         this.checkGlobalLoaderState();
       },
@@ -104,7 +104,7 @@ export class DashboardRequests implements OnInit {
   getHistoryRequestsLogs() { 
     this.requestsService.getActionTakenOnCommitteeMembershipRequestsByLoggedInUser().subscribe({
       next: (response) => {
-        this.resolvedHistory.set(response && response.data ? [...response.data] : []);
+        this.resolvedHistory.set(response ?? []);
         this.isHistoryLoading = false;
         this.checkGlobalLoaderState();
       },
@@ -118,7 +118,7 @@ export class DashboardRequests implements OnInit {
   getSentRequestsList() {
     this.requestsService.getSentCommitteeMembershipRequestsByLoggedInUser().subscribe({
       next: (response) => {
-        this.sentRequests.set(response && response.data ? [...response.data] : []);
+        this.sentRequests.set(response ?? []);
         this.isSentLoading = false;
         this.checkGlobalLoaderState(); // 🚀 Ab loader sahi time par off hoga aur counter update ho jayega!
       },
@@ -186,10 +186,7 @@ export class DashboardRequests implements OnInit {
       }
 
       this.requestsService.cancelSubmittedCommitteeMembershipRequest(committeeId).subscribe({
-        next: (response: CancelSubmittedCommitteeMembershipRequestResponse) => {
-          if (response.statusCode !== 200) {
-            return;
-          }
+        next: () => {
           this.loadAllRequestsParallel();
         },
         error: () => {

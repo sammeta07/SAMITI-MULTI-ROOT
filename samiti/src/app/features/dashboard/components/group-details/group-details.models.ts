@@ -48,4 +48,4 @@ export interface CancelCommitteeMembershipRequestPayload {
   message: string;
 }
 
-export type CommitteeMembershipRequestRole = 'COMITTEE_MEMBER' | 'COMITTEE_ADMIN';
+export type CommitteeMembershipRequestRole = 'COMMITTEE_MEMBER' | 'COMMITTEE_ADMIN';

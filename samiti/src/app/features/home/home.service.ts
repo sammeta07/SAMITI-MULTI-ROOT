@@ -61,12 +61,12 @@ export class HomeService {
             distanceKm: body.distanceKm
           }
         }).pipe(
-          map((res) => ({
-            data: res.data?.committeesListGuestUser ?? [],
-            status: 'success',
-            statusCode: 200,
-            message: 'OK'
-          }))
+          map((res) => {
+            if (res.errors?.length) {
+              throw new Error(res.errors[0].message || 'Failed to fetch committees');
+            }
+            return res.data?.committeesListGuestUser ?? [];
+          })
         );
     }
 
@@ -112,12 +112,12 @@ export class HomeService {
             distanceKm: body.distanceKm
           }
         }).pipe(
-          map((res) => ({
-            data: res.data?.committeesListAuthUser ?? [],
-            status: 'success',
-            statusCode: 200,
-            message: 'OK'
-          }))
+          map((res) => {
+            if (res.errors?.length) {
+              throw new Error(res.errors[0].message || 'Failed to fetch committees');
+            }
+            return res.data?.committeesListAuthUser ?? [];
+          })
         );
     }
 
@@ -130,9 +130,11 @@ export class HomeService {
 
         const query = `mutation SubmitCommitteeMembershipRequest($committeeId: Int!, $requestRole: CommitteeMembershipRequestRole!) {
           submitCommitteeMembershipRequest(committeeId: $committeeId, requestRole: $requestRole) {
-            statusCode
-            status
-            message
+            committeeId
+            requestedByUserId
+            requestedAtDateTime
+            requestedRole
+            membershipStatus
           }
         }`;
 
@@ -147,13 +149,7 @@ export class HomeService {
             if (res.errors?.length) {
               throw new Error(res.errors[0].message || 'Failed to join committee');
             }
-
-            const payload = res.data?.submitCommitteeMembershipRequest;
-            if (!payload) {
-              throw new Error('Invalid join committee response payload');
-            }
-
-            return payload;
+            return res.data?.submitCommitteeMembershipRequest;
           })
         );
     }
@@ -162,9 +158,10 @@ export class HomeService {
         const url = this.graphqlUrl;
         const query = `mutation CancelCommitteeMembershipRequest($committeeId: Int!) {
           cancelCommitteeMembershipRequest(committeeId: $committeeId) {
-            statusCode
-            status
-            message
+            committeeId
+            cancelledByUserId
+            cancelledAtDateTime
+            membershipStatus
           }
         }`;
 
@@ -178,13 +175,7 @@ export class HomeService {
             if (res.errors?.length) {
               throw new Error(res.errors[0].message || 'Failed to cancel request');
             }
-
-            const payload = res.data?.cancelCommitteeMembershipRequest;
-            if (!payload) {
-              throw new Error('Invalid cancel request response payload');
-            }
-
-            return payload;
+            return res.data?.cancelCommitteeMembershipRequest;
           })
         );
     }
@@ -193,22 +184,24 @@ export class HomeService {
         const url = this.graphqlUrl;
         const query = `mutation ToggleCommitteeFavourite($committeeId: Int!, $isFavourite: Int!) {
           toggleCommitteeFavourite(committeeId: $committeeId, isFavourite: $isFavourite) {
-            statusCode
-            status
-            message
             committeeId
             isFavourite
           }
         }`;
 
-        return this.http.post<{ data: { toggleCommitteeFavourite: ToggleCommitteeFavouriteResponse } }>(url, {
+        return this.http.post<GraphQLResponseEnvelope<{ toggleCommitteeFavourite: ToggleCommitteeFavouriteResponse }>>(url, {
           query,
           variables: {
             committeeId,
             isFavourite
           }
         }).pipe(
-          map((res) => res.data.toggleCommitteeFavourite)
+          map((res) => {
+            if (res.errors?.length) {
+              throw new Error(res.errors[0].message || 'Failed to toggle favourite');
+            }
+            return res.data?.toggleCommitteeFavourite;
+          })
         );
     }
 }

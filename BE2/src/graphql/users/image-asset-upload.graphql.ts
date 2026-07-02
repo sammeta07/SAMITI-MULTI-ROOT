@@ -63,9 +63,6 @@ export const imageAssetUploadTypes = `
   }
 
   type ImageAssetBatchUploadPayload {
-    statusCode: Int!
-    status: String!
-    message: String!
     data: [UploadedImageAssetMetadata!]!
   }
 `;
@@ -128,9 +125,6 @@ export const imageAssetUploadResolvers = {
       );
 
       return {
-        statusCode: 200,
-        status: 'success',
-        message: 'Image assets uploaded and optimized successfully.',
         data: uploadedMetadata
       };
     }

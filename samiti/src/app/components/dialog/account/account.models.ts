@@ -8,17 +8,12 @@ export interface AccountUpdatePayload {
 }
 
 // ============================================================================
-// 2. Account Update Response Interface
+// 2. Account Update Response Interface (GraphQL Response)
 // ============================================================================
 export interface AccountUpdateResponse {
-  statusCode: number;
-  status: 'success';
-  message: string;
-  data: {
-    user_id: number;
-    name: string;
-    email: string;
-    mobile: string;
-    photo?: string;
-  };
+  userId: number;
+  name: string;
+  email: string;
+  mobile: string;
+  photo?: string;
 }

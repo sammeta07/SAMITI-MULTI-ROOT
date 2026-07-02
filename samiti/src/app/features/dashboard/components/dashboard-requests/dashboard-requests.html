@@ -51,26 +51,26 @@
                   </tr>
                 </thead>
                 <tbody>
-                  @for (req of receivedMemberRequests(); track req.committee_id + '-' + req.user_details.user_id + '-' + req.request_type) {
+                  @for (req of receivedMemberRequests(); track req.committeeId + '-' + req.userDetails.userId + '-' + req.requestType) {
                     <tr>
                       <td>
                         <div class="table-profile-cell committee-title-cell">
                           <mat-icon class="committee-logo-icon">groups</mat-icon>
-                          <span class="user-fullname-bold">{{ req.committee_name }}</span>
+                          <span class="user-fullname-bold">{{ req.committeeName }}</span>
                         </div>
                       </td>
                       <td><span class="table-text-normal">{{ req.area || 'N/A' }}</span></td>
-                      <td><span class="table-dim-text">{{ req.user_details.email }}</span></td>
-                      <td><span class="table-text-normal">{{ req.user_details.mobile || 'N/A' }}</span></td>
-                      <td><span class="font-capitalize table-text-normal">{{ req.user_details.gender }}</span></td>
-                      <td><span class="table-dim-text">{{ req.request_sent_time | date:'short' }}</span></td>
+                      <td><span class="table-dim-text">{{ req.userDetails.email }}</span></td>
+                      <td><span class="table-text-normal">{{ req.userDetails.mobile || 'N/A' }}</span></td>
+                      <td><span class="font-capitalize table-text-normal">{{ req.userDetails.gender }}</span></td>
+                      <td><span class="table-dim-text">{{ req.requestSentTime | date:'short' }}</span></td>
                       <td><span class="table-dim-text font-style-italic">Pending</span></td>
                       <td>
                         <div class="table-action-cell">
-                          <button type="button" class="row-action-btn row-reject" (click)="rejectRequest(req.committee_id, req.user_details.user_id)">
+                          <button type="button" class="row-action-btn row-reject" (click)="rejectRequest(req.committeeId, req.userDetails.userId)">
                             <mat-icon>close</mat-icon><span>Reject</span>
                           </button>
-                          <button type="button" class="row-action-btn row-approve" (click)="approveRequest(req.committee_id, req.user_details.user_id)">
+                          <button type="button" class="row-action-btn row-approve" (click)="approveRequest(req.committeeId, req.userDetails.userId)">
                             <mat-icon>check</mat-icon><span>Accept</span>
                           </button>
                         </div>
@@ -101,26 +101,26 @@
                   </tr>
                 </thead>
                 <tbody>
-                  @for (req of receivedAdminRequests(); track req.committee_id + '-' + req.user_details.user_id + '-' + req.request_type) {
+                  @for (req of receivedAdminRequests(); track req.committeeId + '-' + req.userDetails.userId + '-' + req.requestType) {
                     <tr>
                       <td>
                         <div class="table-profile-cell committee-title-cell">
                           <mat-icon class="committee-logo-icon">groups</mat-icon>
-                          <span class="user-fullname-bold">{{ req.committee_name }}</span>
+                          <span class="user-fullname-bold">{{ req.committeeName }}</span>
                         </div>
                       </td>
                       <td><span class="table-text-normal">{{ req.area || 'N/A' }}</span></td>
-                      <td><span class="table-dim-text">{{ req.user_details.email }}</span></td>
-                      <td><span class="table-text-normal">{{ req.user_details.mobile || 'N/A' }}</span></td>
-                      <td><span class="font-capitalize table-text-normal">{{ req.user_details.gender }}</span></td>
-                      <td><span class="table-dim-text">{{ req.request_sent_time | date:'short' }}</span></td>
+                      <td><span class="table-dim-text">{{ req.userDetails.email }}</span></td>
+                      <td><span class="table-text-normal">{{ req.userDetails.mobile || 'N/A' }}</span></td>
+                      <td><span class="font-capitalize table-text-normal">{{ req.userDetails.gender }}</span></td>
+                      <td><span class="table-dim-text">{{ req.requestSentTime | date:'short' }}</span></td>
                       <td><span class="table-dim-text font-style-italic">Pending</span></td>
                       <td>
                         <div class="table-action-cell">
-                          <button type="button" class="row-action-btn row-reject" (click)="rejectRequest(req.committee_id, req.user_details.user_id)">
+                          <button type="button" class="row-action-btn row-reject" (click)="rejectRequest(req.committeeId, req.userDetails.userId)">
                             <mat-icon>close</mat-icon><span>Reject</span>
                           </button>
-                          <button type="button" class="row-action-btn row-approve" (click)="approveRequest(req.committee_id, req.user_details.user_id)">
+                          <button type="button" class="row-action-btn row-approve" (click)="approveRequest(req.committeeId, req.userDetails.userId)">
                             <mat-icon>check</mat-icon><span>Accept</span>
                           </button>
                         </div>
@@ -159,33 +159,33 @@
                   </tr>
                 </thead>
                 <tbody>
-                  @for (log of historyMemberRequests(); track log.committee_id + '-' + log.user_details.user_id + '-' + log.request_type + '-' + log.action_at_time) {
+                  @for (log of historyMemberRequests(); track log.committeeId + '-' + log.userDetails.userId + '-' + log.requestType + '-' + log.actionAtTime) {
                     <tr [class.row-state-accept]="log.status === 'ACCEPTED'" [class.row-state-reject]="log.status === 'REJECTED'">
                       <td>
                         <div class="table-profile-cell committee-title-cell">
                           <mat-icon class="committee-logo-icon">groups</mat-icon>
-                          <span class="user-fullname-bold">{{ log.committee_name }}</span>
+                          <span class="user-fullname-bold">{{ log.committeeName }}</span>
                         </div>
                       </td>
                       <td>
                         <div class="table-profile-cell">
                           <div class="mini-avatar">
-                            @if (log.user_details.photo) { <img [src]="log.user_details.photo" alt="profile"> }
-                            @else { <span>{{ log.user_details.name.charAt(0).toUpperCase() }}</span> }
+                            @if (log.userDetails.photo) { <img [src]="log.userDetails.photo" alt="profile"> }
+                            @else { <span>{{ log.userDetails.name.charAt(0).toUpperCase() }}</span> }
                           </div>
-                          <span class="user-fullname-bold text-capitalize">{{ log.user_details.name }}</span>
+                          <span class="user-fullname-bold text-capitalize">{{ log.userDetails.name }}</span>
                         </div>
                       </td>
-                      <td><span class="table-dim-text">{{ log.user_details.email }}</span></td>
-                      <td><span class="table-text-normal">{{ log.user_details.mobile || 'N/A' }}</span></td>
+                      <td><span class="table-dim-text">{{ log.userDetails.email }}</span></td>
+                      <td><span class="table-text-normal">{{ log.userDetails.mobile || 'N/A' }}</span></td>
                       <td>
-                        @if (log.request_sent_time) {
-                          <span class="table-dim-text">{{ log.request_sent_time | date:'medium' }}</span>
+                        @if (log.requestSentTime) {
+                          <span class="table-dim-text">{{ log.requestSentTime | date:'medium' }}</span>
                         } @else {
                           <span class="table-dim-text font-style-italic">Unavailable</span>
                         }
                       </td>
-                      <td><span class="table-dim-text font-weight-700">{{ log.action_at_time | date:'medium' }}</span></td>
+                      <td><span class="table-dim-text font-weight-700">{{ log.actionAtTime | date:'medium' }}</span></td>
                       <td>
                         <span class="log-badge-status" [ngClass]="log.status === 'ACCEPTED' ? 'bg-green' : 'bg-red'">
                           {{ log.status === 'ACCEPTED' ? 'ACCEPTED' : 'REJECTED' }}
@@ -216,33 +216,33 @@
                   </tr>
                 </thead>
                 <tbody>
-                  @for (log of historyAdminRequests(); track log.committee_id + '-' + log.user_details.user_id + '-' + log.request_type + '-' + log.action_at_time) {
+                  @for (log of historyAdminRequests(); track log.committeeId + '-' + log.userDetails.userId + '-' + log.requestType + '-' + log.actionAtTime) {
                     <tr [class.row-state-accept]="log.status === 'ACCEPTED'" [class.row-state-reject]="log.status === 'REJECTED'">
                       <td>
                         <div class="table-profile-cell committee-title-cell">
                           <mat-icon class="committee-logo-icon">groups</mat-icon>
-                          <span class="user-fullname-bold">{{ log.committee_name }}</span>
+                          <span class="user-fullname-bold">{{ log.committeeName }}</span>
                         </div>
                       </td>
                       <td>
                         <div class="table-profile-cell">
                           <div class="mini-avatar">
-                            @if (log.user_details.photo) { <img [src]="log.user_details.photo" alt="profile"> }
-                            @else { <span>{{ log.user_details.name.charAt(0).toUpperCase() }}</span> }
+                            @if (log.userDetails.photo) { <img [src]="log.userDetails.photo" alt="profile"> }
+                            @else { <span>{{ log.userDetails.name.charAt(0).toUpperCase() }}</span> }
                           </div>
-                          <span class="user-fullname-bold text-capitalize">{{ log.user_details.name }}</span>
+                          <span class="user-fullname-bold text-capitalize">{{ log.userDetails.name }}</span>
                         </div>
                       </td>
-                      <td><span class="table-dim-text">{{ log.user_details.email }}</span></td>
-                      <td><span class="table-text-normal">{{ log.user_details.mobile || 'N/A' }}</span></td>
+                      <td><span class="table-dim-text">{{ log.userDetails.email }}</span></td>
+                      <td><span class="table-text-normal">{{ log.userDetails.mobile || 'N/A' }}</span></td>
                       <td>
-                        @if (log.request_sent_time) {
-                          <span class="table-dim-text">{{ log.request_sent_time | date:'medium' }}</span>
+                        @if (log.requestSentTime) {
+                          <span class="table-dim-text">{{ log.requestSentTime | date:'medium' }}</span>
                         } @else {
                           <span class="table-dim-text font-style-italic">Unavailable</span>
                         }
                       </td>
-                      <td><span class="table-dim-text font-weight-700">{{ log.action_at_time | date:'medium' }}</span></td>
+                      <td><span class="table-dim-text font-weight-700">{{ log.actionAtTime | date:'medium' }}</span></td>
                       <td>
                         <span class="log-badge-status" [ngClass]="log.status === 'ACCEPTED' ? 'bg-green' : 'bg-red'">
                           {{ log.status === 'ACCEPTED' ? 'ACCEPTED' : 'REJECTED' }}
@@ -282,21 +282,21 @@
                   </tr>
                 </thead>
                 <tbody>
-                  @for (sent of sentMemberRequests(); track sent.committee_id + '-' + sent.request_sent_time + '-' + sent.request_type) {
+                  @for (sent of sentMemberRequests(); track sent.committeeId + '-' + sent.requestSentTime + '-' + sent.requestType) {
                     <tr [class.row-state-accept]="sent.status === 'ACCEPTED'" [class.row-state-reject]="sent.status === 'REJECTED'">
                       <td>
                         <div class="table-profile-cell committee-title-cell">
                           <mat-icon class="committee-logo-icon">groups</mat-icon>
-                          <span class="user-fullname-bold">{{ sent.committee_name }}</span>
+                          <span class="user-fullname-bold">{{ sent.committeeName }}</span>
                         </div>
                       </td>
                       <td><span class="table-text-normal">{{ sent.area || 'N/A' }}</span></td>
                       <td><span class="table-dim-text">Est. {{ sent.since }}</span></td>
-                      <td><span class="table-dim-text">{{ sent.request_sent_time | date:'d MMMM yyyy, h:mm a' }}</span></td>
+                      <td><span class="table-dim-text">{{ sent.requestSentTime | date:'d MMMM yyyy, h:mm a' }}</span></td>
                       <td>
-                        @if (sent.status !== 'PENDING' && sent.resolved_at_time) {
+                        @if (sent.status !== 'PENDING' && sent.resolvedAtTime) {
                           <span class="table-text-normal">
-                            {{ sent.resolved_at_time | date:'d MMMM yyyy, h:mm a' }}
+                            {{ sent.resolvedAtTime | date:'d MMMM yyyy, h:mm a' }}
                           </span>
                         } @else {
                           <span class="table-dim-text font-style-italic">Awaiting Admin Review</span>
@@ -309,7 +309,7 @@
                             {{ sent.status }}
                           </span>
                           @if (sent.status === 'PENDING') {
-                            <button type="button" class="row-action-btn row-reject sent-cancel-btn" (click)="cancelSentRequest(sent.committee_id, sent.committee_name)">
+                            <button type="button" class="row-action-btn row-reject sent-cancel-btn" (click)="cancelSentRequest(sent.committeeId, sent.committeeName)">
                               <mat-icon>cancel</mat-icon><span>Cancel</span>
                             </button>
                           }
@@ -339,21 +339,21 @@
                   </tr>
                 </thead>
                 <tbody>
-                  @for (sent of sentAdminRequests(); track sent.committee_id + '-' + sent.request_sent_time + '-' + sent.request_type) {
+                  @for (sent of sentAdminRequests(); track sent.committeeId + '-' + sent.requestSentTime + '-' + sent.requestType) {
                     <tr [class.row-state-accept]="sent.status === 'ACCEPTED'" [class.row-state-reject]="sent.status === 'REJECTED'">
                       <td>
                         <div class="table-profile-cell committee-title-cell">
                           <mat-icon class="committee-logo-icon">groups</mat-icon>
-                          <span class="user-fullname-bold">{{ sent.committee_name }}</span>
+                          <span class="user-fullname-bold">{{ sent.committeeName }}</span>
                         </div>
                       </td>
                       <td><span class="table-text-normal">{{ sent.area || 'N/A' }}</span></td>
                       <td><span class="table-dim-text">Est. {{ sent.since }}</span></td>
-                      <td><span class="table-dim-text">{{ sent.request_sent_time | date:'d MMMM yyyy, h:mm a' }}</span></td>
+                      <td><span class="table-dim-text">{{ sent.requestSentTime | date:'d MMMM yyyy, h:mm a' }}</span></td>
                       <td>
-                        @if (sent.status !== 'PENDING' && sent.resolved_at_time) {
+                        @if (sent.status !== 'PENDING' && sent.resolvedAtTime) {
                           <span class="table-text-normal">
-                            {{ sent.resolved_at_time | date:'d MMMM yyyy, h:mm a' }}
+                            {{ sent.resolvedAtTime | date:'d MMMM yyyy, h:mm a' }}
                           </span>
                         } @else {
                           <span class="table-dim-text font-style-italic">Awaiting Admin Review</span>

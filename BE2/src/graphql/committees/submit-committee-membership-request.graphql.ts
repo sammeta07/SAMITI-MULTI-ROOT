@@ -2,14 +2,11 @@ import { execute, query } from '../../config/db';
 
 export const submitCommitteeMembershipRequestTypes = `
   enum CommitteeMembershipRequestRole {
-    COMITTEE_MEMBER
-    COMITTEE_ADMIN
+    COMMITTEE_MEMBER
+    COMMITTEE_ADMIN
   }
 
   type SubmitCommitteeMembershipRequestPayload {
-    statusCode: Int!
-    status: String!
-    message: String!
     committeeId: Int!
     requestedByUserId: Int!
     requestedAtDateTime: String!
@@ -26,7 +23,7 @@ export const submitCommitteeMembershipRequestResolvers = {
   Mutation: {
     async submitCommitteeMembershipRequest(
       _: any,
-      args: { committeeId: number; requestRole: 'COMITTEE_MEMBER' | 'COMITTEE_ADMIN' },
+      args: { committeeId: number; requestRole: 'COMMITTEE_MEMBER' | 'COMMITTEE_ADMIN' },
       context: any
     ) {
       const { committeeId, requestRole } = args;
@@ -81,7 +78,7 @@ export const submitCommitteeMembershipRequestResolvers = {
         [committeeId, loggedInUserId]
       );
 
-      if (requestRole === 'COMITTEE_ADMIN') {
+      if (requestRole === 'COMMITTEE_ADMIN') {
         if (existingMembershipRows.length === 0) {
           throw new Error('Only accepted committee members can request admin role');
         }
@@ -93,9 +90,6 @@ export const submitCommitteeMembershipRequestResolvers = {
 
         if (isCommitteeAdmin || adminStatus === 'ACCEPTED') {
           return {
-            statusCode: 200,
-            status: 'success',
-            message: 'You are already an admin in this committee',
             committeeId,
             requestedByUserId: loggedInUserId,
             requestedAtDateTime,
@@ -110,9 +104,6 @@ export const submitCommitteeMembershipRequestResolvers = {
 
         if (adminStatus === 'PENDING') {
           return {
-            statusCode: 200,
-            status: 'success',
-            message: 'Admin role request already pending for this committee',
             committeeId,
             requestedByUserId: loggedInUserId,
             requestedAtDateTime,
@@ -135,9 +126,6 @@ export const submitCommitteeMembershipRequestResolvers = {
         );
 
         return {
-          statusCode: 200,
-          status: 'success',
-          message: 'Committee admin role request submitted successfully',
           committeeId,
           requestedByUserId: loggedInUserId,
           requestedAtDateTime,
@@ -153,9 +141,6 @@ export const submitCommitteeMembershipRequestResolvers = {
 
         if (isExistingCommitteeMember && existingMembershipStatus === 'ACCEPTED') {
           return {
-            statusCode: 200,
-            status: 'success',
-            message: 'You are already a committee member',
             committeeId,
             requestedByUserId: loggedInUserId,
             requestedAtDateTime,
@@ -166,9 +151,6 @@ export const submitCommitteeMembershipRequestResolvers = {
 
         if (existingMembershipStatus === 'PENDING') {
           return {
-            statusCode: 200,
-            status: 'success',
-            message: 'Join request already pending for this committee',
             committeeId,
             requestedByUserId: loggedInUserId,
             requestedAtDateTime,
@@ -220,9 +202,6 @@ export const submitCommitteeMembershipRequestResolvers = {
       }
 
       return {
-        statusCode: 200,
-        status: 'success',
-        message: 'Committee membership request submitted successfully',
         committeeId,
         requestedByUserId: loggedInUserId,
         requestedAtDateTime,

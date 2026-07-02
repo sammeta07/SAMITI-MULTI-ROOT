@@ -1,14 +1,15 @@
 import { HttpClient } from '@angular/common/http';
 import { inject, Injectable } from '@angular/core';
 import { map } from 'rxjs/operators';
+import { Observable } from 'rxjs';
 import { environment } from '../../../../../environments/environment';
 import { 
   TakeActionOnCommitteeMembershipRequestResponse,
   CancelSubmittedCommitteeMembershipRequestResponse,
-  ReceivedCommitteeMembershipRequestsResponse,
-  SentCommitteeMembershipRequestsResponse,
+  ReceivedCommitteeMembershipRequestItem,
+  SentCommitteeMembershipRequestItem,
   TakeActionOnCommitteeMembershipRequestBody,
-  ActionTakenOnCommitteeMembershipRequestsResponse
+  ActionTakenOnCommitteeMembershipRequestItem
 } from './dashboard-requests.models';
 
 interface GraphQLErrorPayload {
@@ -25,81 +26,61 @@ export class DashboardRequestsService {
   private readonly http = inject(HttpClient);
   private readonly graphqlUrl = environment.graphqlUrl;
 
-  getReceivedCommitteeMembershipRequestsForAdminCommittees() {
+  getReceivedCommitteeMembershipRequestsForAdminCommittees(): Observable<ReceivedCommitteeMembershipRequestItem[]> {
     const query = `query ReceivedCommitteeMembershipRequestsForAdminCommittees {
       receivedCommitteeMembershipRequestsForAdminCommittees {
-        statusCode
-        status
-        message
-        data {
-          committee_id
-          committee_name
-          area
-          request_type
-          request_sent_time
-          user_details {
-            user_id
-            name
-            email
-            mobile
-            date_of_birth
-            gender
-            photo
-          }
+        committeeId
+        committeeName
+        area
+        requestType
+        requestSentTime
+        userDetails {
+          userId
+          name
+          email
+          mobile
+          dateOfBirth
+          gender
+          photo
         }
       }
     }`;
 
-    return this.http.post<GraphQLResponseEnvelope<{ receivedCommitteeMembershipRequestsForAdminCommittees: ReceivedCommitteeMembershipRequestsResponse }>>(this.graphqlUrl, { query }).pipe(
+    return this.http.post<GraphQLResponseEnvelope<{ receivedCommitteeMembershipRequestsForAdminCommittees: ReceivedCommitteeMembershipRequestItem[] }>>(this.graphqlUrl, { query }).pipe(
       map((response) => {
         if (response.errors?.length) {
           throw new Error(response.errors[0].message || 'Failed to fetch received membership requests');
         }
 
-        const payload = response.data?.receivedCommitteeMembershipRequestsForAdminCommittees;
-        if (!payload) {
-          throw new Error('Invalid received membership requests response payload');
-        }
-
-        return payload;
+        return response.data?.receivedCommitteeMembershipRequestsForAdminCommittees ?? [];
       })
     );
   }
 
-  getSentCommitteeMembershipRequestsByLoggedInUser() {
+  getSentCommitteeMembershipRequestsByLoggedInUser(): Observable<SentCommitteeMembershipRequestItem[]> {
     const query = `query SentCommitteeMembershipRequestsByLoggedInUser {
       sentCommitteeMembershipRequestsByLoggedInUser {
-        statusCode
+        committeeId
+        committeeName
+        requestType
+        area
+        since
         status
-        message
-        data {
-          committee_id
-          committee_name
-          request_type
-          area
-          since
-          status
-          request_sent_time
-          resolved_by_name
-          resolved_by_email
-          resolved_by_photo
-          resolved_at_time
-        }
+        requestSentTime
+        resolvedByName
+        resolvedByEmail
+        resolvedByPhoto
+        resolvedAtTime
       }
     }`;
 
-    return this.http.post<GraphQLResponseEnvelope<{ sentCommitteeMembershipRequestsByLoggedInUser: SentCommitteeMembershipRequestsResponse }>>(this.graphqlUrl, { query }).pipe(
+    return this.http.post<GraphQLResponseEnvelope<{ sentCommitteeMembershipRequestsByLoggedInUser: SentCommitteeMembershipRequestItem[] }>>(this.graphqlUrl, { query }).pipe(
       map((response) => {
         if (response.errors?.length) {
           throw new Error(response.errors[0].message || 'Failed to fetch sent membership requests');
         }
 
-        const payload = response.data?.sentCommitteeMembershipRequestsByLoggedInUser;
-        if (!payload) {
-          throw new Error('Invalid sent membership requests response payload');
-        }
-
-        return payload;
+        return response.data?.sentCommitteeMembershipRequestsByLoggedInUser ?? [];
       })
     );
   }
@@ -107,9 +88,9 @@ export class DashboardRequestsService {
   takeActionOnCommitteeMembershipRequest(body: TakeActionOnCommitteeMembershipRequestBody) {
     const query = `mutation TakeActionOnCommitteeMembershipRequest($committeeId: Int!, $targetUserId: Int!, $decisionAction: CommitteeMembershipDecisionAction!) {
       takeActionOnCommitteeMembershipRequest(committeeId: $committeeId, targetUserId: $targetUserId, decisionAction: $decisionAction) {
-        statusCode
-        status
-        message
+        committeeId
+        targetUserId
+        actionAtTime
       }
     }`;
 
@@ -126,12 +107,7 @@ export class DashboardRequestsService {
           throw new Error(response.errors[0].message || 'Failed to process membership request action');
         }
 
-        const payload = response.data?.takeActionOnCommitteeMembershipRequest;
-        if (!payload) {
-          throw new Error('Invalid take action membership request response payload');
-        }
-
-        return payload;
+        return response.data?.takeActionOnCommitteeMembershipRequest;
       })
     );
   }
@@ -139,9 +115,10 @@ export class DashboardRequestsService {
   cancelSubmittedCommitteeMembershipRequest(committeeId: number) {
     const query = `mutation CancelCommitteeMembershipRequest($committeeId: Int!) {
       cancelCommitteeMembershipRequest(committeeId: $committeeId) {
-        statusCode
-        status
-        message
+        committeeId
+        cancelledByUserId
+        cancelledAtDateTime
+        membershipStatus
       }
     }`;
 
@@ -156,54 +133,39 @@ export class DashboardRequestsService {
           throw new Error(response.errors[0].message || 'Failed to cancel submitted request');
         }
 
-        const payload = response.data?.cancelCommitteeMembershipRequest;
-        if (!payload) {
-          throw new Error('Invalid cancel submitted request response payload');
-        }
-
-        return payload;
+        return response.data?.cancelCommitteeMembershipRequest;
       })
     );
   }
 
-  getActionTakenOnCommitteeMembershipRequestsByLoggedInUser() {
+  getActionTakenOnCommitteeMembershipRequestsByLoggedInUser(): Observable<ActionTakenOnCommitteeMembershipRequestItem[]> {
     const query = `query ActionTakenOnCommitteeMembershipRequestsByLoggedInUser {
       actionTakenOnCommitteeMembershipRequestsByLoggedInUser {
-        statusCode
+        committeeId
+        committeeName
+        requestType
+        requestSentTime
+        actionAtTime
         status
-        message
-        data {
-          committee_id
-          committee_name
-          request_type
-          request_sent_time
-          action_at_time
-          status
-          user_details {
-            user_id
-            name
-            email
-            mobile
-            date_of_birth
-            gender
-            photo
-          }
+        userDetails {
+          userId
+          name
+          email
+          mobile
+          dateOfBirth
+          gender
+          photo
         }
       }
     }`;
 
-    return this.http.post<GraphQLResponseEnvelope<{ actionTakenOnCommitteeMembershipRequestsByLoggedInUser: ActionTakenOnCommitteeMembershipRequestsResponse }>>(this.graphqlUrl, { query }).pipe(
+    return this.http.post<GraphQLResponseEnvelope<{ actionTakenOnCommitteeMembershipRequestsByLoggedInUser: ActionTakenOnCommitteeMembershipRequestItem[] }>>(this.graphqlUrl, { query }).pipe(
       map((response) => {
         if (response.errors?.length) {
           throw new Error(response.errors[0].message || 'Failed to fetch action-taken membership requests');
         }
 
-        const payload = response.data?.actionTakenOnCommitteeMembershipRequestsByLoggedInUser;
-        if (!payload) {
-          throw new Error('Invalid action-taken membership requests response payload');
-        }
-
-        return payload;
+        return response.data?.actionTakenOnCommitteeMembershipRequestsByLoggedInUser ?? [];
       })
     );
   }

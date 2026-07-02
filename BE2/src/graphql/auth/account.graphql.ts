@@ -34,9 +34,6 @@ export const accountTypes = `
   }
 
   type AccountPayload {
-    statusCode: Int!
-    status: String!
-    message: String!
     data: AccountData!
   }
 
@@ -103,9 +100,6 @@ export const accountResolvers = {
       const account = await fetchAccountPayloadByUserId(loggedInUserId);
 
       return {
-        statusCode: 200,
-        status: 'success',
-        message: 'Account loaded successfully',
         data: {
           userId: account.id,
           name: account.name,
@@ -170,9 +164,6 @@ export const accountResolvers = {
       const updatedAccount = await fetchAccountPayloadByUserId(loggedInUserId);
 
       return {
-        statusCode: 200,
-        status: 'success',
-        message: 'Account updated successfully',
         data: {
           userId: updatedAccount.id,
           name: updatedAccount.name,

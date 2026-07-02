@@ -83,13 +83,13 @@ export class AccountDialogComponent implements OnInit {
     this.isLoading.set(true);
     this.accountService.getAccount().subscribe({
       next: (response) => {
-        if (response?.statusCode === 200 && response.data) {
+        if (response) {
           const mergedUserData = {
             ...(this.getLocalUserData() || {}),
-            name: response.data.name,
-            email: response.data.email,
-            mobile: response.data.mobile,
-            photo: response.data.photo || ''
+            name: response.name,
+            email: response.email,
+            mobile: response.mobile,
+            photo: response.photo || ''
           };
 
           this.applyUserData(mergedUserData);
@@ -273,29 +273,29 @@ export class AccountDialogComponent implements OnInit {
         })
       );
 
-      if (!updateResponse || updateResponse.statusCode !== 200) {
-        throw new Error(updateResponse?.message || 'Failed to update profile photo');
+      if (!updateResponse) {
+        throw new Error('Failed to update profile photo');
       }
 
       const existingData = this.getLocalUserData() || {};
       const updatedUserData = {
         ...existingData,
-        name: updateResponse.data.name,
-        email: updateResponse.data.email,
-        mobile: updateResponse.data.mobile,
-        photo: updateResponse.data.photo || ''
+        name: updateResponse.name,
+        email: updateResponse.email,
+        mobile: updateResponse.mobile,
+        photo: updateResponse.photo || ''
       };
 
       localStorage.setItem('userData', JSON.stringify(updatedUserData));
-      localStorage.setItem('name', updateResponse.data.name);
-      localStorage.setItem('mobile', updateResponse.data.mobile);
-      if (updateResponse.data.photo) {
-        localStorage.setItem('photo', updateResponse.data.photo);
+      localStorage.setItem('name', updateResponse.name);
+      localStorage.setItem('mobile', updateResponse.mobile);
+      if (updateResponse.photo) {
+        localStorage.setItem('photo', updateResponse.photo);
       }
 
       this.applyUserData(updatedUserData);
       this.selectedProfilePhotoFile.set(null);
-      const displayUserName = this.textFormatService.toTitleCase(updateResponse.data.name || this.name || 'User');
+      const displayUserName = this.textFormatService.toTitleCase(updateResponse.name || this.name || 'User');
       this.notifier.success(
         `Hi, **${displayUserName}**! You have successfully updated your profile photo.`,
         'Profile Updated'
@@ -351,26 +351,26 @@ export class AccountDialogComponent implements OnInit {
       photo: uploadedProfilePhotoUrl
     }).subscribe({
       next: (response) => {
-        if (response && response.statusCode === 200) {
+        if (response) {
           const existingData = this.getLocalUserData() || {};
           const updatedUserData = {
             ...existingData,
-            name: response.data.name,
-            email: response.data.email,
-            mobile: response.data.mobile,
-            photo: response.data.photo || ''
+            name: response.name,
+            email: response.email,
+            mobile: response.mobile,
+            photo: response.photo || ''
           };
 
           // Update localStorage
           localStorage.setItem('userData', JSON.stringify(updatedUserData));
-          localStorage.setItem('name', response.data.name);
-          localStorage.setItem('mobile', response.data.mobile);
-          if (response.data.photo) {
-            localStorage.setItem('photo', response.data.photo);
+          localStorage.setItem('name', response.name);
+          localStorage.setItem('mobile', response.mobile);
+          if (response.photo) {
+            localStorage.setItem('photo', response.photo);
           }
 
           this.applyUserData(updatedUserData);
-          const displayUserName = this.textFormatService.toTitleCase(response.data.name || this.name || 'User');
+          const displayUserName = this.textFormatService.toTitleCase(response.name || this.name || 'User');
           this.notifier.success(
             `Hi, **${displayUserName}**! Your account details have been updated successfully.`,
             'Account Updated'
@@ -378,12 +378,12 @@ export class AccountDialogComponent implements OnInit {
           this.isEditMode = false;
           this.selectedProfilePhotoFile.set(null);
         } else {
-          this.notifier.error(response.message || 'Failed to update account.');
+          this.notifier.error('Failed to update account.');
         }
         this.isLoading.set(false);
       },
       error: (err) => {
-        this.notifier.error(err?.error?.message || err?.message || 'Failed to update account. Please try again.');
+        this.notifier.error(err?.message || 'Failed to update account. Please try again.');
         this.isLoading.set(false);
       }
     });

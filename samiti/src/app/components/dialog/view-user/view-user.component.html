@@ -17,8 +17,8 @@
       <div class="user-profile-summary-card">
         <div class="user-avatar-axis-center">
           <div class="dynamic-profile-circle">
-            @if (userData()?.profile?.profile_photo) {
-              <img [src]="userData()?.profile?.profile_photo" alt="Profile Photo" class="img-avatar-fluid">
+            @if (userData()?.profile?.profilePhoto) {
+              <img [src]="userData()?.profile?.profilePhoto" alt="Profile Photo" class="img-avatar-fluid">
             } @else {
               <span class="initials alpha-char-bold">
                 {{ userData()?.profile?.name?.charAt(0)?.toUpperCase() || 'U' }}
@@ -28,7 +28,7 @@
         </div>
         <div class="profile-title-text-center">
           <h3>{{ userData()?.profile?.name }}</h3>
-          <span class="joined-date-tag">System Participant Since {{ userData()?.profile?.created_at | date:'mediumDate' }}</span>
+          <span class="joined-date-tag">System Participant Since {{ userData()?.profile?.createdAt | date:'mediumDate' }}</span>
         </div>
       </div>
 
@@ -55,7 +55,7 @@
             <div class="info-icon-wrapper color-birth"><mat-icon>cake</mat-icon></div>
             <div class="info-content text-frame-block">
               <span class="info-label">Date of Birth</span>
-              <span class="info-value text-emphasis-bold">{{ userData()?.profile?.date_of_birth || 'Not set' }}</span>
+              <span class="info-value text-emphasis-bold">{{ userData()?.profile?.dateOfBirth || 'Not set' }}</span>
             </div>
           </div>
 
@@ -76,19 +76,19 @@
 
       <div class="kpi-metrics-grid-row">
         <div class="kpi-score-card bg-assigned">
-          <span class="kpi-count">{{ userData()?.kpi_metrics?.tasks_summary?.total_assigned || 0 }}</span>
+          <span class="kpi-count">{{ userData()?.kpiMetrics?.tasksSummary?.totalAssigned || 0 }}</span>
           <span class="kpi-label">Total Tasks</span>
         </div>
         <div class="kpi-score-card bg-completed">
-          <span class="kpi-count">{{ userData()?.kpi_metrics?.tasks_summary?.completed || 0 }}</span>
+          <span class="kpi-count">{{ userData()?.kpiMetrics?.tasksSummary?.completed || 0 }}</span>
           <span class="kpi-label">Completed</span>
         </div>
         <div class="kpi-score-card bg-pending">
-          <span class="kpi-count">{{ userData()?.kpi_metrics?.tasks_summary?.pending || 0 }}</span>
+          <span class="kpi-count">{{ userData()?.kpiMetrics?.tasksSummary?.pending || 0 }}</span>
           <span class="kpi-label">Pending</span>
         </div>
         <div class="kpi-score-card bg-overdue">
-          <span class="kpi-count">{{ userData()?.kpi_metrics?.tasks_summary?.critical_overdue || 0 }}</span>
+          <span class="kpi-count">{{ userData()?.kpiMetrics?.tasksSummary?.criticalOverdue || 0 }}</span>
           <span class="kpi-label">Overdue</span>
         </div>
       </div>
@@ -98,20 +98,20 @@
       </div>
 
       <div class="committees-affiliation-vertical-stack">
-        @for (club of userData()?.associations?.committees || []; track club.committee_id) {
+        @for (club of userData()?.associations?.committees || []; track club.committeeId) {
           <div class="affiliation-item-card">
             <div class="club-left-vector">
               <div class="club-mini-avatar">
-                {{ club.committee_name.charAt(0).toUpperCase() || 'C' }}
+                {{ club.committeeName.charAt(0).toUpperCase() || 'C' }}
               </div>
               <div class="club-meta-block">
-                <strong>{{ club.committee_name }}</strong>
-                <span class="id-sub-spec">System Node ID Reference: #{{ club.committee_id }}</span>
+                <strong>{{ club.committeeName }}</strong>
+                <span class="id-sub-spec">System Node ID Reference: #{{ club.committeeId }}</span>
               </div>
             </div>
             
             <div class="club-right-rank-badge">
-              @if (club.is_committee_admin === 1) {
+              @if (club.isCommitteeAdmin === 1) {
                 <span class="rank-badge role-admin">
                   <mat-icon>shield</mat-icon> Administrator
                 </span>

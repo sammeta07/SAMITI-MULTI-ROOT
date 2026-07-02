@@ -34,27 +34,23 @@ type RegisteredUserRow = RowDataPacket & {
 
 function buildRegistrationResult(createdUser: RegisteredUserRow) {
   return {
-    statusCode: 200,
-    message: 'New user registration successful.',
-    data: {
-      id: createdUser.id,
-      name: createdUser.name,
-      email: createdUser.email,
-      mobile: createdUser.mobile,
-      dateOfBirth: createdUser.date_of_birth,
-      gender: createdUser.gender,
-      baseRole: createdUser.base_role,
-      profilePhoto: createdUser.profile_photo,
-      fcmToken: createdUser.fcm_token,
-      provider: createdUser.provider,
-      providerId: createdUser.provider_id,
-      status: createdUser.status,
-      isVerified: Boolean(createdUser.is_verified),
-      emailVerifiedAt: createdUser.email_verified_at,
-      deletedAt: createdUser.deleted_at,
-      createdAt: createdUser.created_at,
-      updatedAt: createdUser.updated_at
-    }
+    id: createdUser.id,
+    name: createdUser.name,
+    email: createdUser.email,
+    mobile: createdUser.mobile,
+    dateOfBirth: createdUser.date_of_birth,
+    gender: createdUser.gender,
+    baseRole: createdUser.base_role,
+    profilePhoto: createdUser.profile_photo,
+    fcmToken: createdUser.fcm_token,
+    provider: createdUser.provider,
+    providerId: createdUser.provider_id,
+    status: createdUser.status,
+    isVerified: Boolean(createdUser.is_verified),
+    emailVerifiedAt: createdUser.email_verified_at,
+    deletedAt: createdUser.deleted_at,
+    createdAt: createdUser.created_at,
+    updatedAt: createdUser.updated_at
   };
 }
 
@@ -252,8 +248,6 @@ export const newUserRegistrationTypes = `
   }
 
   type NewUserRegistrationPayload {
-    statusCode: Int!
-    message: String!
     data: NewUserRegistrationData!
   }
 
@@ -292,15 +286,11 @@ export const newUserRegistrationTypes = `
   }
 
   type NewUserAccountRegistrationPayload {
-    statusCode: Int!
-    message: String!
     data: NewUserAccountRegistrationData!
   }
 
   type NewUserRegistrationValidationPayload {
-    statusCode: Int!
     isValid: Boolean!
-    message: String!
   }
 
   input NewUserAccountRegistrationInput {
@@ -438,9 +428,7 @@ export const newUserRegistrationResolvers = {
       }
 
       return {
-        statusCode: 200,
-        isValid: true,
-        message: 'Validation successful.'
+        isValid: true
       };
     }
   }

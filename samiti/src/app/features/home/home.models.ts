@@ -35,6 +35,16 @@ export interface CommitteeGuestItem {
   committeeLogo: string | null;
   establishedYear: number;
   events: CommitteeEvent[];
+  // Auth-specific fields (optional for guest users, always present for auth users)
+  isCommitteeAdmin?: number;
+  isCommitteeMember?: number;
+  membershipStatus?: string | null;
+  membershipStatusActionBy?: number | null;
+  membershipStatusActionAt?: string | null;
+  adminStatus?: string | null;
+  adminStatusActionBy?: number | null;
+  adminStatusActionAt?: string | null;
+  isFavourite?: number;
 }
 
 // Matches GraphQL type CommitteeAuth (logged-in — full fields)
@@ -70,7 +80,7 @@ export interface JoinCommitteeApiResponse {
   statusCode: number;
 }
 
-export type CommitteeMembershipRequestRole = 'COMITTEE_MEMBER' | 'COMITTEE_ADMIN';
+export type CommitteeMembershipRequestRole = 'COMMITTEE_MEMBER' | 'COMMITTEE_ADMIN';
 
 export interface SubmitCommitteeMembershipRequestInput {
   committeeId: number;

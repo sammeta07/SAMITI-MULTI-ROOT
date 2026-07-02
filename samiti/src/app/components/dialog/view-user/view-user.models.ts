@@ -26,39 +26,39 @@ export interface UserBasicProfileSpec {
   name: string;
   email: string;
   mobile: string;
-  date_of_birth: string;
+  dateOfBirth: string;
   gender: string;
-  profile_photo: string | null; // 🚀 Matches your exact raw DB payload field link
-  created_at: string;
+  profilePhoto: string | null;
+  createdAt: string;
 }
 
 export interface UserCommitteeAffiliationSpec {
-  committee_id: number;
-  committee_name: string;
+  committeeId: number;
+  committeeName: string;
   logo: string | null;
-  is_committee_admin: number; // 🧱 1 for Admin role, 0 for Member role
+  isCommitteeAdmin: number; // 🧱 1 for Admin role, 0 for Member role
 }
 
 export interface UserProgramOwnershipSpec {
-  program_id: number;
-  program_name: string;
+  programId: number;
+  programName: string;
   status: string;
-  committee_id: number;
+  committeeId: number;
 }
 
 export interface UserTaskRowItemSpec {
-  task_id: number;
-  task_title: string;
+  taskId: number;
+  taskTitle: string;
   status: 'PENDING' | 'ACTIVE' | 'COMPLETED';
-  due_date: string;
+  dueDate: string;
   priority: string;
 }
 
 export interface UserTasksKPISummarySpec {
-  total_assigned: number;
+  totalAssigned: number;
   completed: number;
   pending: number;
-  critical_overdue: number;
+  criticalOverdue: number;
   listing: UserTaskRowItemSpec[];
 }
 
@@ -69,21 +69,16 @@ export interface UserMasterKundaliResponsePayload {
   profile: UserBasicProfileSpec;
   associations: {
     committees: UserCommitteeAffiliationSpec[];
-    programs_owned: UserProgramOwnershipSpec[];
+    programsOwned: UserProgramOwnershipSpec[];
   };
-  kpi_metrics: {
-    tasks_summary: UserTasksKPISummarySpec;
+  kpiMetrics: {
+    tasksSummary: UserTasksKPISummarySpec;
   };
 }
 
 // ── FIXED BRAND NEW RESPONSE API ENVELOPE STRUCTURING ─────────────────────────
 
 /**
- * 🚀 FIXED: Rewritten MemberDetailsResponse mapping your live analytics dataset flawlessly
+ * 🚀 FIXED: GraphQL response returning master aggregated data layout engine directly
  */
-export interface MemberDetailsResponse {
-  statusCode: number;
-  status: string;
-  message: string;
-  data?: UserMasterKundaliResponsePayload; // Injected new master aggregated data layout engine
-}
+export type MemberDetailsResponse = UserMasterKundaliResponsePayload;

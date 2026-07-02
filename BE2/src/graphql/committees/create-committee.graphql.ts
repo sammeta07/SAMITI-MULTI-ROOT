@@ -31,9 +31,6 @@ export const createCommitteeTypes = `
   }
 
   type CreateCommitteePayload {
-    statusCode: Int!
-    status: String!
-    message: String!
     data: CreatedCommittee!
   }
 
@@ -212,9 +209,6 @@ export const createCommitteeResolvers = {
           : [];
 
       return {
-        statusCode: 201,
-        status: 'success',
-        message: 'Committee created successfully',
         data: {
           id: Number(created.id),
           committeeName: created.committee_name,

@@ -2,9 +2,6 @@ import { execute } from '../../config/db';
 
 export const toggleCommitteeFavouriteTypes = `
   type ToggleCommitteeFavouritePayload {
-    statusCode: Int!
-    status: String!
-    message: String!
     committeeId: Int!
     isFavourite: Int!
   }
@@ -64,9 +61,6 @@ export const toggleCommitteeFavouriteResolvers = {
       );
 
       return {
-        statusCode: 200,
-        status: 'success',
-        message: normalizedFavourite === 1 ? 'Added to favourites' : 'Removed from favourites',
         committeeId,
         isFavourite: normalizedFavourite
       };

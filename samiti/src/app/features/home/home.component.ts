@@ -14,7 +14,7 @@ import { AuthService } from '../../core/services/auth.service';
 import { CreateCommitteeDialogComponent } from '../../components/dialog/create-committee/create-committee.component';
 import { ConfirmDialogService } from '../../components/dialog/confirm/confirm-dialog.service';
 import { ConfirmDialogData } from '../../components/dialog/confirm/confirm-dialog.models';
-import { CommitteeListResponseGuestUser, CommitteeListRequestBackend, CommitteeAuthItem, JoinComitteeRequestBody, JoinCommitteeApiResponse, ToggleCommitteeFavouriteResponse, CancelRequestApiResponse } from './home.models';
+import { CommitteeListResponseGuestUser, CommitteeListRequestBackend, CommitteeAuthItem, CommitteesList, JoinComitteeRequestBody, JoinCommitteeApiResponse, ToggleCommitteeFavouriteResponse, CancelRequestApiResponse } from './home.models';
 
 @Component({
   selector: 'app-home',
@@ -49,7 +49,7 @@ private readonly headerService = inject(HeaderService);
   selectedCommitteeRadius: number = 5;
   selectedProgramRadius: number = 5;
   selectedTabIndex: number = 0;
-  committeeList: CommitteeAuthItem[] = [];
+  committeeList: CommitteesList[] = [];
   copiedCommitteeId: string | null = null;
 
   // 🛠️ Reactive Computed Getter: Sync changes natively across header operations
@@ -58,14 +58,14 @@ private readonly headerService = inject(HeaderService);
   }
 
   // Show only committees where logged-in user is NOT already an accepted admin/member
-  get nearbyGroups(): CommitteeAuthItem[] {
+  get nearbyGroups(): CommitteesList[] {
     if (!this.isLoggedIn) return this.committeeList;
-    return this.committeeList.filter(c => c.membershipStatus !== 'ACCEPTED' && !c.isFavourite);
+    return this.committeeList.filter(c => this.isAuthItem(c) && c.membershipStatus !== 'ACCEPTED' && !c.isFavourite);
   }
 
-  get favouriteGroups(): CommitteeAuthItem[] {
+  get favouriteGroups(): CommitteesList[] {
     if (!this.isLoggedIn) return [];
-    return this.committeeList.filter(c => c.isFavourite === 1);
+    return this.committeeList.filter(c => this.isAuthItem(c) && c.isFavourite === 1);
   }
 
 constructor() {
@@ -109,19 +109,19 @@ constructor() {
       : this.homeService.getCommitteesListGuestByDistanceKm(body);
 
     fetch$.subscribe({
-      next: (res: CommitteeListResponseGuestUser) => {
-        this.committeeList = res.data as CommitteeAuthItem[];
+      next: (res) => {
+        this.committeeList = Array.isArray(res) ? res : [res];
         this.cdr.detectChanges();
       },
       error: (error) => {
-        this.notifier.error(error?.error?.message || error?.error || 'Failed to fetch committees');
+        this.notifier.error(error?.message || error?.error || 'Failed to fetch committees');
         this.cdr.detectChanges();
       }
     });
   }
 
   // Type guard: only CommitteeAuthItem has membership fields
-  private isAuthItem(c: CommitteeAuthItem): boolean {
+  private isAuthItem(c: CommitteesList): c is CommitteeAuthItem {
     return 'membershipStatus' in c;
   }
 
@@ -151,24 +151,19 @@ constructor() {
 
       const body:JoinComitteeRequestBody={
         committeeId: committee.id,
-        role: 'COMITTEE_MEMBER'
+        role: 'COMMITTEE_MEMBER'
       }
       // Proceed with join request API call
       this.homeService.joinCommittee(body).subscribe({
-        next: (response: JoinCommitteeApiResponse) => {
-          if (response.statusCode !== 200) {
-            this.notifier.error(response.message || response.error || 'Failed to join committee');
-            return;
-          }
-
-          this.notifier.success(response.message || 'Join request sent successfully!');
+        next: (response: JoinCommitteeApiResponse | undefined) => {
+          this.notifier.success('Join request sent successfully!');
           if (committee && this.isAuthItem(committee)) {
             committee.membershipStatus = 'PENDING';
             this.cdr.detectChanges();
           }
         },
         error: (err) => {
-          this.notifier.error(err?.error?.message || err?.message || err?.error || 'Failed to join committee');
+          this.notifier.error(err?.message || 'Failed to join committee');
         }
       });
     });
@@ -199,13 +194,8 @@ cancelRequest(id: number, event: Event): void {
 
       // Proceed with cancel request API call
       this.homeService.cancelRequest(id).subscribe({
-        next: (response: CancelRequestApiResponse) => {
-          if (response.statusCode !== 200) {
-            this.notifier.error(response.message || response.error || 'Failed to cancel request');
-            return;
-          }
-
-          this.notifier.success(response.message || 'Join request cancelled successfully!');
+        next: (response: CancelRequestApiResponse | undefined) => {
+          this.notifier.success('Join request cancelled successfully!');
           if (committee && this.isAuthItem(committee)) {
             committee.membershipStatus = null;
             this.cdr.detectChanges();
@@ -214,7 +204,7 @@ cancelRequest(id: number, event: Event): void {
           this.homeService.refreshCommitteeList.update(v => v + 1);
         },
         error: (err) => {
-          this.notifier.error(err?.error?.message || err?.message || err?.error || 'Failed to cancel request');
+          this.notifier.error(err?.message || 'Failed to cancel request');
         }
       });
     });
@@ -230,12 +220,11 @@ cancelRequest(id: number, event: Event): void {
     const nextFavouriteState = target.isFavourite ? 0 : 1;
     const targetTabIndex = nextFavouriteState === 1 ? 1 : 0;
     this.homeService.toggleCommitteeFavourite(committeeId, nextFavouriteState).subscribe({
-      next: (response: ToggleCommitteeFavouriteResponse) => {
-        if (response.statusCode !== 200) {
-          this.notifier.error(response.message || 'Failed to update favourite status');
+      next: (response: ToggleCommitteeFavouriteResponse | undefined) => {
+        if (!response) {
+          this.notifier.error('Failed to update favourite status');
           return;
         }
-
         target.isFavourite = response.isFavourite;
         this.selectedTabIndex = targetTabIndex;
         this.cdr.detectChanges();
@@ -243,7 +232,7 @@ cancelRequest(id: number, event: Event): void {
         this.notifier.success(response.isFavourite ? 'Added to Favourites' : 'Removed from Favourites');
       },
       error: (err) => {
-        this.notifier.error(err?.error?.message || err?.error || 'Failed to update favourite status');
+        this.notifier.error(err?.message || 'Failed to update favourite status');
       }
     });
   }
