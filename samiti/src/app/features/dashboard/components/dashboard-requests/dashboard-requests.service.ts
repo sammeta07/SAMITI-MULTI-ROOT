@@ -31,7 +31,7 @@ export class DashboardRequestsService {
       receivedCommitteeMembershipRequestsForAdminCommittees {
         committeeId
         committeeName
-        area
+        address
         requestType
         requestSentTime
         userDetails {
@@ -63,8 +63,8 @@ export class DashboardRequestsService {
         committeeId
         committeeName
         requestType
-        area
-        since
+        address
+        establishYear
         status
         requestSentTime
         resolvedByName

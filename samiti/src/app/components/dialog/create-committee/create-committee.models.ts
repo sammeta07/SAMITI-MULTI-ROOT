@@ -1,8 +1,8 @@
 // 1. Backend ko send hone wala direct payload interface
 export interface CreateCommitteeRequest {
   name: string;
-  since: number;
-  area: string;
+  establish_year: number;
+  address: string;
   contact_numbers: string[];
   description: string;
   latitude: number;   // Location filters ke liye coordinates compulsory hain
@@ -13,8 +13,8 @@ export interface CreateCommitteeRequest {
 // Alias for backward compatibility - Payload sent to backend
 export interface CreateCommitteePayload {
   name: string;
-  since: number;
-  area: string;
+  establish_year: number;
+  address: string;
   contact_numbers: string[];
   description: string;
   latitude: number;
@@ -30,8 +30,8 @@ export interface UpdateCommitteePayload extends CreateCommitteePayload {
 export interface CreateCommitteeApiResponse {
   id: number;
   committeeName: string;
-  since: number;
-  area: string;
+  establishYear: number;
+  address: string;
   contactNumbers: string[];
   description: string;
   latitude: number;

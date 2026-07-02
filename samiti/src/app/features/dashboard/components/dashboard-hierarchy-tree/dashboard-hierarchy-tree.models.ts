@@ -39,8 +39,8 @@ export interface CommitteeDetailsPayload {
   committeeId: number;
   committeeName: string;
   description: string;
-  area: string;
-  since: number;
+  address: string;
+  establishYear: number;
   logo: string | null;
   contactNumbers: string[];
   createdBy: number;

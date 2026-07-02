@@ -71,10 +71,10 @@ export const hierarchyTreeResolvers = {
 
         // Fetch events for these committees
         const events = await query<any[]>(`
-          SELECT id AS event_id, committee_id, event_name
+          SELECT id AS event_id, committee_id, name
           FROM events
           WHERE committee_id IN (${placeholders})
-          ORDER BY event_name ASC
+          ORDER BY name ASC
         `, committeeIds);
 
         const eventIds = events.map((e: any) => e.event_id);
@@ -86,18 +86,18 @@ export const hierarchyTreeResolvers = {
 
           // Fetch programs by event_id
           programs = await query<any[]>(`
-            SELECT id AS program_id, event_id, program_name, type, status
+            SELECT id AS program_id, event_id, name, type, status
             FROM programs
             WHERE event_id IN (${eventPlaceholders})
-            ORDER BY program_name ASC
+            ORDER BY name ASC
           `, eventIds);
 
           // Fetch tasks by event_id (NOT program_id)
           tasks = await query<any[]>(`
-            SELECT id AS task_id, event_id, parent_id, task_name, owner_id, status
+            SELECT id AS task_id, event_id, parent_id, name, owner_id, status
             FROM tasks
             WHERE event_id IN (${eventPlaceholders})
-            ORDER BY parent_id ASC, task_name ASC
+            ORDER BY parent_id ASC, name ASC
           `, eventIds);
         }
 
@@ -118,7 +118,7 @@ export const hierarchyTreeResolvers = {
           if (!acc[t.event_id]) acc[t.event_id] = [];
           acc[t.event_id].push({
             taskId: t.task_id,
-            taskName: t.task_name,
+            taskName: t.name,
             status: t.status || '',
             ownerId: t.owner_id,
             parentId: t.parent_id
@@ -131,7 +131,7 @@ export const hierarchyTreeResolvers = {
           if (!acc[e.committee_id]) acc[e.committee_id] = [];
           acc[e.committee_id].push({
             eventId: e.event_id,
-            eventName: e.event_name,
+            eventName: e.name,
             programs: programsByEvent[e.event_id] || [],
             tasks: tasksByEvent[e.event_id] || []
           });

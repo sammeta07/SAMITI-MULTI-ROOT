@@ -39,7 +39,7 @@ export class HomeService {
             description
             distanceKm
             committeeLogo
-            establishedYear
+            establishYear
             events {
               eventId
               eventName
@@ -81,7 +81,7 @@ export class HomeService {
             description
             distanceKm
             committeeLogo
-            establishedYear
+            establishYear
             isCommitteeAdmin
             isCommitteeMember
             membershipStatus

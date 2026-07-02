@@ -28,7 +28,7 @@ export interface CommitteeGuestItem {
   description: string;
   distanceKm: number;
   committeeLogo: string | null;
-  establishedYear: number;
+  establishYear: number;
   events: CommitteeEvent[];
   // Auth-specific fields (optional for guest users, always present for auth users)
   isCommitteeAdmin?: number;

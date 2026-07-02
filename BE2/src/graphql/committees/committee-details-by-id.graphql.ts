@@ -13,8 +13,8 @@ export const committeeDetailsTypes = `
     committeeId: Int!
     committeeName: String!
     description: String!
-    area: String!
-    since: Int!
+    address: String!
+    establishYear: Int!
     logo: String
     contactNumbers: [String!]!
     createdBy: Int!
@@ -62,8 +62,8 @@ export const committeeDetailsResolvers = {
           id,
           committee_name,
           description,
-          area,
-          since,
+          address,
+          establish_year,
           logo,
           contact_numbers,
           created_by,
@@ -117,8 +117,8 @@ export const committeeDetailsResolvers = {
         committeeId: committee.id,
         committeeName: committee.committee_name,
         description: committee.description,
-        area: committee.area,
-        since: committee.since,
+        address: committee.address,
+        establishYear: committee.establish_year,
         logo: committee.logo || null,
         contactNumbers: typeof committee.contact_numbers === 'string' ? JSON.parse(committee.contact_numbers) : (committee.contact_numbers || []),
         createdBy: committee.created_by,

@@ -24,7 +24,7 @@ export const committeeMembershipRequestsTypes = `
   type ReceivedCommitteeMembershipRequestItem {
     committeeId: Int!
     committeeName: String!
-    area: String
+    address: String
     requestType: CommitteeMembershipRequestType!
     requestSentTime: String
     userDetails: CommitteeMembershipRequesterUserDetails!
@@ -34,8 +34,8 @@ export const committeeMembershipRequestsTypes = `
     committeeId: Int!
     committeeName: String!
     requestType: CommitteeMembershipRequestType!
-    area: String
-    since: Int
+    address: String
+    establishYear: Int
     status: String!
     requestSentTime: String
     resolvedByName: String
@@ -117,7 +117,7 @@ export const committeeMembershipRequestsResolvers = {
           SELECT
             c.id AS committee_id,
             c.committee_name,
-            c.area,
+            c.address,
             CASE
               WHEN cm.admin_status = 'PENDING' THEN 'COMMITTEE_ADMIN'
               ELSE 'COMMITTEE_MEMBER'
@@ -163,7 +163,7 @@ export const committeeMembershipRequestsResolvers = {
         data: rows.map((row) => ({
           committeeId: Number(row.committee_id),
           committeeName: row.committee_name,
-          area: row.area,
+          areaddressa: row.address,
           requestType: row.request_type === 'COMMITTEE_ADMIN' ? 'COMMITTEE_ADMIN' : 'COMMITTEE_MEMBER',
           requestSentTime: row.request_sent_time,
           userDetails: {
@@ -191,8 +191,8 @@ export const committeeMembershipRequestsResolvers = {
               WHEN cm.admin_status IS NOT NULL THEN 'COMMITTEE_ADMIN'
               ELSE 'COMMITTEE_MEMBER'
             END AS request_type,
-            c.area,
-            c.since,
+            c.address,
+            c.establish_year,
             CASE
               WHEN cm.admin_status IS NOT NULL THEN cm.admin_status
               ELSE cm.membership_status
@@ -268,8 +268,8 @@ export const committeeMembershipRequestsResolvers = {
           committeeId: Number(row.committee_id),
           committeeName: row.committee_name,
           requestType: row.request_type === 'COMMITTEE_ADMIN' ? 'COMMITTEE_ADMIN' : 'COMMITTEE_MEMBER',
-          area: row.area,
-          since: row.since ? Number(row.since) : null,
+          areaddressa: row.address,
+          establishYear: row.establish_year ? Number(row.establish_year) : null,
           status: String(row.status || 'PENDING'),
           requestSentTime: row.request_sent_time,
           resolvedByName: row.resolved_by_name,

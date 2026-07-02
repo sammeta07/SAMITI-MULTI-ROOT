@@ -28,8 +28,8 @@ export class GroupDetailsService {
         committeeId
         committeeName
         description
-        area
-        since
+        address
+        establishYear
         logo
         contactNumbers
         createdBy

@@ -20,7 +20,7 @@ export const guestCommitteeTypes = `
     description: String!
     distanceKm: Float!
     committeeLogo: String
-    establishedYear: Int!
+    establishYear: Int!
     events: [EventSummary!]!
   }
 `;
@@ -54,8 +54,8 @@ export const guestCommitteesResolvers = {
         SELECT 
           id,
           committee_name,
-          since,
-          area,
+          establish_year,
+          address,
           logo,
           contact_numbers,
           description,
@@ -77,7 +77,7 @@ export const guestCommitteesResolvers = {
           SELECT 
             id AS eventId,
             committee_id AS committeeId,
-            event_name AS eventName,
+            name,
             status,
             type,
             visibility,
@@ -102,13 +102,13 @@ export const guestCommitteesResolvers = {
 
       return rawList.map((item: any) => ({
         id: Number(item.id) || 0,
-        address: item.area || '',
+        address: item.address || '',
         committeeName: item.committee_name || '',
         contactNumbers: parseContactNumbers(item.contact_numbers),
         description: item.description || '',
         distanceKm: Number(item.distanceKm?.toFixed?.(2) ?? item.distanceKm ?? 0),
         committeeLogo: item.logo || null,
-        establishedYear: Number(item.since) || 0,
+        establishYear: Number(item.establish_year) || 0,
         events: (eventsMap[item.id] || []).map((event) => ({
           eventId: Number(event.eventId) || 0,
           eventName: event.eventName || '',

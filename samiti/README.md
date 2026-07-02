@@ -79,7 +79,7 @@ A clean, non-flat, highly intuitive true hierarchical structure that maps the pr
         "events": [
           {
             "event_id": 501,
-            "event_name": "Durga Puja 2026",
+            "name": "Durga Puja 2026",
             "designation": "ADHYAKSH",
            
             "programs": [

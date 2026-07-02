@@ -4,8 +4,8 @@ import { execute, query } from '../../config/db';
 type CommitteeRow = RowDataPacket & {
   id: number;
   committee_name: string;
-  since: number;
-  area: string;
+  establish_year: number;
+  address: string;
   contact_numbers: string | string[] | null;
   description: string;
   latitude: number;
@@ -19,8 +19,8 @@ export const updateCommitteeTypes = `
   input UpdateCommitteeInput {
     committeeId: Int!
     committeeName: String!
-    since: Int!
-    area: String!
+    establishYear: Int!
+    address: String!
     districtId: Int
     stateId: Int
     latitude: Float!
@@ -43,8 +43,8 @@ export const updateCommitteeResolvers = {
         input: {
           committeeId: number;
           committeeName: string;
-          since: number;
-          area: string;
+          establishYear: number;
+          address: string;
           districtId?: number | null;
           stateId?: number | null;
           latitude: number;
@@ -79,8 +79,8 @@ export const updateCommitteeResolvers = {
       const {
         committeeId,
         committeeName,
-        since,
-        area,
+        establishYear,
+        address,
         districtId = 897,
         stateId = 7,
         latitude,
@@ -94,8 +94,8 @@ export const updateCommitteeResolvers = {
         throw new Error('Committee ID is required');
       }
 
-      if (!committeeName?.trim() || !area?.trim() || !description?.trim()) {
-        throw new Error('Committee name, area and description are required');
+      if (!committeeName?.trim() || !address?.trim() || !description?.trim()) {
+        throw new Error('Committee name, address and description are required');
       }
 
       if (!Array.isArray(contactNumbers) || contactNumbers.length === 0) {
@@ -133,8 +133,8 @@ export const updateCommitteeResolvers = {
       await execute(
         `UPDATE committees
          SET committee_name = ?,
-             since = ?,
-             area = ?,
+             establish_year = ?,
+             address = ?,
              district_id = ?,
              state_id = ?,
              latitude = ?,
@@ -145,8 +145,8 @@ export const updateCommitteeResolvers = {
          WHERE id = ?`,
         [
           committeeName.trim(),
-          since,
-          area.trim(),
+          establishYear,
+          address.trim(),
           districtId,
           stateId,
           latitude,
@@ -162,8 +162,8 @@ export const updateCommitteeResolvers = {
         `SELECT
           id,
           committee_name,
-          since,
-          area,
+          establish_year,
+          address,
           contact_numbers,
           description,
           latitude,
@@ -192,8 +192,8 @@ export const updateCommitteeResolvers = {
         data: {
           id: Number(updated.id),
           committeeName: updated.committee_name,
-          since: Number(updated.since),
-          area: updated.area,
+          establishYear: Number(updated.establish_year),
+          address: updated.address,
           contactNumbers: contactNumbersArray,
           description: updated.description,
           latitude: Number(updated.latitude),

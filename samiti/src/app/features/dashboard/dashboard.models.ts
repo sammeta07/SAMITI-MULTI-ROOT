@@ -1,6 +1,6 @@
 export interface TaskItem {
   task_id: number;
-  task_name: string;
+  name: string;
   status: string;
 }
 
@@ -12,7 +12,7 @@ export interface ProgramItem {
 
 export interface EventItem {
   event_id: number;
-  event_name: string;
+  name: string;
   programs: ProgramItem[];
 }
 

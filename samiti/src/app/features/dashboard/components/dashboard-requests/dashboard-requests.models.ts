@@ -16,7 +16,7 @@ export interface CommitteeMembershipRequesterUserDetails {
 export interface ReceivedCommitteeMembershipRequestItem {
   committeeId: number;
   committeeName: string;
-  area: string | null;
+  address: string | null;
   requestType: CommitteeMembershipRequestType;
   requestSentTime: string;
   userDetails: CommitteeMembershipRequesterUserDetails;
@@ -26,8 +26,8 @@ export interface SentCommitteeMembershipRequestItem {
   committeeId: number;
   committeeName: string;
   requestType: CommitteeMembershipRequestType;
-  area: string;
-  since: number;
+  address: string;
+  establishYear: number;
   status: 'PENDING' | 'ACCEPTED' | 'REJECTED';
   requestSentTime: string;
   resolvedByName: string | null;

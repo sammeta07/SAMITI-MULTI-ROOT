@@ -102,7 +102,7 @@ export const createEventResolvers = {
 
         // ✅ Insert new event with all fields including created_by, updated_by, created_at
         const result = await execute(
-          `INSERT INTO events (committee_id, event_name, description, event_banner, status, type, visibility, start_date, end_date, created_by, updated_by, created_at)
+          `INSERT INTO events (committee_id, name, description, event_banner, status, type, visibility, start_date, end_date, created_by, updated_by, created_at)
            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW())`,
           [committeeId, eventName, description || null, eventBanner || null, status, type || null, visibility || 'VISIBLE', startDate || null, endDate || null, loggedInUserId, loggedInUserId]
         );
@@ -127,7 +127,7 @@ export const createEventResolvers = {
 
         // Fetch and return the created event
         const createdEvent = await query(
-          `SELECT id, id as eventId, event_name as eventName, committee_id as committeeId,
+          `SELECT id, id as eventId, name as eventName, committee_id as committeeId,
                   description, event_banner as eventBanner, status, type, visibility,
                   start_date as startDate, end_date as endDate, created_by as createdBy, updated_by as updatedBy, created_at as createdAt
            FROM events WHERE id = ?`,

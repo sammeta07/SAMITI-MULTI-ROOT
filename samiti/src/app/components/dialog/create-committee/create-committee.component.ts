@@ -44,8 +44,8 @@ export class CreateCommitteeDialogComponent implements OnInit {
 
   // 📝 NgModel models bindings
   public committeeName: string = '';
-  public sinceYear: number = 2026;
-  public areaLocation: string = '';
+  public establishYear: number = 2026;
+  public addressLocation: string = '';
   public primaryContact: string = '';
   public secondaryContact: string = '';
   public description: string = '';
@@ -64,8 +64,8 @@ export class CreateCommitteeDialogComponent implements OnInit {
       this.isEditMode = true;
       this.committeeIdForEdit = Number(committee.committeeId);
       this.committeeName = committee.committeeName || '';
-      this.sinceYear = Number(committee.since || 2026);
-      this.areaLocation = committee.area || '';
+      this.establishYear = Number(committee.establishYear || 2026);
+      this.addressLocation = committee.address || '';
       this.description = committee.description || '';
       this.existingCommitteeLogoUrl = committee.logo || null;
       this.committeeLogoPreviewUrl = committee.logo || null;
@@ -81,8 +81,8 @@ export class CreateCommitteeDialogComponent implements OnInit {
   get isFormValid(): boolean {
     return (
       !!this.committeeName?.trim() &&
-      !!this.sinceYear &&
-      !!this.areaLocation?.trim() &&
+      !!this.establishYear &&
+      !!this.addressLocation?.trim() &&
       !!this.primaryContact?.trim() &&
       !!this.description?.trim()
     );
@@ -159,8 +159,8 @@ export class CreateCommitteeDialogComponent implements OnInit {
 
     const payload = {
       name: this.committeeName.trim(),
-      since: Number(this.sinceYear),
-      area: this.areaLocation.trim(),
+      establish_year: Number(this.establishYear),
+      address: this.addressLocation.trim(),
       contact_numbers: contactsArray, // Dispatches clean mapped dynamic arrays back onto server database structures
       description: this.description.trim(),
       latitude: coords ? coords.lat : 21.2211103,

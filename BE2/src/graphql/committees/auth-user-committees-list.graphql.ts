@@ -9,7 +9,7 @@ export const authCommitteeTypes = `
     description: String!
     distanceKm: Float!
     committeeLogo: String
-    establishedYear: Int!
+    establishYear: Int!
     isCommitteeAdmin: Int!
     isCommitteeMember: Int!
     membershipStatus: String
@@ -57,8 +57,8 @@ export const authCommitteesResolvers = {
         SELECT 
           c.id,
           c.committee_name,
-          c.since,
-          c.area,
+          c.establish_year,
+          c.address,
           c.logo,
           c.contact_numbers,
           c.description,
@@ -90,7 +90,7 @@ export const authCommitteesResolvers = {
           SELECT 
             id AS eventId,
             committee_id AS committeeId,
-            event_name AS eventName,
+            name,
             status,
             type,
             visibility,
@@ -119,13 +119,13 @@ export const authCommitteesResolvers = {
 
         return {
           id: item.id,
-          address: item.area || '',
+          address: item.address || '',
           committeeName: item.committee_name || '',
           contactNumbers: typeof item.contact_numbers === 'string' ? JSON.parse(item.contact_numbers) : (item.contact_numbers || []),
           description: item.description || '',
           distanceKm: Number(item.distanceKm?.toFixed?.(2) ?? item.distanceKm ?? 0),
           committeeLogo: item.logo || null,
-          establishedYear: item.since ?? 0,
+          establishYear: item.establish_year ?? 0,
           isCommitteeAdmin: Number(item.is_committee_admin),
           isCommitteeMember: Number(item.is_committee_member),
           membershipStatus: item.membership_status || null,

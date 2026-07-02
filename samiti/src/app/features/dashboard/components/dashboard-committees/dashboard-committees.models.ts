@@ -9,8 +9,8 @@ export interface Committee {
   committee_id: number;
   committee_name: string;
   logo: string | null;
-  area: string;
-  since: number;
+  address: string;
+  establish_year: number;
   is_admin_privilege: boolean;
   membership_status: 'ACCEPTED' | 'PENDING' | 'REJECTED';
 }
@@ -37,8 +37,8 @@ export type CommitteeActionResponse = Record<string, any>;
 export interface MyCommitteeItem {
   committee_id: number;
   committee_name: string;
-  since: number;
-  area: string;
+  establish_year: number;
+  address: string;
   logo: string | null;
   membership_status: 'ACCEPTED' | string;
   is_admin_privilege: boolean;
@@ -59,8 +59,8 @@ export interface MyCommitteeDetailedItem {
   committee_id: number;
   committee_code: string;
   committee_name: string;
-  since: number;
-  area: string;
+  establish_year: number;
+  address: string;
   logo: string | null;
   description: string;
   membership_status: string;

@@ -17,8 +17,8 @@ export class DashboardCommitteesService {
       createCommittee(input: $input) {
         id
         committeeName
-        since
-        area
+        establishYear
+        address
         contactNumbers
         description
         latitude
@@ -36,8 +36,8 @@ export class DashboardCommitteesService {
         variables: {
           input: {
             committeeName: payload.name,
-            since: payload.since,
-            area: payload.area,
+            establishYear: payload.establish_year,
+            address: payload.address,
             contactNumbers: payload.contact_numbers,
             description: payload.description,
             latitude: payload.latitude,

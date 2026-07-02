@@ -59,7 +59,7 @@
                           <span class="user-fullname-bold">{{ req.committeeName }}</span>
                         </div>
                       </td>
-                      <td><span class="table-text-normal">{{ req.area || 'N/A' }}</span></td>
+                      <td><span class="table-text-normal">{{ req.address || 'N/A' }}</span></td>
                       <td><span class="table-dim-text">{{ req.userDetails.email }}</span></td>
                       <td><span class="table-text-normal">{{ req.userDetails.mobile || 'N/A' }}</span></td>
                       <td><span class="font-capitalize table-text-normal">{{ req.userDetails.gender }}</span></td>
@@ -109,7 +109,7 @@
                           <span class="user-fullname-bold">{{ req.committeeName }}</span>
                         </div>
                       </td>
-                      <td><span class="table-text-normal">{{ req.area || 'N/A' }}</span></td>
+                      <td><span class="table-text-normal">{{ req.address || 'N/A' }}</span></td>
                       <td><span class="table-dim-text">{{ req.userDetails.email }}</span></td>
                       <td><span class="table-text-normal">{{ req.userDetails.mobile || 'N/A' }}</span></td>
                       <td><span class="font-capitalize table-text-normal">{{ req.userDetails.gender }}</span></td>
@@ -290,8 +290,8 @@
                           <span class="user-fullname-bold">{{ sent.committeeName }}</span>
                         </div>
                       </td>
-                      <td><span class="table-text-normal">{{ sent.area || 'N/A' }}</span></td>
-                      <td><span class="table-dim-text">Est. {{ sent.since }}</span></td>
+                      <td><span class="table-text-normal">{{ sent.address || 'N/A' }}</span></td>
+                      <td><span class="table-dim-text">Est. {{ sent.establishYear }}</span></td>
                       <td><span class="table-dim-text">{{ sent.requestSentTime | date:'d MMMM yyyy, h:mm a' }}</span></td>
                       <td>
                         @if (sent.status !== 'PENDING' && sent.resolvedAtTime) {
@@ -347,8 +347,8 @@
                           <span class="user-fullname-bold">{{ sent.committeeName }}</span>
                         </div>
                       </td>
-                      <td><span class="table-text-normal">{{ sent.area || 'N/A' }}</span></td>
-                      <td><span class="table-dim-text">Est. {{ sent.since }}</span></td>
+                      <td><span class="table-text-normal">{{ sent.address || 'N/A' }}</span></td>
+                      <td><span class="table-dim-text">Est. {{ sent.establishYear }}</span></td>
                       <td><span class="table-dim-text">{{ sent.requestSentTime | date:'d MMMM yyyy, h:mm a' }}</span></td>
                       <td>
                         @if (sent.status !== 'PENDING' && sent.resolvedAtTime) {

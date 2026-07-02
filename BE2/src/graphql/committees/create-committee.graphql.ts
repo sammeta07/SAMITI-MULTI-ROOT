@@ -4,8 +4,8 @@ import { execute, query } from '../../config/db';
 type CommitteeRow = RowDataPacket & {
   id: number;
   committee_name: string;
-  since: number;
-  area: string;
+  establish_year: number;
+  address: string;
   contact_numbers: string | string[] | null;
   description: string;
   latitude: number;
@@ -19,8 +19,8 @@ export const createCommitteeTypes = `
   type CreatedCommittee {
     id: Int!
     committeeName: String!
-    since: Int!
-    area: String!
+    establishYear: Int!
+    address: String!
     contactNumbers: [String!]!
     description: String!
     latitude: Float!
@@ -36,8 +36,8 @@ export const createCommitteeTypes = `
 
   input CreateCommitteeInput {
     committeeName: String!
-    since: Int!
-    area: String!
+    establish_year: Int!
+    address: String!
     districtId: Int
     stateId: Int
     latitude: Float!
@@ -59,8 +59,8 @@ export const createCommitteeResolvers = {
       args: {
         input: {
           committeeName: string;
-          since: number;
-          area: string;
+          establishYear: number;
+          address: string;
           districtId?: number | null;
           stateId?: number | null;
           latitude: number;
@@ -94,8 +94,8 @@ export const createCommitteeResolvers = {
 
       const {
         committeeName,
-        since,
-        area,
+        establishYear,
+        address,
         districtId = 897,
         stateId = 7,
         latitude,
@@ -105,8 +105,8 @@ export const createCommitteeResolvers = {
         logo = null
       } = args.input;
 
-      if (!committeeName?.trim() || !area?.trim() || !description?.trim()) {
-        throw new Error('Committee name, area and description are required');
+      if (!committeeName?.trim() || !address?.trim() || !description?.trim()) {
+        throw new Error('Committee name, address and description are required');
       }
 
       if (!Array.isArray(contactNumbers) || contactNumbers.length === 0) {
@@ -130,9 +130,9 @@ export const createCommitteeResolvers = {
       const creationResult = await execute(
         `INSERT INTO committees (
           committee_name,
-          since,
+          establish_year,
           created_by,
-          area,
+          address,
           district_id,
           state_id,
           latitude,
@@ -144,9 +144,9 @@ export const createCommitteeResolvers = {
         ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW())`,
         [
           committeeName.trim(),
-          since,
+          establishYear,
           loggedInUserId,
-          area.trim(),
+          address.trim(),
           districtId,
           stateId,
           latitude,
@@ -182,8 +182,8 @@ export const createCommitteeResolvers = {
         `SELECT
           id,
           committee_name,
-          since,
-          area,
+          establish_year,
+          address,
           contact_numbers,
           description,
           latitude,
@@ -212,8 +212,8 @@ export const createCommitteeResolvers = {
         data: {
           id: Number(created.id),
           committeeName: created.committee_name,
-          since: Number(created.since),
-          area: created.area,
+          establishYear: Number(created.establish_year),
+          address: created.address,
           contactNumbers: contactNumbersArray,
           description: created.description,
           latitude: Number(created.latitude),

@@ -25,8 +25,8 @@ createCommittee(body: CreateCommitteePayload): Observable<any> {
                         data {
                             id
                             committeeName
-                            since
-                            area
+                            establishYear
+                            address
                             contactNumbers
                             description
                             latitude
@@ -43,8 +43,8 @@ createCommittee(body: CreateCommitteePayload): Observable<any> {
                     variables: {
                         input: {
                             committeeName: body.name,
-                            since: body.since,
-                            area: body.area,
+                            establishYear: body.establish_year,
+                            address: body.address,
                             contactNumbers: body.contact_numbers,
                             description: body.description,
                             latitude: body.latitude,
@@ -68,8 +68,8 @@ updateCommittee(body: UpdateCommitteePayload): Observable<any> {
                         data {
                             id
                             committeeName
-                            since
-                            area
+                            establishYear
+                            address
                             contactNumbers
                             description
                             latitude
@@ -87,8 +87,8 @@ updateCommittee(body: UpdateCommitteePayload): Observable<any> {
                         input: {
                             committeeId: body.committeeId,
                             committeeName: body.name,
-                            since: body.since,
-                            area: body.area,
+                            establishYear: body.establish_year,
+                            address: body.address,
                             contactNumbers: body.contact_numbers,
                             description: body.description,
                             latitude: body.latitude,

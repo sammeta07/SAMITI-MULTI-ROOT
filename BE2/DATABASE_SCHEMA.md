@@ -9,7 +9,7 @@
 +--------------+--------------+------+-----+-------------------+-------------------+
 | id           | int          | NO   | PRI | NULL              | auto_increment    |
 | committee_id | int          | YES  | MUL | NULL              |                   |
-| event_name   | varchar(255) | NO   |     | NULL              |                   |
+| name   | varchar(255) | NO   |     | NULL              |                   |
 | created_at   | timestamp    | YES  |     | CURRENT_TIMESTAMP | DEFAULT_GENERATED |
 +--------------+--------------+------+-----+-------------------+-------------------+
 ```
@@ -21,7 +21,7 @@
 +--------------+------------------+------+-----+-------------------+-------------------+
 | id           | int              | NO   | PRI | NULL              | auto_increment    |
 | committee_id | int              | YES  | MUL | NULL              |                   |
-| event_name   | varchar(255)     | NO   |     | NULL              |                   |
+| name   | varchar(255)     | NO   |     | NULL              |                   |
 | description  | LONGTEXT         | YES  |     | NULL              |                   |
 | event_banner | LONGTEXT         | YES  |     | NULL              | (base64/URL)      |
 | status       | varchar(50)      | NO   |     | UPCOMING          |                   |
@@ -41,7 +41,7 @@
 |-------|------|------|---------|-------------|
 | `id` | int | NO | auto_increment | Primary key - Event ID |
 | `committee_id` | int | YES | - | Foreign key to committees table |
-| `event_name` | varchar(255) | NO | - | Event name/title |
+| `name` | varchar(255) | NO | - | Event name/title |
 | `description` | LONGTEXT | YES | - | Detailed event description |
 | `event_banner` | LONGTEXT | YES | - | Event banner image (base64 encoded or URL) |
 | `status` | varchar(50) | NO | UPCOMING | Event status: `UPCOMING`, `ONGOING`, `COMPLETED`, `CANCELLED` |

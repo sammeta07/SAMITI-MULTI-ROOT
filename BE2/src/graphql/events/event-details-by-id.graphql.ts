@@ -55,7 +55,7 @@ export const eventDetailsResolvers = {
           id,
           id AS eventId,
           committee_id AS committeeId,
-          event_name AS eventName,
+          name,
           description,
           event_banner AS eventBanner,
           status,
