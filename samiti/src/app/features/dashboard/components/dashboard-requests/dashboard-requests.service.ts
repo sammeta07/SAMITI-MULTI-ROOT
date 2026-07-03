@@ -26,33 +26,48 @@ export class DashboardRequestsService {
   private readonly http = inject(HttpClient);
   private readonly graphqlUrl = environment.graphqlUrl;
 
+  private unwrapDataArray<TItem>(
+    response: GraphQLResponseEnvelope<{ data: TItem[] }>,
+    fallbackErrorMessage: string
+  ): TItem[] {
+    if (response.errors?.length) {
+      throw new Error(response.errors[0].message || fallbackErrorMessage);
+    }
+
+    return response.data?.data ?? [];
+  }
+
   getReceivedCommitteeMembershipRequestsForAdminCommittees(): Observable<ReceivedCommitteeMembershipRequestItem[]> {
     const query = `query ReceivedCommitteeMembershipRequestsForAdminCommittees {
       receivedCommitteeMembershipRequestsForAdminCommittees {
-        committeeId
-        committeeName
-        address
-        requestType
-        requestSentTime
-        userDetails {
-          userId
-          name
-          email
-          mobile
-          dateOfBirth
-          gender
-          photo
+        data {
+          committeeId
+          committeeName
+          address
+          requestType
+          requestSentTime
+          userDetails {
+            userId
+            name
+            email
+            mobile
+            dateOfBirth
+            gender
+            photo
+          }
         }
       }
     }`;
 
-    return this.http.post<GraphQLResponseEnvelope<{ receivedCommitteeMembershipRequestsForAdminCommittees: ReceivedCommitteeMembershipRequestItem[] }>>(this.graphqlUrl, { query }).pipe(
+    return this.http.post<GraphQLResponseEnvelope<{ receivedCommitteeMembershipRequestsForAdminCommittees: { data: ReceivedCommitteeMembershipRequestItem[] } }>>(this.graphqlUrl, { query }).pipe(
       map((response) => {
-        if (response.errors?.length) {
-          throw new Error(response.errors[0].message || 'Failed to fetch received membership requests');
-        }
-
-        return response.data?.receivedCommitteeMembershipRequestsForAdminCommittees ?? [];
+        return this.unwrapDataArray(
+          {
+            data: response.data?.receivedCommitteeMembershipRequestsForAdminCommittees,
+            errors: response.errors
+          },
+          'Failed to fetch received membership requests'
+        );
       })
     );
   }
@@ -60,27 +75,31 @@ export class DashboardRequestsService {
   getSentCommitteeMembershipRequestsByLoggedInUser(): Observable<SentCommitteeMembershipRequestItem[]> {
     const query = `query SentCommitteeMembershipRequestsByLoggedInUser {
       sentCommitteeMembershipRequestsByLoggedInUser {
-        committeeId
-        committeeName
-        requestType
-        address
-        establishYear
-        status
-        requestSentTime
-        resolvedByName
-        resolvedByEmail
-        resolvedByPhoto
-        resolvedAtTime
+        data {
+          committeeId
+          committeeName
+          requestType
+          address
+          establishYear
+          status
+          requestSentTime
+          resolvedByName
+          resolvedByEmail
+          resolvedByPhoto
+          resolvedAtTime
+        }
       }
     }`;
 
-    return this.http.post<GraphQLResponseEnvelope<{ sentCommitteeMembershipRequestsByLoggedInUser: SentCommitteeMembershipRequestItem[] }>>(this.graphqlUrl, { query }).pipe(
+    return this.http.post<GraphQLResponseEnvelope<{ sentCommitteeMembershipRequestsByLoggedInUser: { data: SentCommitteeMembershipRequestItem[] } }>>(this.graphqlUrl, { query }).pipe(
       map((response) => {
-        if (response.errors?.length) {
-          throw new Error(response.errors[0].message || 'Failed to fetch sent membership requests');
-        }
-
-        return response.data?.sentCommitteeMembershipRequestsByLoggedInUser ?? [];
+        return this.unwrapDataArray(
+          {
+            data: response.data?.sentCommitteeMembershipRequestsByLoggedInUser,
+            errors: response.errors
+          },
+          'Failed to fetch sent membership requests'
+        );
       })
     );
   }
@@ -141,31 +160,35 @@ export class DashboardRequestsService {
   getActionTakenOnCommitteeMembershipRequestsByLoggedInUser(): Observable<ActionTakenOnCommitteeMembershipRequestItem[]> {
     const query = `query ActionTakenOnCommitteeMembershipRequestsByLoggedInUser {
       actionTakenOnCommitteeMembershipRequestsByLoggedInUser {
-        committeeId
-        committeeName
-        requestType
-        requestSentTime
-        actionAtTime
-        status
-        userDetails {
-          userId
-          name
-          email
-          mobile
-          dateOfBirth
-          gender
-          photo
+        data {
+          committeeId
+          committeeName
+          requestType
+          requestSentTime
+          actionAtTime
+          status
+          userDetails {
+            userId
+            name
+            email
+            mobile
+            dateOfBirth
+            gender
+            photo
+          }
         }
       }
     }`;
 
-    return this.http.post<GraphQLResponseEnvelope<{ actionTakenOnCommitteeMembershipRequestsByLoggedInUser: ActionTakenOnCommitteeMembershipRequestItem[] }>>(this.graphqlUrl, { query }).pipe(
+    return this.http.post<GraphQLResponseEnvelope<{ actionTakenOnCommitteeMembershipRequestsByLoggedInUser: { data: ActionTakenOnCommitteeMembershipRequestItem[] } }>>(this.graphqlUrl, { query }).pipe(
       map((response) => {
-        if (response.errors?.length) {
-          throw new Error(response.errors[0].message || 'Failed to fetch action-taken membership requests');
-        }
-
-        return response.data?.actionTakenOnCommitteeMembershipRequestsByLoggedInUser ?? [];
+        return this.unwrapDataArray(
+          {
+            data: response.data?.actionTakenOnCommitteeMembershipRequestsByLoggedInUser,
+            errors: response.errors
+          },
+          'Failed to fetch action-taken membership requests'
+        );
       })
     );
   }

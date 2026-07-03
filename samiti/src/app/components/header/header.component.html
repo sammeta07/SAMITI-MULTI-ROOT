@@ -60,6 +60,10 @@
         Login
       </button>
     } @else {
+      <button class="create-samiti-action-btn" type="button" (click)="openCreateCommitteeFromHeader()">
+        <mat-icon aria-hidden="true">group_add</mat-icon>
+        <span>Create Group</span>
+      </button>
       <button class="btn-accent" type="button" (click)="logout()">
         <mat-icon aria-hidden="true">logout</mat-icon>
         Logout

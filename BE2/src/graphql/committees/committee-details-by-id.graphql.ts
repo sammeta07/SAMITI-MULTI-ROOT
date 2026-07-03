@@ -1,5 +1,28 @@
 import { query } from '../../config/db';
 
+const normalizeContactNumbers = (rawContactNumbers: unknown): string[] => {
+  if (Array.isArray(rawContactNumbers)) {
+    return rawContactNumbers
+      .map((contact) => String(contact).trim())
+      .filter((contact) => contact.length > 0);
+  }
+
+  if (typeof rawContactNumbers === 'string') {
+    try {
+      const parsed = JSON.parse(rawContactNumbers);
+      if (Array.isArray(parsed)) {
+        return parsed
+          .map((contact) => String(contact).trim())
+          .filter((contact) => contact.length > 0);
+      }
+    } catch {
+      return rawContactNumbers.trim() ? [rawContactNumbers.trim()] : [];
+    }
+  }
+
+  return [];
+};
+
 export const committeeDetailsTypes = `
   type CommitteeMember {
     id: Int!
@@ -120,7 +143,7 @@ export const committeeDetailsResolvers = {
         address: committee.address,
         establishYear: committee.establish_year,
         logo: committee.logo || null,
-        contactNumbers: typeof committee.contact_numbers === 'string' ? JSON.parse(committee.contact_numbers) : (committee.contact_numbers || []),
+        contactNumbers: normalizeContactNumbers(committee.contact_numbers),
         createdBy: committee.created_by,
         createdAt: committee.created_at,
         isLoggedUserAdmin,

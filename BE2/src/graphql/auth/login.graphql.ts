@@ -1,4 +1,5 @@
 import { RowDataPacket } from 'mysql2/promise';
+import bcrypt from 'bcrypt';
 import { query } from '../../config/db';
 
 type LoginUserRow = RowDataPacket & {
@@ -8,6 +9,7 @@ type LoginUserRow = RowDataPacket & {
   date_of_birth: string | null;
   gender: string | null;
   mobile: string | null;
+  password: string | null;
   base_role: string | null;
   profile_photo: string | null;
   fcm_token: string | null;
@@ -45,28 +47,41 @@ export const loginTypes = `
 `;
 
 export const loginMutationFields = `
-    login(email: String!, password: String, fcmToken: String): LoginPayload!
+  login(email: String!, password: String!, fcmToken: String): LoginPayload!
 `;
 
 export const loginResolvers = {
   Mutation: {
-    async login(_: any, args: { email: string; password?: string; fcmToken?: string }, context: any) {
-      const { email, fcmToken = null } = args;
+    async login(_: any, args: { email: string; password: string; fcmToken?: string }, context: any) {
+      const { email, password, fcmToken = null } = args;
 
       if (!email) {
         throw new Error('Email is required for login.');
       }
 
       const users = await query<LoginUserRow[]>(
-        'SELECT id, name, email, date_of_birth, gender, mobile, base_role, profile_photo, fcm_token, provider, provider_id, status, is_verified, email_verified_at, deleted_at FROM users WHERE email = ? AND deleted_at IS NULL LIMIT 1',
+        'SELECT id, name, email, date_of_birth, gender, mobile, password, base_role, profile_photo, fcm_token, provider, provider_id, status, is_verified, email_verified_at, deleted_at FROM users WHERE email = ? AND deleted_at IS NULL LIMIT 1',
         [email.trim().toLowerCase()]
       );
 
       if (users.length === 0) {
-        throw new Error('No user found for the provided email.');
+        throw new Error('Invalid email or password.');
       }
 
       const user = users[0];
+
+      if (!user.password) {
+        throw new Error('This account is configured for social login. Please continue with your social provider.');
+      }
+
+      if (!password || !String(password).trim()) {
+        throw new Error('Password is required for login.');
+      }
+
+      const isPasswordValid = await bcrypt.compare(String(password), String(user.password));
+      if (!isPasswordValid) {
+        throw new Error('Invalid email or password.');
+      }
 
       if (user.status && String(user.status).toLowerCase() !== 'active') {
         throw new Error('User account is not active.');

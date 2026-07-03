@@ -11,6 +11,7 @@ import { NotifierService } from '../../shared/notifier/notifier.service';
 import { NewUserAccountRegistrationDialogComponent } from '../dialog/new-user-account-registration/new-user-account-registration.component';
 import { LoginDialogComponent } from '../dialog/login/login.component';
 import { AccountDialogComponent } from '../dialog/account/account.component';
+import { CreateCommitteeDialogComponent } from '../dialog/create-committee/create-committee.component';
 import { Router } from '@angular/router';
 import { AuthService } from '../../core/services/auth.service';
 
@@ -229,6 +230,22 @@ export class HeaderComponent implements OnInit {
     }).afterClosed().subscribe(() => {
       document.body.classList.remove('dialog-open');
       this.loadUserData();
+    });
+  }
+
+  openCreateCommitteeFromHeader(): void {
+    document.body.classList.add('dialog-open');
+
+    this.dialog.open(CreateCommitteeDialogComponent, {
+      position: { right: '0', top: '0' },
+      height: '100%',
+      width: '50%',
+      autoFocus: true,
+      disableClose: true,
+      hasBackdrop: true,
+      panelClass: 'slide-in-dialog'
+    }).afterClosed().subscribe(() => {
+      document.body.classList.remove('dialog-open');
     });
   }
 

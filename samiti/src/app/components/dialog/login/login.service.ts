@@ -19,7 +19,7 @@ export class LoginService {
 
   login(body: LoginPayload): Observable<LoginResponse> {
     const url = this.graphqlUrl;
-    const query = `mutation Login($email: String!, $password: String, $fcmToken: String) {
+    const query = `mutation Login($email: String!, $password: String!, $fcmToken: String) {
       login(email: $email, password: $password, fcmToken: $fcmToken) {
         token
         user {

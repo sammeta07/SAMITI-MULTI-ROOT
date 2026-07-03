@@ -30,45 +30,6 @@
   overflow: hidden;
 }
 
-.sidebar-top-stack {
-  display: flex;
-  flex-direction: column;
-  background: #ffffff;
-  border-bottom: 1px solid #f1f5f9;
-  flex-shrink: 0;
-  box-sizing: border-box;
-}
-
-/* ➕ HIGH-CONTRAST ACTION CREATE BUTTON STRIP */
-.sidebar-action-box {
-  padding: 14px 16px; 
-  box-sizing: border-box;
-
-  .create-samiti-action-btn {
-    width: 100%;
-    height: 38px !important;
-    background-color: #f97316 !important; 
-    color: #ffffff !important;
-    font-size: 0.78rem !important;
-    font-weight: 700 !important;
-    border-radius: 6px !important;
-    display: flex !important;
-    align-items: center !important;
-    justify-content: center !important;
-    gap: 6px !important;
-    box-shadow: 0 2px 8px rgba(249, 115, 22, 0.15) !important;
-    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1) !important;
-
-    mat-icon { font-size: 1.15rem !important; width: 1.15rem; height: 1.15rem; }
-
-    &:hover {
-      background-color: #ea580c !important;
-      transform: translateY(-1px);
-      box-shadow: 0 4px 14px rgba(234, 88, 12, 0.3) !important;
-    }
-  }
-}
-
 .sidebar-tree-wrapper {
   flex-grow: 1;
   overflow-y: auto;

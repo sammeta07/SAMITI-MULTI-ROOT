@@ -149,15 +149,12 @@
 .location-btn {
   display: inline-flex;
   align-items: center;
-  gap: 0.4rem;
+  justify-content: center;
+  gap: 0.35rem;
   margin-right: 1rem;
-  padding: 0 0.9rem;
-
-  /* Fixed dimensions — prevents the pill from resizing when text
-     switches between "Locating…" and the actual location name,
-     which would otherwise push the centered search bar sideways. */
-  width: 168px;
-  height: 34px;
+  padding: 0.4rem 1.1rem;
+  width: fit-content;
+  max-width: 260px;
   flex-shrink: 0;
 
   border: 1.5px solid rgba(255, 255, 255, 0.18);
@@ -166,9 +163,10 @@
   color: var(--clr-white);
   font-size: 0.78rem;
   font-weight: 500;
+  line-height: 1;
   cursor: pointer;
   transition: background 0.2s, border-color 0.2s;
-  overflow: hidden;             // clip oversized content cleanly
+  overflow: hidden;
 
   &:hover {
     background: rgba(255, 255, 255, 0.14);
@@ -193,8 +191,8 @@
 }
 
 .location-text {
-  flex: 1;
-  min-width: 0;                 // lets flex child shrink below its content width
+  display: inline-block;
+  max-width: 180px;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -243,17 +241,55 @@
 .btn-accent {
   display: inline-flex;
   align-items: center;
+  justify-content: center;
   gap: 0.35rem;
   padding: 0.4rem 1.1rem;
+  min-height: 0;
+  line-height: 1;
   border: none;
   border-radius: var(--radius-sm);
-  background: var(--clr-accent);
   color: var(--clr-white);
   font-size: 0.8rem;
   font-weight: 600;
   letter-spacing: 0.06em;
   cursor: pointer;
-  transition: background 0.2s, transform 0.15s;
+  transition: background 0.2s, transform 0.15s, box-shadow 0.2s;
+
+  mat-icon {
+    font-size: 1rem;
+    width: 1rem;
+    height: 1rem;
+  }
+}
+
+.btn-accent {
+  background: var(--clr-accent);
+  box-shadow: 0 2px 8px rgba(249, 115, 22, 0.2);
+
+  &:hover {
+    background: var(--clr-accent-hover);
+    transform: translateY(-1px);
+  }
+}
+
+.create-samiti-action-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.35rem;
+  padding: 0.4rem 1.1rem;
+  min-height: 0;
+  line-height: 1;
+  border: none;
+  border-radius: var(--radius-sm);
+  background: #0f766e;
+  color: var(--clr-white);
+  font-size: 0.8rem;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  cursor: pointer;
+  box-shadow: 0 2px 8px rgba(15, 118, 110, 0.22);
+  transition: background 0.2s, transform 0.15s, box-shadow 0.2s;
 
   mat-icon {
     font-size: 1rem;
@@ -262,8 +298,9 @@
   }
 
   &:hover {
-    background: var(--clr-accent-hover);
+    background: #115e59;
     transform: translateY(-1px);
+    box-shadow: 0 4px 14px rgba(15, 118, 110, 0.32);
   }
 }
 
@@ -299,5 +336,73 @@
     font-size: 0.75rem;
     font-weight: 600;
     text-transform: uppercase;
+  }
+}
+
+@media (max-width: 1024px) {
+  .samiti-header {
+    padding: 0 0.85rem;
+  }
+
+  .search-pill {
+    display: none;
+  }
+
+  .location-btn {
+    margin-right: 0.6rem;
+    padding: 0.36rem 0.85rem;
+    max-width: 180px;
+  }
+
+  .actions {
+    gap: 0.4rem;
+  }
+
+  .btn-outline,
+  .btn-accent,
+  .create-samiti-action-btn {
+    padding: 0.36rem 0.9rem;
+    font-size: 0.76rem;
+  }
+}
+
+@media (max-width: 680px) {
+  .samiti-header {
+    height: auto;
+    min-height: 60px;
+    padding: 0.5rem 0.65rem;
+    flex-wrap: wrap;
+    row-gap: 0.45rem;
+  }
+
+  .spacer {
+    display: none;
+  }
+
+  .brand {
+    flex: 1;
+  }
+
+  .location-btn {
+    margin-left: auto;
+    margin-right: 0;
+    max-width: 160px;
+  }
+
+  .actions {
+    width: 100%;
+    justify-content: flex-end;
+    gap: 0.35rem;
+  }
+
+  .btn-outline,
+  .btn-accent,
+  .create-samiti-action-btn {
+    padding: 0.34rem 0.78rem;
+  }
+
+  .user-avatar-btn {
+    width: 34px;
+    height: 34px;
   }
 }
