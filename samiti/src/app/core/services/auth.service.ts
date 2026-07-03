@@ -1,5 +1,13 @@
 import { Injectable, signal } from '@angular/core';
 
+export interface AuthDashboardTreeNode {
+  id: string;
+  name: string;
+  type: string;
+  roles: string[];
+  children: AuthDashboardTreeNode[];
+}
+
 export interface AuthUserData {
   id: number;
   name: string;
@@ -10,9 +18,7 @@ export interface AuthUserData {
   baseRole: string[];
   photo: string | null;
   fcmToken: string | null;
-  dashboardTree: unknown[];
-  committees: unknown[];
-  events: unknown[];
+  dashboardTree: AuthDashboardTreeNode[];
 }
 
 export interface AuthSessionPayload {

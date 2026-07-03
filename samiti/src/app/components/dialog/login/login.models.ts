@@ -24,7 +24,6 @@ export interface LoginDashboardTreeNode {
   name: string;
   type: string;
   roles: string[];
-  status?: string | null;
   children: LoginDashboardTreeNode[];
 }
 

@@ -6,7 +6,7 @@ import { MatToolbarModule } from '@angular/material/toolbar';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { MatDialog, MatDialogModule } from '@angular/material/dialog';
 import { HeaderService } from './header.service';
-import { LocationCoords, LoginResponseData } from './header.models';
+import { LocationCoords } from './header.models';
 import { NotifierService } from '../../shared/notifier/notifier.service';
 import { NewUserAccountRegistrationDialogComponent } from '../dialog/new-user-account-registration/new-user-account-registration.component';
 import { LoginDialogComponent } from '../dialog/login/login.component';
@@ -94,10 +94,6 @@ export class HeaderComponent implements OnInit {
           this.locationName.set('Location denied');
           this.isLoading.set(false);
           this.notifier.warn('Location permission denied.');
-
-          // 📍 Fallback: use default coordinates so committees still load
-          const fallbackCoords: LocationCoords = { lat: 21.25, long: 81.63 };
-          this.headerService.userLocationCords.set(fallbackCoords);
         }
       );
     } else {
@@ -182,7 +178,7 @@ export class HeaderComponent implements OnInit {
       if (name) {
         const initials = name
           .split(' ')
-          .map(n => n[0])
+          .map((n: string) => n[0])
           .join('')
           .toUpperCase()
           .slice(0, 2);
@@ -191,7 +187,7 @@ export class HeaderComponent implements OnInit {
       return;
     }
 
-    const userdata = storedUserData as LoginResponseData;
+    const userdata = storedUserData;
 
     if (userdata.name) {
       this.userName.set(userdata.name);
@@ -203,7 +199,7 @@ export class HeaderComponent implements OnInit {
     } else if (userdata.name) {
       const initials = userdata.name
         .split(' ')
-        .map(n => n[0])
+        .map((n: string) => n[0])
         .join('')
         .toUpperCase()
         .slice(0, 2);

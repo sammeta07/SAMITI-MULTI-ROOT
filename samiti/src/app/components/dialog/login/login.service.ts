@@ -38,19 +38,16 @@ export class LoginService {
           name
           type
           roles
-          status
           children {
             id
             name
             type
             roles
-            status
             children {
               id
               name
               type
               roles
-              status
             }
           }
         }

@@ -149,7 +149,13 @@ export const loginResolvers = {
           cm.admin_status
          FROM committee_members cm
          INNER JOIN committees c ON c.id = cm.committee_id
-         WHERE cm.user_id = ?`,
+         WHERE cm.user_id = ?
+           AND (
+             COALESCE(cm.is_committee_admin, 0) = 1
+             OR COALESCE(cm.is_committee_member, 0) = 1
+             OR UPPER(COALESCE(cm.membership_status, '')) = 'ACCEPTED'
+             OR UPPER(COALESCE(cm.admin_status, '')) = 'ACCEPTED'
+           )`,
         [user.id]
       ).catch(() => []);
 
@@ -242,9 +248,6 @@ export const loginResolvers = {
           committeeNode.roles.add('ADMIN');
         }
         if (row.is_committee_member) {
-          committeeNode.roles.add('MEMBER');
-        }
-        if (committeeNode.roles.size === 0) {
           committeeNode.roles.add('MEMBER');
         }
 

@@ -88,7 +88,7 @@ export class LoginDialogComponent implements OnInit {
 
         const token = response.token;
         const u = response.user;
-        const dashboardTree = response.dashboardTree || [];
+        const d = response.dashboardTree || [];
 
         const userdata: AuthUserData = {
           id: u.id,
@@ -100,20 +100,17 @@ export class LoginDialogComponent implements OnInit {
           baseRole: u.baseRole,
           photo: u.profilePhoto,
           fcmToken: u.fcmToken,
-          dashboardTree,
-          committees: dashboardTree.filter((node: any) => node.type === 'COMMITTEE'),
-          events: dashboardTree.filter((node: any) => node.type === 'EVENT')
+          dashboardTree:d
         };
-
-        // Centralized session storage write: only login should initialize auth data.
+        
         this.authService.startSession({ token, userData: userdata });
         this.dialogRef.close(true);
 
-        // 🛠️ Navigate seamlessly to dashboard
-        this.router.navigate(['dashboard']);
+        if (d.length > 0) {
+          this.router.navigate(['dashboard']);
+        }
       },
       error: (err) => {
-        // Fastify / GraphQL errors evaluation mapping check
         const errMsg = err?.error?.errors?.[0]?.message || err?.message || 'Server connection lost.';
         this.notifier.error(errMsg);
       }
