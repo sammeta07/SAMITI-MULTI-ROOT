@@ -32,7 +32,9 @@ interface UploadedImageAssetMetadata {
   byteSize: number;
 }
 
-type ImageAssetBatchUploadPayload = UploadedImageAssetMetadata[];
+interface ImageAssetBatchUploadPayload {
+  data: UploadedImageAssetMetadata[];
+}
 
 interface GraphQLResponseEnvelope<TData> {
   data?: TData;
@@ -57,12 +59,14 @@ export class ImageAssetService {
 
   private readonly uploadImageAssetBatchMutationDocument = `mutation UploadImageAssetBatch($input: ImageAssetBatchUploadInput!) {
     uploadImageAssetBatch(input: $input) {
-      storageRelativePath
-      publicRelativeUrl
-      publicAbsoluteUrl
-      width
-      height
-      byteSize
+      data {
+        storageRelativePath
+        publicRelativeUrl
+        publicAbsoluteUrl
+        width
+        height
+        byteSize
+      }
     }
   }`;
 
@@ -125,11 +129,11 @@ export class ImageAssetService {
         }
 
         const uploadPayload = responseEnvelope.data?.uploadImageAssetBatch;
-        if (!uploadPayload || !Array.isArray(uploadPayload)) {
+        if (!uploadPayload || !Array.isArray(uploadPayload.data)) {
           throw new Error('Image upload service returned an invalid response.');
         }
 
-        return uploadPayload;
+        return uploadPayload.data;
       })
     );
   }

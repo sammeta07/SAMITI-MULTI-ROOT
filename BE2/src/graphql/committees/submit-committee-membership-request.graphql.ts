@@ -195,7 +195,7 @@ export const submitCommitteeMembershipRequestResolvers = {
               admin_status_action_at,
               is_favourite
             )
-            VALUES (?, ?, 0, 0, 'PENDING', NOW(), ?, NOW(), NULL, NULL, NULL, 0)
+            VALUES (?, ?, 0, 0, 'PENDING', NOW(), ?, NOW(), NULL, NULL, NULL, NULL, 0)
           `,
           [committeeId, loggedInUserId, loggedInUserId]
         );

@@ -36,7 +36,8 @@ export const createCommitteeTypes = `
 
   input CreateCommitteeInput {
     committeeName: String!
-    establish_year: Int!
+    establishYear: Int
+    establish_year: Int
     address: String!
     districtId: Int
     stateId: Int
@@ -60,6 +61,7 @@ export const createCommitteeResolvers = {
         input: {
           committeeName: string;
           establishYear: number;
+          establish_year?: number;
           address: string;
           districtId?: number | null;
           stateId?: number | null;
@@ -95,6 +97,7 @@ export const createCommitteeResolvers = {
       const {
         committeeName,
         establishYear,
+        establish_year,
         address,
         districtId = 897,
         stateId = 7,
@@ -105,8 +108,14 @@ export const createCommitteeResolvers = {
         logo = null
       } = args.input;
 
+      const normalizedEstablishYear = Number(establishYear ?? establish_year);
+
       if (!committeeName?.trim() || !address?.trim() || !description?.trim()) {
         throw new Error('Committee name, address and description are required');
+      }
+
+      if (!Number.isFinite(normalizedEstablishYear) || normalizedEstablishYear <= 0) {
+        throw new Error('Valid establishYear is required');
       }
 
       if (!Array.isArray(contactNumbers) || contactNumbers.length === 0) {
@@ -144,7 +153,7 @@ export const createCommitteeResolvers = {
         ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW())`,
         [
           committeeName.trim(),
-          establishYear,
+          normalizedEstablishYear,
           loggedInUserId,
           address.trim(),
           districtId,

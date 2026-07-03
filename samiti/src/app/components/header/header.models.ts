@@ -3,13 +3,15 @@ export interface LocationCoords {
   long: number;
 }
 export interface LoginResponseData {
-  userId: number;
+  id: number;
   name: string;
   email: string;
   mobile: string;
   dateOfBirth: string;
   gender: string;
-  baseRole: string;
+  baseRole: string[];
   committees: any[];
+  events?: any[];
+  dashboardTree?: any[];
   photo: string;
 }

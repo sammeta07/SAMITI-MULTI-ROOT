@@ -69,6 +69,7 @@ export const committeeMembershipRequestsTypes = `
   type TakeActionOnCommitteeMembershipRequestResponse {
     committeeId: Int!
     targetUserId: Int!
+    actionAtTime: String!
     updatedMembershipStatus: String!
   }
 `;
@@ -366,6 +367,7 @@ export const committeeMembershipRequestsResolvers = {
       const { committeeId, targetUserId, decisionAction } = args;
       const resolvedDecisionStatus = decisionAction === 'ACCEPTED' ? 'ACCEPTED' : 'REJECTED';
       const loggedInUserId = await resolveLoggedInUserIdFromGraphQLContext(context);
+      const actionAtTime = new Date().toISOString();
 
       const adminValidationRows = await query<any[]>(
         `
@@ -439,6 +441,7 @@ export const committeeMembershipRequestsResolvers = {
       return {
         committeeId,
         targetUserId,
+        actionAtTime,
         updatedMembershipStatus: resolvedDecisionStatus
       };
     }

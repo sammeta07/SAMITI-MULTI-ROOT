@@ -92,6 +92,7 @@ export class LoginDialogComponent implements OnInit {
 
         const token = response.token;
         const u = response.user;
+        const dashboardTree = response.dashboardTree || [];
 
         // Commit identities data to localStorage lifecycle keys
         localStorage.setItem('token', token);
@@ -106,7 +107,10 @@ export class LoginDialogComponent implements OnInit {
           gender: u.gender,
           baseRole: u.baseRole,
           photo: u.profilePhoto,
-          fcmToken: u.fcmToken
+          fcmToken: u.fcmToken,
+          dashboardTree,
+          committees: dashboardTree.filter((node: any) => node.type === 'COMMITTEE'),
+          events: dashboardTree.filter((node: any) => node.type === 'EVENT')
         };
         localStorage.setItem('userData', JSON.stringify(userdata));
 

@@ -14,12 +14,22 @@ export interface LoginUserData {
   dateOfBirth: string | null;
   gender: string | null;
   mobile: string | null;
-  baseRole: string;
+  baseRole: string[];
   profilePhoto: string | null;
   fcmToken: string | null;
+}
+
+export interface LoginDashboardTreeNode {
+  id: string;
+  name: string;
+  type: string;
+  roles: string[];
+  status?: string | null;
+  children: LoginDashboardTreeNode[];
 }
 
 export interface LoginResponse {
   token: string;
   user: LoginUserData;
+  dashboardTree: LoginDashboardTreeNode[];
 }
