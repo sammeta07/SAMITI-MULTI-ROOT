@@ -27,6 +27,7 @@
         </div>
       </div>
 
+      @if (hasCommitteesHierarchy()) {
       <hr class="sidebar-deck-divider" />
       <span class="tree-section-caption-tag">COMMITTEES</span>
 
@@ -109,6 +110,7 @@
         </mat-nested-tree-node>
 
       </mat-tree>
+      }
 
       <mat-menu #actionMenu="matMenu" xPosition="before" class="samiti-compact-context-menu">
         <ng-template matMenuContent let-activeNode="currentTarget">

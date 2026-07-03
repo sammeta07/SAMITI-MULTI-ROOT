@@ -18,8 +18,8 @@
 
 /* 📌 LEFT PANEL: DYNAMIC INITIAL WIDTH RESIZABLE SIDEBAR */
 .workspace-sidebar {
-  width: 320px; 
-  min-width: 260px; 
+  width: 180px; 
+  min-width: 180px; 
   max-width: 480px;
   height: 100%;
   background: #ffffff;
@@ -41,7 +41,7 @@
 
 /* 🎚️ RESIZER DRAG BAR ELEMENT GRAPHICS */
 .workspace-layout-resizer {
-  width: 4px;
+  width: 3px;
   height: 100%;
   background: #e2e8f0;
   cursor: col-resize;
@@ -52,7 +52,7 @@
 
   &:hover, &:active {
     background: #f97316; 
-    width: 4px;
+    width: 3px;
   }
 }
 

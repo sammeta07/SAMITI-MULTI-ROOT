@@ -27,8 +27,8 @@ export class DashboardComponent {
     const doDrag = (moveEvent: MouseEvent) => {
       const currentWidth = startWidth + (moveEvent.clientX - startX);
       
-      // Enforce rigid standard boundary locks (Min: 260px, Max: 480px)
-      if (currentWidth >= 260 && currentWidth <= 480) {
+      // Enforce rigid standard boundary locks (Min: 180px, Max: 480px)
+      if (currentWidth >= 180 && currentWidth <= 480) {
         this.sidebarElement.nativeElement.style.width = `${currentWidth}px`;
         this.sidebarElement.nativeElement.style.minWidth = `${currentWidth}px`;
         this.sidebarElement.nativeElement.style.maxWidth = `${currentWidth}px`;

@@ -36,6 +36,7 @@ export class DashboardHierarchyTreeComponent implements OnInit {
   
   // 🚀 FIXED: Dynamic signal tracking static navigation items from old dashboard
   public readonly activeStaticMenu = signal<string | null>('home');
+  public readonly hasCommitteesHierarchy = signal<boolean>(false);
 
   public readonly expandedNodeKeys = signal<Set<string>>(new Set());
   public readonly childrenAccessor = (node: TreeNode) => node.children ?? [];
@@ -79,16 +80,12 @@ export class DashboardHierarchyTreeComponent implements OnInit {
     
     this.treeService.getAdminHierarchyTree().subscribe({
       next: (rolesData) => {
-        if (rolesData && rolesData.length > 0) {
-          const transformedTree = this.transformBackendToTreeNode(rolesData);
-          this.dataSource.data = transformedTree;
-          this.expandAllTreeNodes();
-          this.isLoading.set(false);
-          this.syncActiveNodeFromRawUrl();
-        } else {
-          this.notifier.error('Failed to construct navigation menu maps.');
-          this.isLoading.set(false);
-        }
+        const transformedTree = this.transformBackendToTreeNode(rolesData || []);
+        this.dataSource.data = transformedTree;
+        this.hasCommitteesHierarchy.set(transformedTree.length > 0);
+        this.expandAllTreeNodes();
+        this.isLoading.set(false);
+        this.syncActiveNodeFromRawUrl();
       },
       error: (err: HttpErrorResponse) => {
         this.notifier.error(err?.error?.message || 'Server context transmission exception.');
@@ -98,7 +95,9 @@ export class DashboardHierarchyTreeComponent implements OnInit {
   }
 
   private transformBackendToTreeNode(rolesData: RoleNode[]): TreeNode[] {
-    return rolesData.map((role: RoleNode): TreeNode => ({
+    return rolesData
+      .filter((role: RoleNode) => Array.isArray(role.committees) && role.committees.length > 0)
+      .map((role: RoleNode): TreeNode => ({
       name: role.roleName || 'Committee Administrator Panel',
       type: 'role',
       children: (role.committees || []).map((committee: CommitteeItem): TreeNode => ({
