@@ -4,10 +4,12 @@ import { Observable } from 'rxjs';
 import { map } from 'rxjs/operators';
 import { CreateEventPayload, CreateEventResponse } from './create-event.models';
 import { environment } from '../../../../environments/environment';
+import { AuthService } from '../../../core/services/auth.service';
 
 @Injectable({ providedIn: 'root' })
 export class CreateEventService {
   private readonly http = inject(HttpClient);
+  private readonly authService = inject(AuthService);
   private readonly graphqlUrl = environment.graphqlUrl;
 
   public createEvent(payload: CreateEventPayload): Observable<CreateEventResponse> {
@@ -31,8 +33,8 @@ export class CreateEventService {
       }
     }`;
 
-    // Get token from localStorage and add Authorization header
-    const token = localStorage.getItem('token');
+    // Read token from centralized auth service.
+    const token = this.authService.getToken();
     const headers: any = {};
     if (token) {
       headers['Authorization'] = `Bearer ${token}`;

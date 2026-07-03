@@ -5,6 +5,7 @@ import { map } from 'rxjs/operators';
 import { environment } from '../../../../environments/environment';
 import { AccountUpdatePayload, AccountUpdateResponse } from './account.models';
 import { TextFormatService } from '../../../shared/services/text-format-service.service';
+import { AuthService } from '../../../core/services/auth.service';
 
 interface GraphQLErrorPayload {
   message: string;
@@ -23,7 +24,8 @@ export class AccountService {
 
   constructor(
     private http: HttpClient,
-    private readonly textFormatService: TextFormatService
+    private readonly textFormatService: TextFormatService,
+    private readonly authService: AuthService
   ) {}
 
   updateAccount(body: AccountUpdatePayload): Observable<AccountUpdateResponse> {
@@ -39,7 +41,7 @@ export class AccountService {
       }
     }`;
 
-    const token = localStorage.getItem('token');
+    const token = this.authService.getToken();
     const headers: Record<string, string> = {};
     if (token) {
       headers['Authorization'] = `Bearer ${token}`;
@@ -85,7 +87,7 @@ export class AccountService {
       }
     }`;
 
-    const token = localStorage.getItem('token');
+    const token = this.authService.getToken();
     const headers: Record<string, string> = {};
     if (token) {
       headers['Authorization'] = `Bearer ${token}`;

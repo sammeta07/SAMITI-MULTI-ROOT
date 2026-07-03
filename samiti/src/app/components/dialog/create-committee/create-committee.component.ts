@@ -14,6 +14,7 @@ import { MatToolbar } from '@angular/material/toolbar';
 import { ImageAssetService } from '../../../core/services/image-asset.service';
 import { ImageCropperDialogComponent } from '../../../shared/components/image-cropper-dialog/image-cropper-dialog.component';
 import { TextFormatService } from '../../../shared/services/text-format-service.service';
+import { AuthService } from '../../../core/services/auth.service';
 
 @Component({
   selector: 'app-create-committee-dialog',
@@ -39,6 +40,7 @@ export class CreateCommitteeDialogComponent implements OnInit {
   private readonly imageAssetService = inject(ImageAssetService);
   private readonly dialog = inject(MatDialog);
   private readonly textFormatService = inject(TextFormatService);
+  private readonly authService = inject(AuthService);
   
   public readonly injectedData = inject(MAT_DIALOG_DATA, { optional: true });
 
@@ -182,10 +184,7 @@ export class CreateCommitteeDialogComponent implements OnInit {
   private executeGroupCreation(payload: any): void {
     this.createCommitteeService.createCommittee(payload).subscribe({
       next: (response) => {
-        const rawUserName =
-          localStorage.getItem('name') ||
-          JSON.parse(localStorage.getItem('userData') || '{}')?.name ||
-          'User';
+        const rawUserName = this.authService.getStoredUserData()?.name || 'User';
         const displayUserName = this.textFormatService.toTitleCase(rawUserName);
         const displayGroupName = this.textFormatService.toTitleCase(payload?.name || this.committeeName);
 
@@ -202,10 +201,7 @@ export class CreateCommitteeDialogComponent implements OnInit {
   private executeGroupUpdate(payload: any): void {
     this.createCommitteeService.updateCommittee(payload).subscribe({
       next: (response) => {
-        const rawUserName =
-          localStorage.getItem('name') ||
-          JSON.parse(localStorage.getItem('userData') || '{}')?.name ||
-          'User';
+        const rawUserName = this.authService.getStoredUserData()?.name || 'User';
         const displayUserName = this.textFormatService.toTitleCase(rawUserName);
         const displayGroupName = this.textFormatService.toTitleCase(payload?.name || this.committeeName);
 

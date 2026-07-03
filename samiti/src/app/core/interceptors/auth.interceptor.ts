@@ -1,13 +1,16 @@
 import { HttpInterceptorFn, HttpRequest, HttpHandlerFn, HttpEvent } from '@angular/common/http';
+import { inject } from '@angular/core';
 import { Observable } from 'rxjs';
+import { AuthService } from '../services/auth.service';
 
 export const authInterceptor: HttpInterceptorFn = (
   req: HttpRequest<unknown>,
   next: HttpHandlerFn
 ): Observable<HttpEvent<unknown>> => {
-  
-  // 1. Get token securely from LocalStorage
-  const token = localStorage.getItem('token');
+  const authService = inject(AuthService);
+
+  // 1. Get token from centralized auth storage service
+  const token = authService.getToken();
 
   // 2. Clone request and inject Authorization Header if token exists
   // We skip injection if it's an external third-party API or asset read if necessary

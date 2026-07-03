@@ -16,6 +16,7 @@ import { ImageAssetService } from '../../../core/services/image-asset.service';
 import { ImageCropperDialogComponent } from '../../../shared/components/image-cropper-dialog/image-cropper-dialog.component';
 import { TextFormatPipe } from '../../../shared/pipe/text-format-pipe.pipe';
 import { TextFormatService } from '../../../shared/services/text-format-service.service';
+import { AuthService, AuthUserData } from '../../../core/services/auth.service';
 
 @Component({
   selector: 'app-account-dialog',
@@ -57,6 +58,7 @@ export class AccountDialogComponent implements OnInit {
   private readonly imageAssetService = inject(ImageAssetService);
   private readonly dialog = inject(MatDialog);
   private readonly textFormatService = inject(TextFormatService);
+  private readonly authService = inject(AuthService);
 
   constructor(
     public dialogRef: MatDialogRef<AccountDialogComponent>
@@ -68,14 +70,9 @@ export class AccountDialogComponent implements OnInit {
   }
 
   private loadAccountFromLocalStorage(): void {
-    const userData = localStorage.getItem('userData');
+    const userData = this.authService.getStoredUserData();
     if (userData) {
-      try {
-        const userdata = JSON.parse(userData);
-        this.applyUserData(userdata);
-      } catch (e) {
-        console.error('Failed to parse userData from localStorage', e);
-      }
+      this.applyUserData(userData);
     }
   }
 
@@ -93,7 +90,7 @@ export class AccountDialogComponent implements OnInit {
           };
 
           this.applyUserData(mergedUserData);
-          localStorage.setItem('userData', JSON.stringify(mergedUserData));
+          this.authService.updateStoredUserData(mergedUserData);
         }
         this.isLoading.set(false);
       },
@@ -104,17 +101,8 @@ export class AccountDialogComponent implements OnInit {
     });
   }
 
-  private getLocalUserData(): Record<string, any> | null {
-    const localData = localStorage.getItem('userData');
-    if (!localData) {
-      return null;
-    }
-
-    try {
-      return JSON.parse(localData);
-    } catch {
-      return null;
-    }
+  private getLocalUserData(): AuthUserData | null {
+    return this.authService.getStoredUserData();
   }
 
   private applyUserData(userdata: any): void {
@@ -286,12 +274,7 @@ export class AccountDialogComponent implements OnInit {
         photo: updateResponse.photo || ''
       };
 
-      localStorage.setItem('userData', JSON.stringify(updatedUserData));
-      localStorage.setItem('name', updateResponse.name);
-      localStorage.setItem('mobile', updateResponse.mobile);
-      if (updateResponse.photo) {
-        localStorage.setItem('photo', updateResponse.photo);
-      }
+      this.authService.updateStoredUserData(updatedUserData);
 
       this.applyUserData(updatedUserData);
       this.selectedProfilePhotoFile.set(null);
@@ -361,13 +344,7 @@ export class AccountDialogComponent implements OnInit {
             photo: response.photo || ''
           };
 
-          // Update localStorage
-          localStorage.setItem('userData', JSON.stringify(updatedUserData));
-          localStorage.setItem('name', response.name);
-          localStorage.setItem('mobile', response.mobile);
-          if (response.photo) {
-            localStorage.setItem('photo', response.photo);
-          }
+          this.authService.updateStoredUserData(updatedUserData);
 
           this.applyUserData(updatedUserData);
           const displayUserName = this.textFormatService.toTitleCase(response.name || this.name || 'User');

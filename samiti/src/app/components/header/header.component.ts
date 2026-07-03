@@ -165,22 +165,20 @@ export class HeaderComponent implements OnInit {
     }).afterClosed().subscribe((result) => {
       document.body.classList.remove('dialog-open');
       if (result === true) {
-        this.isLoggedIn.set(true);
-        localStorage.setItem('is_logged_in', 'true');
         this.loadUserData();
       }
     });
   }
 
   loadUserData(): void {
-    const userData = localStorage.getItem('userData');
-    const name = localStorage.getItem('name') || '';
+    const storedUserData = this.authService.getStoredUserData();
+    const name = storedUserData?.name || '';
 
     if (name) {
       this.userName.set(name);
     }
 
-    if (!userData) {
+    if (!storedUserData) {
       if (name) {
         const initials = name
           .split(' ')
@@ -193,7 +191,7 @@ export class HeaderComponent implements OnInit {
       return;
     }
 
-    const userdata: LoginResponseData = JSON.parse(userData);
+    const userdata = storedUserData as LoginResponseData;
 
     if (userdata.name) {
       this.userName.set(userdata.name);
@@ -250,10 +248,7 @@ export class HeaderComponent implements OnInit {
   }
 
   logout(): void {
-    localStorage.removeItem('is_logged_in');
-    localStorage.removeItem('token');
-    localStorage.removeItem('userData');
-    this.isLoggedIn.set(false);
+    this.authService.clearSession();
     this.userPhoto.set('');
     this.userInitials.set('');
     this.userName.set('');
