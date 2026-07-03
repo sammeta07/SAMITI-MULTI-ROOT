@@ -8,6 +8,7 @@ import jwt from '@fastify/jwt';
 import fastifyStatic from '@fastify/static';
 import mercurius from 'mercurius';
 import { typeDefs as samititypeDefs, resolvers as samitiResolvers } from './graphql/samiti-graphql';
+import { closePool } from './config/db';
 
 const fastify = Fastify({
   logger: true
@@ -96,4 +97,53 @@ const start = async () => {
   }
 };
 
-start();
+let shuttingDown = false;
+
+const shutdown = async (signal: string, error?: unknown) => {
+  if (shuttingDown) return;
+  shuttingDown = true;
+
+  const hasError = Boolean(error);
+  const exitCode = hasError ? 1 : 0;
+  const forceExitTimer = setTimeout(() => {
+    fastify.log.error({ signal }, 'Forced shutdown after timeout');
+    process.exit(1);
+  }, 10_000);
+
+  forceExitTimer.unref();
+
+  if (hasError) {
+    fastify.log.error({ signal, error }, 'Shutting down after runtime error');
+  } else {
+    fastify.log.info({ signal }, 'Shutting down server');
+  }
+
+  try {
+    await fastify.close();
+    await closePool();
+    process.exit(exitCode);
+  } catch (shutdownError) {
+    fastify.log.error({ signal, shutdownError }, 'Graceful shutdown failed');
+    process.exit(1);
+  } finally {
+    clearTimeout(forceExitTimer);
+  }
+};
+
+process.once('SIGINT', () => {
+  void shutdown('SIGINT');
+});
+
+process.once('SIGTERM', () => {
+  void shutdown('SIGTERM');
+});
+
+process.once('unhandledRejection', reason => {
+  void shutdown('unhandledRejection', reason);
+});
+
+process.once('uncaughtException', error => {
+  void shutdown('uncaughtException', error);
+});
+
+void start();

@@ -7,6 +7,8 @@
     "build": "tsc",
     "start": "node dist/index.js",
     "dev": "nodemon --delay 1 src/index.ts",
+    "free:port": "bash -lc 'p=${PORT:-3000}; lsof -ti :$p | xargs -r kill -15; lsof -ti :$p | xargs -r kill -9; lsof -i :$p || echo Port $p is free'",
+    "cleanup:dev": "bash -lc 'for p in 3000 3001; do lsof -ti :$p | xargs -r kill -15; lsof -ti :$p | xargs -r kill -9; done; pkill -f \"nodemon --delay 1 src/index.ts\" || true; pkill -f \"ts-node src/index.ts\" || true; echo Dev cleanup complete'",
     "dev:watch": "tsc --watch",
     "verify:cloudinary": "ts-node verify-cloudinary-upload.ts",
     "migrate:media:cloudinary": "ts-node migrate-local-media-to-cloudinary.ts"
