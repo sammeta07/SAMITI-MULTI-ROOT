@@ -5,6 +5,7 @@ import { provideNativeDateAdapter } from '@angular/material/core';
 
 import { routes } from './app.routes';
 import { authInterceptor } from './core/interceptors/auth.interceptor'; // 🛠️ Import your interceptor file path
+import { apiErrorInterceptor } from './core/interceptors/api-error.interceptor';
 
 export const appConfig: ApplicationConfig = {
   providers: [
@@ -14,7 +15,7 @@ export const appConfig: ApplicationConfig = {
     // 🚀 Configured HttpClient to handle standard Fetch API along with our functional token interceptor
     provideHttpClient(
       withFetch(),
-      withInterceptors([authInterceptor])
+      withInterceptors([authInterceptor, apiErrorInterceptor])
     ),
     
     provideNativeDateAdapter(),
