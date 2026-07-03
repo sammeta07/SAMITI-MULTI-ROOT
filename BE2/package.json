@@ -29,6 +29,7 @@
     "graphql": "^16.14.2",
     "mercurius": "^16.9.0",
     "mysql2": "^3.22.5",
+    "quick-lru": "^7.3.0",
     "sharp": "^0.35.2"
   },
   "devDependencies": {

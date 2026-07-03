@@ -23,7 +23,6 @@ const allowedOrigins = (process.env.ALLOWED_ORIGIN || '')
 fastify.register(cors, {
   origin: (origin: string | undefined, cb: (err: Error | null, allow: boolean) => void) => {
     if (!origin) return cb(null, true);
-    if (origin.endsWith('.app.github.dev')) return cb(null, true);
     if (allowedOrigins.includes(origin)) return cb(null, true);
 
     if (

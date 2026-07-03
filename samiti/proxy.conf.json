@@ -3,10 +3,5 @@
         "target": "http://localhost:3000",
         "secure": false,
         "changeOrigin": true
-    },
-    "/cloud-api": {
-        "target": "https://shiny-succotash-v7596wwvvjg3pgrj-3000.app.github.dev",
-        "secure": false,
-        "changeOrigin": true
     }
 }
