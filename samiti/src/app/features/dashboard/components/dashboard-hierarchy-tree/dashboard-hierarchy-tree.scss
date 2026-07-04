@@ -133,6 +133,14 @@
     justify-content: center;
   }
 
+  .logo-fallback-initial {
+    font-size: 0.72rem;
+    font-weight: 800;
+    text-transform: uppercase;
+    line-height: 1;
+    letter-spacing: 0.2px;
+  }
+
   &.type-role { background: rgba(249, 115, 22, 0.08); color: #f97316; border-color: rgba(249, 115, 22, 0.2); }
   &.type-group { background: rgba(59, 130, 246, 0.08); color: #3b82f6; border-color: rgba(59, 130, 246, 0.2); }
   &.type-event { background: rgba(139, 92, 246, 0.08); color: #8b5cf6; border-color: rgba(139, 92, 246, 0.2); }

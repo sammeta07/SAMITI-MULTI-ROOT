@@ -43,10 +43,16 @@
             [class.is-just-selected]="isNodeHighlighted(node)">
             
             <div class="node-logo-avatar-wrapper branch-leaf-avatar" [ngClass]="'color-' + node.type">
-              <mat-icon class="type-indicator-icon">
-                @if (node.type === 'program') { integration_instructions }
-                @else { assignment_turned_in }
-              </mat-icon>
+              @if (node.type === 'group' && node.logo) {
+                <img [src]="node.logo" [alt]="node.name" class="brand-image-node" (error)="node.logo = null" />
+              } @else if (node.type === 'group') {
+                <span class="logo-fallback-initial">{{ getNodeInitial(node.name) }}</span>
+              } @else {
+                <mat-icon class="type-indicator-icon">
+                  @if (node.type === 'program') { integration_instructions }
+                  @else { assignment_turned_in }
+                </mat-icon>
+              }
             </div>
 
             <span class="node-label-txt">{{ node.name }}</span>
@@ -76,6 +82,8 @@
               <div class="node-logo-avatar-wrapper" [ngClass]="['type-' + node.type]">
                 @if (node.type === 'group' && node.logo) {
                   <img [src]="node.logo" [alt]="node.name" class="brand-image-node" (error)="node.logo = null" />
+                } @else if (node.type === 'group') {
+                  <span class="logo-fallback-initial">{{ getNodeInitial(node.name) }}</span>
                 } @else {
                   <mat-icon class="type-indicator-icon">
                     @switch (node.type) {

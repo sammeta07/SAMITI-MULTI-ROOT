@@ -2,6 +2,7 @@ export interface AdminHierarchyTreeNode {
   id: string;
   name: string;
   type: string;
+  logo?: string | null;
   roles: string[];
   children: AdminHierarchyTreeNode[];
 }

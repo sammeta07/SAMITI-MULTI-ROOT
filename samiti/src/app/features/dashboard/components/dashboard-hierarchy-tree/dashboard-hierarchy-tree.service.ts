@@ -20,26 +20,31 @@ export class DashboardHierarchyTreeService {
           id
           name
           type
+          logo
           roles
           children {
             id
             name
             type
+            logo
             roles
             children {
               id
               name
               type
+              logo
               roles
               children {
                 id
                 name
                 type
+                logo
                 roles
                 children {
                   id
                   name
                   type
+                  logo
                   roles
                 }
               }

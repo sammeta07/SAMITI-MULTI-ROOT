@@ -5,6 +5,7 @@ export const hierarchyTreeTypes = `
     id: String!
     name: String!
     type: String!
+    logo: String
     roles: [String!]!
     children: [HierarchyTreeNode!]!
   }
@@ -23,6 +24,7 @@ type InternalTreeNode = {
   id: string;
   name: string;
   type: string;
+  logo: string | null;
   roles: Set<string>;
   children: InternalTreeNode[];
   childIds: Set<string>;
@@ -32,6 +34,7 @@ type SerializedHierarchyTreeNode = {
   id: string;
   name: string;
   type: string;
+  logo: string | null;
   roles: string[];
   children: SerializedHierarchyTreeNode[];
 };
@@ -63,6 +66,7 @@ export const hierarchyTreeResolvers = {
         `SELECT
            c.id AS committee_id,
            c.committee_name,
+           c.logo,
            cm.is_committee_admin,
            cm.is_committee_member
          FROM users_committees cm
@@ -100,6 +104,7 @@ export const hierarchyTreeResolvers = {
           id: `committee_${committeeId}`,
           name: String(row.committee_name),
           type: 'COMMITTEE',
+          logo: row.logo ? String(row.logo) : null,
           roles: new Set<string>(),
           children: [],
           childIds: new Set<string>()
@@ -168,6 +173,7 @@ export const hierarchyTreeResolvers = {
             id: `event_${eventId}`,
             name: String(eventRow.event_name),
             type: 'EVENT',
+            logo: null,
             roles: eventRoleSetById.get(eventId) || new Set<string>(),
             children: [],
             childIds: new Set<string>()
@@ -204,6 +210,7 @@ export const hierarchyTreeResolvers = {
             id: `program_${Number(programRow.program_id)}`,
             name: String(programRow.program_name),
             type: 'PROGRAM',
+            logo: null,
             roles: new Set<string>(),
             children: [],
             childIds: new Set<string>()
@@ -244,6 +251,7 @@ export const hierarchyTreeResolvers = {
             id: `task_${taskId}`,
             name: String(taskRow.task_name),
             type: 'TASK',
+            logo: null,
             roles: taskRoles,
             children: [],
             childIds: new Set<string>()
@@ -286,6 +294,7 @@ export const hierarchyTreeResolvers = {
         id: node.id,
         name: node.name,
         type: node.type,
+        logo: node.logo,
         roles: Array.from(node.roles),
         children: node.children.map((childNode) => serializeNode(childNode))
       });

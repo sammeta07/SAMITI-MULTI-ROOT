@@ -123,6 +123,7 @@ export class DashboardHierarchyTreeComponent implements OnInit {
       name: node.name,
       type: mappedType,
       id: this.extractNumericId(node.id),
+      logo: mappedType === 'group' ? (node.logo || null) : null,
       children: mappedChildren.length > 0 ? mappedChildren : undefined
     };
   }
@@ -399,5 +400,9 @@ export class DashboardHierarchyTreeComponent implements OnInit {
   public executeAction(actionType: 'view' | 'edit' | 'delete', node: TreeNode, event: Event): void {
     event.stopPropagation();
     this.notifier.success(`${actionType.toUpperCase()} pipeline fired for ${node.name}`);
+  }
+
+  public getNodeInitial(name: string | undefined): string {
+    return String(name || '').trim().charAt(0).toUpperCase() || '?';
   }
 }
