@@ -57,10 +57,15 @@ private readonly headerService = inject(HeaderService);
     return this.authService.isLoggedIn();
   }
 
-  // Show only committees where logged-in user is NOT already an accepted admin/member
+  // Show committees where logged-in user is not yet an accepted member/admin and not in favourites
   get nearbyGroups(): CommitteesList[] {
     if (!this.isLoggedIn) return this.committeeList;
-    return this.committeeList.filter(c => this.isAuthItem(c) && c.membershipStatus !== 'ACCEPTED' && !c.isFavourite);
+    return this.committeeList.filter(c =>
+      this.isAuthItem(c) &&
+      c.isCommitteeMember !== 1 &&
+      c.isCommitteeAdmin !== 1 &&
+      !c.isFavourite
+    );
   }
 
   get favouriteGroups(): CommitteesList[] {
@@ -120,9 +125,9 @@ constructor() {
     });
   }
 
-  // Type guard: only CommitteeAuthItem has membership fields
+  // Type guard: only CommitteeAuthItem has auth-specific fields
   private isAuthItem(c: CommitteesList): c is CommitteeAuthItem {
-    return 'membershipStatus' in c;
+    return 'pendingRequestRole' in c;
   }
 
 // 🛡️ Action: Send Request to join Selected operational matrix unit
@@ -158,7 +163,7 @@ constructor() {
         next: (response: JoinCommitteeApiResponse | undefined) => {
           this.notifier.success('Join request sent successfully!');
           if (committee && this.isAuthItem(committee)) {
-            committee.membershipStatus = 'PENDING';
+            committee.pendingRequestRole = 'COMMITTEE_MEMBER';
             this.cdr.detectChanges();
           }
         },
@@ -197,7 +202,7 @@ cancelRequest(id: number, event: Event): void {
         next: (response: CancelRequestApiResponse | undefined) => {
           this.notifier.success('Join request cancelled successfully!');
           if (committee && this.isAuthItem(committee)) {
-            committee.membershipStatus = null;
+            committee.pendingRequestRole = null;
             this.cdr.detectChanges();
           }
           // Trigger refresh of committee list

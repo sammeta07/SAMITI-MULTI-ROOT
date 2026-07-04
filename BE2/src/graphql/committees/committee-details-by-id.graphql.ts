@@ -101,26 +101,31 @@ export const committeeDetailsResolvers = {
 
       const committee = committeeResult[0];
 
-      // Check if logged-in user is admin of this committee
+      // Check if logged-in user is admin + latest admin request status
       const adminCheckResult = await query<any[]>(`
-        SELECT
-          is_committee_admin,
-          admin_status,
-          admin_status_action_by,
-          admin_status_action_at
-        FROM users_committees
+        SELECT is_committee_admin FROM users_committees
         WHERE committee_id = ? AND user_id = ?
+        LIMIT 1
       `, [committeeId, loggedInUserId]);
 
-      const isLoggedUserAdmin = adminCheckResult && adminCheckResult.length > 0 && Number(adminCheckResult[0].is_committee_admin) === 1;
-      const loggedInUserMembershipRow = adminCheckResult && adminCheckResult.length > 0 ? adminCheckResult[0] : null;
+      const isLoggedUserAdmin = adminCheckResult.length > 0 && Number(adminCheckResult[0].is_committee_admin) === 1;
+
+      // Latest admin role request for this user
+      const adminRequestRow = await query<any[]>(`
+        SELECT status, action_by_user_id, action_at
+        FROM committee_role_requests
+        WHERE committee_id = ? AND requester_user_id = ? AND request_role = 'COMMITTEE_ADMIN'
+        ORDER BY requested_at DESC
+        LIMIT 1
+      `, [committeeId, loggedInUserId]);
+
       const loggedInUserAdminStatus = isLoggedUserAdmin
         ? 'ACCEPTED'
-        : (loggedInUserMembershipRow?.admin_status ? String(loggedInUserMembershipRow.admin_status).toUpperCase() : null);
-      const loggedInUserAdminStatusActionBy = loggedInUserMembershipRow?.admin_status_action_by
-        ? Number(loggedInUserMembershipRow.admin_status_action_by)
+        : (adminRequestRow.length > 0 ? String(adminRequestRow[0].status).toUpperCase() : null);
+      const loggedInUserAdminStatusActionBy = adminRequestRow.length > 0 && adminRequestRow[0].action_by_user_id
+        ? Number(adminRequestRow[0].action_by_user_id)
         : null;
-      const loggedInUserAdminStatusActionAt = loggedInUserMembershipRow?.admin_status_action_at || null;
+      const loggedInUserAdminStatusActionAt = adminRequestRow.length > 0 ? adminRequestRow[0].action_at || null : null;
 
       // Fetch all members of the committee
       const members = await query<any[]>(`
@@ -131,7 +136,7 @@ export const committeeDetailsResolvers = {
           COALESCE(cm.is_committee_admin, 0) AS is_committee_admin
         FROM users u
         INNER JOIN users_committees cm ON u.id = cm.user_id
-        WHERE cm.committee_id = ? AND cm.membership_status = 'ACCEPTED'
+        WHERE cm.committee_id = ? AND cm.is_committee_member = 1
         ORDER BY u.name ASC
       `, [committeeId]);
 

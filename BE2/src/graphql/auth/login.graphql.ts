@@ -26,8 +26,6 @@ type LoginCommitteeRoleRow = RowDataPacket & {
   committee_name: string;
   is_committee_admin: number | null;
   is_committee_member: number | null;
-  membership_status: string | null;
-  admin_status: string | null;
 };
 
 type LoginEventRoleRow = RowDataPacket & {
@@ -144,17 +142,13 @@ export const loginResolvers = {
           c.id AS committee_id,
           c.committee_name,
           cm.is_committee_admin,
-          cm.is_committee_member,
-          cm.membership_status,
-          cm.admin_status
+          cm.is_committee_member
          FROM users_committees cm
          INNER JOIN committees c ON c.id = cm.committee_id
          WHERE cm.user_id = ?
            AND (
              COALESCE(cm.is_committee_admin, 0) = 1
              OR COALESCE(cm.is_committee_member, 0) = 1
-             OR UPPER(COALESCE(cm.membership_status, '')) = 'ACCEPTED'
-             OR UPPER(COALESCE(cm.admin_status, '')) = 'ACCEPTED'
            )`,
         [user.id]
       ).catch(() => []);

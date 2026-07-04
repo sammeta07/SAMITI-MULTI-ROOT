@@ -87,12 +87,7 @@ export class HomeService {
             establishYear
             isCommitteeAdmin
             isCommitteeMember
-            membershipStatus
-            membershipStatusActionBy
-            membershipStatusActionAt
-            adminStatus
-            adminStatusActionBy
-            adminStatusActionAt
+            pendingRequestRole
             isFavourite
             events {
               eventId

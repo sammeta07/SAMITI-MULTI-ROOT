@@ -1,5 +1,7 @@
 import { execute, query } from '../../config/db';
 
+// ─── All queries/mutations now use committee_role_requests for workflow ───────
+
 export const committeeMembershipRequestsTypes = `
   enum CommitteeMembershipDecisionAction {
     ACCEPTED
@@ -110,56 +112,34 @@ async function resolveLoggedInUserIdFromGraphQLContext(context: any): Promise<nu
 
 export const committeeMembershipRequestsResolvers = {
   Query: {
+    // ── Requests received by committees where logged-in user is admin ──────────
     async receivedCommitteeMembershipRequestsForAdminCommittees(_: any, __: any, context: any) {
       const loggedInUserId = await resolveLoggedInUserIdFromGraphQLContext(context);
 
       const rows = await query<any[]>(
-        `
-          SELECT
-            c.id AS committee_id,
+        `SELECT
+            c.id                                            AS committee_id,
             c.committee_name,
             c.address,
-            COALESCE(
-              cm.request_type,
-              CASE
-                WHEN cm.admin_status = 'PENDING' THEN 'COMMITTEE_ADMIN'
-                ELSE 'COMMITTEE_MEMBER'
-              END
-            ) AS request_type,
-            DATE_FORMAT(
-              CASE
-                WHEN cm.admin_status = 'PENDING' THEN cm.admin_request_created_at
-                ELSE cm.membership_request_created_at
-              END,
-              '%Y-%m-%d %H:%i:%s'
-            ) AS request_sent_time,
-            u.id AS user_id,
+            crr.request_role                               AS request_type,
+            DATE_FORMAT(crr.requested_at, '%Y-%m-%d %H:%i:%s') AS request_sent_time,
+            u.id                                           AS user_id,
             u.name,
             u.email,
             u.mobile,
             u.date_of_birth,
             u.gender,
-            u.profile_photo AS photo
-          FROM users_committees cm
-          INNER JOIN committees c ON c.id = cm.committee_id
-          INNER JOIN users u ON u.id = cm.user_id
-          INNER JOIN users_committees admin_cm
-            ON admin_cm.committee_id = cm.committee_id
-            AND admin_cm.user_id = ?
-            AND admin_cm.is_committee_admin = 1
-            AND admin_cm.membership_status = 'ACCEPTED'
-          WHERE (
-              (cm.membership_status = 'PENDING' AND cm.is_committee_admin = 0)
-              OR
-              (cm.admin_status = 'PENDING' AND cm.membership_status = 'ACCEPTED')
-            )
-            AND cm.user_id <> ?
-          ORDER BY
-            CASE
-              WHEN cm.admin_status = 'PENDING' THEN cm.admin_request_created_at
-              ELSE cm.membership_request_created_at
-            END DESC
-        `,
+            u.profile_photo                                AS photo
+         FROM committee_role_requests crr
+         INNER JOIN committees c ON c.id = crr.committee_id
+         INNER JOIN users u ON u.id = crr.requester_user_id
+         INNER JOIN users_committees admin_uc
+            ON admin_uc.committee_id = crr.committee_id
+            AND admin_uc.user_id = ?
+            AND admin_uc.is_committee_admin = 1
+         WHERE crr.status = 'PENDING'
+           AND crr.requester_user_id <> ?
+         ORDER BY crr.requested_at DESC`,
         [loggedInUserId, loggedInUserId]
       );
 
@@ -168,7 +148,7 @@ export const committeeMembershipRequestsResolvers = {
           committeeId: Number(row.committee_id),
           committeeName: row.committee_name,
           address: row.address,
-          requestType: row.request_type === 'COMMITTEE_ADMIN' ? 'COMMITTEE_ADMIN' : 'COMMITTEE_MEMBER',
+          requestType: row.request_type as 'COMMITTEE_MEMBER' | 'COMMITTEE_ADMIN',
           requestSentTime: row.request_sent_time,
           userDetails: {
             userId: Number(row.user_id),
@@ -183,90 +163,28 @@ export const committeeMembershipRequestsResolvers = {
       };
     },
 
+    // ── Requests sent by the logged-in user ────────────────────────────────────
     async sentCommitteeMembershipRequestsByLoggedInUser(_: any, __: any, context: any) {
       const loggedInUserId = await resolveLoggedInUserIdFromGraphQLContext(context);
 
       const rows = await query<any[]>(
-        `
-          SELECT
-            c.id AS committee_id,
+        `SELECT
+            c.id                                            AS committee_id,
             c.committee_name,
-            COALESCE(
-              cm.request_type,
-              CASE
-                WHEN cm.admin_status IS NOT NULL THEN 'COMMITTEE_ADMIN'
-                ELSE 'COMMITTEE_MEMBER'
-              END
-            ) AS request_type,
+            crr.request_role                               AS request_type,
             c.address,
             c.establish_year,
-            CASE
-              WHEN cm.admin_status IS NOT NULL THEN cm.admin_status
-              ELSE cm.membership_status
-            END AS status,
-            DATE_FORMAT(
-              CASE
-                WHEN cm.admin_status IS NOT NULL THEN cm.admin_request_created_at
-                ELSE cm.membership_request_created_at
-              END,
-              '%Y-%m-%d %H:%i:%s'
-            ) AS request_sent_time,
-            CASE
-              WHEN (
-                (cm.admin_status IS NOT NULL AND cm.admin_status IN ('ACCEPTED', 'REJECTED'))
-                OR
-                (cm.admin_status IS NULL AND cm.membership_status IN ('ACCEPTED', 'REJECTED'))
-              ) THEN action_user.name
-              ELSE NULL
-            END AS resolved_by_name,
-            CASE
-              WHEN (
-                (cm.admin_status IS NOT NULL AND cm.admin_status IN ('ACCEPTED', 'REJECTED'))
-                OR
-                (cm.admin_status IS NULL AND cm.membership_status IN ('ACCEPTED', 'REJECTED'))
-              ) THEN action_user.email
-              ELSE NULL
-            END AS resolved_by_email,
-            CASE
-              WHEN (
-                (cm.admin_status IS NOT NULL AND cm.admin_status IN ('ACCEPTED', 'REJECTED'))
-                OR
-                (cm.admin_status IS NULL AND cm.membership_status IN ('ACCEPTED', 'REJECTED'))
-              ) THEN action_user.profile_photo
-              ELSE NULL
-            END AS resolved_by_photo,
-            CASE
-              WHEN (
-                (cm.admin_status IS NOT NULL AND cm.admin_status IN ('ACCEPTED', 'REJECTED'))
-                OR
-                (cm.admin_status IS NULL AND cm.membership_status IN ('ACCEPTED', 'REJECTED'))
-              ) THEN DATE_FORMAT(
-                CASE
-                  WHEN cm.admin_status IS NOT NULL THEN cm.admin_status_action_at
-                  ELSE cm.membership_status_action_at
-                END,
-                '%Y-%m-%d %H:%i:%s'
-              )
-              ELSE NULL
-            END AS resolved_at_time
-          FROM users_committees cm
-          INNER JOIN committees c ON c.id = cm.committee_id
-          LEFT JOIN users action_user
-            ON action_user.id = CASE
-                WHEN cm.admin_status IS NOT NULL THEN cm.admin_status_action_by
-                ELSE cm.membership_status_action_by
-              END
-          WHERE cm.user_id = ?
-            AND (
-              cm.membership_status IS NOT NULL
-              OR cm.admin_status IS NOT NULL
-            )
-          ORDER BY
-            CASE
-              WHEN cm.admin_status IS NOT NULL THEN cm.admin_request_created_at
-              ELSE cm.membership_request_created_at
-            END DESC
-        `,
+            crr.status,
+            DATE_FORMAT(crr.requested_at, '%Y-%m-%d %H:%i:%s') AS request_sent_time,
+            action_user.name                               AS resolved_by_name,
+            action_user.email                              AS resolved_by_email,
+            action_user.profile_photo                      AS resolved_by_photo,
+            DATE_FORMAT(crr.action_at, '%Y-%m-%d %H:%i:%s') AS resolved_at_time
+         FROM committee_role_requests crr
+         INNER JOIN committees c ON c.id = crr.committee_id
+         LEFT JOIN users action_user ON action_user.id = crr.action_by_user_id
+         WHERE crr.requester_user_id = ?
+         ORDER BY crr.requested_at DESC`,
         [loggedInUserId]
       );
 
@@ -274,10 +192,10 @@ export const committeeMembershipRequestsResolvers = {
         data: rows.map((row) => ({
           committeeId: Number(row.committee_id),
           committeeName: row.committee_name,
-          requestType: row.request_type === 'COMMITTEE_ADMIN' ? 'COMMITTEE_ADMIN' : 'COMMITTEE_MEMBER',
+          requestType: row.request_type as 'COMMITTEE_MEMBER' | 'COMMITTEE_ADMIN',
           address: row.address,
           establishYear: row.establish_year ? Number(row.establish_year) : null,
-          status: String(row.status || 'PENDING'),
+          status: String(row.status),
           requestSentTime: row.request_sent_time,
           resolvedByName: row.resolved_by_name,
           resolvedByEmail: row.resolved_by_email,
@@ -287,69 +205,40 @@ export const committeeMembershipRequestsResolvers = {
       };
     },
 
+    // ── Requests on which the logged-in user took action ──────────────────────
     async actionTakenOnCommitteeMembershipRequestsByLoggedInUser(_: any, __: any, context: any) {
       const loggedInUserId = await resolveLoggedInUserIdFromGraphQLContext(context);
 
       const rows = await query<any[]>(
-        `
-          SELECT
-            c.id AS committee_id,
+        `SELECT
+            c.id                                             AS committee_id,
             c.committee_name,
-            COALESCE(
-              cm.request_type,
-              CASE
-                WHEN cm.admin_status IS NOT NULL THEN 'COMMITTEE_ADMIN'
-                ELSE 'COMMITTEE_MEMBER'
-              END
-            ) AS request_type,
-            DATE_FORMAT(
-              CASE
-                WHEN cm.admin_status IS NOT NULL THEN cm.admin_request_created_at
-                ELSE cm.membership_request_created_at
-              END,
-              '%Y-%m-%d %H:%i:%s'
-            ) AS request_sent_time,
-            DATE_FORMAT(
-              CASE
-                WHEN cm.admin_status IS NOT NULL THEN cm.admin_status_action_at
-                ELSE cm.membership_status_action_at
-              END,
-              '%Y-%m-%d %H:%i:%s'
-            ) AS action_at_time,
-            CASE
-              WHEN cm.admin_status IS NOT NULL THEN cm.admin_status
-              ELSE cm.membership_status
-            END AS status,
-            u.id AS user_id,
+            crr.request_role                                AS request_type,
+            DATE_FORMAT(crr.requested_at, '%Y-%m-%d %H:%i:%s') AS request_sent_time,
+            DATE_FORMAT(crr.action_at, '%Y-%m-%d %H:%i:%s') AS action_at_time,
+            crr.status,
+            u.id                                            AS user_id,
             u.name,
             u.email,
             u.mobile,
             u.date_of_birth,
             u.gender,
-            u.profile_photo AS photo
-          FROM users_committees cm
-          INNER JOIN committees c ON c.id = cm.committee_id
-          INNER JOIN users u ON u.id = cm.user_id
-          WHERE (
-              (cm.membership_status IN ('ACCEPTED', 'REJECTED') AND cm.membership_status_action_by = ?)
-              OR
-              (cm.admin_status IN ('ACCEPTED', 'REJECTED') AND cm.admin_status_action_by = ?)
-            )
-            AND cm.user_id <> ?
-          ORDER BY
-            CASE
-              WHEN cm.admin_status IN ('ACCEPTED', 'REJECTED') THEN cm.admin_status_action_at
-              ELSE cm.membership_status_action_at
-            END DESC
-        `,
-        [loggedInUserId, loggedInUserId, loggedInUserId]
+            u.profile_photo                                 AS photo
+         FROM committee_role_requests crr
+         INNER JOIN committees c ON c.id = crr.committee_id
+         INNER JOIN users u ON u.id = crr.requester_user_id
+         WHERE crr.action_by_user_id = ?
+           AND crr.status IN ('ACCEPTED', 'REJECTED')
+           AND crr.requester_user_id <> ?
+         ORDER BY crr.action_at DESC`,
+        [loggedInUserId, loggedInUserId]
       );
 
       return {
         data: rows.map((row) => ({
           committeeId: Number(row.committee_id),
           committeeName: row.committee_name,
-          requestType: row.request_type === 'COMMITTEE_ADMIN' ? 'COMMITTEE_ADMIN' : 'COMMITTEE_MEMBER',
+          requestType: row.request_type as 'COMMITTEE_MEMBER' | 'COMMITTEE_ADMIN',
           requestSentTime: row.request_sent_time,
           actionAtTime: row.action_at_time,
           status: String(row.status),
@@ -368,6 +257,7 @@ export const committeeMembershipRequestsResolvers = {
   },
 
   Mutation: {
+    // ── Admin accepts/rejects a pending request ────────────────────────────────
     async takeActionOnCommitteeMembershipRequest(
       _: any,
       args: { committeeId: number; targetUserId: number; decisionAction: 'ACCEPTED' | 'REJECTED' },
@@ -378,72 +268,63 @@ export const committeeMembershipRequestsResolvers = {
       const loggedInUserId = await resolveLoggedInUserIdFromGraphQLContext(context);
       const actionAtTime = new Date().toISOString();
 
+      // Verify actor is an accepted admin
       const adminValidationRows = await query<any[]>(
-        `
-          SELECT user_id
-          FROM users_committees
-          WHERE committee_id = ?
-            AND user_id = ?
-            AND is_committee_admin = 1
-            AND membership_status = 'ACCEPTED'
-          LIMIT 1
-        `,
+        `SELECT user_id FROM users_committees
+         WHERE committee_id = ? AND user_id = ? AND is_committee_admin = 1
+         LIMIT 1`,
         [committeeId, loggedInUserId]
       );
-
       if (adminValidationRows.length === 0) {
         throw new Error('Forbidden: Only accepted committee admins can take membership actions');
       }
 
-      const membershipRows = await query<any[]>(
-        `
-          SELECT membership_status, admin_status, is_committee_admin
-          FROM users_committees
-          WHERE committee_id = ? AND user_id = ?
-          LIMIT 1
-        `,
+      // Find the latest PENDING request for this user in this committee
+      const pendingRows = await query<any[]>(
+        `SELECT id, request_role FROM committee_role_requests
+         WHERE committee_id = ? AND requester_user_id = ? AND status = 'PENDING'
+         ORDER BY requested_at DESC
+         LIMIT 1`,
         [committeeId, targetUserId]
       );
-
-      if (membershipRows.length === 0) {
-        throw new Error('Membership request not found for this committee and user');
+      if (pendingRows.length === 0) {
+        throw new Error('No pending membership request found for this user and committee');
       }
 
-      const currentMembershipStatus = String(membershipRows[0].membership_status || '').toUpperCase();
-      const currentAdminStatus = String(membershipRows[0].admin_status || '').toUpperCase();
+      const { id: requestId, request_role: requestRole } = pendingRows[0];
 
-      const hasPendingMemberRequest = currentMembershipStatus === 'PENDING';
-      const hasPendingAdminRequest = currentAdminStatus === 'PENDING';
+      // Update request status
+      await execute(
+        `UPDATE committee_role_requests
+         SET status = ?, action_by_user_id = ?, action_at = NOW()
+         WHERE id = ?`,
+        [resolvedDecisionStatus, loggedInUserId, requestId]
+      );
 
-      if (!hasPendingMemberRequest && !hasPendingAdminRequest) {
-        throw new Error('Only pending membership requests can be processed');
-      }
-
-      if (hasPendingAdminRequest) {
-        await execute(
-          `
-            UPDATE users_committees
-            SET
-              is_committee_admin = ?,
-              admin_status = ?,
-              admin_status_action_by = ?,
-              admin_status_action_at = NOW()
-            WHERE committee_id = ? AND user_id = ?
-          `,
-          [decisionAction === 'ACCEPTED' ? 1 : 0, resolvedDecisionStatus, loggedInUserId, committeeId, targetUserId]
-        );
+      // Update or insert final state in users_committees
+      if (decisionAction === 'ACCEPTED') {
+        if (requestRole === 'COMMITTEE_ADMIN') {
+          await execute(
+            `INSERT INTO users_committees (committee_id, user_id, is_committee_admin, is_committee_member, is_favourite)
+             VALUES (?, ?, 1, 1, 0)
+             ON DUPLICATE KEY UPDATE is_committee_admin = 1, is_committee_member = 1`,
+            [committeeId, targetUserId]
+          );
+        } else {
+          await execute(
+            `INSERT INTO users_committees (committee_id, user_id, is_committee_admin, is_committee_member, is_favourite)
+             VALUES (?, ?, 0, 1, 0)
+             ON DUPLICATE KEY UPDATE is_committee_member = 1`,
+            [committeeId, targetUserId]
+          );
+        }
       } else {
+        // REJECTED — ensure row exists but not promoted
         await execute(
-          `
-            UPDATE users_committees
-            SET
-              is_committee_member = ?,
-              membership_status = ?,
-              membership_status_action_by = ?,
-              membership_status_action_at = NOW()
-            WHERE committee_id = ? AND user_id = ?
-          `,
-          [decisionAction === 'ACCEPTED' ? 1 : 0, resolvedDecisionStatus, loggedInUserId, committeeId, targetUserId]
+          `INSERT INTO users_committees (committee_id, user_id, is_committee_admin, is_committee_member, is_favourite)
+           VALUES (?, ?, 0, 0, 0)
+           ON DUPLICATE KEY UPDATE committee_id = committee_id`,
+          [committeeId, targetUserId]
         );
       }
 

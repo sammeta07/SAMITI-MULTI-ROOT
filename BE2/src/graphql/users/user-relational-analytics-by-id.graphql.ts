@@ -171,7 +171,7 @@ export const userRelationalAnalyticsResolvers = {
          FROM users_committees cm
          INNER JOIN committees c ON cm.committee_id = c.id
          WHERE cm.user_id = ?
-           AND cm.membership_status = 'ACCEPTED'`,
+           AND cm.is_committee_member = 1`,
         [userId]
       );
 

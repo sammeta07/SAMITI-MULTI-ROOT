@@ -12,12 +12,7 @@ export const authCommitteeTypes = `
     establishYear: Int!
     isCommitteeAdmin: Int!
     isCommitteeMember: Int!
-    membershipStatus: String
-    membershipStatusActionBy: Int
-    membershipStatusActionAt: String
-    adminStatus: String
-    adminStatusActionBy: Int
-    adminStatusActionAt: String
+    pendingRequestRole: String
     isFavourite: Int!
     events: [EventSummary!]!
   }
@@ -54,7 +49,7 @@ export const authCommitteesResolvers = {
       }
 
       const rawList = await query<any[]>(`
-        SELECT 
+        SELECT
           c.id,
           c.committee_name,
           c.establish_year,
@@ -62,24 +57,21 @@ export const authCommitteesResolvers = {
           c.logo,
           c.contact_numbers,
           c.description,
-          COALESCE(cm.is_committee_admin, 0) AS is_committee_admin,
+          COALESCE(cm.is_committee_admin, 0)  AS is_committee_admin,
           COALESCE(cm.is_committee_member, 0) AS is_committee_member,
-          cm.membership_status,
-          cm.membership_status_action_by,
-          cm.membership_status_action_at,
-          cm.admin_status,
-          cm.admin_status_action_by,
-          cm.admin_status_action_at,
-          COALESCE(cm.is_favourite, 0) AS is_favourite,
+          COALESCE(cm.is_favourite, 0)        AS is_favourite,
+          crr.request_role                    AS pending_request_role,
           (6371 * acos(
-            cos(radians(?)) * cos(radians(c.latitude)) * cos(radians(c.longitude) - radians(?)) + 
+            cos(radians(?)) * cos(radians(c.latitude)) * cos(radians(c.longitude) - radians(?)) +
             sin(radians(?)) * sin(radians(c.latitude))
           )) AS distanceKm
         FROM committees c
         LEFT JOIN users_committees cm ON c.id = cm.committee_id AND cm.user_id = ?
+        LEFT JOIN committee_role_requests crr
+          ON crr.committee_id = c.id AND crr.requester_user_id = ? AND crr.status = 'PENDING'
         HAVING distanceKm <= ?
         ORDER BY distanceKm ASC
-      `, [latitude, longitude, latitude, loggedInUserId, distanceKm]);
+      `, [latitude, longitude, latitude, loggedInUserId, loggedInUserId, distanceKm]);
 
       const committeeIds = rawList.map(item => item.id);
       let eventsMap: Record<number, any[]> = {};
@@ -128,12 +120,7 @@ export const authCommitteesResolvers = {
           establishYear: item.establish_year ?? 0,
           isCommitteeAdmin: Number(item.is_committee_admin),
           isCommitteeMember: Number(item.is_committee_member),
-          membershipStatus: item.membership_status || null,
-          membershipStatusActionBy: item.membership_status_action_by ? Number(item.membership_status_action_by) : null,
-          membershipStatusActionAt: item.membership_status_action_at || null,
-          adminStatus: item.admin_status || null,
-          adminStatusActionBy: item.admin_status_action_by ? Number(item.admin_status_action_by) : null,
-          adminStatusActionAt: item.admin_status_action_at || null,
+          pendingRequestRole: item.pending_request_role || null,
           isFavourite: Number(item.is_favourite),
           events: isAdmin ? allEvents : visibleEvents
         };

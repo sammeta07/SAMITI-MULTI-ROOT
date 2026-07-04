@@ -50,45 +50,39 @@ export const submitCommitteeMembershipRequestResolvers = {
 
       const requestedAtDateTime = new Date().toISOString();
 
+      // Verify committee exists
       const committeeRows = await query<any[]>(
-        `
-          SELECT id
-          FROM committees
-          WHERE id = ?
-          LIMIT 1
-        `,
+        `SELECT id FROM committees WHERE id = ? LIMIT 1`,
         [committeeId]
       );
-
       if (!committeeRows || committeeRows.length === 0) {
         throw new Error(`Committee with ID ${committeeId} not found`);
       }
 
-      const existingMembershipRows = await query<any[]>(
-        `
-          SELECT
-            is_committee_admin,
-            is_committee_member,
-            membership_status,
-            admin_status
-          FROM users_committees
-          WHERE committee_id = ? AND user_id = ?
-          LIMIT 1
-        `,
+      // Get current membership state
+      const membershipRows = await query<any[]>(
+        `SELECT is_committee_admin, is_committee_member
+         FROM users_committees
+         WHERE committee_id = ? AND user_id = ?
+         LIMIT 1`,
         [committeeId, loggedInUserId]
       );
 
+      // Check existing pending request for this role
+      const existingPendingRows = await query<any[]>(
+        `SELECT id FROM committee_role_requests
+         WHERE committee_id = ? AND requester_user_id = ? AND request_role = ? AND status = 'PENDING'
+         LIMIT 1`,
+        [committeeId, loggedInUserId, requestRole]
+      );
+
       if (requestRole === 'COMMITTEE_ADMIN') {
-        if (existingMembershipRows.length === 0) {
+        // Must be accepted member first
+        if (membershipRows.length === 0 || Number(membershipRows[0].is_committee_member) !== 1) {
           throw new Error('Only accepted committee members can request admin role');
         }
-
-        const existingMembership = existingMembershipRows[0];
-        const membershipStatus = String(existingMembership.membership_status || '').toUpperCase();
-        const adminStatus = String(existingMembership.admin_status || '').toUpperCase();
-        const isCommitteeAdmin = Number(existingMembership.is_committee_admin) === 1;
-
-        if (isCommitteeAdmin || adminStatus === 'ACCEPTED') {
+        // Already admin
+        if (Number(membershipRows[0].is_committee_admin) === 1) {
           return {
             committeeId,
             requestedByUserId: loggedInUserId,
@@ -97,35 +91,23 @@ export const submitCommitteeMembershipRequestResolvers = {
             membershipStatus: 'ACCEPTED'
           };
         }
+      }
 
-        if (membershipStatus !== 'ACCEPTED') {
-          throw new Error('Only accepted committee members can request admin role');
-        }
-
-        if (adminStatus === 'PENDING') {
+      if (requestRole === 'COMMITTEE_MEMBER') {
+        // Already an accepted member
+        if (membershipRows.length > 0 && Number(membershipRows[0].is_committee_member) === 1) {
           return {
             committeeId,
             requestedByUserId: loggedInUserId,
             requestedAtDateTime,
             requestedRole: requestRole,
-            membershipStatus: 'PENDING'
+            membershipStatus: 'ACCEPTED'
           };
         }
+      }
 
-        await execute(
-          `
-            UPDATE users_committees
-            SET
-              request_type = 'COMMITTEE_ADMIN',
-              admin_status = 'PENDING',
-              admin_request_created_at = NOW(),
-              admin_status_action_by = NULL,
-              admin_status_action_at = NULL
-            WHERE committee_id = ? AND user_id = ?
-          `,
-          [committeeId, loggedInUserId]
-        );
-
+      // Already has a pending request for this role
+      if (existingPendingRows.length > 0) {
         return {
           committeeId,
           requestedByUserId: loggedInUserId,
@@ -135,74 +117,21 @@ export const submitCommitteeMembershipRequestResolvers = {
         };
       }
 
-      if (existingMembershipRows.length > 0) {
-        const existingMembership = existingMembershipRows[0];
-        const existingMembershipStatus = String(existingMembership.membership_status || '').toUpperCase();
-        const isExistingCommitteeMember = Number(existingMembership.is_committee_member) === 1;
+      // Insert new request into committee_role_requests
+      await execute(
+        `INSERT INTO committee_role_requests
+           (committee_id, requester_user_id, request_role, status, requested_at)
+         VALUES (?, ?, ?, 'PENDING', NOW())`,
+        [committeeId, loggedInUserId, requestRole]
+      );
 
-        if (isExistingCommitteeMember && existingMembershipStatus === 'ACCEPTED') {
-          return {
-            committeeId,
-            requestedByUserId: loggedInUserId,
-            requestedAtDateTime,
-            requestedRole: requestRole,
-            membershipStatus: 'ACCEPTED'
-          };
-        }
-
-        if (existingMembershipStatus === 'PENDING') {
-          return {
-            committeeId,
-            requestedByUserId: loggedInUserId,
-            requestedAtDateTime,
-            requestedRole: requestRole,
-            membershipStatus: 'PENDING'
-          };
-        }
-
-        await execute(
-          `
-            UPDATE users_committees
-            SET
-              request_type = 'COMMITTEE_MEMBER',
-              is_committee_admin = 0,
-              is_committee_member = 0,
-              membership_status = 'PENDING',
-              membership_request_created_at = NOW(),
-              membership_status_action_by = ?,
-              membership_status_action_at = NOW(),
-              admin_status = NULL,
-              admin_request_created_at = NULL,
-              admin_status_action_by = NULL,
-              admin_status_action_at = NULL
-            WHERE committee_id = ? AND user_id = ?
-          `,
-          [loggedInUserId, committeeId, loggedInUserId]
-        );
-      } else {
-        await execute(
-          `
-            INSERT INTO users_committees (
-              committee_id,
-              user_id,
-              request_type,
-              is_committee_admin,
-              is_committee_member,
-              membership_status,
-              membership_request_created_at,
-              membership_status_action_by,
-              membership_status_action_at,
-              admin_status,
-              admin_request_created_at,
-              admin_status_action_by,
-              admin_status_action_at,
-              is_favourite
-            )
-            VALUES (?, ?, 'COMMITTEE_MEMBER', 0, 0, 'PENDING', NOW(), ?, NOW(), NULL, NULL, NULL, NULL, 0)
-          `,
-          [committeeId, loggedInUserId, loggedInUserId]
-        );
-      }
+      // Ensure a users_committees row exists (for favourite/state tracking)
+      await execute(
+        `INSERT INTO users_committees (committee_id, user_id, is_committee_admin, is_committee_member, is_favourite)
+         VALUES (?, ?, 0, 0, 0)
+         ON DUPLICATE KEY UPDATE committee_id = committee_id`,
+        [committeeId, loggedInUserId]
+      );
 
       return {
         committeeId,

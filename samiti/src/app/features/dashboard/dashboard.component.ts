@@ -16,6 +16,8 @@ import { DashboardHierarchyTreeComponent } from './components/dashboard-hierarch
 })
 export class DashboardComponent {
   @ViewChild('sidebarEl', { static: false }) sidebarElement!: ElementRef<HTMLElement>;
+  private static readonly SIDEBAR_MIN_WIDTH = 260;
+  private static readonly SIDEBAR_MAX_WIDTH = 480;
 
   // 🎚️ RESIZER MOUSE DRAG DRIVER: Real-time calculation mechanics for sidebar width changes
   public initSidebarResize(mouseDownEvent: MouseEvent): void {
@@ -27,8 +29,11 @@ export class DashboardComponent {
     const doDrag = (moveEvent: MouseEvent) => {
       const currentWidth = startWidth + (moveEvent.clientX - startX);
       
-      // Enforce rigid standard boundary locks (Min: 180px, Max: 480px)
-      if (currentWidth >= 180 && currentWidth <= 480) {
+      // Enforce rigid standard boundary locks (Min: 260px, Max: 480px)
+      if (
+        currentWidth >= DashboardComponent.SIDEBAR_MIN_WIDTH &&
+        currentWidth <= DashboardComponent.SIDEBAR_MAX_WIDTH
+      ) {
         this.sidebarElement.nativeElement.style.width = `${currentWidth}px`;
         this.sidebarElement.nativeElement.style.minWidth = `${currentWidth}px`;
         this.sidebarElement.nativeElement.style.maxWidth = `${currentWidth}px`;

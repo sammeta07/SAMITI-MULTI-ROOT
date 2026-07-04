@@ -15,6 +15,7 @@ import { ImageAssetService } from '../../../core/services/image-asset.service';
 import { ImageCropperDialogComponent } from '../../../shared/components/image-cropper-dialog/image-cropper-dialog.component';
 import { TextFormatService } from '../../../shared/services/text-format-service.service';
 import { AuthService } from '../../../core/services/auth.service';
+import { Router } from '@angular/router';
 
 @Component({
   selector: 'app-create-committee-dialog',
@@ -41,6 +42,7 @@ export class CreateCommitteeDialogComponent implements OnInit {
   private readonly dialog = inject(MatDialog);
   private readonly textFormatService = inject(TextFormatService);
   private readonly authService = inject(AuthService);
+  private readonly router = inject(Router);
   
   public readonly injectedData = inject(MAT_DIALOG_DATA, { optional: true });
 
@@ -182,6 +184,9 @@ export class CreateCommitteeDialogComponent implements OnInit {
   }
 
   private executeGroupCreation(payload: any): void {
+    const existingDashboardTree = this.authService.getStoredUserData()?.dashboardTree || [];
+    const shouldRouteToDashboardHome = existingDashboardTree.length === 0;
+
     this.createCommitteeService.createCommittee(payload).subscribe({
       next: (response) => {
         const rawUserName = this.authService.getStoredUserData()?.name || 'User';
@@ -192,6 +197,24 @@ export class CreateCommitteeDialogComponent implements OnInit {
           `Hi, **${displayUserName}**! You have successfully created the group **${displayGroupName}**.`,
           'Group Created'
         );
+
+        // First-time group creation after login: bootstrap dashboard tree and route to dashboard/home once.
+        if (shouldRouteToDashboardHome) {
+          const createdCommitteeNode = {
+            id: String(response?.id || ''),
+            name: response?.committeeName || payload?.name || this.committeeName,
+            type: 'committee',
+            roles: ['COMMITTEE_ADMIN', 'COMMITTEE_MEMBER'],
+            children: []
+          };
+
+          this.authService.updateStoredUserData({
+            dashboardTree: response?.id ? [createdCommitteeNode] : existingDashboardTree
+          });
+
+          this.router.navigate(['/dashboard', 'home']);
+        }
+
         this.dialogRef.close(true);
       },
       error: (err) => this.notifier.error(err?.message || 'Server network exception.')

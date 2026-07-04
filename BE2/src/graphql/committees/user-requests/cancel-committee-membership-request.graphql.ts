@@ -38,90 +38,48 @@ export const cancelCommitteeMembershipRequestResolvers = {
         throw new Error('Unauthorized: Invalid token');
       }
 
+      const cancelledAtDateTime = new Date().toISOString();
+
       const committeeRows = await query<any[]>(
-        `
-          SELECT id
-          FROM committees
-          WHERE id = ?
-          LIMIT 1
-        `,
+        `SELECT id FROM committees WHERE id = ? LIMIT 1`,
         [committeeId]
       );
-
       if (!committeeRows || committeeRows.length === 0) {
         throw new Error(`Committee with ID ${committeeId} not found`);
       }
 
-      const existingMembershipRows = await query<any[]>(
-        `
-          SELECT
-            membership_status,
-            admin_status
-          FROM users_committees
-          WHERE committee_id = ? AND user_id = ?
-          LIMIT 1
-        `,
+      // Find the latest PENDING request by this user for this committee
+      const pendingRows = await query<any[]>(
+        `SELECT id, request_role
+         FROM committee_role_requests
+         WHERE committee_id = ? AND requester_user_id = ? AND status = 'PENDING'
+         ORDER BY requested_at DESC
+         LIMIT 1`,
         [committeeId, loggedInUserId]
       );
 
-      if (existingMembershipRows.length === 0) {
+      if (pendingRows.length === 0) {
         return {
           committeeId,
           cancelledByUserId: loggedInUserId,
-          cancelledAtDateTime: new Date().toISOString(),
+          cancelledAtDateTime,
           membershipStatus: null
         };
       }
 
-      const existingMembershipStatus = String(existingMembershipRows[0].membership_status || '').toUpperCase();
-      const existingAdminStatus = String(existingMembershipRows[0].admin_status || '').toUpperCase();
-      const hasPendingAdminRoleRequest = existingAdminStatus === 'PENDING';
-      const hasPendingMembershipRequest = existingMembershipStatus === 'PENDING';
+      const pendingRequestId = pendingRows[0].id;
 
-      if (!hasPendingAdminRoleRequest && !hasPendingMembershipRequest) {
-        return {
-          committeeId,
-          cancelledByUserId: loggedInUserId,
-          cancelledAtDateTime: new Date().toISOString(),
-          membershipStatus: (existingAdminStatus || existingMembershipStatus) || null
-        };
-      }
-
-      if (hasPendingAdminRoleRequest) {
-        await execute(
-          `
-            UPDATE users_committees
-            SET
-              request_type = NULL,
-              admin_status = NULL,
-              admin_request_created_at = NULL,
-              admin_status_action_by = ?,
-              admin_status_action_at = NOW()
-            WHERE committee_id = ? AND user_id = ?
-          `,
-          [loggedInUserId, committeeId, loggedInUserId]
-        );
-      } else {
-        await execute(
-          `
-            UPDATE users_committees
-            SET
-              request_type = NULL,
-              is_committee_member = 0,
-              membership_status = NULL,
-              membership_request_created_at = NULL,
-              membership_status_action_by = ?,
-              membership_status_action_at = NOW()
-            WHERE committee_id = ? AND user_id = ?
-          `,
-          [loggedInUserId, committeeId, loggedInUserId]
-        );
-      }
+      await execute(
+        `UPDATE committee_role_requests
+         SET status = 'CANCELLED', cancel_by_user_id = ?, cancel_at = NOW()
+         WHERE id = ?`,
+        [loggedInUserId, pendingRequestId]
+      );
 
       return {
         committeeId,
         cancelledByUserId: loggedInUserId,
-        cancelledAtDateTime: new Date().toISOString(),
+        cancelledAtDateTime,
         membershipStatus: null
       };
     }

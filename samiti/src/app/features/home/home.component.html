@@ -29,10 +29,10 @@
       <div class="committees-tabs-shell">
         <ng-template #committeeCardTemplate let-committee let-isAuth="isAuth" let-panelPrefix="panelPrefix">
           <mat-expansion-panel id="{{ panelPrefix }}-committee-{{ committee.id }}" [hideToggle]="false"
-            [class.panel-role-admin]="isAuth && committee.isCommitteeAdmin && committee.membershipStatus === 'ACCEPTED'"
-            [class.panel-role-member]="isAuth && !committee.isCommitteeAdmin && committee.membershipStatus === 'ACCEPTED'"
-            [class.panel-role-pending]="isAuth && committee.membershipStatus === 'PENDING'"
-            [class.panel-role-none]="isAuth && !committee.membershipStatus">
+            [class.panel-role-admin]="isAuth && committee.isCommitteeAdmin === 1"
+            [class.panel-role-member]="isAuth && committee.isCommitteeMember === 1 && committee.isCommitteeAdmin !== 1"
+            [class.panel-role-pending]="isAuth && committee.pendingRequestRole"
+            [class.panel-role-none]="isAuth && !committee.isCommitteeMember && !committee.isCommitteeAdmin && !committee.pendingRequestRole">
 
             <mat-expansion-panel-header>
               <div class="committee-card-grid">
@@ -96,13 +96,13 @@
 
                   @if (isAuth) {
                   <div class="committee-action-footer">
-                    @if (committee.isCommitteeAdmin && committee.membershipStatus === 'ACCEPTED') {
+                    @if (committee.isCommitteeAdmin === 1) {
                     <span class="badge-pill admin-pill">ADMIN</span>
-                    } @else if (!committee.isCommitteeAdmin && committee.membershipStatus === 'ACCEPTED') {
+                    } @else if (committee.isCommitteeMember === 1) {
                     <span class="badge-pill member-pill">MEMBER</span>
-                    } @else if (committee.membershipStatus === 'PENDING') {
+                    } @else if (committee.pendingRequestRole) {
                     <div class="pending-action-group">
-                      <span class="badge-pill pending-pill">PENDING</span>
+                      <span class="badge-pill pending-pill">{{ committee.pendingRequestRole === 'COMMITTEE_ADMIN' ? 'ADMIN PENDING' : 'PENDING' }}</span>
                       <button mat-button type="button" class="cancel-request-btn"
                         (click)="cancelRequest(committee.id, $event)">
                         <mat-icon>close</mat-icon>

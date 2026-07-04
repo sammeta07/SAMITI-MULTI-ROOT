@@ -30,28 +30,14 @@ export interface CommitteeGuestItem {
   committeeLogo: string | null;
   establishYear: number;
   events: CommitteeEvent[];
-  // Auth-specific fields (optional for guest users, always present for auth users)
-  isCommitteeAdmin?: number;
-  isCommitteeMember?: number;
-  membershipStatus?: string | null;
-  membershipStatusActionBy?: number | null;
-  membershipStatusActionAt?: string | null;
-  adminStatus?: string | null;
-  adminStatusActionBy?: number | null;
-  adminStatusActionAt?: string | null;
-  isFavourite?: number;
 }
 
 // Matches GraphQL type CommitteeAuth (logged-in — full fields)
 export interface CommitteeAuthItem extends CommitteeGuestItem {
   isCommitteeAdmin: number;
   isCommitteeMember: number;
-  membershipStatus: string | null;
-  membershipStatusActionBy: number | null;
-  membershipStatusActionAt: string | null;
-  adminStatus: string | null;
-  adminStatusActionBy: number | null;
-  adminStatusActionAt: string | null;
+  // null = no pending request; 'COMMITTEE_MEMBER' | 'COMMITTEE_ADMIN' = pending
+  pendingRequestRole: 'COMMITTEE_MEMBER' | 'COMMITTEE_ADMIN' | null;
   isFavourite: number;
 }
 

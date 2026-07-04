@@ -168,23 +168,22 @@ export const createCommitteeResolvers = {
 
       const newCommitteeId = creationResult.insertId;
 
+      // Creator becomes immediate admin+member — no request workflow needed
       await execute(
-        `INSERT INTO users_committees (
-          committee_id,
-          user_id,
-          is_committee_admin,
-          is_committee_member,
-          membership_status,
-          membership_request_created_at,
-          membership_status_action_by,
-          membership_status_action_at,
-          admin_status,
-          admin_request_created_at,
-          admin_status_action_by,
-          admin_status_action_at,
-          is_favourite
-        ) VALUES (?, ?, 1, 1, 'ACCEPTED', NOW(), ?, NOW(), 'ACCEPTED', NOW(), ?, NOW(), 0)`,
-        [newCommitteeId, loggedInUserId, loggedInUserId, loggedInUserId]
+        `INSERT INTO users_committees (committee_id, user_id, is_committee_admin, is_committee_member, is_favourite)
+         VALUES (?, ?, 1, 1, 0)
+         ON DUPLICATE KEY UPDATE is_committee_admin = 1, is_committee_member = 1`,
+        [newCommitteeId, loggedInUserId]
+      );
+
+      // Record accepted requests for audit trail
+      await execute(
+        `INSERT IGNORE INTO committee_role_requests
+           (committee_id, requester_user_id, request_role, status, requested_at, action_by_user_id, action_at)
+         VALUES
+           (?, ?, 'COMMITTEE_MEMBER', 'ACCEPTED', NOW(), ?, NOW()),
+           (?, ?, 'COMMITTEE_ADMIN',  'ACCEPTED', NOW(), ?, NOW())`,
+        [newCommitteeId, loggedInUserId, loggedInUserId, newCommitteeId, loggedInUserId, loggedInUserId]
       );
 
       const rows = await query<CommitteeRow[]>(
