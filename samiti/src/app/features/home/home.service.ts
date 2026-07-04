@@ -1,9 +1,11 @@
 import { HttpClient } from '@angular/common/http';
 import { inject, Injectable, signal } from '@angular/core';
+import { Observable } from 'rxjs';
 import { map } from 'rxjs/operators';
 import { CommitteeListResponseGuestUser, CommitteeListRequestBackend, JoinCommitteeApiResponse, CancelRequestApiResponse, ToggleCommitteeFavouriteResponse, SubmitCommitteeMembershipRequestInput } from './home.models';
 import { environment } from '../../../environments/environment';
 import { JoinCommitteeRequestBody } from './home.models';
+import { CommitteeMembershipRequestService } from '../../core/services/committee-membership-request.service';
 
 interface GraphQLErrorPayload {
   message: string;
@@ -24,6 +26,7 @@ interface CommitteeListGraphQLPayload {
 export class HomeService {
     private readonly http = inject(HttpClient);
     private readonly graphqlUrl = environment.graphqlUrl;
+  private readonly committeeMembershipRequestService = inject(CommitteeMembershipRequestService);
 
     // Signal to trigger committee list refresh
     readonly refreshCommitteeList = signal<number>(0);
@@ -121,63 +124,22 @@ export class HomeService {
         );
     }
 
-    joinCommittee(body: JoinCommitteeRequestBody) {
-        const url = this.graphqlUrl;
+    requestCommitteeMembershipRole(body: JoinCommitteeRequestBody): Observable<JoinCommitteeApiResponse> {
         const submitCommitteeMembershipRequestInput: SubmitCommitteeMembershipRequestInput = {
           committeeId: body.committeeId,
           requestRole: body.role
         };
 
-        const query = `mutation SubmitCommitteeMembershipRequest($committeeId: Int!, $requestRole: CommitteeMembershipRequestRole!) {
-          submitCommitteeMembershipRequest(committeeId: $committeeId, requestRole: $requestRole) {
-            committeeId
-            requestedByUserId
-            requestedAtDateTime
-            requestedRole
-            membershipStatus
-          }
-        }`;
-
-        return this.http.post<GraphQLResponseEnvelope<{ submitCommitteeMembershipRequest: JoinCommitteeApiResponse }>>(url, {
-          query,
-          variables: {
-            committeeId: submitCommitteeMembershipRequestInput.committeeId,
-            requestRole: submitCommitteeMembershipRequestInput.requestRole
-          }
-        }).pipe(
-          map((res) => {
-            if (res.errors?.length) {
-              throw new Error(res.errors[0].message || 'Failed to join committee');
-            }
-            return res.data?.submitCommitteeMembershipRequest;
-          })
-        );
+        return this.committeeMembershipRequestService.submitCommitteeMembershipRequest(
+          submitCommitteeMembershipRequestInput.committeeId,
+          submitCommitteeMembershipRequestInput.requestRole
+        ).pipe(map((payload) => payload as JoinCommitteeApiResponse));
     }
 
-    cancelRequest(committeeId: number) {
-        const url = this.graphqlUrl;
-        const query = `mutation CancelCommitteeMembershipRequest($committeeId: Int!) {
-          cancelCommitteeMembershipRequest(committeeId: $committeeId) {
-            committeeId
-            cancelledByUserId
-            cancelledAtDateTime
-            membershipStatus
-          }
-        }`;
-
-        return this.http.post<GraphQLResponseEnvelope<{ cancelCommitteeMembershipRequest: CancelRequestApiResponse }>>(url, {
-          query,
-          variables: {
-            committeeId
-          }
-        }).pipe(
-          map((res) => {
-            if (res.errors?.length) {
-              throw new Error(res.errors[0].message || 'Failed to cancel request');
-            }
-            return res.data?.cancelCommitteeMembershipRequest;
-          })
-        );
+    cancelRequest(committeeId: number): Observable<CancelRequestApiResponse> {
+        return this.committeeMembershipRequestService
+          .cancelCommitteeMembershipRequest(committeeId)
+          .pipe(map((payload) => payload as CancelRequestApiResponse));
     }
 
     toggleCommitteeFavourite(committeeId: number, isFavourite: number) {

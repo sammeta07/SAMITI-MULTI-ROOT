@@ -181,7 +181,7 @@ export class GroupDetailsComponent implements OnInit {
       return;
     }
 
-      const committeeId = committee.committeeId;
+    const committeeId = committee.committeeId;
 
     const dialogData: ConfirmDialogData = {
       title: 'Request Admin Role',
@@ -199,7 +199,7 @@ export class GroupDetailsComponent implements OnInit {
 
       this.isSubmittingAdminRoleRequest.set(true);
 
-        this.groupDetailsService.submitCommitteeMembershipRequest(committeeId, 'COMMITTEE_ADMIN').subscribe({
+        this.groupDetailsService.requestCommitteeAdminRole(committeeId, 'COMMITTEE_ADMIN').subscribe({
         next: (response: SubmitCommitteeMembershipRequestPayload) => {
           this.loggedInUserAdminRequestStatus.set('PENDING');
           this.loggedInUserAdminStatusActionBy.set(null);

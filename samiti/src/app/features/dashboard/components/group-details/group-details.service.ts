@@ -4,15 +4,7 @@ import { Observable } from 'rxjs';
 import { map } from 'rxjs/operators';
 import { environment } from '../../../../../environments/environment';
 import { CancelCommitteeMembershipRequestPayload, CommitteeDetailsPayload, CommitteeMembershipRequestRole, SubmitCommitteeMembershipRequestPayload } from './group-details.models';
-
-interface GraphQLErrorPayload {
-  message: string;
-}
-
-interface GraphQLResponseEnvelope<TData> {
-  data?: TData;
-  errors?: GraphQLErrorPayload[];
-}
+import { CommitteeMembershipRequestService } from '../../../../core/services/committee-membership-request.service';
 
 @Injectable({
   providedIn: 'root'
@@ -20,6 +12,7 @@ interface GraphQLResponseEnvelope<TData> {
 export class GroupDetailsService {
   private readonly http = inject(HttpClient);
   private readonly graphqlUrl = environment.graphqlUrl;
+  private readonly committeeMembershipRequestService = inject(CommitteeMembershipRequestService);
 
   public getCommitteeDetails(id: string): Observable<CommitteeDetailsPayload> {
     const query = `query {
@@ -56,68 +49,15 @@ export class GroupDetailsService {
     );
   }
 
-  public submitCommitteeMembershipRequest(committeeId: number, requestRole: CommitteeMembershipRequestRole): Observable<SubmitCommitteeMembershipRequestPayload> {
-    const query = `mutation SubmitCommitteeMembershipRequest($committeeId: Int!, $requestRole: CommitteeMembershipRequestRole!) {
-      submitCommitteeMembershipRequest(committeeId: $committeeId, requestRole: $requestRole) {
-        id
-      }
-    }`;
-
-    return this.http.post<GraphQLResponseEnvelope<{ submitCommitteeMembershipRequest: SubmitCommitteeMembershipRequestPayload }>>(
-      this.graphqlUrl,
-      {
-        query,
-        variables: {
-          committeeId,
-          requestRole
-        }
-      },
-      { withCredentials: true }
-    ).pipe(
-      map((response) => {
-        if (response.errors?.length) {
-          throw new Error(response.errors[0].message || 'Failed to submit committee membership request');
-        }
-
-        const payload = response.data?.submitCommitteeMembershipRequest;
-        if (!payload) {
-          throw new Error('Invalid submit committee membership request response payload');
-        }
-
-        return payload;
-      })
-    );
+  public requestCommitteeAdminRole(committeeId: number, requestRole: CommitteeMembershipRequestRole): Observable<SubmitCommitteeMembershipRequestPayload> {
+    return this.committeeMembershipRequestService
+      .submitCommitteeMembershipRequest(committeeId, requestRole, true)
+      .pipe(map((payload) => payload as SubmitCommitteeMembershipRequestPayload));
   }
 
   public cancelCommitteeMembershipRequest(committeeId: number): Observable<CancelCommitteeMembershipRequestPayload> {
-    const query = `mutation CancelCommitteeMembershipRequest($committeeId: Int!) {
-      cancelCommitteeMembershipRequest(committeeId: $committeeId) {
-        id
-      }
-    }`;
-
-    return this.http.post<GraphQLResponseEnvelope<{ cancelCommitteeMembershipRequest: CancelCommitteeMembershipRequestPayload }>>(
-      this.graphqlUrl,
-      {
-        query,
-        variables: {
-          committeeId
-        }
-      },
-      { withCredentials: true }
-    ).pipe(
-      map((response) => {
-        if (response.errors?.length) {
-          throw new Error(response.errors[0].message || 'Failed to cancel committee request');
-        }
-
-        const payload = response.data?.cancelCommitteeMembershipRequest;
-        if (!payload) {
-          throw new Error('Invalid cancel committee request response payload');
-        }
-
-        return payload;
-      })
-    );
+    return this.committeeMembershipRequestService
+      .cancelCommitteeMembershipRequest(committeeId, true)
+      .pipe(map((payload) => payload as CancelCommitteeMembershipRequestPayload));
   }
 }

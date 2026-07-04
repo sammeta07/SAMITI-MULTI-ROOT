@@ -126,7 +126,7 @@ constructor() {
   }
 
 // 🛡️ Action: Send Request to join Selected operational matrix unit
-  joinCommittee(id: number, event: Event): void {
+  onRequestMemberRole(id: number, event: Event): void {
     event.stopPropagation(); // Avoid panel toggle conflict during interaction
 
     // Find the committee details for confirmation message
@@ -154,7 +154,7 @@ constructor() {
         role: 'COMMITTEE_MEMBER'
       }
       // Proceed with join request API call
-      this.homeService.joinCommittee(body).subscribe({
+      this.homeService.requestCommitteeMembershipRole(body).subscribe({
         next: (response: JoinCommitteeApiResponse | undefined) => {
           this.notifier.success('Join request sent successfully!');
           if (committee && this.isAuthItem(committee)) {

@@ -36,8 +36,19 @@ export interface CommitteeDetailsPayload {
   members: CommitteeRosterMember[];
 }
 
-export type SubmitCommitteeMembershipRequestPayload = Record<string, any>;
+export interface SubmitCommitteeMembershipRequestPayload {
+  committeeId: number;
+  requestedByUserId: number;
+  requestedAtDateTime: string;
+  requestedRole: CommitteeMembershipRequestRole;
+  membershipStatus: 'PENDING' | 'ACCEPTED' | 'REJECTED' | string;
+}
 
-export type CancelCommitteeMembershipRequestPayload = Record<string, any>;
+export interface CancelCommitteeMembershipRequestPayload {
+  committeeId: number;
+  cancelledByUserId: number;
+  cancelledAtDateTime: string;
+  membershipStatus: 'PENDING' | 'ACCEPTED' | 'REJECTED' | null | string;
+}
 
 export type CommitteeMembershipRequestRole = 'COMMITTEE_MEMBER' | 'COMMITTEE_ADMIN';
