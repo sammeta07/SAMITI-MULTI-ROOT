@@ -5,16 +5,16 @@ import { userRelationalAnalyticsTypes, userRelationalAnalyticsQueryFields, userR
 import { imageAssetUploadTypes, imageAssetUploadMutationFields, imageAssetUploadResolvers } from './users/image-asset-upload.graphql';
 import { createCommitteeTypes, createCommitteeMutationFields, createCommitteeResolvers } from './committees/create-committee.graphql';
 import { updateCommitteeTypes, updateCommitteeMutationFields, updateCommitteeResolvers } from './committees/update-committee.graphql';
-import { guestCommitteeTypes, guestCommitteeQueryFields, guestCommitteesResolvers } from './committees/guest-user-committees-list.graphql';
-import { authCommitteeTypes, authCommitteeQueryFields, authCommitteesResolvers } from './committees/auth-user-committees-list.graphql';
 import { committeeMembershipRequestsTypes, committeeMembershipRequestsQueryFields, committeeMembershipRequestsMutationFields, committeeMembershipRequestsResolvers } from './committees/committee-membership-requests.graphql';
 import { toggleCommitteeFavouriteTypes, toggleCommitteeFavouriteMutationFields, toggleCommitteeFavouriteResolvers } from './committees/toggle-committee-favourite.graphql';
-import { cancelCommitteeMembershipRequestTypes, cancelCommitteeMembershipRequestMutationFields, cancelCommitteeMembershipRequestResolvers } from './committees/cancel-committee-membership-request.graphql';
-import { submitCommitteeMembershipRequestTypes, submitCommitteeMembershipRequestMutationFields, submitCommitteeMembershipRequestResolvers } from './committees/submit-committee-membership-request.graphql';
 import { hierarchyTreeTypes, hierarchyTreeQueryFields, hierarchyTreeResolvers } from './committees/hierarchy-tree.graphql';
 import { committeeDetailsTypes, committeeDetailsQueryFields, committeeDetailsResolvers } from './committees/committee-details-by-id.graphql';
 import { createEventTypes, createEventMutationFields, createEventResolvers } from './events/create-event.graphql';
 import { eventDetailsTypes, eventDetailsQueryFields, eventDetailsResolvers } from './events/event-details-by-id.graphql';
+import { authCommitteeTypes, authCommitteeQueryFields, authCommitteesResolvers } from './committees/committees-list/auth-user-committees-list.graphql';
+import { guestCommitteeTypes, guestCommitteeQueryFields, guestCommitteesResolvers } from './committees/committees-list/guest-user-committees-list.graphql';
+import { cancelCommitteeMembershipRequestTypes, cancelCommitteeMembershipRequestMutationFields, cancelCommitteeMembershipRequestResolvers } from './committees/user-requests/cancel-committee-membership-request.graphql';
+import { submitCommitteeMembershipRequestTypes, submitCommitteeMembershipRequestMutationFields, submitCommitteeMembershipRequestResolvers } from './committees/user-requests/submit-committee-membership-request.graphql';
 
 // Single schema — one Query block, one Mutation block
 export const typeDefs = `
