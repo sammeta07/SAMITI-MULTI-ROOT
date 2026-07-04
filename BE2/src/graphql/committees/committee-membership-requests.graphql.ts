@@ -137,10 +137,10 @@ export const committeeMembershipRequestsResolvers = {
             u.date_of_birth,
             u.gender,
             u.profile_photo AS photo
-          FROM committee_members cm
+          FROM users_committees cm
           INNER JOIN committees c ON c.id = cm.committee_id
           INNER JOIN users u ON u.id = cm.user_id
-          INNER JOIN committee_members admin_cm
+          INNER JOIN users_committees admin_cm
             ON admin_cm.committee_id = cm.committee_id
             AND admin_cm.user_id = ?
             AND admin_cm.is_committee_admin = 1
@@ -243,7 +243,7 @@ export const committeeMembershipRequestsResolvers = {
               )
               ELSE NULL
             END AS resolved_at_time
-          FROM committee_members cm
+          FROM users_committees cm
           INNER JOIN committees c ON c.id = cm.committee_id
           LEFT JOIN users action_user
             ON action_user.id = CASE
@@ -318,7 +318,7 @@ export const committeeMembershipRequestsResolvers = {
             u.date_of_birth,
             u.gender,
             u.profile_photo AS photo
-          FROM committee_members cm
+          FROM users_committees cm
           INNER JOIN committees c ON c.id = cm.committee_id
           INNER JOIN users u ON u.id = cm.user_id
           WHERE (
@@ -372,7 +372,7 @@ export const committeeMembershipRequestsResolvers = {
       const adminValidationRows = await query<any[]>(
         `
           SELECT user_id
-          FROM committee_members
+          FROM users_committees
           WHERE committee_id = ?
             AND user_id = ?
             AND is_committee_admin = 1
@@ -389,7 +389,7 @@ export const committeeMembershipRequestsResolvers = {
       const membershipRows = await query<any[]>(
         `
           SELECT membership_status, admin_status, is_committee_admin
-          FROM committee_members
+          FROM users_committees
           WHERE committee_id = ? AND user_id = ?
           LIMIT 1
         `,
@@ -413,7 +413,7 @@ export const committeeMembershipRequestsResolvers = {
       if (hasPendingAdminRequest) {
         await execute(
           `
-            UPDATE committee_members
+            UPDATE users_committees
             SET
               is_committee_admin = ?,
               admin_status = ?,
@@ -426,7 +426,7 @@ export const committeeMembershipRequestsResolvers = {
       } else {
         await execute(
           `
-            UPDATE committee_members
+            UPDATE users_committees
             SET
               is_committee_member = ?,
               membership_status = ?,

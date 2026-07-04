@@ -169,7 +169,7 @@ export const createCommitteeResolvers = {
       const newCommitteeId = creationResult.insertId;
 
       await execute(
-        `INSERT INTO committee_members (
+        `INSERT INTO users_committees (
           committee_id,
           user_id,
           is_committee_admin,

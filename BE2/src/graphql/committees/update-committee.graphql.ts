@@ -118,7 +118,7 @@ export const updateCommitteeResolvers = {
 
       const adminCheckRows = await query<RowDataPacket[]>(
         `SELECT committee_id
-         FROM committee_members
+         FROM users_committees
          WHERE committee_id = ?
            AND user_id = ?
            AND is_committee_admin = 1

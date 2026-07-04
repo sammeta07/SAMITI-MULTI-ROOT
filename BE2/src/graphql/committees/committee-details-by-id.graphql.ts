@@ -108,7 +108,7 @@ export const committeeDetailsResolvers = {
           admin_status,
           admin_status_action_by,
           admin_status_action_at
-        FROM committee_members
+        FROM users_committees
         WHERE committee_id = ? AND user_id = ?
       `, [committeeId, loggedInUserId]);
 
@@ -130,7 +130,7 @@ export const committeeDetailsResolvers = {
           u.email,
           COALESCE(cm.is_committee_admin, 0) AS is_committee_admin
         FROM users u
-        INNER JOIN committee_members cm ON u.id = cm.user_id
+        INNER JOIN users_committees cm ON u.id = cm.user_id
         WHERE cm.committee_id = ? AND cm.membership_status = 'ACCEPTED'
         ORDER BY u.name ASC
       `, [committeeId]);

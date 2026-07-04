@@ -168,7 +168,7 @@ export const userRelationalAnalyticsResolvers = {
           c.committee_name,
           c.logo,
           cm.is_committee_admin
-         FROM committee_members cm
+         FROM users_committees cm
          INNER JOIN committees c ON cm.committee_id = c.id
          WHERE cm.user_id = ?
            AND cm.membership_status = 'ACCEPTED'`,
@@ -185,7 +185,7 @@ export const userRelationalAnalyticsResolvers = {
          INNER JOIN events e ON p.event_id = e.id
          WHERE e.committee_id IN (
            SELECT committee_id
-           FROM committee_members
+           FROM users_committees
            WHERE user_id = ? AND is_committee_admin = 1
          )`,
         [userId]

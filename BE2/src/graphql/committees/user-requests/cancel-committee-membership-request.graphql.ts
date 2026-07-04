@@ -1,4 +1,4 @@
-import { execute, query } from '../../config/db';
+import { execute, query } from '../../../config/db';
 
 export const cancelCommitteeMembershipRequestTypes = `
   type CancelCommitteeMembershipRequestPayload {
@@ -57,7 +57,7 @@ export const cancelCommitteeMembershipRequestResolvers = {
           SELECT
             membership_status,
             admin_status
-          FROM committee_members
+          FROM users_committees
           WHERE committee_id = ? AND user_id = ?
           LIMIT 1
         `,
@@ -90,7 +90,7 @@ export const cancelCommitteeMembershipRequestResolvers = {
       if (hasPendingAdminRoleRequest) {
         await execute(
           `
-            UPDATE committee_members
+            UPDATE users_committees
             SET
               admin_status = NULL,
               admin_request_created_at = NULL,
@@ -103,7 +103,7 @@ export const cancelCommitteeMembershipRequestResolvers = {
       } else {
         await execute(
           `
-            UPDATE committee_members
+            UPDATE users_committees
             SET
               is_committee_member = 0,
               membership_status = NULL,

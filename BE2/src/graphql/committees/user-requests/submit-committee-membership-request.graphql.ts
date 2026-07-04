@@ -1,4 +1,4 @@
-import { execute, query } from '../../config/db';
+import { execute, query } from '../../../config/db';
 
 export const submitCommitteeMembershipRequestTypes = `
   enum CommitteeMembershipRequestRole {
@@ -71,7 +71,7 @@ export const submitCommitteeMembershipRequestResolvers = {
             is_committee_member,
             membership_status,
             admin_status
-          FROM committee_members
+          FROM users_committees
           WHERE committee_id = ? AND user_id = ?
           LIMIT 1
         `,
@@ -114,7 +114,7 @@ export const submitCommitteeMembershipRequestResolvers = {
 
         await execute(
           `
-            UPDATE committee_members
+            UPDATE users_committees
             SET
               admin_status = 'PENDING',
               admin_request_created_at = NOW(),
@@ -161,7 +161,7 @@ export const submitCommitteeMembershipRequestResolvers = {
 
         await execute(
           `
-            UPDATE committee_members
+            UPDATE users_committees
             SET
               is_committee_admin = 0,
               is_committee_member = 0,
@@ -180,7 +180,7 @@ export const submitCommitteeMembershipRequestResolvers = {
       } else {
         await execute(
           `
-            INSERT INTO committee_members (
+            INSERT INTO users_committees (
               committee_id,
               user_id,
               is_committee_admin,

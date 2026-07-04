@@ -150,7 +150,7 @@ export const hierarchyTreeResolvers = {
       const adminCommittees = await query<any[]>(`
         SELECT c.id AS committeeId, c.committee_name AS committeeName, c.logo
         FROM committees c
-        INNER JOIN committee_members cm ON c.id = cm.committee_id
+        INNER JOIN users_committees cm ON c.id = cm.committee_id
         WHERE cm.user_id = ? AND cm.is_committee_admin = 1 AND cm.membership_status = 'ACCEPTED'
         ORDER BY c.committee_name ASC
       `, [loggedInUserId]);
@@ -159,7 +159,7 @@ export const hierarchyTreeResolvers = {
       const memberCommittees = await query<any[]>(`
         SELECT c.id AS committeeId, c.committee_name AS committeeName, c.logo
         FROM committees c
-        INNER JOIN committee_members cm ON c.id = cm.committee_id
+        INNER JOIN users_committees cm ON c.id = cm.committee_id
         WHERE cm.user_id = ? AND cm.is_committee_admin = 0 AND cm.membership_status = 'ACCEPTED'
         ORDER BY c.committee_name ASC
       `, [loggedInUserId]);

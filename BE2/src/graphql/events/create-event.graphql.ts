@@ -91,7 +91,7 @@ export const createEventResolvers = {
       try {
         // 🔐 Check if user is committee admin
         const adminCheck = await query(
-          `SELECT user_id FROM committee_members 
+          `SELECT user_id FROM users_committees 
            WHERE committee_id = ? AND user_id = ? AND is_committee_admin = 1 LIMIT 1`,
           [committeeId, loggedInUserId]
         );

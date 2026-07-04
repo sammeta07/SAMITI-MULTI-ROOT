@@ -10,12 +10,12 @@ async function checkSchema() {
 
     console.log('✅ Connected to MySQL');
     
-    const [committeeMembersSchema] = await connection.execute<RowDataPacket[]>('DESCRIBE committee_members');
-    console.log('\n📋 committee_members Table Structure:');
+    const [committeeMembersSchema] = await connection.execute<RowDataPacket[]>('DESCRIBE users_committees');
+    console.log('\n📋 users_committees Table Structure:');
     console.table(committeeMembersSchema);
 
     const [committeeAdmins] = await connection.execute<RowDataPacket[]>(`
-      SELECT * FROM committee_members WHERE is_committee_admin = 1 LIMIT 3
+      SELECT * FROM users_committees WHERE is_committee_admin = 1 LIMIT 3
     `);
     console.log('\n👤 Sample Committee Admins:');
     console.table(committeeAdmins);

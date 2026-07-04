@@ -1,4 +1,4 @@
-import { query } from '../../config/db';
+import { query } from '../../../config/db';
 
 export const authCommitteeTypes = `
   type CommitteeAuth {
@@ -76,7 +76,7 @@ export const authCommitteesResolvers = {
             sin(radians(?)) * sin(radians(c.latitude))
           )) AS distanceKm
         FROM committees c
-        LEFT JOIN committee_members cm ON c.id = cm.committee_id AND cm.user_id = ?
+        LEFT JOIN users_committees cm ON c.id = cm.committee_id AND cm.user_id = ?
         HAVING distanceKm <= ?
         ORDER BY distanceKm ASC
       `, [latitude, longitude, latitude, loggedInUserId, distanceKm]);

@@ -147,7 +147,7 @@ export const loginResolvers = {
           cm.is_committee_member,
           cm.membership_status,
           cm.admin_status
-         FROM committee_members cm
+         FROM users_committees cm
          INNER JOIN committees c ON c.id = cm.committee_id
          WHERE cm.user_id = ?
            AND (
