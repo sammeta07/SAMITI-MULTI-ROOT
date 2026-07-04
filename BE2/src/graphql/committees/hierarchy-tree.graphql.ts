@@ -147,7 +147,7 @@ export const hierarchyTreeResolvers = {
           `SELECT
              event_id,
              designation
-           FROM event_members
+           FROM users_events
            WHERE user_id = ?
              AND event_id IN (${eventPlaceholders})`,
           [loggedInUserId, ...eventIds]

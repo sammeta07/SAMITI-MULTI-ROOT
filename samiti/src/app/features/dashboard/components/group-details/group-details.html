@@ -123,6 +123,14 @@
               <button mat-icon-button class="icon-btn view-btn" title="View" (click)="onViewMember(admin.id)">
                 <mat-icon>visibility</mat-icon>
               </button>
+              @if (isCurrentUserAdmin() && admin.id !== getLoggedInUserId()) {
+              <button mat-icon-button class="icon-btn demote-btn" title="Demote Admin" (click)="onDemoteAdmin(admin)">
+                <mat-icon>arrow_downward</mat-icon>
+              </button>
+              <button mat-icon-button class="icon-btn remove-btn" title="Remove Admin" (click)="onRemoveCommitteeMember(admin)">
+                <mat-icon>person_remove</mat-icon>
+              </button>
+              }
             </div>
           </div>
           } @empty {
@@ -165,6 +173,14 @@
               <button mat-icon-button class="icon-btn view-btn" title="View" (click)="onViewMember(member.id)">
                 <mat-icon>visibility</mat-icon>
               </button>
+              @if (isCurrentUserAdmin() && member.id !== getLoggedInUserId()) {
+              <button mat-icon-button class="icon-btn promote-btn" title="Promote Member" (click)="onPromoteMember(member)">
+                <mat-icon>arrow_upward</mat-icon>
+              </button>
+              <button mat-icon-button class="icon-btn remove-btn" title="Remove Member" (click)="onRemoveCommitteeMember(member)">
+                <mat-icon>person_remove</mat-icon>
+              </button>
+              }
             </div>
           </div>
           } @empty {

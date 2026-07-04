@@ -106,6 +106,7 @@ export const authCommitteesResolvers = {
 
       return rawList.map((item: any) => {
         const isAdmin = Number(item.is_committee_admin) === 1;
+        const isMember = Number(item.is_committee_member) === 1;
         const allEvents = eventsMap[item.id] || [];
         const visibleEvents = allEvents.filter((event) => event.visibility === 'VISIBLE');
 
@@ -122,7 +123,7 @@ export const authCommitteesResolvers = {
           isCommitteeMember: Number(item.is_committee_member),
           pendingRequestRole: item.pending_request_role || null,
           isFavourite: Number(item.is_favourite),
-          events: isAdmin ? allEvents : visibleEvents
+          events: (isAdmin || isMember) ? allEvents : visibleEvents
         };
       });
     }

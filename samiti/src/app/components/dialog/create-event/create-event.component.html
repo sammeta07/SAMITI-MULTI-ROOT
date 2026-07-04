@@ -114,13 +114,13 @@
             <mat-icon>visibility</mat-icon>
             <span class="visibility-label">Event Visibility</span>
           </div>
-          <mat-slide-toggle [(ngModel)]="visibility" name="visibility" 
-                           [checked]="visibility === 'VISIBLE'"
-                           (change)="visibility = $event.checked ? 'VISIBLE' : 'HIDDEN'">
+          <mat-slide-toggle name="visibility"
+                           [checked]="isVisibilityVisible"
+                           (change)="onVisibilityToggle($event.checked)">
             {{ visibility === 'VISIBLE' ? 'Visible' : 'Hidden' }}
           </mat-slide-toggle>
         </div>
-        <span class="visibility-hint">{{ visibility === 'VISIBLE' ? 'Event will be shown to all members' : 'Event will be hidden from members' }}</span>
+        <span class="visibility-hint">{{ visibility === 'VISIBLE' ? 'Event will be visible on public (guest) home committee listings' : 'Event will be hidden from public (guest) home committee listings' }}</span>
       </div>
 
     </form>

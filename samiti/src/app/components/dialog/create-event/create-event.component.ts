@@ -78,6 +78,14 @@ export class CreateEventDialogComponent {
     );
   }
 
+  get isVisibilityVisible(): boolean {
+    return this.visibility === 'VISIBLE';
+  }
+
+  public onVisibilityToggle(checked: boolean): void {
+    this.visibility = checked ? 'VISIBLE' : 'HIDDEN';
+  }
+
   public onCancel(): void {
     this.dialogRef.close(false);
   }

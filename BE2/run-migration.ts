@@ -25,7 +25,7 @@ async function executeSqlStatementsFromFile(connection: mysql.Connection, migrat
       await connection.execute(statement);
       console.log('✅ Query executed successfully');
     } catch (error: any) {
-      const safeErrorCodes = ['ER_DUP_FIELDNAME', 'ER_DUP_KEYNAME', 'ER_TABLE_EXISTS_ERROR', 'ER_FK_DUP_NAME', 'ER_DUP_CONSTRAINT', 'ER_CANT_DROP_FIELD_OR_KEY'];
+      const safeErrorCodes = ['ER_DUP_FIELDNAME', 'ER_DUP_KEYNAME', 'ER_TABLE_EXISTS_ERROR', 'ER_FK_DUP_NAME', 'ER_DUP_CONSTRAINT', 'ER_CANT_DROP_FIELD_OR_KEY', 'ER_BAD_FIELD_ERROR'];
       const duplicateCheckConstraintMessage = typeof error?.message === 'string' && error.message.includes('Duplicate check constraint name');
       const missingCheckConstraintMessage = typeof error?.message === 'string' && error.message.includes('Check constraint') && error.message.includes('is not found in the table');
       const legacyForeignKeyMessage = typeof error?.message === 'string' && error.message.includes('Missing column') && error.message.includes('foreign key constraint');

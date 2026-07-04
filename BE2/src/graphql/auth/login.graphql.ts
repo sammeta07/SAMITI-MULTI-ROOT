@@ -112,7 +112,7 @@ export const loginResolvers = {
         ).catch(() => [{ total_count: 0 } as CountRow]),
         query<CountRow[]>(
           `SELECT COUNT(*) AS total_count
-           FROM event_members
+           FROM users_events
            WHERE user_id = ?`,
           [user.id]
         ).catch(() => [{ total_count: 0 } as CountRow]),

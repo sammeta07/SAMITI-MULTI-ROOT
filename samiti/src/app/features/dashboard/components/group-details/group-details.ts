@@ -18,6 +18,9 @@ import { ConfirmDialogData } from '../../../../components/dialog/confirm/confirm
 import { CreateEventDialogComponent } from '../../../../components/dialog/create-event/create-event.component';
 import { ViewUserDialogComponent } from '../../../../components/dialog/view-user/view-user.component';
 import { CreateCommitteeDialogComponent } from '../../../../components/dialog/create-committee/create-committee.component';
+import { PromoteMemberDialogService } from '../../../../components/dialog/promote-member/promote-member.service';
+import { DemoteMemberDialogService } from '../../../../components/dialog/demote-member/demote-member.service';
+import { RemoveMemberDialogService } from '../../../../components/dialog/remove-member/remove-member.service';
 
 @Component({
   selector: 'app-group-details',
@@ -42,6 +45,9 @@ export class GroupDetailsComponent implements OnInit {
   private readonly groupDetailsService = inject(GroupDetailsService);
   private readonly confirmDialog = inject(ConfirmDialogService);
   private readonly dialog = inject(MatDialog);
+  private readonly promoteMemberDialog = inject(PromoteMemberDialogService);
+  private readonly demoteMemberDialog = inject(DemoteMemberDialogService);
+  private readonly removeMemberDialog = inject(RemoveMemberDialogService);
 
   public readonly isLoading = signal<boolean>(false);
   public readonly isSubmittingAdminRoleRequest = signal<boolean>(false);
@@ -315,6 +321,101 @@ export class GroupDetailsComponent implements OnInit {
   public onOpenFullRosterDialog(): void {
     this.notifier.success('Compiling heavy matrix buffer records into full high-density modal dialogue shell...');
     // Dialog launch sequence hooks here cleanly
+  }
+
+  public onPromoteMember(member: CommitteeRosterMember): void {
+    const committee = this.groupData();
+    if (!committee?.committeeId) {
+      this.notifier.error('No committee selected');
+      return;
+    }
+
+    if (!this.isCurrentUserAdmin()) {
+      this.notifier.warn('Only committee admins can promote members');
+      return;
+    }
+
+    if (member.id === this.getLoggedInUserId()) {
+      this.notifier.warn('You cannot promote yourself from this screen');
+      return;
+    }
+
+    const dialogRef = this.promoteMemberDialog.open({
+      userId: String(member.id),
+      committeeId: String(committee.committeeId),
+      userName: member.name,
+      currentRole: 'member',
+      committeeName: committee.committeeName
+    });
+
+    dialogRef.afterClosed().subscribe((result) => {
+      if (result?.confirmed) {
+        this.fetchCommitteeDetailsPayload(String(committee.committeeId));
+      }
+    });
+  }
+
+  public onDemoteAdmin(admin: CommitteeRosterMember): void {
+    const committee = this.groupData();
+    if (!committee?.committeeId) {
+      this.notifier.error('No committee selected');
+      return;
+    }
+
+    if (!this.isCurrentUserAdmin()) {
+      this.notifier.warn('Only committee admins can demote admins');
+      return;
+    }
+
+    if (admin.id === this.getLoggedInUserId()) {
+      this.notifier.warn('You cannot demote yourself from this screen');
+      return;
+    }
+
+    const dialogRef = this.demoteMemberDialog.open({
+      userId: String(admin.id),
+      committeeId: String(committee.committeeId),
+      userName: admin.name,
+      currentRole: 'admin',
+      committeeName: committee.committeeName
+    });
+
+    dialogRef.afterClosed().subscribe((result) => {
+      if (result?.confirmed) {
+        this.fetchCommitteeDetailsPayload(String(committee.committeeId));
+      }
+    });
+  }
+
+  public onRemoveCommitteeMember(member: CommitteeRosterMember): void {
+    const committee = this.groupData();
+    if (!committee?.committeeId) {
+      this.notifier.error('No committee selected');
+      return;
+    }
+
+    if (!this.isCurrentUserAdmin()) {
+      this.notifier.warn('Only committee admins can remove members');
+      return;
+    }
+
+    if (member.id === this.getLoggedInUserId()) {
+      this.notifier.warn('You cannot remove yourself from this screen');
+      return;
+    }
+
+    const dialogRef = this.removeMemberDialog.open({
+      userId: String(member.id),
+      committeeId: String(committee.committeeId),
+      userName: member.name,
+      committeeName: committee.committeeName
+    });
+
+    dialogRef.afterClosed().subscribe((result) => {
+      if (result?.confirmed) {
+        this.fetchCommitteeDetailsPayload(String(committee.committeeId));
+      }
+    });
   }
 
   // 🎉 CREATE NEW EVENT DIALOG PIPELINE
