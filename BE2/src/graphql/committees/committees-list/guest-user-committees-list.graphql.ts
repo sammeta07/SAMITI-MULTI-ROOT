@@ -83,7 +83,13 @@ export const guestCommitteesResolvers = {
             visibility,
             DATE_FORMAT(start_date, '%Y-%m-%d') AS startDate,
             DATE_FORMAT(end_date, '%Y-%m-%d') AS endDate,
-            event_banner AS eventBanner
+            (
+              SELECT ema.media_url
+              FROM event_media_assets ema
+              WHERE ema.event_id = events.id
+              ORDER BY ema.sort_order ASC, ema.id ASC
+              LIMIT 1
+            ) AS eventBanner
           FROM events
           WHERE committee_id IN (${placeholders})
             AND visibility = 'VISIBLE'

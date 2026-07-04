@@ -30,7 +30,7 @@ type InternalTreeNode = {
   childIds: Set<string>;
 };
 
-type SerializedHierarchyTreeNode = {
+export type SerializedHierarchyTreeNode = {
   id: string;
   name: string;
   type: string;

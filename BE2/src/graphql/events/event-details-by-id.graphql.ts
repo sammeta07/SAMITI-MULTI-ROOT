@@ -57,7 +57,6 @@ export const eventDetailsResolvers = {
           committee_id AS committeeId,
           name,
           description,
-          event_banner AS eventBanner,
           status,
           type,
           visibility,
@@ -85,6 +84,7 @@ export const eventDetailsResolvers = {
 
       return {
         ...eventResult[0],
+        eventBanner: bannerImageRows[0]?.mediaUrl || null,
         bannerImages: bannerImageRows.map((row) => row.mediaUrl)
       };
     }
