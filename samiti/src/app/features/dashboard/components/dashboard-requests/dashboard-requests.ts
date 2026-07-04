@@ -23,7 +23,7 @@ export class DashboardRequests implements OnInit {
   private readonly requestsService = inject(DashboardRequestsService);
   private readonly confirmDialog = inject(ConfirmDialogService);
 
-  readonly activeTab = signal<'received' | 'history' | 'sent'>('received'); 
+  readonly activeTab = signal<'received' | 'history' | 'sent'>('sent'); 
   readonly requests = signal<ReceivedCommitteeMembershipRequestItem[]>([]); 
   readonly resolvedHistory = signal<ActionTakenOnCommitteeMembershipRequestItem[]>([]); 
   readonly sentRequests = signal<SentCommitteeMembershipRequestItem[]>([]); 
@@ -53,6 +53,15 @@ export class DashboardRequests implements OnInit {
     this.sentRequests().filter((request) => request.requestType === 'COMMITTEE_ADMIN')
   );
 
+  readonly sectionExpanded = signal<Record<string, boolean>>({
+    receivedAdmin: true,
+    receivedMember: true,
+    historyAdmin: true,
+    historyMember: true,
+    sentAdmin: true,
+    sentMember: true
+  });
+
   // 🚀 Track individual api loaders inside parallel streams
   private isIncomingLoading = false;
   private isHistoryLoading = false;
@@ -66,6 +75,17 @@ export class DashboardRequests implements OnInit {
   // 🚀 1. SMART SWITCH TAB: Ab tab badalne par koi API call nahi hogi, instant load hoga data signals se!
   switchTab(tab: 'received' | 'history' | 'sent') {
     this.activeTab.set(tab);
+  }
+
+  isSectionExpanded(sectionKey: string): boolean {
+    return this.sectionExpanded()[sectionKey] ?? true;
+  }
+
+  toggleSection(sectionKey: string) {
+    this.sectionExpanded.update((current) => ({
+      ...current,
+      [sectionKey]: !current[sectionKey]
+    }));
   }
 
   // 🚀 2. PARALLEL LOAD LOGIC: Handles master loading state across all three requests types
@@ -194,6 +214,10 @@ export class DashboardRequests implements OnInit {
         }
       });
     });
+  }
+
+  getCommitteeInitial(committeeName: string | null | undefined): string {
+    return String(committeeName || '').trim().charAt(0).toUpperCase() || '?';
   }
 
 }

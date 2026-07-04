@@ -71,9 +71,13 @@ export const cancelCommitteeMembershipRequestResolvers = {
 
       await execute(
         `UPDATE committee_role_requests
-         SET status = 'CANCELLED', cancel_by_user_id = ?, cancel_at = NOW()
+         SET status = 'CANCELLED',
+             cancel_by_user_id = ?,
+             cancel_at = NOW(),
+             action_by_user_id = ?,
+             action_at = NOW()
          WHERE id = ?`,
-        [loggedInUserId, pendingRequestId]
+        [loggedInUserId, loggedInUserId, pendingRequestId]
       );
 
       return {

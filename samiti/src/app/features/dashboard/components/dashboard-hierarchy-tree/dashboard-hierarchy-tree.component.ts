@@ -226,9 +226,17 @@ export class DashboardHierarchyTreeComponent implements OnInit {
         return;
       }
 
-      this.onSelectStaticMenu('home');
+      // Only auto-redirect on bare /dashboard route; keep current group/event route untouched.
+      if (this.isDashboardRootRoute(urlSegments)) {
+        this.onSelectStaticMenu('home');
+      }
     }
     this.isLoading.set(false);
+  }
+
+  private isDashboardRootRoute(urlSegments: string[]): boolean {
+    const cleanedSegments = urlSegments.filter((segment) => segment.length > 0);
+    return cleanedSegments.length === 1 && cleanedSegments[0] === 'dashboard';
   }
 
   private tryOpenFirstHierarchyNode(): boolean {
@@ -275,10 +283,23 @@ export class DashboardHierarchyTreeComponent implements OnInit {
       const selectedTreeNodeElement = document.querySelector(
         '.samiti-fluent-tree .node-interactive-strip.is-selected'
       ) as HTMLElement | null;
+      const treeViewportElement = document.querySelector('.tree-scroll-viewport') as HTMLElement | null;
 
-      selectedTreeNodeElement?.scrollIntoView({
-        behavior: 'smooth',
-        block: 'center'
+      if (!selectedTreeNodeElement || !treeViewportElement) {
+        return;
+      }
+
+      const viewportRect = treeViewportElement.getBoundingClientRect();
+      const selectedRect = selectedTreeNodeElement.getBoundingClientRect();
+      const currentScrollTop = treeViewportElement.scrollTop;
+      const targetScrollTop =
+        currentScrollTop +
+        (selectedRect.top - viewportRect.top) -
+        (viewportRect.height / 2 - selectedRect.height / 2);
+
+      treeViewportElement.scrollTo({
+        top: targetScrollTop,
+        behavior: 'smooth'
       });
     }, 0);
   }

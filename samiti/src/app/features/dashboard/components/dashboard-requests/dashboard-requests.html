@@ -31,71 +31,26 @@
     @else {
       
       @if (activeTab() === 'received') {
-        @if (receivedMemberRequests().length > 0 || receivedAdminRequests().length > 0) {
-          @if (receivedMemberRequests().length > 0) {
-            <div class="received-subsection-head">
-              <h3><mat-icon>person</mat-icon> Member role requests</h3>
-            </div>
-            <div class="dense-table-container">
-              <table class="samiti-high-scale-table">
-                <thead>
-                  <tr>
-                    <th>Committee Name</th>
-                    <th>Address</th>
-                    <th>Email Address</th>
-                    <th>Contact No</th>
-                    <th>Gender</th>
-                    <th>Requested Date</th>
-                    <th>Resolution Date</th>
-                    <th class="text-center">Actions</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  @for (req of receivedMemberRequests(); track req.committeeId + '-' + req.userDetails.userId + '-' + req.requestType) {
-                    <tr>
-                      <td>
-                        <div class="table-profile-cell committee-title-cell">
-                          <mat-icon class="committee-logo-icon">groups</mat-icon>
-                          <span class="user-fullname-bold">{{ req.committeeName }}</span>
-                        </div>
-                      </td>
-                      <td><span class="table-text-normal">{{ req.address || 'N/A' }}</span></td>
-                      <td><span class="table-dim-text">{{ req.userDetails.email }}</span></td>
-                      <td><span class="table-text-normal">{{ req.userDetails.mobile || 'N/A' }}</span></td>
-                      <td><span class="font-capitalize table-text-normal">{{ req.userDetails.gender }}</span></td>
-                      <td><span class="table-dim-text">{{ req.requestSentTime | date:'short' }}</span></td>
-                      <td><span class="table-dim-text font-style-italic">Pending</span></td>
-                      <td>
-                        <div class="table-action-cell">
-                          <button type="button" class="row-action-btn row-reject" (click)="rejectRequest(req.committeeId, req.userDetails.userId)">
-                            <mat-icon>close</mat-icon><span>Reject</span>
-                          </button>
-                          <button type="button" class="row-action-btn row-approve" (click)="approveRequest(req.committeeId, req.userDetails.userId)">
-                            <mat-icon>check</mat-icon><span>Accept</span>
-                          </button>
-                        </div>
-                      </td>
-                    </tr>
-                  }
-                </tbody>
-              </table>
-            </div>
-          }
-
+        <div class="received-subsection-head admin-section-head">
+          <h3><mat-icon>admin_panel_settings</mat-icon> Admin role requests <mat-icon class="sent-heading-inline-icon">call_received</mat-icon></h3>
+          <button type="button" class="section-toggle-btn" (click)="toggleSection('receivedAdmin')" [attr.aria-label]="isSectionExpanded('receivedAdmin') ? 'Collapse admin role requests' : 'Expand admin role requests'">
+            <mat-icon>{{ isSectionExpanded('receivedAdmin') ? 'expand_less' : 'expand_more' }}</mat-icon>
+          </button>
+        </div>
+        @if (isSectionExpanded('receivedAdmin')) {
           @if (receivedAdminRequests().length > 0) {
-            <div class="received-subsection-head">
-              <h3><mat-icon>admin_panel_settings</mat-icon> Admin role requests</h3>
-            </div>
             <div class="dense-table-container">
               <table class="samiti-high-scale-table">
                 <thead>
                   <tr>
-                    <th>Committee Name</th>
+                    <th>Group Name</th>
+                    <th>Requested By</th>
                     <th>Address</th>
                     <th>Email Address</th>
                     <th>Contact No</th>
                     <th>Gender</th>
                     <th>Requested Date</th>
+                    <th>Resolved By</th>
                     <th>Resolution Date</th>
                     <th class="text-center">Actions</th>
                   </tr>
@@ -109,11 +64,36 @@
                           <span class="user-fullname-bold">{{ req.committeeName }}</span>
                         </div>
                       </td>
+                      <td>
+                        <div class="table-profile-cell">
+                          <div class="mini-avatar">
+                            @if (req.userDetails.photo) { <img [src]="req.userDetails.photo" alt="requester profile"> }
+                            @else { <span>{{ req.userDetails.name.charAt(0).toUpperCase() }}</span> }
+                          </div>
+                          <span class="user-fullname-bold text-capitalize">{{ req.userDetails.name }}</span>
+                        </div>
+                      </td>
                       <td><span class="table-text-normal">{{ req.address || 'N/A' }}</span></td>
                       <td><span class="table-dim-text">{{ req.userDetails.email }}</span></td>
                       <td><span class="table-text-normal">{{ req.userDetails.mobile || 'N/A' }}</span></td>
                       <td><span class="font-capitalize table-text-normal">{{ req.userDetails.gender }}</span></td>
                       <td><span class="table-dim-text">{{ req.requestSentTime | date:'short' }}</span></td>
+                      <td>
+                        @if (req.resolvedByName || req.actionByUserId) {
+                          <div class="table-profile-cell resolved-by-cell">
+                            <div class="mini-avatar">
+                              @if (req.resolvedByPhoto) {
+                                <img [src]="req.resolvedByPhoto" [alt]="req.resolvedByName || 'Resolver'" />
+                              } @else {
+                                <span>{{ (req.resolvedByName || 'R').charAt(0).toUpperCase() }}</span>
+                              }
+                            </div>
+                            <span class="table-dim-text">{{ req.resolvedByName || ('ID: ' + req.actionByUserId) }}</span>
+                          </div>
+                        } @else {
+                          <span class="table-dim-text">Pending</span>
+                        }
+                      </td>
                       <td><span class="table-dim-text font-style-italic">Pending</span></td>
                       <td>
                         <div class="table-action-cell">
@@ -130,88 +110,124 @@
                 </tbody>
               </table>
             </div>
-          }
-        } @else {
-          <div class="feedback-utility-box empty-state-wrapper">
-            <mat-icon class="empty-vector-icon">person_add_disabled</mat-icon>
-            <h3>No Received Requests</h3>
-          </div>
-        }
-      }
-
-      @if (activeTab() === 'history') {
-        @if (historyMemberRequests().length > 0 || historyAdminRequests().length > 0) {
-          @if (historyMemberRequests().length > 0) {
-            <div class="received-subsection-head">
-              <h3><mat-icon>person</mat-icon> Member role requests</h3>
+          } @else {
+            <div class="feedback-utility-box empty-state-wrapper">
+              <mat-icon class="empty-vector-icon">admin_panel_settings</mat-icon>
+              <h3>No Admin Role Requests</h3>
+              <p>There are no admin role requests to display right now.</p>
             </div>
+          }
+        }
+
+        <div class="received-subsection-head member-section-head">
+          <h3><mat-icon>person</mat-icon> Member role requests <mat-icon class="sent-heading-inline-icon">call_received</mat-icon></h3>
+          <button type="button" class="section-toggle-btn" (click)="toggleSection('receivedMember')" [attr.aria-label]="isSectionExpanded('receivedMember') ? 'Collapse member role requests' : 'Expand member role requests'">
+            <mat-icon>{{ isSectionExpanded('receivedMember') ? 'expand_less' : 'expand_more' }}</mat-icon>
+          </button>
+        </div>
+        @if (isSectionExpanded('receivedMember')) {
+          @if (receivedMemberRequests().length > 0) {
             <div class="dense-table-container">
               <table class="samiti-high-scale-table">
                 <thead>
                   <tr>
-                    <th>Committee Name</th>
-                    <th>Profile</th>
+                    <th>Group Name</th>
+                    <th>Requested By</th>
+                    <th>Address</th>
                     <th>Email Address</th>
-                    <th>Mobile Number</th>
+                    <th>Contact No</th>
+                    <th>Gender</th>
                     <th>Requested Date</th>
+                    <th>Resolved By</th>
                     <th>Resolution Date</th>
-                    <th>Current Status</th>
+                    <th class="text-center">Actions</th>
                   </tr>
                 </thead>
                 <tbody>
-                  @for (log of historyMemberRequests(); track log.committeeId + '-' + log.userDetails.userId + '-' + log.requestType + '-' + log.actionAtTime) {
-                    <tr [class.row-state-accept]="log.status === 'ACCEPTED'" [class.row-state-reject]="log.status === 'REJECTED'">
+                  @for (req of receivedMemberRequests(); track req.committeeId + '-' + req.userDetails.userId + '-' + req.requestType) {
+                    <tr>
                       <td>
                         <div class="table-profile-cell committee-title-cell">
                           <mat-icon class="committee-logo-icon">groups</mat-icon>
-                          <span class="user-fullname-bold">{{ log.committeeName }}</span>
+                          <span class="user-fullname-bold">{{ req.committeeName }}</span>
                         </div>
                       </td>
                       <td>
                         <div class="table-profile-cell">
                           <div class="mini-avatar">
-                            @if (log.userDetails.photo) { <img [src]="log.userDetails.photo" alt="profile"> }
-                            @else { <span>{{ log.userDetails.name.charAt(0).toUpperCase() }}</span> }
+                            @if (req.userDetails.photo) { <img [src]="req.userDetails.photo" alt="requester profile"> }
+                            @else { <span>{{ req.userDetails.name.charAt(0).toUpperCase() }}</span> }
                           </div>
-                          <span class="user-fullname-bold text-capitalize">{{ log.userDetails.name }}</span>
+                          <span class="user-fullname-bold text-capitalize">{{ req.userDetails.name }}</span>
                         </div>
                       </td>
-                      <td><span class="table-dim-text">{{ log.userDetails.email }}</span></td>
-                      <td><span class="table-text-normal">{{ log.userDetails.mobile || 'N/A' }}</span></td>
+                      <td><span class="table-text-normal">{{ req.address || 'N/A' }}</span></td>
+                      <td><span class="table-dim-text">{{ req.userDetails.email }}</span></td>
+                      <td><span class="table-text-normal">{{ req.userDetails.mobile || 'N/A' }}</span></td>
+                      <td><span class="font-capitalize table-text-normal">{{ req.userDetails.gender }}</span></td>
+                      <td><span class="table-dim-text">{{ req.requestSentTime | date:'short' }}</span></td>
                       <td>
-                        @if (log.requestSentTime) {
-                          <span class="table-dim-text">{{ log.requestSentTime | date:'medium' }}</span>
+                        @if (req.resolvedByName || req.actionByUserId) {
+                          <div class="table-profile-cell resolved-by-cell">
+                            <div class="mini-avatar">
+                              @if (req.resolvedByPhoto) {
+                                <img [src]="req.resolvedByPhoto" [alt]="req.resolvedByName || 'Resolver'" />
+                              } @else {
+                                <span>{{ (req.resolvedByName || 'R').charAt(0).toUpperCase() }}</span>
+                              }
+                            </div>
+                            <span class="table-dim-text">{{ req.resolvedByName || ('ID: ' + req.actionByUserId) }}</span>
+                          </div>
                         } @else {
-                          <span class="table-dim-text font-style-italic">Unavailable</span>
+                          <span class="table-dim-text">Pending</span>
                         }
                       </td>
-                      <td><span class="table-dim-text font-weight-700">{{ log.actionAtTime | date:'medium' }}</span></td>
+                      <td><span class="table-dim-text font-style-italic">Pending</span></td>
                       <td>
-                        <span class="log-badge-status" [ngClass]="log.status === 'ACCEPTED' ? 'bg-green' : 'bg-red'">
-                          {{ log.status === 'ACCEPTED' ? 'ACCEPTED' : 'REJECTED' }}
-                        </span>
+                        <div class="table-action-cell">
+                          <button type="button" class="row-action-btn row-reject" (click)="rejectRequest(req.committeeId, req.userDetails.userId)">
+                            <mat-icon>close</mat-icon><span>Reject</span>
+                          </button>
+                          <button type="button" class="row-action-btn row-approve" (click)="approveRequest(req.committeeId, req.userDetails.userId)">
+                            <mat-icon>check</mat-icon><span>Accept</span>
+                          </button>
+                        </div>
                       </td>
                     </tr>
                   }
                 </tbody>
               </table>
             </div>
-          }
-
-          @if (historyAdminRequests().length > 0) {
-            <div class="received-subsection-head">
-              <h3><mat-icon>admin_panel_settings</mat-icon> Admin role requests</h3>
+          } @else {
+            <div class="feedback-utility-box empty-state-wrapper">
+              <mat-icon class="empty-vector-icon">person_add_disabled</mat-icon>
+              <h3>No Member Role Requests</h3>
+              <p>There are no member role requests to display right now.</p>
             </div>
+          }
+        }
+      }
+
+      @if (activeTab() === 'history') {
+        <div class="received-subsection-head admin-section-head">
+          <h3><mat-icon>admin_panel_settings</mat-icon> Admin role requests <mat-icon class="sent-heading-inline-icon">history_toggle_off</mat-icon></h3>
+          <button type="button" class="section-toggle-btn" (click)="toggleSection('historyAdmin')" [attr.aria-label]="isSectionExpanded('historyAdmin') ? 'Collapse admin role history' : 'Expand admin role history'">
+            <mat-icon>{{ isSectionExpanded('historyAdmin') ? 'expand_less' : 'expand_more' }}</mat-icon>
+          </button>
+        </div>
+        @if (isSectionExpanded('historyAdmin')) {
+          @if (historyAdminRequests().length > 0) {
             <div class="dense-table-container">
               <table class="samiti-high-scale-table">
                 <thead>
                   <tr>
-                    <th>Committee Name</th>
-                    <th>Profile</th>
+                    <th>Group Name</th>
+                    <th>Requested By</th>
                     <th>Email Address</th>
                     <th>Mobile Number</th>
                     <th>Requested Date</th>
                     <th>Resolution Date</th>
+                    <th>Resolved By</th>
                     <th>Current Status</th>
                   </tr>
                 </thead>
@@ -244,6 +260,22 @@
                       </td>
                       <td><span class="table-dim-text font-weight-700">{{ log.actionAtTime | date:'medium' }}</span></td>
                       <td>
+                        @if (log.resolvedByName || log.actionByUserId) {
+                          <div class="table-profile-cell resolved-by-cell">
+                            <div class="mini-avatar">
+                              @if (log.resolvedByPhoto) {
+                                <img [src]="log.resolvedByPhoto" [alt]="log.resolvedByName || 'Resolver'" />
+                              } @else {
+                                <span>{{ (log.resolvedByName || 'R').charAt(0).toUpperCase() }}</span>
+                              }
+                            </div>
+                            <span class="table-dim-text">{{ log.resolvedByName || ('ID: ' + log.actionByUserId) }}</span>
+                          </div>
+                        } @else {
+                          <span class="table-dim-text">N/A</span>
+                        }
+                      </td>
+                      <td>
                         <span class="log-badge-status" [ngClass]="log.status === 'ACCEPTED' ? 'bg-green' : 'bg-red'">
                           {{ log.status === 'ACCEPTED' ? 'ACCEPTED' : 'REJECTED' }}
                         </span>
@@ -253,119 +285,85 @@
                 </tbody>
               </table>
             </div>
+          } @else {
+            <div class="feedback-utility-box empty-state-wrapper">
+              <mat-icon class="empty-vector-icon">admin_panel_settings</mat-icon>
+              <h3>No Admin Role History</h3>
+              <p>No admin role actions found yet.</p>
+            </div>
           }
-        } @else {
-          <div class="feedback-utility-box empty-state-wrapper">
-            <mat-icon class="empty-vector-icon">manage_history</mat-icon>
-            <h3>Log Book Empty</h3>
-            <p>You haven't accepted or rejected any registration requests yet.</p>
-          </div>
         }
-      }
 
-     @if (activeTab() === 'sent') {
-        @if (sentMemberRequests().length > 0 || sentAdminRequests().length > 0) {
-          @if (sentMemberRequests().length > 0) {
-            <div class="received-subsection-head">
-              <h3><mat-icon>person</mat-icon> Member role requests <mat-icon class="sent-heading-inline-icon">call_received</mat-icon></h3>
-            </div>
+        <div class="received-subsection-head member-section-head">
+          <h3><mat-icon>person</mat-icon> Member role requests <mat-icon class="sent-heading-inline-icon">history_toggle_off</mat-icon></h3>
+          <button type="button" class="section-toggle-btn" (click)="toggleSection('historyMember')" [attr.aria-label]="isSectionExpanded('historyMember') ? 'Collapse member role history' : 'Expand member role history'">
+            <mat-icon>{{ isSectionExpanded('historyMember') ? 'expand_less' : 'expand_more' }}</mat-icon>
+          </button>
+        </div>
+        @if (isSectionExpanded('historyMember')) {
+          @if (historyMemberRequests().length > 0) {
             <div class="dense-table-container">
               <table class="samiti-high-scale-table">
                 <thead>
                   <tr>
-                    <th>Committee Name</th>
-                    <th>Address</th>
-                    <th>Established Since</th>
+                    <th>Group Name</th>
+                    <th>Requested By</th>
+                    <th>Email Address</th>
+                    <th>Mobile Number</th>
                     <th>Requested Date</th>
                     <th>Resolution Date</th>
+                    <th>Resolved By</th>
                     <th>Current Status</th>
                   </tr>
                 </thead>
                 <tbody>
-                  @for (sent of sentMemberRequests(); track sent.committeeId + '-' + sent.requestSentTime + '-' + sent.requestType) {
-                    <tr [class.row-state-accept]="sent.status === 'ACCEPTED'" [class.row-state-reject]="sent.status === 'REJECTED'">
+                  @for (log of historyMemberRequests(); track log.committeeId + '-' + log.userDetails.userId + '-' + log.requestType + '-' + log.actionAtTime) {
+                    <tr [class.row-state-accept]="log.status === 'ACCEPTED'" [class.row-state-reject]="log.status === 'REJECTED'">
                       <td>
                         <div class="table-profile-cell committee-title-cell">
                           <mat-icon class="committee-logo-icon">groups</mat-icon>
-                          <span class="user-fullname-bold">{{ sent.committeeName }}</span>
+                          <span class="user-fullname-bold">{{ log.committeeName }}</span>
                         </div>
                       </td>
-                      <td><span class="table-text-normal">{{ sent.address || 'N/A' }}</span></td>
-                      <td><span class="table-dim-text">Est. {{ sent.establishYear }}</span></td>
-                      <td><span class="table-dim-text">{{ sent.requestSentTime | date:'d MMMM yyyy, h:mm a' }}</span></td>
                       <td>
-                        @if (sent.status !== 'PENDING' && sent.resolvedAtTime) {
-                          <span class="table-text-normal">
-                            {{ sent.resolvedAtTime | date:'d MMMM yyyy, h:mm a' }}
-                          </span>
+                        <div class="table-profile-cell">
+                          <div class="mini-avatar">
+                            @if (log.userDetails.photo) { <img [src]="log.userDetails.photo" alt="profile"> }
+                            @else { <span>{{ log.userDetails.name.charAt(0).toUpperCase() }}</span> }
+                          </div>
+                          <span class="user-fullname-bold text-capitalize">{{ log.userDetails.name }}</span>
+                        </div>
+                      </td>
+                      <td><span class="table-dim-text">{{ log.userDetails.email }}</span></td>
+                      <td><span class="table-text-normal">{{ log.userDetails.mobile || 'N/A' }}</span></td>
+                      <td>
+                        @if (log.requestSentTime) {
+                          <span class="table-dim-text">{{ log.requestSentTime | date:'medium' }}</span>
                         } @else {
-                          <span class="table-dim-text font-style-italic">Awaiting Admin Review</span>
+                          <span class="table-dim-text font-style-italic">Unavailable</span>
                         }
                       </td>
-
+                      <td><span class="table-dim-text font-weight-700">{{ log.actionAtTime | date:'medium' }}</span></td>
                       <td>
-                        <div class="sent-status-stack">
-                          <span class="status-badge-pill" [ngClass]="sent.status.toLowerCase() + '-pill-badge'">
-                            {{ sent.status }}
-                          </span>
-                          @if (sent.status === 'PENDING') {
-                            <button type="button" class="row-action-btn row-reject sent-cancel-btn" (click)="cancelSentRequest(sent.committeeId, sent.committeeName)">
-                              <mat-icon>cancel</mat-icon><span>Cancel</span>
-                            </button>
-                          }
-                        </div>
-                      </td>
-                    </tr>
-                  }
-                </tbody>
-              </table>
-            </div>
-          }
-
-          @if (sentAdminRequests().length > 0) {
-            <div class="received-subsection-head">
-              <h3><mat-icon>admin_panel_settings</mat-icon> Admin role requests <mat-icon class="sent-heading-inline-icon">call_received</mat-icon></h3>
-            </div>
-            <div class="dense-table-container">
-              <table class="samiti-high-scale-table">
-                <thead>
-                  <tr>
-                    <th>Committee Name</th>
-                    <th>Address</th>
-                    <th>Established Since</th>
-                    <th>Requested Date</th>
-                    <th>Resolution Date</th>
-                    <th>Current Status</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  @for (sent of sentAdminRequests(); track sent.committeeId + '-' + sent.requestSentTime + '-' + sent.requestType) {
-                    <tr [class.row-state-accept]="sent.status === 'ACCEPTED'" [class.row-state-reject]="sent.status === 'REJECTED'">
-                      <td>
-                        <div class="table-profile-cell committee-title-cell">
-                          <mat-icon class="committee-logo-icon">groups</mat-icon>
-                          <span class="user-fullname-bold">{{ sent.committeeName }}</span>
-                        </div>
-                      </td>
-                      <td><span class="table-text-normal">{{ sent.address || 'N/A' }}</span></td>
-                      <td><span class="table-dim-text">Est. {{ sent.establishYear }}</span></td>
-                      <td><span class="table-dim-text">{{ sent.requestSentTime | date:'d MMMM yyyy, h:mm a' }}</span></td>
-                      <td>
-                        @if (sent.status !== 'PENDING' && sent.resolvedAtTime) {
-                          <span class="table-text-normal">
-                            {{ sent.resolvedAtTime | date:'d MMMM yyyy, h:mm a' }}
-                          </span>
+                        @if (log.resolvedByName || log.actionByUserId) {
+                          <div class="table-profile-cell resolved-by-cell">
+                            <div class="mini-avatar">
+                              @if (log.resolvedByPhoto) {
+                                <img [src]="log.resolvedByPhoto" [alt]="log.resolvedByName || 'Resolver'" />
+                              } @else {
+                                <span>{{ (log.resolvedByName || 'R').charAt(0).toUpperCase() }}</span>
+                              }
+                            </div>
+                            <span class="table-dim-text">{{ log.resolvedByName || ('ID: ' + log.actionByUserId) }}</span>
+                          </div>
                         } @else {
-                          <span class="table-dim-text font-style-italic">Awaiting Admin Review</span>
+                          <span class="table-dim-text">N/A</span>
                         }
                       </td>
-
                       <td>
-                        <div class="sent-status-stack">
-                          <span class="status-badge-pill" [ngClass]="sent.status.toLowerCase() + '-pill-badge'">
-                            {{ sent.status }}
-                          </span>
-                        </div>
+                        <span class="log-badge-status" [ngClass]="log.status === 'ACCEPTED' ? 'bg-green' : 'bg-red'">
+                          {{ log.status === 'ACCEPTED' ? 'ACCEPTED' : 'REJECTED' }}
+                        </span>
                       </td>
                     </tr>
                   }
@@ -373,14 +371,220 @@
               </table>
             </div>
           } @else {
-            <div class="received-subsection-head">
-              <h3><mat-icon>admin_panel_settings</mat-icon> Admin role requests <mat-icon class="sent-heading-inline-icon">call_received</mat-icon></h3>
-            </div>
             <div class="feedback-utility-box empty-state-wrapper">
-              <mat-icon class="empty-vector-icon">admin_panel_settings</mat-icon>
-              <h3>No Admin Role Requests</h3>
-              <p>There are no admin role requests to display right now.</p>
+              <mat-icon class="empty-vector-icon">person_off</mat-icon>
+              <h3>No Member Role History</h3>
+              <p>No member role actions found yet.</p>
             </div>
+          }
+        }
+      }
+
+     @if (activeTab() === 'sent') {
+        @if (sentMemberRequests().length > 0 || sentAdminRequests().length > 0) {
+          @if (sentAdminRequests().length > 0) {
+            <div class="received-subsection-head admin-section-head">
+              <h3><mat-icon>admin_panel_settings</mat-icon> Admin role requests <mat-icon class="sent-heading-inline-icon">call_made</mat-icon></h3>
+              <button type="button" class="section-toggle-btn" (click)="toggleSection('sentAdmin')" [attr.aria-label]="isSectionExpanded('sentAdmin') ? 'Collapse sent admin role requests' : 'Expand sent admin role requests'">
+                <mat-icon>{{ isSectionExpanded('sentAdmin') ? 'expand_less' : 'expand_more' }}</mat-icon>
+              </button>
+            </div>
+            @if (isSectionExpanded('sentAdmin')) {
+              <div class="dense-table-container">
+                <table class="samiti-high-scale-table">
+                  <thead>
+                    <tr>
+                      <th>Group Name</th>
+                      <th>Requested By</th>
+                      <th>Address</th>
+                      <th>Established Since</th>
+                      <th>Requested Date</th>
+                      <th>Resolution Date</th>
+                      <th>Resolved By</th>
+                      <th>Current Status</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    @for (sent of sentAdminRequests(); track sent.committeeId + '-' + sent.requestSentTime + '-' + sent.requestType) {
+                      <tr [class.row-state-accept]="sent.status === 'ACCEPTED'" [class.row-state-reject]="sent.status === 'REJECTED'">
+                        <td>
+                          <div class="table-profile-cell committee-title-cell">
+                            <div class="committee-logo-avatar">
+                              @if (sent.committeeLogo) {
+                                <img [src]="sent.committeeLogo" [alt]="sent.committeeName" (error)="sent.committeeLogo = null" />
+                              } @else {
+                                <span>{{ getCommitteeInitial(sent.committeeName) }}</span>
+                              }
+                            </div>
+                            <span class="user-fullname-bold">{{ sent.committeeName }}</span>
+                          </div>
+                        </td>
+                        <td>
+                          <div class="table-profile-cell">
+                            <div class="mini-avatar">
+                              @if (sent.requesterPhoto) {
+                                <img [src]="sent.requesterPhoto" [alt]="sent.requesterName || 'Requester'" />
+                              } @else {
+                                <span>{{ (sent.requesterName || 'R').charAt(0).toUpperCase() }}</span>
+                              }
+                            </div>
+                            <span class="user-fullname-bold text-capitalize">{{ sent.requesterName || ('ID: ' + sent.requesterUserId) }}</span>
+                          </div>
+                        </td>
+                        <td><span class="table-text-normal">{{ sent.address || 'N/A' }}</span></td>
+                        <td><span class="table-dim-text">Est. {{ sent.establishYear }}</span></td>
+                        <td><span class="table-dim-text">{{ sent.requestSentTime | date:'d MMMM yyyy, h:mm a' }}</span></td>
+                        <td>
+                          @if (sent.status !== 'PENDING' && sent.resolvedAtTime) {
+                            <span class="table-text-normal">
+                              {{ sent.resolvedAtTime | date:'d MMMM yyyy, h:mm a' }}
+                            </span>
+                          } @else {
+                            <span class="table-dim-text font-style-italic">Awaiting Admin Review</span>
+                          }
+                        </td>
+                        <td>
+                          @if (sent.resolvedByName || sent.actionByUserId) {
+                            <div class="table-profile-cell resolved-by-cell">
+                              <div class="mini-avatar">
+                                @if (sent.resolvedByPhoto) {
+                                  <img [src]="sent.resolvedByPhoto" [alt]="sent.resolvedByName || 'Resolver'" />
+                                } @else {
+                                  <span>{{ (sent.resolvedByName || 'R').charAt(0).toUpperCase() }}</span>
+                                }
+                              </div>
+                              <span class="table-dim-text">{{ sent.resolvedByName || ('ID: ' + sent.actionByUserId) }}</span>
+                            </div>
+                          } @else {
+                            <span class="table-dim-text">Pending</span>
+                          }
+                        </td>
+
+                        <td>
+                          <div class="sent-status-stack">
+                            <span class="status-badge-pill" [ngClass]="sent.status.toLowerCase() + '-pill-badge'">
+                              {{ sent.status }}
+                            </span>
+                          </div>
+                        </td>
+                      </tr>
+                    }
+                  </tbody>
+                </table>
+              </div>
+            }
+          } @else {
+            <div class="received-subsection-head admin-section-head">
+              <h3><mat-icon>admin_panel_settings</mat-icon> Admin role requests <mat-icon class="sent-heading-inline-icon">call_made</mat-icon></h3>
+              <button type="button" class="section-toggle-btn" (click)="toggleSection('sentAdmin')" [attr.aria-label]="isSectionExpanded('sentAdmin') ? 'Collapse sent admin role requests' : 'Expand sent admin role requests'">
+                <mat-icon>{{ isSectionExpanded('sentAdmin') ? 'expand_less' : 'expand_more' }}</mat-icon>
+              </button>
+            </div>
+            @if (isSectionExpanded('sentAdmin')) {
+              <div class="feedback-utility-box empty-state-wrapper">
+                <mat-icon class="empty-vector-icon">admin_panel_settings</mat-icon>
+                <h3>No Admin Role Requests</h3>
+                <p>There are no admin role requests to display right now.</p>
+              </div>
+            }
+          }
+
+          @if (sentMemberRequests().length > 0) {
+            <div class="received-subsection-head member-section-head">
+              <h3><mat-icon>person</mat-icon> Member role requests <mat-icon class="sent-heading-inline-icon">call_made</mat-icon></h3>
+              <button type="button" class="section-toggle-btn" (click)="toggleSection('sentMember')" [attr.aria-label]="isSectionExpanded('sentMember') ? 'Collapse sent member role requests' : 'Expand sent member role requests'">
+                <mat-icon>{{ isSectionExpanded('sentMember') ? 'expand_less' : 'expand_more' }}</mat-icon>
+              </button>
+            </div>
+            @if (isSectionExpanded('sentMember')) {
+              <div class="dense-table-container">
+                <table class="samiti-high-scale-table">
+                  <thead>
+                    <tr>
+                      <th>Group Name</th>
+                      <th>Requested By</th>
+                      <th>Address</th>
+                      <th>Established Since</th>
+                      <th>Requested Date</th>
+                      <th>Resolution Date</th>
+                      <th>Resolved By</th>
+                      <th>Current Status</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    @for (sent of sentMemberRequests(); track sent.committeeId + '-' + sent.requestSentTime + '-' + sent.requestType) {
+                      <tr [class.row-state-accept]="sent.status === 'ACCEPTED'" [class.row-state-reject]="sent.status === 'REJECTED'">
+                        <td>
+                          <div class="table-profile-cell committee-title-cell">
+                            <div class="committee-logo-avatar">
+                              @if (sent.committeeLogo) {
+                                <img [src]="sent.committeeLogo" [alt]="sent.committeeName" (error)="sent.committeeLogo = null" />
+                              } @else {
+                                <span>{{ getCommitteeInitial(sent.committeeName) }}</span>
+                              }
+                            </div>
+                            <span class="user-fullname-bold">{{ sent.committeeName }}</span>
+                          </div>
+                        </td>
+                        <td>
+                          <div class="table-profile-cell">
+                            <div class="mini-avatar">
+                              @if (sent.requesterPhoto) {
+                                <img [src]="sent.requesterPhoto" [alt]="sent.requesterName || 'Requester'" />
+                              } @else {
+                                <span>{{ (sent.requesterName || 'R').charAt(0).toUpperCase() }}</span>
+                              }
+                            </div>
+                            <span class="user-fullname-bold text-capitalize">{{ sent.requesterName || ('ID: ' + sent.requesterUserId) }}</span>
+                          </div>
+                        </td>
+                        <td><span class="table-text-normal">{{ sent.address || 'N/A' }}</span></td>
+                        <td><span class="table-dim-text">Est. {{ sent.establishYear }}</span></td>
+                        <td><span class="table-dim-text">{{ sent.requestSentTime | date:'d MMMM yyyy, h:mm a' }}</span></td>
+                        <td>
+                          @if (sent.status !== 'PENDING' && sent.resolvedAtTime) {
+                            <span class="table-text-normal">
+                              {{ sent.resolvedAtTime | date:'d MMMM yyyy, h:mm a' }}
+                            </span>
+                          } @else {
+                            <span class="table-dim-text font-style-italic">Awaiting Admin Review</span>
+                          }
+                        </td>
+                        <td>
+                          @if (sent.resolvedByName || sent.actionByUserId) {
+                            <div class="table-profile-cell resolved-by-cell">
+                              <div class="mini-avatar">
+                                @if (sent.resolvedByPhoto) {
+                                  <img [src]="sent.resolvedByPhoto" [alt]="sent.resolvedByName || 'Resolver'" />
+                                } @else {
+                                  <span>{{ (sent.resolvedByName || 'R').charAt(0).toUpperCase() }}</span>
+                                }
+                              </div>
+                              <span class="table-dim-text">{{ sent.resolvedByName || ('ID: ' + sent.actionByUserId) }}</span>
+                            </div>
+                          } @else {
+                            <span class="table-dim-text">Pending</span>
+                          }
+                        </td>
+
+                        <td>
+                          <div class="sent-status-stack">
+                            <span class="status-badge-pill" [ngClass]="sent.status.toLowerCase() + '-pill-badge'">
+                              {{ sent.status }}
+                            </span>
+                            @if (sent.status === 'PENDING') {
+                              <button type="button" class="row-action-btn row-reject sent-cancel-btn" (click)="cancelSentRequest(sent.committeeId, sent.committeeName)">
+                                <mat-icon>cancel</mat-icon><span>Cancel</span>
+                              </button>
+                            }
+                          </div>
+                        </td>
+                      </tr>
+                    }
+                  </tbody>
+                </table>
+              </div>
+            }
           }
         } @else {
           <div class="feedback-utility-box empty-state-wrapper">

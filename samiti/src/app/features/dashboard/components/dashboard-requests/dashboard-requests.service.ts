@@ -44,6 +44,9 @@ export class DashboardRequestsService {
           committeeId
           committeeName
           address
+          actionByUserId
+          resolvedByName
+          resolvedByPhoto
           requestType
           requestSentTime
           userDetails {
@@ -78,6 +81,11 @@ export class DashboardRequestsService {
         data {
           committeeId
           committeeName
+          committeeLogo
+          requesterUserId
+          requesterName
+          requesterPhoto
+          actionByUserId
           requestType
           address
           establishYear
@@ -163,6 +171,9 @@ export class DashboardRequestsService {
         data {
           committeeId
           committeeName
+          actionByUserId
+          resolvedByName
+          resolvedByPhoto
           requestType
           requestSentTime
           actionAtTime

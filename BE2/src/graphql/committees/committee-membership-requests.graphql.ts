@@ -27,6 +27,9 @@ export const committeeMembershipRequestsTypes = `
     committeeId: Int!
     committeeName: String!
     address: String
+    actionByUserId: Int
+    resolvedByName: String
+    resolvedByPhoto: String
     requestType: CommitteeMembershipRequestType!
     requestSentTime: String
     userDetails: CommitteeMembershipRequesterUserDetails!
@@ -35,6 +38,11 @@ export const committeeMembershipRequestsTypes = `
   type SentCommitteeMembershipRequestItem {
     committeeId: Int!
     committeeName: String!
+    committeeLogo: String
+    requesterUserId: Int!
+    requesterName: String
+    requesterPhoto: String
+    actionByUserId: Int
     requestType: CommitteeMembershipRequestType!
     address: String
     establishYear: Int
@@ -49,6 +57,9 @@ export const committeeMembershipRequestsTypes = `
   type ActionTakenOnCommitteeMembershipRequestItem {
     committeeId: Int!
     committeeName: String!
+    actionByUserId: Int
+    resolvedByName: String
+    resolvedByPhoto: String
     requestType: CommitteeMembershipRequestType!
     requestSentTime: String
     actionAtTime: String
@@ -121,6 +132,9 @@ export const committeeMembershipRequestsResolvers = {
             c.id                                            AS committee_id,
             c.committee_name,
             c.address,
+            crr.action_by_user_id,
+            action_user.name                                AS resolved_by_name,
+            action_user.profile_photo                       AS resolved_by_photo,
             crr.request_role                               AS request_type,
             DATE_FORMAT(crr.requested_at, '%Y-%m-%d %H:%i:%s') AS request_sent_time,
             u.id                                           AS user_id,
@@ -133,6 +147,7 @@ export const committeeMembershipRequestsResolvers = {
          FROM committee_role_requests crr
          INNER JOIN committees c ON c.id = crr.committee_id
          INNER JOIN users u ON u.id = crr.requester_user_id
+        LEFT JOIN users action_user ON action_user.id = crr.action_by_user_id
          INNER JOIN users_committees admin_uc
             ON admin_uc.committee_id = crr.committee_id
             AND admin_uc.user_id = ?
@@ -148,6 +163,9 @@ export const committeeMembershipRequestsResolvers = {
           committeeId: Number(row.committee_id),
           committeeName: row.committee_name,
           address: row.address,
+          actionByUserId: row.action_by_user_id ? Number(row.action_by_user_id) : null,
+          resolvedByName: row.resolved_by_name,
+          resolvedByPhoto: row.resolved_by_photo,
           requestType: row.request_type as 'COMMITTEE_MEMBER' | 'COMMITTEE_ADMIN',
           requestSentTime: row.request_sent_time,
           userDetails: {
@@ -171,6 +189,11 @@ export const committeeMembershipRequestsResolvers = {
         `SELECT
             c.id                                            AS committee_id,
             c.committee_name,
+            c.logo                                          AS committee_logo,
+            crr.requester_user_id,
+            requester_user.name                             AS requester_name,
+            requester_user.profile_photo                    AS requester_photo,
+            COALESCE(crr.action_by_user_id, crr.cancel_by_user_id) AS action_by_user_id,
             crr.request_role                               AS request_type,
             c.address,
             c.establish_year,
@@ -179,11 +202,17 @@ export const committeeMembershipRequestsResolvers = {
             action_user.name                               AS resolved_by_name,
             action_user.email                              AS resolved_by_email,
             action_user.profile_photo                      AS resolved_by_photo,
-            DATE_FORMAT(crr.action_at, '%Y-%m-%d %H:%i:%s') AS resolved_at_time
+            DATE_FORMAT(COALESCE(crr.action_at, crr.cancel_at), '%Y-%m-%d %H:%i:%s') AS resolved_at_time
          FROM committee_role_requests crr
          INNER JOIN committees c ON c.id = crr.committee_id
-         LEFT JOIN users action_user ON action_user.id = crr.action_by_user_id
+         INNER JOIN users requester_user ON requester_user.id = crr.requester_user_id
+         LEFT JOIN users action_user ON action_user.id = COALESCE(crr.action_by_user_id, crr.cancel_by_user_id)
          WHERE crr.requester_user_id = ?
+           AND (
+             crr.status = 'CANCELLED'
+             OR crr.action_by_user_id IS NULL
+             OR crr.action_by_user_id <> crr.requester_user_id
+           )
          ORDER BY crr.requested_at DESC`,
         [loggedInUserId]
       );
@@ -192,6 +221,11 @@ export const committeeMembershipRequestsResolvers = {
         data: rows.map((row) => ({
           committeeId: Number(row.committee_id),
           committeeName: row.committee_name,
+          committeeLogo: row.committee_logo || null,
+          requesterUserId: Number(row.requester_user_id),
+          requesterName: row.requester_name,
+          requesterPhoto: row.requester_photo,
+          actionByUserId: row.action_by_user_id ? Number(row.action_by_user_id) : null,
           requestType: row.request_type as 'COMMITTEE_MEMBER' | 'COMMITTEE_ADMIN',
           address: row.address,
           establishYear: row.establish_year ? Number(row.establish_year) : null,
@@ -213,6 +247,9 @@ export const committeeMembershipRequestsResolvers = {
         `SELECT
             c.id                                             AS committee_id,
             c.committee_name,
+            crr.action_by_user_id,
+            action_user.name                                 AS resolved_by_name,
+            action_user.profile_photo                        AS resolved_by_photo,
             crr.request_role                                AS request_type,
             DATE_FORMAT(crr.requested_at, '%Y-%m-%d %H:%i:%s') AS request_sent_time,
             DATE_FORMAT(crr.action_at, '%Y-%m-%d %H:%i:%s') AS action_at_time,
@@ -227,6 +264,7 @@ export const committeeMembershipRequestsResolvers = {
          FROM committee_role_requests crr
          INNER JOIN committees c ON c.id = crr.committee_id
          INNER JOIN users u ON u.id = crr.requester_user_id
+         LEFT JOIN users action_user ON action_user.id = crr.action_by_user_id
          WHERE crr.action_by_user_id = ?
            AND crr.status IN ('ACCEPTED', 'REJECTED')
            AND crr.requester_user_id <> ?
@@ -238,6 +276,9 @@ export const committeeMembershipRequestsResolvers = {
         data: rows.map((row) => ({
           committeeId: Number(row.committee_id),
           committeeName: row.committee_name,
+          actionByUserId: row.action_by_user_id ? Number(row.action_by_user_id) : null,
+          resolvedByName: row.resolved_by_name,
+          resolvedByPhoto: row.resolved_by_photo,
           requestType: row.request_type as 'COMMITTEE_MEMBER' | 'COMMITTEE_ADMIN',
           requestSentTime: row.request_sent_time,
           actionAtTime: row.action_at_time,

@@ -21,23 +21,28 @@
 
   .tabs-navigation-bar {
     display: flex;
-    gap: 4px;
+    gap: 0.5rem;
 
     .tab-link-btn {
       background: #f8fafc;
       border: 1px solid #e2e8f0;
-      font-size: 0.76rem;
-      font-weight: 700;
+      font-size: 0.8rem;
+      font-weight: 600;
       color: #475569;
-      padding: 10px 14px;
+      padding: 0.4rem 1.1rem;
       cursor: pointer;
       display: inline-flex;
       align-items: center;
-      gap: 5px;
+      justify-content: center;
+      gap: 0.35rem;
       transition: all 0.2s ease-in-out;
-      height: 40px;
+      width: fit-content;
+      height: auto;
+      min-height: 0;
+      line-height: 1;
       box-sizing: border-box;
-      border-radius: 999px;
+      border-radius: var(--radius-sm, 6px);
+      margin: 0;
 
       mat-icon { font-size: 1rem; width: 1rem; height: 1rem; }
       &.active-tab {
@@ -90,6 +95,15 @@
 
 .received-subsection-head {
   margin: 14px 0 10px;
+  padding: 7px 10px;
+  border-radius: 8px;
+  border: 1px solid transparent;
+  width: 100%;
+  box-sizing: border-box;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
 
   h3 {
     margin: 0;
@@ -108,6 +122,44 @@
       color: #64748b;
     }
   }
+
+  .section-toggle-btn {
+    border: none;
+    background: rgba(255, 255, 255, 0.65);
+    color: #475569;
+    border-radius: 6px;
+    width: 24px;
+    height: 24px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    padding: 0;
+    flex-shrink: 0;
+    transition: background-color 0.15s ease, color 0.15s ease;
+
+    &:hover {
+      background: rgba(255, 255, 255, 0.95);
+      color: #0f172a;
+    }
+
+    mat-icon {
+      font-size: 1rem;
+      width: 1rem;
+      height: 1rem;
+      line-height: 1;
+    }
+  }
+
+  &.member-section-head {
+    background: linear-gradient(135deg, #ecfeff 0%, #f0fdfa 100%);
+    border-color: #99f6e4;
+  }
+
+  &.admin-section-head {
+    background: linear-gradient(135deg, #fff7ed 0%, #fffbeb 100%);
+    border-color: #fed7aa;
+  }
 }
 
 .sent-heading-inline-icon {
@@ -118,6 +170,13 @@
   height: 0.95rem;
   line-height: 1;
   color: #64748b;
+}
+
+.role-section-separator {
+  height: 1px;
+  width: 100%;
+  margin: 14px 0 2px;
+  background: linear-gradient(90deg, rgba(203, 213, 225, 0) 0%, rgba(203, 213, 225, 1) 20%, rgba(203, 213, 225, 1) 80%, rgba(203, 213, 225, 0) 100%);
 }
 
 /* 📊 LIST TABLE CONTAINER AND DENSITY MATRICES */
@@ -144,6 +203,12 @@
   }
   tbody tr {
     border-bottom: 1px solid #f1f5f9;
+    background: #ffffff;
+
+    &:nth-child(even) {
+      background: #f8fafc;
+    }
+
     &:last-child { border-bottom: none; }
     &:hover { background: #fdf8f5; }
   }
@@ -169,6 +234,33 @@
 }
 
 .committee-title-cell {
+  .committee-logo-avatar {
+    width: 22px;
+    height: 22px;
+    border-radius: 50%;
+    overflow: hidden;
+    border: 1px solid #cbd5e1;
+    background: #f1f5f9;
+    flex-shrink: 0;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+
+    img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+    }
+
+    span {
+      font-size: 0.65rem;
+      font-weight: 800;
+      color: #f97316;
+      text-transform: uppercase;
+      line-height: 1;
+    }
+  }
+
   .committee-logo-icon {
     font-size: 1rem;
     width: 1rem;
