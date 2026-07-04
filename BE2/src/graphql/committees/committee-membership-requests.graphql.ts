@@ -119,10 +119,13 @@ export const committeeMembershipRequestsResolvers = {
             c.id AS committee_id,
             c.committee_name,
             c.address,
-            CASE
-              WHEN cm.admin_status = 'PENDING' THEN 'COMMITTEE_ADMIN'
-              ELSE 'COMMITTEE_MEMBER'
-            END AS request_type,
+            COALESCE(
+              cm.request_type,
+              CASE
+                WHEN cm.admin_status = 'PENDING' THEN 'COMMITTEE_ADMIN'
+                ELSE 'COMMITTEE_MEMBER'
+              END
+            ) AS request_type,
             DATE_FORMAT(
               CASE
                 WHEN cm.admin_status = 'PENDING' THEN cm.admin_request_created_at
@@ -164,7 +167,7 @@ export const committeeMembershipRequestsResolvers = {
         data: rows.map((row) => ({
           committeeId: Number(row.committee_id),
           committeeName: row.committee_name,
-          areaddressa: row.address,
+          address: row.address,
           requestType: row.request_type === 'COMMITTEE_ADMIN' ? 'COMMITTEE_ADMIN' : 'COMMITTEE_MEMBER',
           requestSentTime: row.request_sent_time,
           userDetails: {
@@ -188,10 +191,13 @@ export const committeeMembershipRequestsResolvers = {
           SELECT
             c.id AS committee_id,
             c.committee_name,
-            CASE
-              WHEN cm.admin_status IS NOT NULL THEN 'COMMITTEE_ADMIN'
-              ELSE 'COMMITTEE_MEMBER'
-            END AS request_type,
+            COALESCE(
+              cm.request_type,
+              CASE
+                WHEN cm.admin_status IS NOT NULL THEN 'COMMITTEE_ADMIN'
+                ELSE 'COMMITTEE_MEMBER'
+              END
+            ) AS request_type,
             c.address,
             c.establish_year,
             CASE
@@ -269,7 +275,7 @@ export const committeeMembershipRequestsResolvers = {
           committeeId: Number(row.committee_id),
           committeeName: row.committee_name,
           requestType: row.request_type === 'COMMITTEE_ADMIN' ? 'COMMITTEE_ADMIN' : 'COMMITTEE_MEMBER',
-          areaddressa: row.address,
+          address: row.address,
           establishYear: row.establish_year ? Number(row.establish_year) : null,
           status: String(row.status || 'PENDING'),
           requestSentTime: row.request_sent_time,
@@ -289,10 +295,13 @@ export const committeeMembershipRequestsResolvers = {
           SELECT
             c.id AS committee_id,
             c.committee_name,
-            CASE
-              WHEN cm.admin_status IS NOT NULL THEN 'COMMITTEE_ADMIN'
-              ELSE 'COMMITTEE_MEMBER'
-            END AS request_type,
+            COALESCE(
+              cm.request_type,
+              CASE
+                WHEN cm.admin_status IS NOT NULL THEN 'COMMITTEE_ADMIN'
+                ELSE 'COMMITTEE_MEMBER'
+              END
+            ) AS request_type,
             DATE_FORMAT(
               CASE
                 WHEN cm.admin_status IS NOT NULL THEN cm.admin_request_created_at

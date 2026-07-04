@@ -116,6 +116,7 @@ export const submitCommitteeMembershipRequestResolvers = {
           `
             UPDATE users_committees
             SET
+              request_type = 'COMMITTEE_ADMIN',
               admin_status = 'PENDING',
               admin_request_created_at = NOW(),
               admin_status_action_by = NULL,
@@ -163,6 +164,7 @@ export const submitCommitteeMembershipRequestResolvers = {
           `
             UPDATE users_committees
             SET
+              request_type = 'COMMITTEE_MEMBER',
               is_committee_admin = 0,
               is_committee_member = 0,
               membership_status = 'PENDING',
@@ -183,6 +185,7 @@ export const submitCommitteeMembershipRequestResolvers = {
             INSERT INTO users_committees (
               committee_id,
               user_id,
+              request_type,
               is_committee_admin,
               is_committee_member,
               membership_status,
@@ -195,7 +198,7 @@ export const submitCommitteeMembershipRequestResolvers = {
               admin_status_action_at,
               is_favourite
             )
-            VALUES (?, ?, 0, 0, 'PENDING', NOW(), ?, NOW(), NULL, NULL, NULL, NULL, 0)
+            VALUES (?, ?, 'COMMITTEE_MEMBER', 0, 0, 'PENDING', NOW(), ?, NOW(), NULL, NULL, NULL, NULL, 0)
           `,
           [committeeId, loggedInUserId, loggedInUserId]
         );

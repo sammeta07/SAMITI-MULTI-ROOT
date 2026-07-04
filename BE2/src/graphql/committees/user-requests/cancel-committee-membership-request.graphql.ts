@@ -92,6 +92,7 @@ export const cancelCommitteeMembershipRequestResolvers = {
           `
             UPDATE users_committees
             SET
+              request_type = NULL,
               admin_status = NULL,
               admin_request_created_at = NULL,
               admin_status_action_by = ?,
@@ -105,6 +106,7 @@ export const cancelCommitteeMembershipRequestResolvers = {
           `
             UPDATE users_committees
             SET
+              request_type = NULL,
               is_committee_member = 0,
               membership_status = NULL,
               membership_request_created_at = NULL,
