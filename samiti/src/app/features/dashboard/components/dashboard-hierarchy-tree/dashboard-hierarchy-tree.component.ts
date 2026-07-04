@@ -10,7 +10,7 @@ import { HttpErrorResponse } from '@angular/common/http';
 import { filter } from 'rxjs/operators';
 import { DashboardHierarchyTreeService } from './dashboard-hierarchy-tree.service';
 import { NotifierService } from '../../../../shared/notifier/notifier.service';
-import { RoleNode, TreeNode, CommitteeItem, EventItem, ProgramItem, TaskItem } from './dashboard-hierarchy-tree.models';
+import { AdminHierarchyTreeNode, RoleNode, TreeNode } from './dashboard-hierarchy-tree.models';
 
 @Component({
   selector: 'app-dashboard-hierarchy-tree',
@@ -30,9 +30,11 @@ export class DashboardHierarchyTreeComponent implements OnInit {
   private readonly treeService = inject(DashboardHierarchyTreeService);
   private readonly notifier = inject(NotifierService);
   private readonly router = inject(Router);
+  private readonly routeRefreshAttempts = new Set<string>();
 
   public readonly isLoading = signal<boolean>(false);
   public readonly selectedNode = signal<TreeNode | null>(null);
+  public readonly highlightedNodeToken = signal<string>('');
   
   // 🚀 FIXED: Dynamic signal tracking static navigation items from old dashboard
   public readonly activeStaticMenu = signal<string | null>('home');
@@ -79,8 +81,8 @@ export class DashboardHierarchyTreeComponent implements OnInit {
     this.isLoading.set(true);
     
     this.treeService.getAdminHierarchyTree().subscribe({
-      next: (rolesData) => {
-        const transformedTree = this.transformBackendToTreeNode(rolesData || []);
+      next: (treeData) => {
+        const transformedTree = this.transformBackendToTreeNode(treeData || []);
         this.dataSource.data = transformedTree;
         this.hasCommitteesHierarchy.set(transformedTree.length > 0);
         this.expandAllTreeNodes();
@@ -95,50 +97,67 @@ export class DashboardHierarchyTreeComponent implements OnInit {
   }
 
   private transformBackendToTreeNode(rolesData: RoleNode[]): TreeNode[] {
-    return rolesData
-      .filter((role: RoleNode) => Array.isArray(role.committees) && role.committees.length > 0)
-      .map((role: RoleNode): TreeNode => ({
-      name: role.roleName || 'Committee Administrator Panel',
-      type: 'role',
-      children: (role.committees || []).map((committee: CommitteeItem): TreeNode => ({
-        name: committee.committeeName,
-        type: 'group',
-        id: committee.committeeId,
-        logo: committee.logo || null,
-        children: (committee.events || []).map((event: EventItem): TreeNode => ({
-          name: event.eventName,
-          type: 'event',
-          id: event.eventId,
-          children: [
-            // Add programs as children
-            ...(event.programs || []).map((program: ProgramItem): TreeNode => ({
-              name: program.programName,
-              type: 'program',
-              id: program.programId,
-              status: program.status || undefined
-            })),
-            // Add tasks as children (main tasks with parentId === null or undefined)
-            ...(event.tasks || [])
-              .filter((task: TaskItem) => !task.parentId)
-              .map((task: TaskItem): TreeNode => ({
-                name: task.taskName,
-                type: 'task',
-                id: task.taskId,
-                status: task.status,
-                // Add subtasks if any exist
-                children: (event.tasks || [])
-                  .filter((subtask: TaskItem) => subtask.parentId === task.taskId)
-                  .map((subtask: TaskItem): TreeNode => ({
-                    name: subtask.taskName,
-                    type: 'task',
-                    id: subtask.taskId,
-                    status: subtask.status
-                  }))
-              }))
-          ]
-        }))
+    return (rolesData || [])
+      .map((role): TreeNode => ({
+        name: role.roleName || 'Committee Roles',
+        type: 'role',
+        children: (role.committees || [])
+          .map((committeeNode) => this.mapAdminNodeToTreeNode(committeeNode))
+          .filter((treeNode): treeNode is TreeNode => Boolean(treeNode))
       }))
-    }));
+      .filter((roleNode) => (roleNode.children?.length || 0) > 0)
+      .filter((node): node is TreeNode => Boolean(node));
+  }
+
+  private mapAdminNodeToTreeNode(node: AdminHierarchyTreeNode): TreeNode | null {
+    const mappedType = this.mapBackendTypeToTreeType(node.type, node.id);
+    if (!mappedType) {
+      return null;
+    }
+
+    const mappedChildren = (node.children || [])
+      .map((childNode) => this.mapAdminNodeToTreeNode(childNode))
+      .filter((childNode): childNode is TreeNode => Boolean(childNode));
+
+    return {
+      name: node.name,
+      type: mappedType,
+      id: this.extractNumericId(node.id),
+      children: mappedChildren.length > 0 ? mappedChildren : undefined
+    };
+  }
+
+  private mapBackendTypeToTreeType(typeValue: string, nodeId: string): TreeNode['type'] | null {
+    const normalizedType = (typeValue || '').trim().toUpperCase();
+
+    if (normalizedType === 'ROLE') return 'role';
+    if (normalizedType === 'COMMITTEE' || normalizedType === 'GROUP') return 'group';
+    if (normalizedType === 'EVENT') return 'event';
+    if (normalizedType === 'PROGRAM') return 'program';
+    if (normalizedType === 'TASK') return 'task';
+
+    if (nodeId.startsWith('committee_')) return 'group';
+    if (nodeId.startsWith('event_')) return 'event';
+    if (nodeId.startsWith('program_')) return 'program';
+    if (nodeId.startsWith('task_')) return 'task';
+
+    return null;
+  }
+
+  private extractNumericId(rawId: string): number | undefined {
+    if (!rawId) {
+      return undefined;
+    }
+
+    const directNumeric = Number(rawId);
+    if (!Number.isNaN(directNumeric)) {
+      return directNumeric;
+    }
+
+    const idParts = rawId.split('_');
+    const trailingSegment = idParts[idParts.length - 1];
+    const parsedId = Number(trailingSegment);
+    return Number.isNaN(parsedId) ? undefined : parsedId;
   }
 
   private syncActiveNodeFromRawUrl(): void {
@@ -172,12 +191,22 @@ export class DashboardHierarchyTreeComponent implements OnInit {
     if (typeParam && idParam) {
       const targetId = Number(idParam);
       const matchedNode = this.findNodeInDeepTree(this.dataSource.data, typeParam, targetId);
+      const routeSelectionKey = `${typeParam}:${targetId}`;
 
       if (matchedNode) {
         this.activeStaticMenu.set(null); // Deselect static menus if tree item is matched
         this.selectedNode.set(matchedNode);
+        this.triggerNodeHighlight(matchedNode);
         this.expandAncestorsChain(this.dataSource.data, matchedNode);
+        this.routeRefreshAttempts.delete(routeSelectionKey);
+        this.scrollSelectedNodeIntoView();
         this.isLoading.set(false);
+        return;
+      }
+
+      if (!this.routeRefreshAttempts.has(routeSelectionKey)) {
+        this.routeRefreshAttempts.add(routeSelectionKey);
+        this.fetchAdminNavigationTree();
         return;
       }
     }
@@ -187,6 +216,19 @@ export class DashboardHierarchyTreeComponent implements OnInit {
       this.onSelectStaticMenu('home');
     }
     this.isLoading.set(false);
+  }
+
+  private scrollSelectedNodeIntoView(): void {
+    setTimeout(() => {
+      const selectedTreeNodeElement = document.querySelector(
+        '.samiti-fluent-tree .node-interactive-strip.is-selected'
+      ) as HTMLElement | null;
+
+      selectedTreeNodeElement?.scrollIntoView({
+        behavior: 'smooth',
+        block: 'center'
+      });
+    }, 0);
   }
 
   private findNodeInDeepTree(nodes: TreeNode[], type: string, id: number): TreeNode | null {
@@ -243,13 +285,24 @@ export class DashboardHierarchyTreeComponent implements OnInit {
     return selected.id === node.id && selected.type === node.type;
   }
 
+  public isNodeHighlighted(node: TreeNode): boolean {
+    const nodeKey = this.getNodeKey(node);
+    return this.highlightedNodeToken().startsWith(`${nodeKey}::`);
+  }
+
   public onNodeClick(node: TreeNode): void {
     if (node.type === 'role') return;
 
     this.activeStaticMenu.set(null); // Clear static highlights when tree node gets selected
     this.selectedNode.set(node);
+    this.triggerNodeHighlight(node);
 
     if (node.type === 'group' || node.type === 'event') {
+      if (!node.id) {
+        this.notifier.warn(`Unable to open ${node.type} details.`);
+        return;
+      }
+
       this.router.navigate(['/dashboard', node.type, node.id]).then((success) => {
         if (!success) {
           this.notifier.error(`Unable to open ${node.type} details.`);
@@ -279,6 +332,17 @@ export class DashboardHierarchyTreeComponent implements OnInit {
 
   private getNodeKey(node: TreeNode): string {
     return `${node.type}:${node.id ?? node.name}`;
+  }
+
+  private triggerNodeHighlight(node: TreeNode): void {
+    const nodeKey = this.getNodeKey(node);
+    this.highlightedNodeToken.set(`${nodeKey}::${Date.now()}`);
+
+    setTimeout(() => {
+      if (this.highlightedNodeToken().startsWith(`${nodeKey}::`)) {
+        this.highlightedNodeToken.set('');
+      }
+    }, 1400);
   }
 
   public executeAction(actionType: 'view' | 'edit' | 'delete', node: TreeNode, event: Event): void {

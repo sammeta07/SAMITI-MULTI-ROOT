@@ -88,7 +88,6 @@ export class LoginDialogComponent implements OnInit {
 
         const token = response.token;
         const u = response.user;
-        const d = response.dashboardTree || [];
 
         const userdata: AuthUserData = {
           id: u.id,
@@ -100,13 +99,13 @@ export class LoginDialogComponent implements OnInit {
           baseRole: u.baseRole,
           photo: u.profilePhoto,
           fcmToken: u.fcmToken,
-          dashboardTree:d
+          dashboardTree: []
         };
         
         this.authService.startSession({ token, userData: userdata });
         this.dialogRef.close(true);
 
-        if (d.length > 0) {
+        if ((u.baseRole || []).includes('DASHBOARD_USER')) {
           this.router.navigate(['dashboard']);
         }
       },

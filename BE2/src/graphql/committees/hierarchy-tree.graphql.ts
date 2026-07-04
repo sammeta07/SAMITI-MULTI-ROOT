@@ -1,44 +1,40 @@
 import { query } from '../../config/db';
 
 export const hierarchyTreeTypes = `
-  type HierarchyTask {
-    taskId: Int!
-    taskName: String!
-    status: String!
-    ownerId: Int
-    parentId: Int
-  }
-
-  type HierarchyProgram {
-    programId: Int!
-    programName: String!
-    type: String
-    status: String
-  }
-
-  type HierarchyEvent {
-    eventId: Int!
-    eventName: String!
-    programs: [HierarchyProgram!]!
-    tasks: [HierarchyTask!]!
-  }
-
-  type HierarchyCommittee {
-    committeeId: Int!
-    committeeName: String!
-    logo: String
-    events: [HierarchyEvent!]!
+  type HierarchyTreeNode {
+    id: String!
+    name: String!
+    type: String!
+    roles: [String!]!
+    children: [HierarchyTreeNode!]!
   }
 
   type HierarchyRole {
     roleName: String!
-    committees: [HierarchyCommittee!]!
+    committees: [HierarchyTreeNode!]!
   }
 `;
 
 export const hierarchyTreeQueryFields = `
     adminHierarchyTree: [HierarchyRole!]!
 `;
+
+type InternalTreeNode = {
+  id: string;
+  name: string;
+  type: string;
+  roles: Set<string>;
+  children: InternalTreeNode[];
+  childIds: Set<string>;
+};
+
+type SerializedHierarchyTreeNode = {
+  id: string;
+  name: string;
+  type: string;
+  roles: string[];
+  children: SerializedHierarchyTreeNode[];
+};
 
 export const hierarchyTreeResolvers = {
   Query: {
@@ -63,141 +59,257 @@ export const hierarchyTreeResolvers = {
         throw new Error('Unauthorized: Invalid token');
       }
 
-      // Helper function to build hierarchy for committees
-      const buildHierarchy = async (committeeIds: number[]): Promise<any[]> => {
-        if (committeeIds.length === 0) return [];
+      const committeeRows = await query<any[]>(
+        `SELECT
+           c.id AS committee_id,
+           c.committee_name,
+           cm.is_committee_admin,
+           cm.is_committee_member
+         FROM users_committees cm
+         INNER JOIN committees c ON c.id = cm.committee_id
+         WHERE cm.user_id = ?
+           AND (
+             COALESCE(cm.is_committee_admin, 0) = 1
+             OR COALESCE(cm.is_committee_member, 0) = 1
+           )
+         ORDER BY c.committee_name ASC`,
+        [loggedInUserId]
+      );
 
-        const placeholders = committeeIds.map(() => '?').join(',');
+      if (committeeRows.length === 0) {
+        return [];
+      }
 
-        // Fetch events for these committees
-        const events = await query<any[]>(`
-          SELECT id AS eventId, committee_id AS committeeId, name AS eventName
-          FROM events
-          WHERE committee_id IN (${placeholders})
-          ORDER BY name ASC
-        `, committeeIds);
+      const committeeNodeById = new Map<number, InternalTreeNode>();
+      const adminCommitteeIds = new Set<number>();
+      const memberOnlyCommitteeIds = new Set<number>();
+      const eventNodeById = new Map<number, InternalTreeNode>();
+      const eventRoleSetById = new Map<number, Set<string>>();
 
-        const eventIds = events.map((e: any) => e.eventId);
-        let programs: any[] = [];
-        let tasks: any[] = [];
-
-        if (eventIds.length > 0) {
-          const eventPlaceholders = eventIds.map(() => '?').join(',');
-
-          // Fetch programs by event_id
-          programs = await query<any[]>(`
-            SELECT id AS programId, event_id AS eventId, name AS programName, type, status
-            FROM programs
-            WHERE event_id IN (${eventPlaceholders})
-            ORDER BY name ASC
-          `, eventIds);
-
-          // Fetch tasks by event_id (NOT program_id)
-          tasks = await query<any[]>(`
-            SELECT id AS taskId, event_id AS eventId, parent_id AS parentId, name, owner_id AS ownerId, status
-            FROM tasks
-            WHERE event_id IN (${eventPlaceholders})
-            ORDER BY parent_id ASC, name ASC
-          `, eventIds);
+      const attachChild = (parentNode: InternalTreeNode, childNode: InternalTreeNode) => {
+        if (!parentNode.childIds.has(childNode.id)) {
+          parentNode.children.push(childNode);
+          parentNode.childIds.add(childNode.id);
         }
-
-        // Group programs by event
-        const programsByEvent = programs.reduce((acc: Record<number, any[]>, p: any) => {
-          if (!acc[p.eventId]) acc[p.eventId] = [];
-          acc[p.eventId].push({
-            programId: p.programId,
-            programName: p.programName,
-            type: p.type || '',
-            status: p.status || ''
-          });
-          return acc;
-        }, {});
-
-        // Group tasks by event
-        const tasksByEvent = tasks.reduce((acc: Record<number, any[]>, t: any) => {
-          if (!acc[t.eventId]) acc[t.eventId] = [];
-          acc[t.eventId].push({
-            taskId: t.taskId,
-            taskName: t.name,
-            status: t.status || '',
-            ownerId: t.ownerId,
-            parentId: t.parentId
-          });
-          return acc;
-        }, {});
-
-        // Group events by committee
-        const eventsByCommittee = events.reduce((acc: Record<number, any[]>, e: any) => {
-          if (!acc[e.committeeId]) acc[e.committeeId] = [];
-          acc[e.committeeId].push({
-            eventId: e.eventId,
-            eventName: e.eventName,
-            programs: programsByEvent[e.eventId] || [],
-            tasks: tasksByEvent[e.eventId] || []
-          });
-          return acc;
-        }, {});
-
-        return committeeIds.map(id => {
-          return {
-            committeeId: id,
-            events: eventsByCommittee[id] || []
-          };
-        });
       };
 
-      // Fetch all committees where user is admin
-      const adminCommittees = await query<any[]>(`
-        SELECT c.id AS committeeId, c.committee_name AS committeeName, c.logo
-        FROM committees c
-        INNER JOIN users_committees cm ON c.id = cm.committee_id
-        WHERE cm.user_id = ? AND cm.is_committee_admin = 1
-        ORDER BY c.committee_name ASC
-      `, [loggedInUserId]);
-
-      // Fetch all committees where user is only a member (not admin)
-      const memberCommittees = await query<any[]>(`
-        SELECT c.id AS committeeId, c.committee_name AS committeeName, c.logo
-        FROM committees c
-        INNER JOIN users_committees cm ON c.id = cm.committee_id
-        WHERE cm.user_id = ? AND cm.is_committee_admin = 0 AND cm.is_committee_member = 1
-        ORDER BY c.committee_name ASC
-      `, [loggedInUserId]);
-
-      // Build admin hierarchy
-      const adminCommitteeIds = adminCommittees.map((c: any) => c.committeeId);
-      let adminHierarchy = await buildHierarchy(adminCommitteeIds);
-      
-      // Populate committee details in admin hierarchy
-      const adminCommitteesTree = adminCommittees.map((c: any) => {
-        const hierData = adminHierarchy.find((h: any) => h.committeeId === c.committeeId);
-        return {
-          committeeId: c.committeeId,
-          committeeName: c.committeeName,
-          logo: c.logo || null,
-          events: hierData?.events || []
+      for (const row of committeeRows) {
+        const committeeId = Number(row.committee_id);
+        const existingNode = committeeNodeById.get(committeeId);
+        const committeeNode = existingNode || {
+          id: `committee_${committeeId}`,
+          name: String(row.committee_name),
+          type: 'COMMITTEE',
+          roles: new Set<string>(),
+          children: [],
+          childIds: new Set<string>()
         };
+
+        if (Number(row.is_committee_admin) === 1) {
+          committeeNode.roles.add('ADMIN');
+          adminCommitteeIds.add(committeeId);
+        }
+        if (Number(row.is_committee_member) === 1 && Number(row.is_committee_admin) !== 1) {
+          memberOnlyCommitteeIds.add(committeeId);
+        }
+        if (Number(row.is_committee_member) === 1) {
+          committeeNode.roles.add('MEMBER');
+        }
+
+        committeeNodeById.set(committeeId, committeeNode);
+      }
+
+      const committeeIds = Array.from(committeeNodeById.keys());
+      const committeePlaceholders = committeeIds.map(() => '?').join(',');
+
+      const eventRows = await query<any[]>(
+        `SELECT
+           id AS event_id,
+           committee_id,
+           name AS event_name
+         FROM events
+         WHERE committee_id IN (${committeePlaceholders})
+         ORDER BY name ASC`,
+        committeeIds
+      );
+
+      const eventIds = eventRows.map((eventRow) => Number(eventRow.event_id));
+
+      if (eventIds.length > 0) {
+        const eventPlaceholders = eventIds.map(() => '?').join(',');
+
+        const eventRoleRows = await query<any[]>(
+          `SELECT
+             event_id,
+             designation
+           FROM event_members
+           WHERE user_id = ?
+             AND event_id IN (${eventPlaceholders})`,
+          [loggedInUserId, ...eventIds]
+        );
+
+        for (const eventRoleRow of eventRoleRows) {
+          const eventId = Number(eventRoleRow.event_id);
+          if (!eventRoleSetById.has(eventId)) {
+            eventRoleSetById.set(eventId, new Set<string>());
+          }
+
+          const roleValue = String(eventRoleRow.designation || '').trim();
+          if (roleValue) {
+            eventRoleSetById.get(eventId)!.add(roleValue.toUpperCase());
+          } else {
+            eventRoleSetById.get(eventId)!.add('MEMBER');
+          }
+        }
+
+        for (const eventRow of eventRows) {
+          const eventId = Number(eventRow.event_id);
+          const eventNode: InternalTreeNode = {
+            id: `event_${eventId}`,
+            name: String(eventRow.event_name),
+            type: 'EVENT',
+            roles: eventRoleSetById.get(eventId) || new Set<string>(),
+            children: [],
+            childIds: new Set<string>()
+          };
+
+          eventNodeById.set(eventId, eventNode);
+
+          const committeeId = Number(eventRow.committee_id);
+          const committeeNode = committeeNodeById.get(committeeId);
+          if (committeeNode) {
+            attachChild(committeeNode, eventNode);
+          }
+        }
+
+        const programRows = await query<any[]>(
+          `SELECT
+             id AS program_id,
+             event_id,
+             name AS program_name
+           FROM programs
+           WHERE event_id IN (${eventPlaceholders})
+           ORDER BY name ASC`,
+          eventIds
+        );
+
+        for (const programRow of programRows) {
+          const eventId = Number(programRow.event_id);
+          const eventNode = eventNodeById.get(eventId);
+          if (!eventNode) {
+            continue;
+          }
+
+          const programNode: InternalTreeNode = {
+            id: `program_${Number(programRow.program_id)}`,
+            name: String(programRow.program_name),
+            type: 'PROGRAM',
+            roles: new Set<string>(),
+            children: [],
+            childIds: new Set<string>()
+          };
+
+          attachChild(eventNode, programNode);
+        }
+
+        const taskRows = await query<any[]>(
+          `SELECT
+             id AS task_id,
+             event_id,
+             parent_id,
+             name AS task_name,
+             owner_id
+           FROM tasks
+           WHERE event_id IN (${eventPlaceholders})
+           ORDER BY parent_id ASC, name ASC`,
+          eventIds
+        );
+
+        const taskNodeById = new Map<number, InternalTreeNode>();
+
+        for (const taskRow of taskRows) {
+          const taskId = Number(taskRow.task_id);
+          const eventId = Number(taskRow.event_id);
+          const isOwner = Number(taskRow.owner_id) === loggedInUserId;
+          const hasEventMembership = (eventRoleSetById.get(eventId)?.size || 0) > 0;
+          const taskRoles = new Set<string>();
+
+          if (isOwner) {
+            taskRoles.add('OWNER');
+          } else if (hasEventMembership) {
+            taskRoles.add('ASSIGNED');
+          }
+
+          const taskNode: InternalTreeNode = {
+            id: `task_${taskId}`,
+            name: String(taskRow.task_name),
+            type: 'TASK',
+            roles: taskRoles,
+            children: [],
+            childIds: new Set<string>()
+          };
+
+          taskNodeById.set(taskId, taskNode);
+        }
+
+        for (const taskRow of taskRows) {
+          const taskId = Number(taskRow.task_id);
+          const parentId = taskRow.parent_id ? Number(taskRow.parent_id) : null;
+          const eventId = Number(taskRow.event_id);
+          const taskNode = taskNodeById.get(taskId);
+          if (!taskNode) {
+            continue;
+          }
+
+          if (parentId && taskNodeById.has(parentId)) {
+            attachChild(taskNodeById.get(parentId)!, taskNode);
+            continue;
+          }
+
+          const eventNode = eventNodeById.get(eventId);
+          if (eventNode) {
+            attachChild(eventNode, taskNode);
+          }
+        }
+      }
+
+      const sortNodesByName = (nodes: InternalTreeNode[]) => {
+        nodes.sort((leftNode, rightNode) => leftNode.name.localeCompare(rightNode.name));
+        for (const node of nodes) {
+          if (node.children.length > 0) {
+            sortNodesByName(node.children);
+          }
+        }
+      };
+
+      const serializeNode = (node: InternalTreeNode): SerializedHierarchyTreeNode => ({
+        id: node.id,
+        name: node.name,
+        type: node.type,
+        roles: Array.from(node.roles),
+        children: node.children.map((childNode) => serializeNode(childNode))
       });
 
-      // Build member hierarchy
-      const memberCommitteeIds = memberCommittees.map((c: any) => c.committeeId);
-      let memberHierarchy = await buildHierarchy(memberCommitteeIds);
-      
-      // Populate committee details in member hierarchy
-      const memberCommitteesTree = memberCommittees.map((c: any) => {
-        const hierData = memberHierarchy.find((h: any) => h.committeeId === c.committeeId);
-        return {
-          committeeId: c.committeeId,
-          committeeName: c.committeeName,
-          logo: c.logo || null,
-          events: hierData?.events || []
-        };
-      });
+      const committeeNodes = Array.from(committeeNodeById.values());
+      sortNodesByName(committeeNodes);
 
-      // Return both roles
+      const serializedCommitteeById = new Map<number, SerializedHierarchyTreeNode>();
+      for (const committeeNode of committeeNodes) {
+        const numericCommitteeId = Number(committeeNode.id.split('_')[1]);
+        serializedCommitteeById.set(numericCommitteeId, serializeNode(committeeNode));
+      }
+
+      const adminCommittees = Array.from(adminCommitteeIds)
+        .map((committeeId) => serializedCommitteeById.get(committeeId))
+        .filter((committeeNode): committeeNode is SerializedHierarchyTreeNode => Boolean(committeeNode));
+
+      const memberCommittees = Array.from(memberOnlyCommitteeIds)
+        .map((committeeId) => serializedCommitteeById.get(committeeId))
+        .filter((committeeNode): committeeNode is SerializedHierarchyTreeNode => Boolean(committeeNode));
+
       return [
-        { roleName: 'Admin Roles', committees: adminCommitteesTree },
-        { roleName: 'Member Roles', committees: memberCommitteesTree }
+        { roleName: 'Admin Roles', committees: adminCommittees },
+        { roleName: 'Member Roles', committees: memberCommittees }
       ];
     }
   }

@@ -21,48 +21,11 @@ type LoginUserRow = RowDataPacket & {
   deleted_at: string | null;
 };
 
-type LoginCommitteeRoleRow = RowDataPacket & {
-  committee_id: number;
-  committee_name: string;
-  is_committee_admin: number | null;
-  is_committee_member: number | null;
-};
-
-type LoginEventRoleRow = RowDataPacket & {
-  event_id: number;
-  event_name: string;
-  committee_id: number | null;
-  designation: string | null;
-  status: string | null;
-};
-
-type LoginProgramRoleRow = RowDataPacket & {
-  program_id: number;
-  program_name: string;
-  event_id: number | null;
-  event_name: string | null;
-};
-
-type LoginTaskRoleRow = RowDataPacket & {
-  task_id: number;
-  task_name: string;
-  event_id: number | null;
-  parent_id: number | null;
-  status: string | null;
-  owner_id: number | null;
-  event_member_user_id: number | null;
+type CountRow = RowDataPacket & {
+  total_count: number;
 };
 
 export const loginTypes = `
-  type LoginDashboardTreeNode {
-    id: String!
-    name: String!
-    type: String!
-    roles: [String!]!
-    status: String
-    children: [LoginDashboardTreeNode!]!
-  }
-
   type LoginUserData {
     id: Int!
     name: String!
@@ -84,7 +47,6 @@ export const loginTypes = `
   type LoginPayload {
     token: String!
     user: LoginUserData!
-    dashboardTree: [LoginDashboardTreeNode!]!
   }
 `;
 
@@ -137,203 +99,43 @@ export const loginResolvers = {
         await query('UPDATE users SET fcm_token = ?, updated_at = NOW() WHERE id = ?', [fcmToken, user.id]);
       }
 
-      const committeeRoleRows = await query<LoginCommitteeRoleRow[]>(
-        `SELECT
-          c.id AS committee_id,
-          c.committee_name,
-          cm.is_committee_admin,
-          cm.is_committee_member
-         FROM users_committees cm
-         INNER JOIN committees c ON c.id = cm.committee_id
-         WHERE cm.user_id = ?
-           AND (
-             COALESCE(cm.is_committee_admin, 0) = 1
-             OR COALESCE(cm.is_committee_member, 0) = 1
-           )`,
-        [user.id]
-      ).catch(() => []);
+      const [committeeCountRows, eventCountRows, programCountRows, taskCountRows] = await Promise.all([
+        query<CountRow[]>(
+          `SELECT COUNT(*) AS total_count
+           FROM users_committees
+           WHERE user_id = ?
+             AND (
+               COALESCE(is_committee_admin, 0) = 1
+               OR COALESCE(is_committee_member, 0) = 1
+             )`,
+          [user.id]
+        ).catch(() => [{ total_count: 0 } as CountRow]),
+        query<CountRow[]>(
+          `SELECT COUNT(*) AS total_count
+           FROM event_members
+           WHERE user_id = ?`,
+          [user.id]
+        ).catch(() => [{ total_count: 0 } as CountRow]),
+        query<CountRow[]>(
+          `SELECT COUNT(*) AS total_count
+           FROM programs p
+           INNER JOIN events e ON e.id = p.event_id
+           WHERE e.created_by = ?`,
+          [user.id]
+        ).catch(() => [{ total_count: 0 } as CountRow]),
+        query<CountRow[]>(
+          `SELECT COUNT(*) AS total_count
+           FROM tasks
+           WHERE owner_id = ?`,
+          [user.id]
+        ).catch(() => [{ total_count: 0 } as CountRow])
+      ]);
 
-      const eventRoleRows = await query<LoginEventRoleRow[]>(
-        `SELECT
-          e.id AS event_id,
-          e.name AS event_name,
-          e.committee_id,
-          em.designation,
-          em.status
-         FROM event_members em
-         INNER JOIN events e ON e.id = em.event_id
-         WHERE em.user_id = ?`,
-        [user.id]
-      ).catch(() => []);
-
-      const programRoleRows = await query<LoginProgramRoleRow[]>(
-        `SELECT
-          p.id AS program_id,
-          p.name AS program_name,
-          p.event_id,
-          e.name AS event_name
-         FROM programs p
-         INNER JOIN events e ON e.id = p.event_id
-         WHERE e.created_by = ?`,
-        [user.id]
-      ).catch(() => []);
-
-      const taskRoleRows = await query<LoginTaskRoleRow[]>(
-        `SELECT
-          t.id AS task_id,
-          t.name AS task_name,
-          t.event_id,
-          t.parent_id,
-          t.status,
-          t.owner_id,
-          em.user_id AS event_member_user_id
-         FROM tasks t
-         LEFT JOIN event_members em
-           ON em.event_id = t.event_id
-          AND em.user_id = ?
-         WHERE t.owner_id = ?
-            OR em.user_id IS NOT NULL`,
-        [user.id, user.id]
-      ).catch(() => []);
-
-      type InternalTreeNode = {
-        id: string;
-        name: string;
-        type: string;
-        roles: Set<string>;
-        status: string | null;
-        children: InternalTreeNode[];
-        childIds: Set<string>;
-      };
-
-      const rootNodes: InternalTreeNode[] = [];
-      const rootNodeIds = new Set<string>();
-      const committeeNodeById = new Map<number, InternalTreeNode>();
-      const eventNodeById = new Map<number, InternalTreeNode>();
-
-      const attachRoot = (node: InternalTreeNode) => {
-        if (!rootNodeIds.has(node.id)) {
-          rootNodes.push(node);
-          rootNodeIds.add(node.id);
-        }
-      };
-
-      const attachChild = (parentNode: InternalTreeNode, childNode: InternalTreeNode) => {
-        if (!parentNode.childIds.has(childNode.id)) {
-          parentNode.children.push(childNode);
-          parentNode.childIds.add(childNode.id);
-        }
-      };
-
-      for (const row of committeeRoleRows) {
-        const committeeId = Number(row.committee_id);
-        const existingNode = committeeNodeById.get(committeeId);
-        const committeeNode = existingNode || {
-          id: `committee_${committeeId}`,
-          name: String(row.committee_name),
-          type: 'COMMITTEE',
-          roles: new Set<string>(),
-          status: row.membership_status || row.admin_status || null,
-          children: [],
-          childIds: new Set<string>()
-        };
-
-        if (row.is_committee_admin) {
-          committeeNode.roles.add('ADMIN');
-        }
-        if (row.is_committee_member) {
-          committeeNode.roles.add('MEMBER');
-        }
-
-        committeeNodeById.set(committeeId, committeeNode);
-        attachRoot(committeeNode);
-      }
-
-      for (const row of eventRoleRows) {
-        const eventId = Number(row.event_id);
-        const existingNode = eventNodeById.get(eventId);
-        const eventNode = existingNode || {
-          id: `event_${eventId}`,
-          name: String(row.event_name),
-          type: 'EVENT',
-          roles: new Set<string>(),
-          status: row.status || null,
-          children: [],
-          childIds: new Set<string>()
-        };
-
-        if (row.designation && String(row.designation).trim()) {
-          eventNode.roles.add(String(row.designation).trim().toUpperCase());
-        } else {
-          eventNode.roles.add('MEMBER');
-        }
-
-        eventNodeById.set(eventId, eventNode);
-
-        const committeeId = row.committee_id ? Number(row.committee_id) : null;
-        if (committeeId && committeeNodeById.has(committeeId)) {
-          attachChild(committeeNodeById.get(committeeId)!, eventNode);
-        } else {
-          attachRoot(eventNode);
-        }
-      }
-
-      for (const row of programRoleRows) {
-        const programNode: InternalTreeNode = {
-          id: `program_${Number(row.program_id)}`,
-          name: String(row.program_name),
-          type: 'PROGRAM',
-          roles: new Set<string>(['OWNER']),
-          status: null,
-          children: [],
-          childIds: new Set<string>()
-        };
-
-        const eventId = row.event_id ? Number(row.event_id) : null;
-        if (eventId && eventNodeById.has(eventId)) {
-          attachChild(eventNodeById.get(eventId)!, programNode);
-        } else {
-          attachRoot(programNode);
-        }
-      }
-
-      for (const row of taskRoleRows) {
-        const isOwner = Number(row.owner_id) === Number(user.id);
-        const taskNode: InternalTreeNode = {
-          id: `task_${Number(row.task_id)}`,
-          name: String(row.task_name),
-          type: 'TASK',
-          roles: new Set<string>([isOwner ? 'OWNER' : 'ASSIGNED']),
-          status: row.status || null,
-          children: [],
-          childIds: new Set<string>()
-        };
-
-        const eventId = row.event_id ? Number(row.event_id) : null;
-        if (eventId && eventNodeById.has(eventId)) {
-          attachChild(eventNodeById.get(eventId)!, taskNode);
-        } else {
-          attachRoot(taskNode);
-        }
-      }
-
-      const serializeNode = (node: InternalTreeNode): {
-        id: string;
-        name: string;
-        type: string;
-        roles: string[];
-        status: string | null;
-        children: any[];
-      } => ({
-        id: node.id,
-        name: node.name,
-        type: node.type,
-        roles: Array.from(node.roles),
-        status: node.status,
-        children: node.children.map((childNode) => serializeNode(childNode))
-      });
-
-      const dashboardTree = rootNodes.map((rootNode) => serializeNode(rootNode));
+      const hasDashboardAccess =
+        Number(committeeCountRows[0]?.total_count || 0) > 0 ||
+        Number(eventCountRows[0]?.total_count || 0) > 0 ||
+        Number(programCountRows[0]?.total_count || 0) > 0 ||
+        Number(taskCountRows[0]?.total_count || 0) > 0;
 
       const baseRoleSet = new Set<string>();
       const rawBaseRoleValue = String(user.base_role || '').trim();
@@ -343,7 +145,7 @@ export const loginResolvers = {
         }
       }
       baseRoleSet.add('AUTH_USER');
-      if (dashboardTree.length > 0) {
+      if (hasDashboardAccess) {
         baseRoleSet.add('DASHBOARD_USER');
       }
 
@@ -357,7 +159,7 @@ export const loginResolvers = {
       context.reply.setCookie('token', sessionToken, {
         path: '/',
         httpOnly: true,
-        secure: process.env.NODE_ENV === 'production', // Only secure on production (HTTPS)
+        secure: process.env.NODE_ENV === 'production',
         sameSite: 'none',
         maxAge: 30 * 24 * 60 * 60
       });
@@ -380,8 +182,7 @@ export const loginResolvers = {
           isVerified: Boolean(user.is_verified),
           emailVerifiedAt: user.email_verified_at,
           deletedAt: user.deleted_at
-        },
-        dashboardTree
+        }
       };
     }
   }

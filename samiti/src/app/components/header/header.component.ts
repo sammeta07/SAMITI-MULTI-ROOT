@@ -48,6 +48,10 @@ export class HeaderComponent implements OnInit {
   userName = signal<string>('');
   constructor(private headerService: HeaderService) { }
 
+  private isOnDashboardRoute(): boolean {
+    return this.router.url.startsWith('/dashboard');
+  }
+
   private resolveDisplayPhotoUrl(url: string): string {
     if (!url || url.startsWith('data:image')) {
       return url;
@@ -238,8 +242,13 @@ export class HeaderComponent implements OnInit {
       disableClose: true,
       hasBackdrop: true,
       panelClass: 'slide-in-dialog'
-    }).afterClosed().subscribe(() => {
+    }).afterClosed().subscribe((result) => {
       document.body.classList.remove('dialog-open');
+
+      const createdCommitteeId = Number(result?.createdCommitteeId || 0);
+      if (createdCommitteeId > 0 && this.isOnDashboardRoute()) {
+        this.router.navigate(['/dashboard', 'group', createdCommitteeId]);
+      }
     });
   }
 

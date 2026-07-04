@@ -19,16 +19,7 @@ export interface LoginUserData {
   fcmToken: string | null;
 }
 
-export interface LoginDashboardTreeNode {
-  id: string;
-  name: string;
-  type: string;
-  roles: string[];
-  children: LoginDashboardTreeNode[];
-}
-
 export interface LoginResponse {
   token: string;
   user: LoginUserData;
-  dashboardTree: LoginDashboardTreeNode[];
 }

@@ -61,6 +61,14 @@ export class CreateCommitteeDialogComponent implements OnInit {
   public isEditMode: boolean = false;
   private committeeIdForEdit: number | null = null;
 
+  private static buildCreateResultPayload(response: any) {
+    return {
+      createdCommitteeId: Number(response?.id || 0),
+      createdCommitteeName: String(response?.committeeName || ''),
+      updated: false
+    };
+  }
+
   ngOnInit(): void {
     const committee = this.injectedData?.committee;
 
@@ -215,7 +223,7 @@ export class CreateCommitteeDialogComponent implements OnInit {
           this.router.navigate(['/dashboard', 'home']);
         }
 
-        this.dialogRef.close(true);
+        this.dialogRef.close(CreateCommitteeDialogComponent.buildCreateResultPayload(response));
       },
       error: (err) => this.notifier.error(err?.message || 'Server network exception.')
     });

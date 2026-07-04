@@ -17,24 +17,32 @@ export class DashboardHierarchyTreeService {
       adminHierarchyTree {
         roleName
         committees {
-          committeeId
-          committeeName
-          logo
-          events {
-            eventId
-            eventName
-            programs {
-              programId
-              programName
+          id
+          name
+          type
+          roles
+          children {
+            id
+            name
+            type
+            roles
+            children {
+              id
+              name
               type
-              status
-            }
-            tasks {
-              taskId
-              taskName
-              status
-              ownerId
-              parentId
+              roles
+              children {
+                id
+                name
+                type
+                roles
+                children {
+                  id
+                  name
+                  type
+                  roles
+                }
+              }
             }
           }
         }

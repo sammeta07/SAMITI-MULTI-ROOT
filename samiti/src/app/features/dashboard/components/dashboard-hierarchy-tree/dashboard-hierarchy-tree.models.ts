@@ -1,30 +1,16 @@
-export interface TaskItem {
-  taskId: number;
-  taskName: string; 
-  status: string;
-  ownerId?: number | null;
-  parentId?: number | null;
+export interface AdminHierarchyTreeNode {
+  id: string;
+  name: string;
+  type: string;
+  roles: string[];
+  children: AdminHierarchyTreeNode[];
 }
 
-export interface ProgramItem {
-  programId: number;
-  programName: string;
-  type?: string | null;
-  status?: string | null;
-}
+export type CommitteeItem = AdminHierarchyTreeNode;
 
-export interface EventItem {
-  eventId: number;
-  eventName: string;
-  programs: ProgramItem[]; 
-  tasks: TaskItem[];
-}
-
-export interface CommitteeItem {
-  committeeId: number;
-  committeeName: string;
-  logo?: string | null;
-  events: EventItem[]; 
+export interface RoleNode {
+  roleName: string;
+  committees: CommitteeItem[];
 }
 
 export interface CommitteeMember {
@@ -47,11 +33,6 @@ export interface CommitteeDetailsPayload {
   createdAt: string;
   isLoggedUserAdmin: boolean;
   members: CommitteeMember[];
-}
-
-export interface RoleNode {
-  roleName: string;
-  committees: CommitteeItem[];
 }
 
 export interface TreeNode {

@@ -39,7 +39,8 @@
           <div class="tree-node-guide-stub-horizontal"></div>
 
           <div class="node-interactive-strip" (click)="onNodeClick(node)"
-            [ngClass]="['type-' + node.type, isNodeSelected(node) ? 'is-selected' : '']">
+            [ngClass]="['type-' + node.type, isNodeSelected(node) ? 'is-selected' : '']"
+            [class.is-just-selected]="isNodeHighlighted(node)">
             
             <div class="node-logo-avatar-wrapper branch-leaf-avatar" [ngClass]="'color-' + node.type">
               <mat-icon class="type-indicator-icon">
@@ -69,7 +70,8 @@
             <div class="tree-node-guide-stub-horizontal" *ngIf="node.type !== 'role'"></div>
 
             <div class="node-interactive-strip" (click)="onNodeClick(node)"
-              [ngClass]="['type-' + node.type, isNodeExpanded(node) ? 'is-active-expanded' : '', isNodeSelected(node) ? 'is-selected' : '']">
+              [ngClass]="['type-' + node.type, isNodeExpanded(node) ? 'is-active-expanded' : '', isNodeSelected(node) ? 'is-selected' : '']"
+              [class.is-just-selected]="isNodeHighlighted(node)">
               
               <div class="node-logo-avatar-wrapper" [ngClass]="['type-' + node.type]">
                 @if (node.type === 'group' && node.logo) {

@@ -33,24 +33,6 @@ export class LoginService {
           profilePhoto
           fcmToken
         }
-        dashboardTree {
-          id
-          name
-          type
-          roles
-          children {
-            id
-            name
-            type
-            roles
-            children {
-              id
-              name
-              type
-              roles
-            }
-          }
-        }
       }
     }`;
 

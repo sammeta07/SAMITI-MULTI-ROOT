@@ -167,6 +167,10 @@
     border-radius: 0 6px 6px 0;
   }
 
+  &.is-just-selected {
+    animation: nodeSelectPulse 1.2s ease-out 1;
+  }
+
   .node-label-txt {
     font-size: 0.83rem; font-weight: 500; color: #334155; letter-spacing: -0.15px;
     &.bold-text { font-weight: 700; color: #0f172a; }
@@ -217,4 +221,16 @@
     }
   }
   .menu-divider-line { border: 0; border-top: 1px solid #f1f5f9; margin: 4px 0; }
+}
+
+@keyframes nodeSelectPulse {
+  0% {
+    box-shadow: 0 0 0 0 rgba(249, 115, 22, 0.35);
+  }
+  50% {
+    box-shadow: 0 0 0 8px rgba(249, 115, 22, 0.12);
+  }
+  100% {
+    box-shadow: 0 0 0 0 rgba(249, 115, 22, 0);
+  }
 }
