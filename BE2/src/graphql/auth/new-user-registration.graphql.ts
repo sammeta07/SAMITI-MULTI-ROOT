@@ -320,14 +320,18 @@ export const newUserRegistrationResolvers = {
       _: unknown,
       args: { input: RegistrationInput }
     ) {
-      return registerUser(args.input);
+      return {
+        data: await registerUser(args.input)
+      };
     },
 
     async submitNewUserAccountRegistration(
       _: unknown,
       args: { input: RegistrationInput }
     ) {
-      return registerUser(args.input);
+      return {
+        data: await registerUser(args.input)
+      };
     },
 
     async validateNewUserAccountRegistration(

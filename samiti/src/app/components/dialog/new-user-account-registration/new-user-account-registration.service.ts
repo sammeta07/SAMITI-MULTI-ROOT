@@ -71,21 +71,23 @@ export class NewUserAccountRegistrationService {
   register(body: NewUserAccountRegistrationPayload): Observable<NewUserAccountRegistrationResponse> {
     const query = `mutation SubmitNewUserAccountRegistration($input: NewUserAccountRegistrationInput!) {
       submitNewUserAccountRegistration(input: $input) {
-        id
-        name
-        email
-        mobile
-        dateOfBirth
-        gender
-        baseRole
-        profilePhoto
-        fcmToken
-        createdAt
-        updatedAt
+        data {
+          id
+          name
+          email
+          mobile
+          dateOfBirth
+          gender
+          baseRole
+          profilePhoto
+          fcmToken
+          createdAt
+          updatedAt
+        }
       }
     }`;
 
-    return this.http.post<GraphQLResponseEnvelope<{ submitNewUserAccountRegistration: NewUserAccountRegistrationResponse }>>(this.graphqlUrl, {
+    return this.http.post<GraphQLResponseEnvelope<{ submitNewUserAccountRegistration: { data: NewUserAccountRegistrationResponse } }>>(this.graphqlUrl, {
       query,
       variables: {
         input: {
@@ -106,7 +108,7 @@ export class NewUserAccountRegistrationService {
           throw new Error(res.errors[0].message || 'Registration failed. Please try again.');
         }
 
-        const payload = res.data?.submitNewUserAccountRegistration;
+        const payload = res.data?.submitNewUserAccountRegistration?.data;
         if (!payload) {
           throw new Error('Registration failed. Please try again.');
         }

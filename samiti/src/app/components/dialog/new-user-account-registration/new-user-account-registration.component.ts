@@ -299,8 +299,9 @@ export class NewUserAccountRegistrationDialogComponent {
 
       const result: NewUserAccountRegistrationResponse = await firstValueFrom(this.registerService.register(body));
       const registeredUserName = this.normalizeText(result.name || body.name);
+      const registeredUserNameDisplay = registeredUserName.toUpperCase();
       this.notifier.success(
-        `Hi, ${registeredUserName}! You have registered successfully. Please log in to continue.`,
+        `Hi, **${registeredUserNameDisplay}**! You have registered successfully. Please log in to continue.`,
         'Registration Complete'
       );
       this.dialogRef.close(true);

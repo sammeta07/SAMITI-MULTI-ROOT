@@ -98,25 +98,33 @@ export class DashboardHierarchyTreeComponent implements OnInit {
 
   private transformBackendToTreeNode(rolesData: RoleNode[]): TreeNode[] {
     return (rolesData || [])
-      .map((role): TreeNode => ({
-        name: role.roleName || 'Committee Roles',
-        type: 'role',
-        children: (role.committees || [])
-          .map((committeeNode) => this.mapAdminNodeToTreeNode(committeeNode))
+      .map((role): TreeNode => {
+        const roleScope = this.resolveRoleScope(role.roleName);
+
+        return {
+          name: role.roleName || 'Committee Roles',
+          type: 'role',
+          roleScope: roleScope ?? undefined,
+          children: (role.committees || [])
+          .map((committeeNode) => this.mapAdminNodeToTreeNode(committeeNode, roleScope))
           .filter((treeNode): treeNode is TreeNode => Boolean(treeNode))
-      }))
+        };
+      })
       .filter((roleNode) => (roleNode.children?.length || 0) > 0)
       .filter((node): node is TreeNode => Boolean(node));
   }
 
-  private mapAdminNodeToTreeNode(node: AdminHierarchyTreeNode): TreeNode | null {
+  private mapAdminNodeToTreeNode(
+    node: AdminHierarchyTreeNode,
+    roleScope: 'admin' | 'member' | null
+  ): TreeNode | null {
     const mappedType = this.mapBackendTypeToTreeType(node.type, node.id);
     if (!mappedType) {
       return null;
     }
 
     const mappedChildren = (node.children || [])
-      .map((childNode) => this.mapAdminNodeToTreeNode(childNode))
+      .map((childNode) => this.mapAdminNodeToTreeNode(childNode, roleScope))
       .filter((childNode): childNode is TreeNode => Boolean(childNode));
 
     return {
@@ -124,8 +132,23 @@ export class DashboardHierarchyTreeComponent implements OnInit {
       type: mappedType,
       id: this.extractNumericId(node.id),
       logo: mappedType === 'group' ? (node.logo || null) : null,
+      roleScope: roleScope ?? undefined,
       children: mappedChildren.length > 0 ? mappedChildren : undefined
     };
+  }
+
+  private resolveRoleScope(roleName: string | undefined): 'admin' | 'member' | null {
+    const normalizedRoleName = (roleName || '').trim().toLowerCase();
+
+    if (normalizedRoleName.includes('admin')) {
+      return 'admin';
+    }
+
+    if (normalizedRoleName.includes('member')) {
+      return 'member';
+    }
+
+    return null;
   }
 
   private mapBackendTypeToTreeType(typeValue: string, nodeId: string): TreeNode['type'] | null {

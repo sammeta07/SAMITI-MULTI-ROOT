@@ -29,11 +29,12 @@
 
       @if (hasCommitteesHierarchy()) {
       <hr class="sidebar-deck-divider" />
-      <span class="tree-section-caption-tag">COMMITTEES</span>
+      <span class="tree-section-caption-tag">GROUPS</span>
 
       <mat-tree [dataSource]="dataSource" [childrenAccessor]="childrenAccessor" class="samiti-fluent-tree">
 
         <mat-nested-tree-node *matTreeNodeDef="let node" class="tree-flat-node-row leaf-node-spec"
+          [ngClass]="['type-' + node.type]"
           [class.is-selected]="isNodeSelected(node)">
 
           <div class="tree-node-guide-stub-horizontal"></div>
@@ -71,7 +72,7 @@
         </mat-nested-tree-node>
 
         <mat-nested-tree-node *matTreeNodeDef="let node; when: hasChild" [isExpanded]="isNodeExpanded(node)">
-          <div class="tree-flat-node-row parent-node-spec" [class.is-selected]="isNodeSelected(node)">
+          <div class="tree-flat-node-row parent-node-spec" [ngClass]="['type-' + node.type, node.roleScope ? 'scope-' + node.roleScope : '']" [class.is-selected]="isNodeSelected(node)">
             
             <div class="tree-node-guide-stub-horizontal" *ngIf="node.type !== 'role'"></div>
 
