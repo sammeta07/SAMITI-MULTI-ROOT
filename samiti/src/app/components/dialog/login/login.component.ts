@@ -106,7 +106,11 @@ export class LoginDialogComponent implements OnInit {
         this.dialogRef.close(true);
 
         if ((u.baseRole || []).includes('DASHBOARD_USER')) {
-          this.router.navigate(['dashboard']);
+          this.router.navigate(['dashboard'], {
+            queryParams: {
+              autoOpenFirstNode: '1'
+            }
+          });
         }
       },
       error: (err) => {

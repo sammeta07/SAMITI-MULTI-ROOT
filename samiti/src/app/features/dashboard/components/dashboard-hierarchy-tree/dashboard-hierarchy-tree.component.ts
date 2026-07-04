@@ -162,12 +162,19 @@ export class DashboardHierarchyTreeComponent implements OnInit {
 
   private syncActiveNodeFromRawUrl(): void {
     const currentUrl = this.router.url;
+    const parsedUrl = this.router.parseUrl(currentUrl);
+    const shouldAutoOpenFirstNode = parsedUrl.queryParams?.['autoOpenFirstNode'] === '1';
     const [pathOnly] = currentUrl.split('?');
     const urlSegments = pathOnly.split('/');
     let typeParam: string | null = null;
     let idParam: string | null = null;
     
     if (urlSegments.includes('home')) {
+      if (shouldAutoOpenFirstNode && this.tryOpenFirstHierarchyNode()) {
+        this.isLoading.set(false);
+        return;
+      }
+
       this.activeStaticMenu.set('home');
       this.selectedNode.set(null);
       this.isLoading.set(false);
@@ -213,9 +220,53 @@ export class DashboardHierarchyTreeComponent implements OnInit {
 
     // Default system landing node behavior definition
     if (this.dataSource.data.length > 0 && !this.selectedNode() && !this.activeStaticMenu()) {
+      if (shouldAutoOpenFirstNode && this.tryOpenFirstHierarchyNode()) {
+        this.isLoading.set(false);
+        return;
+      }
+
       this.onSelectStaticMenu('home');
     }
     this.isLoading.set(false);
+  }
+
+  private tryOpenFirstHierarchyNode(): boolean {
+    const firstNavigableNode = this.findFirstNavigableNode(this.dataSource.data);
+    if (!firstNavigableNode || !firstNavigableNode.id) {
+      return false;
+    }
+
+    this.activeStaticMenu.set(null);
+    this.selectedNode.set(firstNavigableNode);
+    this.triggerNodeHighlight(firstNavigableNode);
+    this.expandAncestorsChain(this.dataSource.data, firstNavigableNode);
+    this.scrollSelectedNodeIntoView();
+
+    this.router.navigate(['/dashboard', firstNavigableNode.type, firstNavigableNode.id], {
+      queryParams: {
+        autoOpenFirstNode: null
+      },
+      queryParamsHandling: 'merge'
+    });
+
+    return true;
+  }
+
+  private findFirstNavigableNode(nodes: TreeNode[]): TreeNode | null {
+    for (const node of nodes) {
+      if ((node.type === 'group' || node.type === 'event') && node.id) {
+        return node;
+      }
+
+      if (node.children && node.children.length > 0) {
+        const nestedNode = this.findFirstNavigableNode(node.children);
+        if (nestedNode) {
+          return nestedNode;
+        }
+      }
+    }
+
+    return null;
   }
 
   private scrollSelectedNodeIntoView(): void {
