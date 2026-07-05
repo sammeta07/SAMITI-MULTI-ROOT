@@ -2,207 +2,232 @@
 
   @if (isLoading()) {
   <div class="spinner-loading-overlay">
-    <mat-progress-spinner mode="indeterminate" diameter="40"></mat-progress-spinner>
-    <span>Loading group configuration payload...</span>
+    <mat-progress-spinner mode="indeterminate" diameter="32"></mat-progress-spinner>
+    <span>Loading group configuration...</span>
   </div>
   } @else if (groupData()) {
 
-  <div class="dialog-body scrollable-workspace-body">
-    <div class="header-actions committee-top-actions">
+  <div class="workspace-body scrollable-container">
+    <header class="workspace-action-header">
       @if (isCurrentUserMember()) {
-      @if (shouldShowAdminRequestStatusBadge()) {
-      <span class="status-badge-pill" [ngClass]="loggedInUserAdminRequestStatus() ? loggedInUserAdminRequestStatus()!.toLowerCase() + '-pill-badge' : 'pending-pill-badge'">
-        {{ loggedInUserAdminRequestStatus() }}
-      </span>
-      }
-      @if (canShowRequestAdminRoleButton()) {
-      <button mat-stroked-button class="action-btn" (click)="onRequestAdminRole()" [disabled]="isSubmittingAdminRoleRequest()">
-        <mat-icon>admin_panel_settings</mat-icon>
-        @if (isSubmittingAdminRoleRequest()) {
-          Submitting Request...
-        } @else {
-          Request Admin Role
+        @if (shouldShowAdminRequestStatusBadge()) {
+        <span class="status-badge-pill" [ngClass]="loggedInUserAdminRequestStatus() ? loggedInUserAdminRequestStatus()!.toLowerCase() + '-pill-badge' : 'pending-pill-badge'">
+          {{ loggedInUserAdminRequestStatus() }}
+        </span>
         }
-      </button>
-      }
-
-      @if (canShowCancelAdminRoleRequestButton()) {
-      <button mat-stroked-button class="action-btn delete-btn" (click)="onCancelAdminRoleRequest()" [disabled]="isCancellingAdminRoleRequest()">
-        <mat-icon>cancel</mat-icon>
-        @if (isCancellingAdminRoleRequest()) {
-          Cancelling...
-        } @else {
-          Cancel Request
+        @if (canShowRequestAdminRoleButton()) {
+        <button mat-stroked-button class="action-btn" (click)="onRequestAdminRole()" [disabled]="isSubmittingAdminRoleRequest()">
+          <mat-icon>admin_panel_settings</mat-icon>
+          {{ isSubmittingAdminRoleRequest() ? 'Submitting...' : 'Request Admin' }}
+        </button>
         }
-      </button>
-      }
-      }
+        @if (canShowCancelAdminRoleRequestButton()) {
+        <button mat-stroked-button class="action-btn delete-btn" (click)="onCancelAdminRoleRequest()" [disabled]="isCancellingAdminRoleRequest()">
+          <mat-icon>cancel</mat-icon>
+          {{ isCancellingAdminRoleRequest() ? 'Cancelling...' : 'Cancel Request' }}
+        </button>
+        }
+      @}
+      
       @if (isCurrentUserAdmin()) {
-      <button mat-stroked-button class="action-btn edit-profile-action-btn" (click)="onEditCommitteeProfile()">
-        <mat-icon>edit</mat-icon>
-        Edit Committee
+      <button mat-stroked-button class="action-btn edit-btn" (click)="onEditCommitteeProfile()">
+        <mat-icon>edit</mat-icon>Edit
       </button>
-
-      <button mat-stroked-button class="action-btn delete-workspace-action-btn" (click)="onDeleteCommitteeWorkspace()">
-        <mat-icon>delete</mat-icon>
-        Delete Committee
+      <button mat-stroked-button class="action-btn delete-btn" (click)="onDeleteCommitteeWorkspace()">
+        <mat-icon>delete</mat-icon>Delete
       </button>
       }
       <button mat-stroked-button class="action-btn create-event-btn" (click)="onCreateEvent()" [disabled]="!isCurrentUserAdmin()">
-        <mat-icon>add_event</mat-icon>Create Event
+        <mat-icon>add_event</mat-icon>Event
       </button>
-    </div>
-    
-    <!-- PREMIUM HEADER SECTION -->
-    <div class="premium-header-section">
-      <div class="header-content-wrapper">
-        <div class="header-left">
-          <div class="group-avatar-premium">
-            @if (groupData()?.logo) {
-            <img [src]="groupData()?.logo" [alt]="groupData()?.committeeName" class="avatar-image" />
-            } @else {
-            <div class="avatar-letter">{{ groupData()?.committeeName?.charAt(0) || 'C' }}</div>
-            }
-          </div>
-          
-          <div class="header-info-stack">
-            <h1>{{ groupData()?.committeeName }}</h1>
-            <div class="info-badges">
-              <span class="badge-item">
-                <mat-icon>place</mat-icon> {{ groupData()?.address }}
-              </span>
-              <span class="badge-item">
-                <mat-icon>calendar_month</mat-icon> Est. {{ groupData()?.establishYear }}
-              </span>
-            </div>
+    </header>
+
+    <section class="compact-hero-card">
+      <div class="hero-left-cluster">
+        <div class="avatar-premium-square">
+          @if (groupData()?.logo) {
+          <img [src]="groupData()?.logo" [alt]="groupData()?.committeeName" class="avatar-img" />
+          } @else {
+          <span class="avatar-glyph">{{ groupData()?.committeeName?.charAt(0) || 'C' }}</span>
+          }
+        </div>
+        
+        <div class="hero-meta-stack">
+          <h1>{{ groupData()?.committeeName }}</h1>
+          <div class="inline-badge-row">
+            <span class="badge-item"><mat-icon>place</mat-icon> {{ groupData()?.address }}</span>
+            <span class="badge-item"><mat-icon>calendar_month</mat-icon> Est. {{ groupData()?.establishYear }}</span>
           </div>
         </div>
-
       </div>
 
       @if (groupData()?.contactNumbers?.length) {
-      <div class="contacts-bar">
-        @for (phone of groupData()?.contactNumbers; track phone) {
-        <a [href]="'tel:' + phone" class="contact-link">
-          <mat-icon>phone</mat-icon> {{ phone }}
+      <div class="compact-phone-deck">
+        @for (phone of groupData()?.contactNumbers; track phone + '-' + $index) {
+        <a [href]="'tel:' + phone" class="phone-link-chip">
+          <mat-icon>phone</mat-icon>{{ phone }}
         </a>
         }
       </div>
       }
-    </div>
+    </section>
 
-    <!-- DESCRIPTION SECTION -->
     @if (groupData()?.description) {
-    <div class="description-section">
+    <blockquote class="compact-desc-box">
       <p>{{ groupData()?.description }}</p>
-    </div>
+    </blockquote>
     }
 
-    <!-- MAIN CONTENT GRID -->
-    <div class="content-grid">
+    <section class="horizontal-full-card events-section-style">
+      <div class="panel-card-header">
+        <div class="header-title-left">
+          <mat-icon class="icon-accent-event">event</mat-icon>
+          <span class="title-text">Events</span>
+          <span class="count-pill">{{ committeeEvents().length }}</span>
+        </div>
+      </div>
 
-      <!-- ADMINS ROSTER CARD -->
-      <div class="roster-card admin-card">
-        <div class="roster-card-header">
-          <span class="header-title">
-            <mat-icon class="icon-admin">shield_admin</mat-icon>
+      <div class="horizontal-list-container">
+        @if (isEventsLoading()) {
+          <div class="mini-empty-state">Loading records...</div>
+        } @else {
+          @for (event of committeeEvents(); track event.eventId) {
+          <div class="event-aligned-row">
+            <div class="event-col-avatar">
+              <div class="row-avatar square-shape">
+                @if (event.eventBanner) {
+                  <img [src]="event.eventBanner" [alt]="event.eventName" class="avatar-img" />
+                } @else {
+                  {{ event.eventName.charAt(0).toUpperCase() }}
+                }
+              </div>
+            </div>
+
+            <div class="event-col-info">
+              <span class="main-title">{{ event.eventName }}</span>
+              <span class="secondary-sub-lbl">{{ event.type || 'Standard' }}</span>
+            </div>
+
+            <div class="event-col-status">
+              <span class="status-tag tag-{{event.status?.toLowerCase() || 'upcoming'}}">{{ event.status }}</span>
+            </div>
+
+            <div class="event-col-timeline">
+              <div class="timeline-date-node"><mat-icon>calendar_month</mat-icon> <span class="lbl">Start:</span> {{ event.startDate ? (event.startDate | date:'dd MMM yyyy') : 'N/A' }}</div>
+              <div class="timeline-date-node"><mat-icon>event_busy</mat-icon> <span class="lbl">End:&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span>{{ event.endDate ? (event.endDate | date:'dd MMM yyyy') : 'N/A' }}</div>
+            </div>
+
+            <div class="event-col-visibility">
+              <div class="toggle-alignment-box">
+                <span class="visibility-indicator-text">{{ event.visibility === 'VISIBLE' ? 'Public' : 'Private' }}</span>
+                <mat-slide-toggle
+                  class="density-toggle"
+                  [checked]="event.visibility === 'VISIBLE'"
+                  [disabled]="!isCurrentUserAdmin()"
+                  (change)="onEventVisibilityChange(event, $event.checked)">
+                  {{ event.visibility === 'VISIBLE' ? 'Show' : 'Hide' }}
+                </mat-slide-toggle>
+              </div>
+            </div>
+
+            <div class="event-col-actions">
+              <div class="row-action-deck">
+                <button mat-icon-button class="circle-btn view-btn" title="View" (click)="openEventDetails(event.eventId)"><mat-icon>visibility</mat-icon></button>
+                <button mat-icon-button class="circle-btn edit-btn" title="Edit" [disabled]="!isCurrentUserAdmin()" (click)="onEditEvent(event)"><mat-icon>edit</mat-icon></button>
+                <button mat-icon-button class="circle-btn delete-btn" title="Delete" [disabled]="!isCurrentUserAdmin()" (click)="onDeleteEvent(event)"><mat-icon>delete</mat-icon></button>
+              </div>
+            </div>
+          </div>
+          } @empty {
+          <div class="mini-empty-state">No events available</div>
+          }
+        }
+      </div>
+    </section>
+
+    <main class="dashboard-split-grid">
+      
+      <section class="mesh-card admins-card-style">
+        <div class="panel-card-header">
+          <div class="header-title-left">
+            <mat-icon class="icon-accent-admin">shield_admin</mat-icon>
             <span class="title-text">Admins</span>
-            <span class="count-badge">{{ adminsList().length }}</span>
-          </span>
+            <span class="count-pill">{{ adminsList().length }}</span>
+          </div>
         </div>
 
-        <div class="roster-content">
+        <div class="mesh-list-scroll-box">
           @for (admin of adminsList(); track admin.id) {
-          <div class="member-card">
-            <div class="member-avatar admin">{{ admin.name.charAt(0).toUpperCase() }}</div>
-            <div class="member-info">
-              <div class="member-name">{{ admin.name }}</div>
-              <div class="member-email">{{ admin.email }}</div>
+          <div class="item-density-row">
+            <div class="row-avatar circle-shape admin-bg">{{ admin.name.charAt(0).toUpperCase() }}</div>
+            <div class="row-info-core">
+              <div class="main-title">{{ admin.name }}</div>
+              <div class="secondary-sub-lbl">{{ admin.email }}</div>
             </div>
-            <div class="member-actions">
-              <button mat-icon-button class="icon-btn view-btn" title="View" (click)="onViewMember(admin.id)">
-                <mat-icon>visibility</mat-icon>
-              </button>
+            <div class="row-action-deck">
+              <button mat-icon-button class="circle-btn view-btn" title="View" (click)="onViewMember(admin.id)"><mat-icon>visibility</mat-icon></button>
               @if (isCurrentUserAdmin() && admin.id !== getLoggedInUserId()) {
-              <button mat-icon-button class="icon-btn demote-btn" title="Demote Admin" (click)="onDemoteAdmin(admin)">
-                <mat-icon>arrow_downward</mat-icon>
-              </button>
-              <button mat-icon-button class="icon-btn remove-btn" title="Remove Admin" (click)="onRemoveCommitteeMember(admin)">
-                <mat-icon>person_remove</mat-icon>
-              </button>
+              <button mat-icon-button class="circle-btn demote-btn" title="Demote" (click)="onDemoteAdmin(admin)"><mat-icon>arrow_downward</mat-icon></button>
+              <button mat-icon-button class="circle-btn delete-btn" title="Remove" (click)="onRemoveCommitteeMember(admin)"><mat-icon>person_remove</mat-icon></button>
               }
             </div>
           </div>
           } @empty {
-          <div class="empty-state">No administrators</div>
+          <div class="mini-empty-state">No administrators</div>
           }
         </div>
-      </div>
+      </section>
 
-      <!-- MEMBERS ROSTER CARD -->
-      <div class="roster-card members-card">
-        <div class="roster-card-header">
-          <span class="header-title">
-            <mat-icon class="icon-member">groups</mat-icon>
+      <section class="mesh-card members-card-style">
+        <div class="panel-card-header">
+          <div class="header-title-left">
+            <mat-icon class="icon-accent-member">groups</mat-icon>
             <span class="title-text">Members</span>
-            <span class="count-badge">{{ membersList().length }}</span>
-          </span>
+            <span class="count-pill">{{ membersList().length }}</span>
+          </div>
 
           @if (membersList().length > 15) {
-          <div class="search-box">
+          <div class="compact-search-pill">
             <mat-icon>search</mat-icon>
-            <input type="text" placeholder="Search..." [ngModel]="searchQuery()" (ngModelChange)="searchQuery.set($event)" />
+            <input type="text" placeholder="Filter..." [ngModel]="searchQuery()" (ngModelChange)="searchQuery.set($event)" />
             @if (searchQuery()) {
-            <button type="button" (mousedown)="clearSearch()">
-              <mat-icon>close</mat-icon>
-            </button>
+            <button type="button" class="clear-search-trigger" (mousedown)="clearSearch()"><mat-icon>close</mat-icon></button>
             }
           </div>
           }
         </div>
 
-        <div class="roster-content">
+        <div class="mesh-list-scroll-box">
           @for (member of filteredMembersList(); track member.id) {
-          <div class="member-card">
-            <div class="member-avatar member">{{ member.name.charAt(0).toUpperCase() }}</div>
-            <div class="member-info">
-              <div class="member-name">{{ member.name }}</div>
-              <div class="member-email">{{ member.email }}</div>
+          <div class="item-density-row">
+            <div class="row-avatar circle-shape member-bg">{{ member.name.charAt(0).toUpperCase() }}</div>
+            <div class="row-info-core">
+              <div class="main-title">{{ member.name }}</div>
+              <div class="secondary-sub-lbl">{{ member.email }}</div>
             </div>
-            <div class="member-actions">
-              <button mat-icon-button class="icon-btn view-btn" title="View" (click)="onViewMember(member.id)">
-                <mat-icon>visibility</mat-icon>
-              </button>
+            <div class="row-action-deck">
+              <button mat-icon-button class="circle-btn view-btn" title="View" (click)="onViewMember(member.id)"><mat-icon>visibility</mat-icon></button>
               @if (isCurrentUserAdmin() && member.id !== getLoggedInUserId()) {
-              <button mat-icon-button class="icon-btn promote-btn" title="Promote Member" (click)="onPromoteMember(member)">
-                <mat-icon>arrow_upward</mat-icon>
-              </button>
-              <button mat-icon-button class="icon-btn remove-btn" title="Remove Member" (click)="onRemoveCommitteeMember(member)">
-                <mat-icon>person_remove</mat-icon>
-              </button>
+              <button mat-icon-button class="circle-btn promote-btn" title="Promote" (click)="onPromoteMember(member)"><mat-icon>arrow_upward</mat-icon></button>
+              <button mat-icon-button class="circle-btn delete-btn" title="Remove" (click)="onRemoveCommitteeMember(member)"><mat-icon>person_remove</mat-icon></button>
               }
             </div>
           </div>
           } @empty {
-            @if (searchQuery()) {
-            <div class="empty-state">No results for "{{ searchQuery() }}"</div>
-            } @else {
-            <div class="empty-state">No members</div>
-            }
+            <div class="mini-empty-state">
+              {{ searchQuery() ? 'No matches found' : 'No core members' }}
+            </div>
           }
         </div>
-      </div>
+      </section>
 
-    </div>
-
+    </main>
   </div>
   } @else {
-  <div class="dialog-body">
-    <div class="empty-state-card">
-      <mat-icon>folder_off</mat-icon>
-      <h3>No Workspace Active</h3>
-      <p>Select a specific group from the navigation tree menu to interact with panel logs.</p>
-    </div>
+  <div class="empty-layout-shell">
+    <mat-icon class="icon-off">folder_off</mat-icon>
+    <h3>No Active Workspace</h3>
+    <p>Select a group configuration from the sidebar navigator component tree.</p>
   </div>
   }
 

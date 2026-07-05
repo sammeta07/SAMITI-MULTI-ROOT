@@ -1,10 +1,104 @@
 import { query, execute } from '../../config/db';
+import { hasEventsDisplayNameColumn } from './event-display-name-support';
+
+const ALLOWED_EVENT_STATUSES = new Set(['UPCOMING', 'ONGOING', 'COMPLETED', 'CANCELLED']);
+const ALLOWED_EVENT_VISIBILITIES = new Set(['VISIBLE', 'HIDDEN']);
+
+function throwEventError(code: string, message: string): never {
+  throw new Error(`${code}: ${message}`);
+}
+
+function getAccessToken(context: any): string {
+  const authHeader = context.headers?.authorization;
+  const tokenFromCookie = context.cookies?.token;
+
+  if (typeof authHeader === 'string' && authHeader.startsWith('Bearer ')) {
+    return authHeader.slice(7);
+  }
+
+  if (typeof tokenFromCookie === 'string' && tokenFromCookie.trim().length > 0) {
+    return tokenFromCookie.trim();
+  }
+
+  return '';
+}
+
+async function getLoggedInUserId(context: any): Promise<number> {
+  const accessToken = getAccessToken(context);
+  if (!accessToken) {
+    throwEventError('UNAUTHORIZED', 'Missing access token');
+  }
+
+  try {
+    const decoded: any = await context.jwt.verify(accessToken);
+    const loggedInUserId = Number(decoded?.id || decoded?.user_id || decoded?.uid);
+
+    if (!Number.isInteger(loggedInUserId) || loggedInUserId <= 0) {
+      throwEventError('UNAUTHORIZED', 'Invalid token payload');
+    }
+
+    return loggedInUserId;
+  } catch {
+    throwEventError('UNAUTHORIZED', 'Invalid or expired token');
+  }
+}
+
+function normalizeOptionalText(value: unknown): string | null {
+  if (typeof value !== 'string') {
+    return null;
+  }
+
+  const normalized = value.trim();
+  return normalized.length > 0 ? normalized : null;
+}
+
+function normalizeDateInput(value: unknown, fieldName: string): string | null {
+  const normalized = normalizeOptionalText(value);
+  if (!normalized) {
+    return null;
+  }
+
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(normalized)) {
+    throwEventError('BAD_REQUEST', `${fieldName} must be in YYYY-MM-DD format`);
+  }
+
+  const date = new Date(`${normalized}T00:00:00Z`);
+  if (Number.isNaN(date.getTime())) {
+    throwEventError('BAD_REQUEST', `${fieldName} is not a valid date`);
+  }
+
+  return normalized;
+}
+
+function normalizeEnumInput(value: unknown, fallbackValue: string, allowed: Set<string>, fieldName: string): string {
+  const normalized = (normalizeOptionalText(value) || fallbackValue).toUpperCase();
+  if (!allowed.has(normalized)) {
+    throwEventError('BAD_REQUEST', `Invalid ${fieldName}`);
+  }
+
+  return normalized;
+}
+
+function buildEventDisplayName(eventName: string, rawDisplayName: unknown): string {
+  const normalizedDisplayName = normalizeOptionalText(rawDisplayName);
+
+  if (!normalizedDisplayName) {
+    throwEventError('BAD_REQUEST', 'eventDisplayName is required');
+  }
+
+  if (normalizedDisplayName.length > 20) {
+    throwEventError('BAD_REQUEST', 'eventDisplayName cannot exceed 20 characters');
+  }
+
+  return normalizedDisplayName;
+}
 
 export const createEventTypes = `
   type CreatedEvent {
     id: Int!
     eventId: Int!
     eventName: String!
+    eventDisplayName: String!
     committeeId: Int!
     description: String
     eventBanner: String
@@ -22,6 +116,7 @@ export const createEventTypes = `
   input CreateEventInput {
     committeeId: Int!
     eventName: String!
+    eventDisplayName: String!
     description: String
     eventBanner: String
     bannerImageUrls: [String!]
@@ -40,75 +135,87 @@ export const createEventMutationFields = `
 export const createEventResolvers = {
   Mutation: {
     async createEvent(_: any, args: any, context: any) {
-      // 🔐 Authentication & Authorization
-      const authHeader = context.headers?.authorization;
-      const tokenFromCookie = context.cookies?.token;
-      let accessToken: string | null = null;
+      const loggedInUserId = await getLoggedInUserId(context);
 
-      if (authHeader && authHeader.startsWith('Bearer ')) {
-        accessToken = authHeader.slice(7);
-      } else if (tokenFromCookie) {
-        accessToken = tokenFromCookie;
+      const input = args?.input || {};
+      const committeeId = Number(input.committeeId);
+      const eventName = normalizeOptionalText(input.eventName);
+      const eventDisplayName = eventName ? buildEventDisplayName(eventName, input.eventDisplayName) : null;
+      const description = normalizeOptionalText(input.description);
+      const type = normalizeOptionalText(input.type);
+      const normalizedStatus = normalizeEnumInput(input.status, 'UPCOMING', ALLOWED_EVENT_STATUSES, 'status');
+      const normalizedVisibility = normalizeEnumInput(input.visibility, 'VISIBLE', ALLOWED_EVENT_VISIBILITIES, 'visibility');
+      const normalizedStartDate = normalizeDateInput(input.startDate, 'startDate');
+      const normalizedEndDate = normalizeDateInput(input.endDate, 'endDate');
+
+      if (!Number.isInteger(committeeId) || committeeId <= 0) {
+        throwEventError('BAD_REQUEST', 'committeeId must be a positive integer');
       }
 
-      if (!accessToken) {
-        throw new Error('Unauthorized: No token provided');
+      if (!eventName) {
+        throwEventError('BAD_REQUEST', 'eventName is required');
       }
 
-      // 🔓 Decode token to get user ID
-      let loggedInUserId: number = 0;
-      try {
-        const decoded: any = await context.jwt.verify(accessToken);
-        loggedInUserId = Number(decoded?.id || decoded?.user_id || decoded?.uid);
-        if (!loggedInUserId) {
-          throw new Error('Invalid token: No user ID found');
-        }
-      } catch (error: any) {
-        throw new Error(`Token verification failed: ${error.message}`);
+      if (eventName.length > 255) {
+        throwEventError('BAD_REQUEST', 'eventName cannot exceed 255 characters');
       }
 
-      const {
-        committeeId,
-        eventName,
-        description,
-        eventBanner,
-        bannerImageUrls,
-        status,
-        type,
-        visibility,
-        startDate,
-        endDate
-      } = args.input;
-
-      if (!committeeId || !eventName) {
-        throw new Error('Committee ID and Event Name are required');
-      }
-
-      if (!status) {
-        throw new Error('Event Status is required');
+      if (normalizedStartDate && normalizedEndDate && normalizedStartDate > normalizedEndDate) {
+        throwEventError('BAD_REQUEST', 'startDate cannot be after endDate');
       }
 
       try {
-        // 🔐 Check if user is committee admin
-        const adminCheck = await query(
+        const supportsEventDisplayName = await hasEventsDisplayNameColumn();
+
+        const adminCheck = await query<any[]>(
           `SELECT user_id FROM users_committees 
            WHERE committee_id = ? AND user_id = ? AND is_committee_admin = 1 LIMIT 1`,
           [committeeId, loggedInUserId]
         );
 
         if (adminCheck.length === 0) {
-          throw new Error('Only committee admins can create events');
+          throwEventError('FORBIDDEN', 'Only committee admins can create events');
         }
 
-        // ✅ Insert new event with all fields including created_by, updated_by, created_at
-        const result = await execute(
-          `INSERT INTO events (committee_id, name, description, status, type, visibility, start_date, end_date, created_by, updated_by, created_at)
-           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW())`,
-          [committeeId, eventName, description || null, status, type || null, visibility || 'VISIBLE', startDate || null, endDate || null, loggedInUserId, loggedInUserId]
-        );
+        const result = supportsEventDisplayName
+          ? await execute(
+              `INSERT INTO events (committee_id, name, display_name, description, status, type, visibility, start_date, end_date, created_by, updated_by, created_at)
+               VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW())`,
+              [
+                committeeId,
+                eventName,
+                eventDisplayName,
+                description,
+                normalizedStatus,
+                type,
+                normalizedVisibility,
+                normalizedStartDate,
+                normalizedEndDate,
+                loggedInUserId,
+                loggedInUserId
+              ]
+            )
+          : await execute(
+              `INSERT INTO events (committee_id, name, description, status, type, visibility, start_date, end_date, created_by, updated_by, created_at)
+               VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW())`,
+              [
+                committeeId,
+                eventName,
+                description,
+                normalizedStatus,
+                type,
+                normalizedVisibility,
+                normalizedStartDate,
+                normalizedEndDate,
+                loggedInUserId,
+                loggedInUserId
+              ]
+            );
 
         const eventId = result.insertId;
 
+        const eventBanner = normalizeOptionalText(input.eventBanner);
+        const bannerImageUrls = Array.isArray(input.bannerImageUrls) ? input.bannerImageUrls : [];
         const normalizedBannerImageUrls: string[] = Array.isArray(bannerImageUrls)
           ? bannerImageUrls.filter((url: unknown) => typeof url === 'string' && url.trim().length > 0).map((url: string) => url.trim())
           : [];
@@ -125,12 +232,20 @@ export const createEventResolvers = {
           );
         }
 
-        // Fetch and return the created event
-        const createdEvent = await query(
-          `SELECT id, id as eventId, name as eventName, committee_id as committeeId,
-                  description, status, type, visibility,
-                  start_date as startDate, end_date as endDate, created_by as createdBy, updated_by as updatedBy, created_at as createdAt
-           FROM events WHERE id = ?`,
+        const createdEvent = await query<any[]>(
+          supportsEventDisplayName
+            ? `SELECT id, id as eventId, name as eventName,
+                      COALESCE(NULLIF(TRIM(display_name), ''), LEFT(name, 20)) as eventDisplayName,
+                      committee_id as committeeId,
+                      description, status, type, visibility,
+                      start_date as startDate, end_date as endDate, created_by as createdBy, updated_by as updatedBy, created_at as createdAt
+               FROM events WHERE id = ?`
+            : `SELECT id, id as eventId, name as eventName,
+                      LEFT(name, 20) as eventDisplayName,
+                      committee_id as committeeId,
+                      description, status, type, visibility,
+                      start_date as startDate, end_date as endDate, created_by as createdBy, updated_by as updatedBy, created_at as createdAt
+               FROM events WHERE id = ?`,
           [eventId]
         );
 
@@ -144,7 +259,7 @@ export const createEventResolvers = {
 
         const createdEventRecord = createdEvent[0] || null;
         if (!createdEventRecord) {
-          return null;
+          throwEventError('INTERNAL_ERROR', 'Event created but could not be fetched');
         }
 
         return {
@@ -152,8 +267,12 @@ export const createEventResolvers = {
           eventBanner: eventBannerImages[0] ? String(eventBannerImages[0].mediaUrl) : null,
           bannerImages: eventBannerImages.map((imageRow) => String(imageRow.mediaUrl))
         };
-      } catch (error: any) {
-        throw new Error(`Failed to create event: ${error.message}`);
+      } catch (error: unknown) {
+        if (error instanceof Error && /^[A-Z_]+: /.test(error.message)) {
+          throw error;
+        }
+
+        throwEventError('INTERNAL_ERROR', 'Failed to create event');
       }
     }
   }

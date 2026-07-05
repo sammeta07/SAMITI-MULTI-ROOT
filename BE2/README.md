@@ -45,6 +45,25 @@ CREATE TABLE IF NOT EXISTS groups (
 npm run dev
 ```
 
+## Migrations
+
+Run all SQL migrations in `src/migrations`:
+
+```bash
+npm run migrate
+```
+
+If a legacy events foreign-key mismatch needs cleanup, run:
+
+```bash
+npm run migrate:fix
+```
+
+Notes:
+- Migrations run in sorted filename order, so `012-add-event-display-name.sql` will be picked up automatically.
+- If `display_name` migration is not applied yet, backend code now falls back to `LEFT(name, 20)` for compact event labels.
+- After running migrations, restart the backend if it is already running.
+
 ## API Endpoints
 
 - `GET /health` - Health check

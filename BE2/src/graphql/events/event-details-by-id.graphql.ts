@@ -1,5 +1,45 @@
 import { query } from '../../config/db';
 import { RowDataPacket } from 'mysql2/promise';
+import { hasEventsDisplayNameColumn } from './event-display-name-support';
+
+function throwEventError(code: string, message: string): never {
+  throw new Error(`${code}: ${message}`);
+}
+
+function getAccessToken(context: any): string {
+  const authHeader = context.headers?.authorization;
+  const tokenFromCookie = context.cookies?.token;
+
+  if (typeof authHeader === 'string' && authHeader.startsWith('Bearer ')) {
+    return authHeader.slice(7);
+  }
+
+  if (typeof tokenFromCookie === 'string' && tokenFromCookie.trim().length > 0) {
+    return tokenFromCookie.trim();
+  }
+
+  return '';
+}
+
+async function getLoggedInUserId(context: any): Promise<number> {
+  const accessToken = getAccessToken(context);
+  if (!accessToken) {
+    throwEventError('UNAUTHORIZED', 'Missing access token');
+  }
+
+  try {
+    const decoded: any = await context.jwt.verify(accessToken);
+    const loggedInUserId = Number(decoded?.id || decoded?.user_id || decoded?.uid);
+
+    if (!Number.isInteger(loggedInUserId) || loggedInUserId <= 0) {
+      throwEventError('UNAUTHORIZED', 'Invalid token payload');
+    }
+
+    return loggedInUserId;
+  } catch {
+    throwEventError('UNAUTHORIZED', 'Invalid or expired token');
+  }
+}
 
 export const eventDetailsTypes = `
   type EventDetails {
@@ -7,6 +47,7 @@ export const eventDetailsTypes = `
     eventId: Int!
     committeeId: Int
     eventName: String!
+    eventDisplayName: String!
     description: String
     eventBanner: String
     bannerImages: [String!]!
@@ -28,34 +69,21 @@ export const eventDetailsQueryFields = `
 export const eventDetailsResolvers = {
   Query: {
     async eventDetails(_: any, args: { id: number }, context: any) {
-      const { id: eventId } = args;
-
-      const authHeader = context.headers?.authorization;
-      const tokenFromCookie = context.cookies?.token;
-      let accessToken: string | null = null;
-
-      if (authHeader && authHeader.startsWith('Bearer ')) {
-        accessToken = authHeader.substring(7);
-      } else if (tokenFromCookie) {
-        accessToken = tokenFromCookie;
+      const eventId = Number(args?.id);
+      if (!Number.isInteger(eventId) || eventId <= 0) {
+        throwEventError('BAD_REQUEST', 'id must be a positive integer');
       }
 
-      if (!accessToken) {
-        throw new Error('Unauthorized: Missing access token');
-      }
-
-      const decoded: any = await context.jwt.verify(accessToken);
-      const loggedInUserId = Number(decoded?.id || decoded?.user_id || decoded?.uid);
-      if (!loggedInUserId) {
-        throw new Error('Unauthorized: Invalid token');
-      }
+      const loggedInUserId = await getLoggedInUserId(context);
+      const supportsEventDisplayName = await hasEventsDisplayNameColumn();
 
       const eventResult = await query<any[]>(`
         SELECT
           id,
           id AS eventId,
           committee_id AS committeeId,
-          name,
+          name AS eventName,
+          ${supportsEventDisplayName ? "COALESCE(NULLIF(TRIM(display_name), ''), LEFT(name, 20))" : 'LEFT(name, 20)'} AS eventDisplayName,
           description,
           status,
           type,
@@ -71,7 +99,30 @@ export const eventDetailsResolvers = {
       `, [eventId]);
 
       if (!eventResult || eventResult.length === 0) {
-        throw new Error(`Event with ID ${eventId} not found`);
+        throwEventError('NOT_FOUND', 'Event not found');
+      }
+
+      const event = eventResult[0];
+      const visibility = String(event.visibility || '').toUpperCase();
+
+      if (visibility === 'HIDDEN') {
+        const committeeMembership = await query<any[]>(
+          `SELECT is_committee_member, is_committee_admin
+           FROM users_committees
+           WHERE committee_id = ? AND user_id = ?
+           LIMIT 1`,
+          [Number(event.committeeId), loggedInUserId]
+        );
+
+        const membership = committeeMembership[0];
+        const hasCommitteeAccess = Boolean(
+          membership &&
+          (Number(membership.is_committee_member) === 1 || Number(membership.is_committee_admin) === 1)
+        );
+
+        if (!hasCommitteeAccess) {
+          throwEventError('FORBIDDEN', 'You are not allowed to access this event');
+        }
       }
 
       const bannerImageRows = await query<Array<RowDataPacket & { mediaUrl: string }>>(
@@ -83,7 +134,7 @@ export const eventDetailsResolvers = {
       );
 
       return {
-        ...eventResult[0],
+        ...event,
         eventBanner: bannerImageRows[0]?.mediaUrl || null,
         bannerImages: bannerImageRows.map((row) => row.mediaUrl)
       };

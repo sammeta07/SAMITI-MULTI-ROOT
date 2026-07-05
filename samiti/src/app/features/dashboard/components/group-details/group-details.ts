@@ -1,7 +1,7 @@
 import { Component, inject, OnInit, signal, computed } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { ActivatedRoute } from '@angular/router';
+import { ActivatedRoute, Router } from '@angular/router';
 import { MatIconModule } from '@angular/material/icon';
 import { MatButtonModule } from '@angular/material/button';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
@@ -9,10 +9,11 @@ import { MatDialog, MatDialogModule } from '@angular/material/dialog';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
 import { MatExpansionModule } from '@angular/material/expansion';
+import { MatSlideToggleModule } from '@angular/material/slide-toggle';
 import { HttpErrorResponse } from '@angular/common/http';
 import { GroupDetailsService } from './group-details.service';
 import { NotifierService } from '../../../../shared/notifier/notifier.service';
-import { CancelCommitteeMembershipRequestPayload, CommitteeProfileMeta, CommitteeRosterMember, CommitteeDetailsPayload, SubmitCommitteeMembershipRequestPayload } from './group-details.models';
+import { CancelCommitteeMembershipRequestPayload, CommitteeEventListItem, CommitteeProfileMeta, CommitteeRosterMember, CommitteeDetailsPayload, SubmitCommitteeMembershipRequestPayload } from './group-details.models';
 import { ConfirmDialogService } from '../../../../components/dialog/confirm/confirm-dialog.service';
 import { ConfirmDialogData } from '../../../../components/dialog/confirm/confirm-dialog.models';
 import { CreateEventDialogComponent } from '../../../../components/dialog/create-event/create-event.component';
@@ -35,12 +36,14 @@ import { RemoveMemberDialogService } from '../../../../components/dialog/remove-
     MatFormFieldModule,
     MatInputModule,
     MatExpansionModule,
+    MatSlideToggleModule,
   ],
   templateUrl: './group-details.html',
   styleUrl: './group-details.scss'
 })
 export class GroupDetailsComponent implements OnInit {
   private readonly route = inject(ActivatedRoute);
+  private readonly router = inject(Router);
   private readonly notifier = inject(NotifierService);
   private readonly groupDetailsService = inject(GroupDetailsService);
   private readonly confirmDialog = inject(ConfirmDialogService);
@@ -57,6 +60,8 @@ export class GroupDetailsComponent implements OnInit {
   public readonly loggedInUserAdminStatusActionAt = signal<string | null>(null);
   public readonly groupData = signal<CommitteeProfileMeta | null>(null);
   public readonly isAdmin = signal<boolean>(false);
+  public readonly isEventsLoading = signal<boolean>(false);
+  public readonly committeeEvents = signal<CommitteeEventListItem[]>([]);
   
   // Lists holding structured members segment arrays securely typed
   public readonly adminsList = signal<CommitteeRosterMember[]>([]);
@@ -129,6 +134,68 @@ export class GroupDetailsComponent implements OnInit {
     });
   }
 
+  public openEventDetails(eventId: number): void {
+    if (!eventId) {
+      return;
+    }
+
+    this.router.navigate(['/dashboard/event', eventId]);
+  }
+
+  public onEventVisibilityChange(eventItem: CommitteeEventListItem, isVisible: boolean): void {
+    if (!this.isCurrentUserAdmin()) {
+      this.notifier.warn('Only committee admins can update event visibility');
+      return;
+    }
+
+    const visibility: 'VISIBLE' | 'HIDDEN' = isVisible ? 'VISIBLE' : 'HIDDEN';
+
+    if (!eventItem?.eventId || eventItem.visibility === visibility) {
+      return;
+    }
+
+    const previousVisibility = eventItem.visibility;
+    this.committeeEvents.update((currentEvents) =>
+      currentEvents.map((currentEvent) =>
+        currentEvent.eventId === eventItem.eventId ? { ...currentEvent, visibility } : currentEvent
+      )
+    );
+
+    this.groupDetailsService.updateEventVisibility(eventItem.eventId, visibility).subscribe({
+      next: () => {
+        const formattedEventName = this.toTitleCase(eventItem.eventName || 'Event');
+        const visibilityMessage = visibility === 'VISIBLE'
+          ? `**${formattedEventName}** is now visible to all the public`
+          : `**${formattedEventName}** is now hidden to all the public`;
+        this.notifier.success(visibilityMessage);
+      },
+      error: (err: HttpErrorResponse) => {
+        this.committeeEvents.update((currentEvents) =>
+          currentEvents.map((currentEvent) =>
+            currentEvent.eventId === eventItem.eventId ? { ...currentEvent, visibility: previousVisibility } : currentEvent
+          )
+        );
+        this.notifier.error(err?.error?.message || 'Failed to update event visibility.');
+      }
+    });
+  }
+
+  public onEditEvent(eventItem: CommitteeEventListItem): void {
+    this.notifier.warn(`Edit event flow is not available yet for "${eventItem.eventName}".`);
+  }
+
+  public onDeleteEvent(eventItem: CommitteeEventListItem): void {
+    this.notifier.warn(`Delete event flow is not available yet for "${eventItem.eventName}".`);
+  }
+
+  private toTitleCase(value: string): string {
+    return value
+      .toLowerCase()
+      .replace(/\s+/g, ' ')
+      .trim()
+      .replace(/\b\w/g, (char) => char.toUpperCase());
+  }
+
   private fetchCommitteeDetailsPayload(id: string): void {
     this.isLoading.set(true);
     
@@ -158,6 +225,7 @@ export class GroupDetailsComponent implements OnInit {
           const membersPool = data.members || [];
           this.adminsList.set(membersPool.filter((m: CommitteeRosterMember) => Number(m.isCommitteeAdmin) === 1));
           this.membersList.set(membersPool.filter((m: CommitteeRosterMember) => Number(m.isCommitteeAdmin) !== 1));
+          this.fetchCommitteeEvents(data.committeeId);
         } else {
           this.notifier.error('Failed to parse committee details.');
         }
@@ -166,6 +234,26 @@ export class GroupDetailsComponent implements OnInit {
       error: (err: HttpErrorResponse) => {
         this.notifier.error(err?.error?.message || 'Transaction error loading group rows.');
         this.isLoading.set(false);
+      }
+    });
+  }
+
+  private fetchCommitteeEvents(committeeId: number): void {
+    if (!committeeId) {
+      this.committeeEvents.set([]);
+      return;
+    }
+
+    this.isEventsLoading.set(true);
+    this.groupDetailsService.getEventsByCommittee(committeeId).subscribe({
+      next: (events: CommitteeEventListItem[]) => {
+        this.committeeEvents.set(events || []);
+        this.isEventsLoading.set(false);
+      },
+      error: (err: HttpErrorResponse) => {
+        this.committeeEvents.set([]);
+        this.isEventsLoading.set(false);
+        this.notifier.error(err?.error?.message || 'Failed to load events list.');
       }
     });
   }
@@ -453,7 +541,13 @@ export class GroupDetailsComponent implements OnInit {
       document.body.classList.remove('dialog-open');
       if (result) {
         this.notifier.success(`Event "${result.eventName}" created successfully!`);
-        // Optionally refresh the committee details or navigate to events list
+        if (committee.committeeId) {
+          this.fetchCommitteeEvents(committee.committeeId);
+        }
+
+        if (result.eventId) {
+          this.router.navigate(['/dashboard', 'event', result.eventId]);
+        }
       }
     });
   }

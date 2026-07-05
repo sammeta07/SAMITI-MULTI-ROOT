@@ -56,6 +56,15 @@
         </mat-form-field>
       </div>
 
+      <div class="form-row-full">
+        <mat-form-field appearance="outline" class="samiti-custom-field">
+          <mat-label>Event Display Name</mat-label>
+          <input matInput [(ngModel)]="eventDisplayName" name="eventDisplayName" maxlength="20" placeholder="Ex. Annual Celebr." required>
+          <mat-icon matPrefix>short_text</mat-icon>
+          <mat-hint>Max 20 characters allowed.</mat-hint>
+        </mat-form-field>
+      </div>
+
       <!-- DESCRIPTION -->
       <div class="form-row-full">
         <mat-form-field appearance="outline" class="samiti-custom-field">

@@ -1,4 +1,5 @@
 import { query } from '../../../config/db';
+import { normalizeEventSummaryRow, parseContactNumbers } from './committee-list.helpers';
 
 export const authCommitteeTypes = `
   type CommitteeAuth {
@@ -105,7 +106,10 @@ export const authCommitteesResolvers = {
           if (!map[committeeId]) {
             map[committeeId] = [];
           }
-          map[committeeId].push(event);
+          map[committeeId].push(normalizeEventSummaryRow({
+            ...event,
+            eventName: event.eventName || event.name || ''
+          }));
           return map;
         }, {});
       }
@@ -120,7 +124,7 @@ export const authCommitteesResolvers = {
           id: item.id,
           address: item.address || '',
           committeeName: item.committee_name || '',
-          contactNumbers: typeof item.contact_numbers === 'string' ? JSON.parse(item.contact_numbers) : (item.contact_numbers || []),
+          contactNumbers: parseContactNumbers(item.contact_numbers),
           description: item.description || '',
           distanceKm: Number(item.distanceKm?.toFixed?.(2) ?? item.distanceKm ?? 0),
           committeeLogo: item.logo || null,

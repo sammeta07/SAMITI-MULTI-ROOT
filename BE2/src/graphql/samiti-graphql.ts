@@ -11,6 +11,8 @@ import { hierarchyTreeTypes, hierarchyTreeQueryFields, hierarchyTreeResolvers } 
 import { committeeDetailsTypes, committeeDetailsQueryFields, committeeDetailsResolvers } from './committees/committee-details-by-id.graphql';
 import { createEventTypes, createEventMutationFields, createEventResolvers } from './events/create-event.graphql';
 import { eventDetailsTypes, eventDetailsQueryFields, eventDetailsResolvers } from './events/event-details-by-id.graphql';
+import { eventsListTypes, eventsListQueryFields, eventsListResolvers } from './events/events-list-by-committee.graphql';
+import { updateEventVisibilityTypes, updateEventVisibilityMutationFields, updateEventVisibilityResolvers } from './events/update-event-visibility.graphql';
 import { authCommitteeTypes, authCommitteeQueryFields, authCommitteesResolvers } from './committees/committees-list/auth-user-committees-list.graphql';
 import { guestCommitteeTypes, guestCommitteeQueryFields, guestCommitteesResolvers } from './committees/committees-list/guest-user-committees-list.graphql';
 import { cancelCommitteeMembershipRequestTypes, cancelCommitteeMembershipRequestMutationFields, cancelCommitteeMembershipRequestResolvers } from './committees/user-requests/cancel-committee-membership-request.graphql';
@@ -35,6 +37,8 @@ export const typeDefs = `
   ${imageAssetUploadTypes}
   ${createEventTypes}
   ${eventDetailsTypes}
+  ${eventsListTypes}
+  ${updateEventVisibilityTypes}
 
   type Query {
     ${guestCommitteeQueryFields}
@@ -45,6 +49,7 @@ export const typeDefs = `
     ${hierarchyTreeQueryFields}
     ${committeeDetailsQueryFields}
     ${eventDetailsQueryFields}
+    ${eventsListQueryFields}
   }
 
   type Mutation {
@@ -55,6 +60,7 @@ export const typeDefs = `
     ${createCommitteeMutationFields}
     ${updateCommitteeMutationFields}
     ${createEventMutationFields}
+    ${updateEventVisibilityMutationFields}
     ${toggleCommitteeFavouriteMutationFields}
     ${cancelCommitteeMembershipRequestMutationFields}
     ${submitCommitteeMembershipRequestMutationFields}
@@ -71,7 +77,8 @@ export const resolvers = {
     ...userRelationalAnalyticsResolvers.Query,
     ...hierarchyTreeResolvers.Query,
     ...committeeDetailsResolvers.Query,
-    ...eventDetailsResolvers.Query
+    ...eventDetailsResolvers.Query,
+    ...eventsListResolvers.Query
   },
   Mutation: {
     ...loginResolvers.Mutation,
@@ -81,6 +88,7 @@ export const resolvers = {
     ...createCommitteeResolvers.Mutation,
     ...updateCommitteeResolvers.Mutation,
     ...createEventResolvers.Mutation,
+    ...updateEventVisibilityResolvers.Mutation,
     ...toggleCommitteeFavouriteResolvers.Mutation,
     ...cancelCommitteeMembershipRequestResolvers.Mutation,
     ...submitCommitteeMembershipRequestResolvers.Mutation,

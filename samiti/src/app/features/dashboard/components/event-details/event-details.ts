@@ -1,8 +1,7 @@
 import { Component, inject, OnInit, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { ActivatedRoute, Router } from '@angular/router';
+import { ActivatedRoute } from '@angular/router';
 import { MatIconModule } from '@angular/material/icon';
-import { MatButtonModule } from '@angular/material/button';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { HttpErrorResponse } from '@angular/common/http';
 import { EventDetailsService } from './event-details.service';
@@ -15,7 +14,6 @@ import { NotifierService } from '../../../../shared/notifier/notifier.service';
   imports: [
     CommonModule,
     MatIconModule,
-    MatButtonModule,
     MatProgressSpinnerModule
   ],
   templateUrl: './event-details.html',
@@ -23,7 +21,6 @@ import { NotifierService } from '../../../../shared/notifier/notifier.service';
 })
 export class EventDetailsComponent implements OnInit {
   private readonly route = inject(ActivatedRoute);
-  private readonly router = inject(Router);
   private readonly notifier = inject(NotifierService);
   private readonly eventDetailsService = inject(EventDetailsService);
 
@@ -37,10 +34,6 @@ export class EventDetailsComponent implements OnInit {
         this.fetchEventDetails(eventId);
       }
     });
-  }
-
-  public goBackToDashboardHome(): void {
-    this.router.navigate(['/dashboard', 'home']);
   }
 
   private fetchEventDetails(id: string): void {

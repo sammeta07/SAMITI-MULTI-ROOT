@@ -52,6 +52,7 @@ export class CreateEventDialogComponent {
 
   // 📝 Form bindings
   public eventName: string = '';
+  public eventDisplayName: string = '';
   public description: string = '';
   public eventBannerFiles: File[] = [];
   public uploadedEventBannerUrls: string[] = [];
@@ -73,6 +74,8 @@ export class CreateEventDialogComponent {
   get isFormValid(): boolean {
     return (
       !!this.eventName?.trim() &&
+      !!this.eventDisplayName?.trim() &&
+      this.eventDisplayName.trim().length <= 20 &&
       !!this.status &&
       !!this.startDate
     );
@@ -188,6 +191,7 @@ export class CreateEventDialogComponent {
     const payload = {
       committeeId: Number(committeeId),
       eventName: this.eventName.trim(),
+      eventDisplayName: this.eventDisplayName.trim(),
       description: this.description?.trim() || undefined,
       eventBanner: primaryBannerImageUrl,
       bannerImageUrls: this.uploadedEventBannerUrls.length ? this.uploadedEventBannerUrls : undefined,

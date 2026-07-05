@@ -75,55 +75,15 @@
   height: 40px;
   position: relative;
   margin-bottom: 2px;
-  border-radius: 6px;
   transition: all 0.2s ease;
 }
 
-.tree-flat-node-row.type-group {
-  border: 1px solid #e2e8f0;
-  background: rgba(248, 250, 252, 0.45);
-}
-
 .tree-flat-node-row.is-selected {
-  background: rgba(249, 115, 22, 0.06) !important;
-  border-left: 3px solid #f97316;
-  border-radius: 0 6px 6px 0;
+  border-left: 2px solid #f97316;
 
   .node-actions-right-aligned {
     opacity: 1;
   }
-
-  .node-logo-avatar-wrapper {
-    border-color: rgba(249, 115, 22, 0.35);
-  }
-}
-
-.tree-flat-node-row.parent-node-spec.scope-admin {
-  background: linear-gradient(135deg, #fff7ed 0%, #fffbeb 100%);
-  border: 1px solid #fed7aa;
-}
-
-.tree-flat-node-row.parent-node-spec.scope-admin:hover {
-  background: linear-gradient(135deg, #ffedd5 0%, #fef3c7 100%);
-}
-
-.tree-flat-node-row.parent-node-spec.scope-member {
-  background: linear-gradient(135deg, #ecfeff 0%, #f0fdfa 100%);
-  border: 1px solid #99f6e4;
-
-  .node-logo-avatar-wrapper.type-role {
-    background: rgba(59, 130, 246, 0.12);
-    color: #2563eb;
-    border-color: rgba(59, 130, 246, 0.35);
-  }
-}
-
-.tree-flat-node-row.parent-node-spec.scope-member:hover {
-  background: linear-gradient(135deg, #cffafe 0%, #ccfbf1 100%);
-}
-
-.tree-flat-node-row:not(.is-selected):not(.scope-admin):not(.scope-member):hover {
-  background: #f8fafc;
 }
 
 .tree-nested-recursion-shell {
@@ -210,10 +170,7 @@
   padding: 6px 10px;
   height: 100%;
   cursor: pointer;
-  border-radius: 6px;
   transition: all 0.15s ease;
-
-  &:hover { background: #f8fafc; }
 
   &.is-selected {
     .node-label-txt { color: #f97316 !important; font-weight: 700 !important; }

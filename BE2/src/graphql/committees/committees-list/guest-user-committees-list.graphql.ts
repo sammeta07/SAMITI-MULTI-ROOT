@@ -28,27 +28,12 @@ export const guestCommitteeTypes = `
 export const guestCommitteeQueryFields = `
     committeesListGuestUser(latitude: Float!, longitude: Float!, distanceKm: Float!): [Committee!]!
 `;
+import { normalizeEventSummaryRow, parseContactNumbers } from './committee-list.helpers';
 
 export const guestCommitteesResolvers = {
   Query: {
     async committeesListGuestUser(_: any, args: { latitude: number; longitude: number; distanceKm: number }) {
       const { latitude, longitude, distanceKm } = args;
-      const parseContactNumbers = (value: unknown): string[] => {
-        if (Array.isArray(value)) {
-          return value.map((item) => String(item).trim()).filter(Boolean);
-        }
-
-        if (typeof value === 'string' && value.trim()) {
-          try {
-            const parsed = JSON.parse(value);
-            return Array.isArray(parsed) ? parsed.map((item) => String(item).trim()).filter(Boolean) : [];
-          } catch {
-            return value.split(',').map((item) => item.trim()).filter(Boolean);
-          }
-        }
-
-        return [];
-      };
 
       const rawList = await query<any[]>(`
         SELECT 
@@ -101,7 +86,7 @@ export const guestCommitteesResolvers = {
           if (!map[committeeId]) {
             map[committeeId] = [];
           }
-          map[committeeId].push(event);
+          map[committeeId].push(normalizeEventSummaryRow(event));
           return map;
         }, {});
       }
@@ -115,16 +100,7 @@ export const guestCommitteesResolvers = {
         distanceKm: Number(item.distanceKm?.toFixed?.(2) ?? item.distanceKm ?? 0),
         committeeLogo: item.logo || null,
         establishYear: Number(item.establish_year) || 0,
-        events: (eventsMap[item.id] || []).map((event) => ({
-          eventId: Number(event.eventId) || 0,
-          eventName: event.eventName || '',
-          status: event.status || 'UPCOMING',
-          type: event.type || null,
-          visibility: event.visibility || 'VISIBLE',
-          startDate: event.startDate || null,
-          endDate: event.endDate || null,
-          eventBanner: event.eventBanner || null
-        }))
+        events: eventsMap[item.id] || []
       }));
     }
   }

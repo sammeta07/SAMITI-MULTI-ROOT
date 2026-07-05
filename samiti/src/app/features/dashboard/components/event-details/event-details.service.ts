@@ -19,6 +19,7 @@ export class EventDetailsService {
         eventId
         committeeId
         eventName
+        eventDisplayName
         description
         eventBanner
         bannerImages

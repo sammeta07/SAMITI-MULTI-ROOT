@@ -3,6 +3,7 @@ export interface EventDetailsPayload {
   eventId: number;
   committeeId?: number | null;
   eventName: string;
+  eventDisplayName: string;
   description?: string | null;
   eventBanner?: string | null;
   bannerImages: string[];

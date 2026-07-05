@@ -18,6 +18,30 @@ export interface CommitteeRosterMember {
   isCommitteeAdmin: number; // 1 for true, 0 for false
 }
 
+export interface CommitteeEventListItem {
+  id: number;
+  eventId: number;
+  committeeId: number;
+  eventName: string;
+  eventDisplayName: string;
+  description?: string | null;
+  eventBanner?: string | null;
+  status: string;
+  type?: string | null;
+  visibility: string;
+  startDate?: string | null;
+  endDate?: string | null;
+  createdBy: number;
+  updatedBy?: number | null;
+  createdAt?: string | null;
+}
+
+export interface UpdatedEventVisibilityPayload {
+  eventId: number;
+  visibility: 'VISIBLE' | 'HIDDEN';
+  updatedBy: number;
+}
+
 export interface CommitteeDetailsPayload {
   id: number;
   committeeId: number;

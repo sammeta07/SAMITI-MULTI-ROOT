@@ -18,6 +18,7 @@ export class CreateEventService {
         id
         eventId
         eventName
+        eventDisplayName
         committeeId
         description
         eventBanner
@@ -48,6 +49,7 @@ export class CreateEventService {
           input: {
             committeeId: payload.committeeId,
             eventName: payload.eventName,
+            eventDisplayName: payload.eventDisplayName || null,
             description: payload.description || null,
             eventBanner: payload.eventBanner || null,
             bannerImageUrls: payload.bannerImageUrls || null,

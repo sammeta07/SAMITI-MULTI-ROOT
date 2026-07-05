@@ -1,4 +1,5 @@
 import { query } from '../../config/db';
+import { hasEventsDisplayNameColumn } from '../events/event-display-name-support';
 
 export const hierarchyTreeTypes = `
   type HierarchyTreeNode {
@@ -126,12 +127,13 @@ export const hierarchyTreeResolvers = {
 
       const committeeIds = Array.from(committeeNodeById.keys());
       const committeePlaceholders = committeeIds.map(() => '?').join(',');
+      const supportsEventDisplayName = await hasEventsDisplayNameColumn();
 
       const eventRows = await query<any[]>(
         `SELECT
            id AS event_id,
            committee_id,
-           name AS event_name
+           ${supportsEventDisplayName ? "COALESCE(NULLIF(TRIM(display_name), ''), LEFT(name, 20))" : 'LEFT(name, 20)'} AS event_name
          FROM events
          WHERE committee_id IN (${committeePlaceholders})
          ORDER BY name ASC`,
