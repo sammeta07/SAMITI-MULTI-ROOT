@@ -109,7 +109,7 @@
             </div>
 
             <div class="event-col-status">
-              <span class="status-tag tag-{{event.status?.toLowerCase() || 'upcoming'}}">{{ event.status }}</span>
+              <span class="status-tag tag-{{event.status.toLowerCase() || 'upcoming'}}">{{ event.status }}</span>
             </div>
 
             <div class="event-col-timeline">
@@ -132,8 +132,6 @@
 
             <div class="event-col-actions">
               <div class="row-action-deck">
-                <button mat-icon-button class="circle-btn view-btn" title="View" (click)="openEventDetails(event.eventId)"><mat-icon>visibility</mat-icon></button>
-                <button mat-icon-button class="circle-btn edit-btn" title="Edit" [disabled]="!isCurrentUserAdmin()" (click)="onEditEvent(event)"><mat-icon>edit</mat-icon></button>
                 <button mat-icon-button class="circle-btn delete-btn" title="Delete" [disabled]="!isCurrentUserAdmin()" (click)="onDeleteEvent(event)"><mat-icon>delete</mat-icon></button>
               </div>
             </div>

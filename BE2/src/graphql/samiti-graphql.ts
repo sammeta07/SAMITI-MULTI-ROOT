@@ -13,6 +13,7 @@ import { createEventTypes, createEventMutationFields, createEventResolvers } fro
 import { eventDetailsTypes, eventDetailsQueryFields, eventDetailsResolvers } from './events/event-details-by-id.graphql';
 import { eventsListTypes, eventsListQueryFields, eventsListResolvers } from './events/events-list-by-committee.graphql';
 import { updateEventVisibilityTypes, updateEventVisibilityMutationFields, updateEventVisibilityResolvers } from './events/update-event-visibility.graphql';
+import { deleteEventTypes, deleteEventMutationFields, deleteEventResolvers } from './events/delete-event.graphql';
 import { authCommitteeTypes, authCommitteeQueryFields, authCommitteesResolvers } from './committees/committees-list/auth-user-committees-list.graphql';
 import { guestCommitteeTypes, guestCommitteeQueryFields, guestCommitteesResolvers } from './committees/committees-list/guest-user-committees-list.graphql';
 import { cancelCommitteeMembershipRequestTypes, cancelCommitteeMembershipRequestMutationFields, cancelCommitteeMembershipRequestResolvers } from './committees/user-requests/cancel-committee-membership-request.graphql';
@@ -39,6 +40,7 @@ export const typeDefs = `
   ${eventDetailsTypes}
   ${eventsListTypes}
   ${updateEventVisibilityTypes}
+  ${deleteEventTypes}
 
   type Query {
     ${guestCommitteeQueryFields}
@@ -61,6 +63,7 @@ export const typeDefs = `
     ${updateCommitteeMutationFields}
     ${createEventMutationFields}
     ${updateEventVisibilityMutationFields}
+    ${deleteEventMutationFields}
     ${toggleCommitteeFavouriteMutationFields}
     ${cancelCommitteeMembershipRequestMutationFields}
     ${submitCommitteeMembershipRequestMutationFields}
@@ -89,6 +92,7 @@ export const resolvers = {
     ...updateCommitteeResolvers.Mutation,
     ...createEventResolvers.Mutation,
     ...updateEventVisibilityResolvers.Mutation,
+    ...deleteEventResolvers.Mutation,
     ...toggleCommitteeFavouriteResolvers.Mutation,
     ...cancelCommitteeMembershipRequestResolvers.Mutation,
     ...submitCommitteeMembershipRequestResolvers.Mutation,

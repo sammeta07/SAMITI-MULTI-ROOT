@@ -145,6 +145,12 @@
   font-weight: 700 !important;
 }
 
+.delete-btn {
+  border-color: #fecaca !important;
+  color: #b91c1c !important;
+  background: #fff1f2 !important;
+}
+
 .content-grid {
   display: grid;
   grid-template-columns: minmax(0, 1.1fr) minmax(0, 1fr);

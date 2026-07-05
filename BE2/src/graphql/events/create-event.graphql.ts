@@ -177,6 +177,31 @@ export const createEventResolvers = {
           throwEventError('FORBIDDEN', 'Only committee admins can create events');
         }
 
+        if (!normalizedStartDate) {
+          throwEventError('BAD_REQUEST', 'startDate is required for duplicate event validation by year');
+        }
+
+        const targetEventYear = Number(normalizedStartDate.slice(0, 4));
+
+        const duplicateEventRows = await query<any[]>(
+          `SELECT e.id, e.name AS existingEventName, u.name AS creatorName
+           FROM events e
+           LEFT JOIN users u ON u.id = e.created_by
+           WHERE committee_id = ?
+             AND LOWER(TRIM(e.name)) = LOWER(TRIM(?))
+             AND YEAR(e.start_date) = ?
+           LIMIT 1`,
+          [committeeId, eventName, targetEventYear]
+        );
+
+        if (duplicateEventRows.length > 0) {
+          const duplicateEvent = duplicateEventRows[0];
+          throwEventError(
+            'CONFLICT',
+            `${String(duplicateEvent.existingEventName)} is already created by ${String(duplicateEvent.creatorName)}`
+          );
+        }
+
         const result = supportsEventDisplayName
           ? await execute(
               `INSERT INTO events (committee_id, name, display_name, description, status, type, visibility, start_date, end_date, created_by, updated_by, created_at)

@@ -13,7 +13,7 @@ import { MatSlideToggleModule } from '@angular/material/slide-toggle';
 import { HttpErrorResponse } from '@angular/common/http';
 import { GroupDetailsService } from './group-details.service';
 import { NotifierService } from '../../../../shared/notifier/notifier.service';
-import { CancelCommitteeMembershipRequestPayload, CommitteeEventListItem, CommitteeProfileMeta, CommitteeRosterMember, CommitteeDetailsPayload, SubmitCommitteeMembershipRequestPayload } from './group-details.models';
+import { CancelCommitteeMembershipRequestPayload, CommitteeEventListItem, CommitteeProfileMeta, CommitteeRosterMember, CommitteeDetailsPayload, DeletedEventPayload, SubmitCommitteeMembershipRequestPayload } from './group-details.models';
 import { ConfirmDialogService } from '../../../../components/dialog/confirm/confirm-dialog.service';
 import { ConfirmDialogData } from '../../../../components/dialog/confirm/confirm-dialog.models';
 import { CreateEventDialogComponent } from '../../../../components/dialog/create-event/create-event.component';
@@ -22,6 +22,7 @@ import { CreateCommitteeDialogComponent } from '../../../../components/dialog/cr
 import { PromoteMemberDialogService } from '../../../../components/dialog/promote-member/promote-member.service';
 import { DemoteMemberDialogService } from '../../../../components/dialog/demote-member/demote-member.service';
 import { RemoveMemberDialogService } from '../../../../components/dialog/remove-member/remove-member.service';
+import { DashboardHierarchyTreeService } from '../dashboard-hierarchy-tree/dashboard-hierarchy-tree.service';
 
 @Component({
   selector: 'app-group-details',
@@ -51,6 +52,7 @@ export class GroupDetailsComponent implements OnInit {
   private readonly promoteMemberDialog = inject(PromoteMemberDialogService);
   private readonly demoteMemberDialog = inject(DemoteMemberDialogService);
   private readonly removeMemberDialog = inject(RemoveMemberDialogService);
+  private readonly hierarchyTreeService = inject(DashboardHierarchyTreeService);
 
   public readonly isLoading = signal<boolean>(false);
   public readonly isSubmittingAdminRoleRequest = signal<boolean>(false);
@@ -185,7 +187,45 @@ export class GroupDetailsComponent implements OnInit {
   }
 
   public onDeleteEvent(eventItem: CommitteeEventListItem): void {
-    this.notifier.warn(`Delete event flow is not available yet for "${eventItem.eventName}".`);
+    if (!this.isCurrentUserAdmin()) {
+      this.notifier.warn('Only committee admins can delete events');
+      return;
+    }
+
+    if (!eventItem?.eventId) {
+      this.notifier.error('Invalid event selected for deletion');
+      return;
+    }
+
+    const dialogData: ConfirmDialogData = {
+      title: 'Delete Event',
+      message: `Are you sure you want to delete "${eventItem.eventName}"? This action will also remove linked members, media, programs, and tasks.`,
+      confirmText: 'Delete',
+      cancelText: 'Cancel'
+    };
+
+    const dialogRef = this.confirmDialog.open(dialogData);
+
+    dialogRef.afterClosed().subscribe((result) => {
+      if (!result?.confirmed) {
+        return;
+      }
+
+      const previousEvents = this.committeeEvents();
+      this.committeeEvents.set(previousEvents.filter((event) => event.eventId !== eventItem.eventId));
+
+      this.groupDetailsService.deleteEvent(eventItem.eventId).subscribe({
+        next: (response: DeletedEventPayload) => {
+          const formattedEventName = this.toTitleCase(response?.eventName || eventItem.eventName || 'Event');
+          this.hierarchyTreeService.triggerHierarchyTreeRefresh();
+          this.notifier.success(`**${formattedEventName}** has been deleted successfully`);
+        },
+        error: (err: HttpErrorResponse) => {
+          this.committeeEvents.set(previousEvents);
+          this.notifier.error(err?.error?.message || 'Failed to delete event.');
+        }
+      });
+    });
   }
 
   private toTitleCase(value: string): string {

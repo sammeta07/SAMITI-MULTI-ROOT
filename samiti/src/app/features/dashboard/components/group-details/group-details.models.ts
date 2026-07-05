@@ -42,6 +42,13 @@ export interface UpdatedEventVisibilityPayload {
   updatedBy: number;
 }
 
+export interface DeletedEventPayload {
+  eventId: number;
+  eventName: string;
+  deletedBy: number;
+  deletedAt: string;
+}
+
 export interface CommitteeDetailsPayload {
   id: number;
   committeeId: number;

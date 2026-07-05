@@ -5,6 +5,13 @@ import { map } from 'rxjs/operators';
 import { environment } from '../../../../../environments/environment';
 import { EventDetailsPayload } from './event-details.models';
 
+export interface DeletedEventPayload {
+  eventId: number;
+  eventName: string;
+  deletedBy: number;
+  deletedAt: string;
+}
+
 @Injectable({
   providedIn: 'root'
 })
@@ -40,6 +47,30 @@ export class EventDetailsService {
       { withCredentials: true }
     ).pipe(
       map(res => res.data.eventDetails)
+    );
+  }
+
+  public deleteEvent(eventId: number): Observable<DeletedEventPayload> {
+    const query = `mutation DeleteEvent($eventId: Int!) {
+      deleteEvent(eventId: $eventId) {
+        eventId
+        eventName
+        deletedBy
+        deletedAt
+      }
+    }`;
+
+    return this.http.post<{ data: { deleteEvent: DeletedEventPayload } }>(
+      this.graphqlUrl,
+      {
+        query,
+        variables: {
+          eventId
+        }
+      },
+      { withCredentials: true }
+    ).pipe(
+      map((res) => res.data.deleteEvent)
     );
   }
 }

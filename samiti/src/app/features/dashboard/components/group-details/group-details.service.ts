@@ -3,7 +3,7 @@ import { HttpClient } from '@angular/common/http';
 import { Observable } from 'rxjs';
 import { map } from 'rxjs/operators';
 import { environment } from '../../../../../environments/environment';
-import { CancelCommitteeMembershipRequestPayload, CommitteeDetailsPayload, CommitteeEventListItem, CommitteeMembershipRequestRole, SubmitCommitteeMembershipRequestPayload, UpdatedEventVisibilityPayload } from './group-details.models';
+import { CancelCommitteeMembershipRequestPayload, CommitteeDetailsPayload, CommitteeEventListItem, CommitteeMembershipRequestRole, DeletedEventPayload, SubmitCommitteeMembershipRequestPayload, UpdatedEventVisibilityPayload } from './group-details.models';
 import { CommitteeMembershipRequestService } from '../../../../core/services/committee-membership-request.service';
 
 @Injectable({
@@ -113,6 +113,30 @@ export class GroupDetailsService {
       { withCredentials: true }
     ).pipe(
       map((res) => res.data.updateEventVisibility)
+    );
+  }
+
+  public deleteEvent(eventId: number): Observable<DeletedEventPayload> {
+    const query = `mutation DeleteEvent($eventId: Int!) {
+      deleteEvent(eventId: $eventId) {
+        eventId
+        eventName
+        deletedBy
+        deletedAt
+      }
+    }`;
+
+    return this.http.post<{ data: { deleteEvent: DeletedEventPayload } }>(
+      this.graphqlUrl,
+      {
+        query,
+        variables: {
+          eventId
+        }
+      },
+      { withCredentials: true }
+    ).pipe(
+      map((res) => res.data.deleteEvent)
     );
   }
 

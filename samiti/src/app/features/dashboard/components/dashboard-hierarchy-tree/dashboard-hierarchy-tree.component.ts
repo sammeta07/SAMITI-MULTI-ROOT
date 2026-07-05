@@ -1,4 +1,4 @@
-import { Component, inject, OnInit, signal } from '@angular/core';
+import { Component, effect, inject, OnInit, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { Router, NavigationEnd } from '@angular/router';
 import { MatTreeModule, MatTreeNestedDataSource } from '@angular/material/tree';
@@ -43,6 +43,13 @@ export class DashboardHierarchyTreeComponent implements OnInit {
   public readonly expandedNodeKeys = signal<Set<string>>(new Set());
   public readonly childrenAccessor = (node: TreeNode) => node.children ?? [];
   public readonly dataSource = new MatTreeNestedDataSource<TreeNode>();
+
+  private readonly treeRefreshEffect = effect(() => {
+    const refreshCounter = this.treeService.refreshHierarchyTree();
+    if (refreshCounter > 0) {
+      this.fetchAdminNavigationTree();
+    }
+  });
 
   ngOnInit(): void {
     this.fetchAdminNavigationTree();
