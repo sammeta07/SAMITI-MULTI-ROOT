@@ -172,6 +172,22 @@
   color: #64748b;
 }
 
+.request-count-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 20px;
+  height: 18px;
+  padding: 0 6px;
+  border-radius: 999px;
+  font-size: 0.66rem;
+  font-weight: 800;
+  line-height: 1;
+  color: #0f766e;
+  background: rgba(45, 212, 191, 0.2);
+  border: 1px solid rgba(20, 184, 166, 0.35);
+}
+
 .role-section-separator {
   height: 1px;
   width: 100%;
@@ -187,6 +203,28 @@
   border: 1px solid #f1f5f9;
   border-radius: 4px;
   margin-top: 4px;
+}
+
+.member-requests-scroll {
+  max-height: 460px;
+  overflow: auto;
+  box-sizing: border-box;
+  padding-bottom: 8px;
+  scrollbar-gutter: stable;
+
+  &::-webkit-scrollbar { width: 6px; }
+  &::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 99px; }
+
+  .samiti-high-scale-table thead th {
+    position: sticky;
+    top: 0;
+    z-index: 1;
+    background: #f8fafc;
+  }
+
+  .samiti-high-scale-table tbody tr:last-child td {
+    padding-bottom: 12px;
+  }
 }
 
 .samiti-high-scale-table {

@@ -27,7 +27,7 @@
           {{ isCancellingAdminRoleRequest() ? 'Cancelling...' : 'Cancel Request' }}
         </button>
         }
-      @}
+      }
       
       @if (isCurrentUserAdmin()) {
       <button mat-stroked-button class="action-btn edit-btn" (click)="onEditCommitteeProfile()">
@@ -37,9 +37,11 @@
         <mat-icon>delete</mat-icon>Delete
       </button>
       }
-      <button mat-stroked-button class="action-btn create-event-btn" (click)="onCreateEvent()" [disabled]="!isCurrentUserAdmin()">
+      @if (isCurrentUserAdmin()) {
+      <button mat-stroked-button class="action-btn create-event-btn" (click)="onCreateEvent()">
         <mat-icon>add_event</mat-icon>Event
       </button>
+      }
     </header>
 
     <section class="compact-hero-card">
@@ -146,9 +148,9 @@
     <main class="dashboard-split-grid">
       
       <section class="mesh-card admins-card-style">
-        <div class="panel-card-header">
+        <div class="panel-card-header admins-header-bg">
           <div class="header-title-left">
-            <mat-icon class="icon-accent-admin">shield_admin</mat-icon>
+            <mat-icon class="icon-accent-admin">admin_panel_settings</mat-icon>
             <span class="title-text">Admins</span>
             <span class="count-pill">{{ adminsList().length }}</span>
           </div>
@@ -157,7 +159,13 @@
         <div class="mesh-list-scroll-box">
           @for (admin of adminsList(); track admin.id) {
           <div class="item-density-row">
-            <div class="row-avatar circle-shape admin-bg">{{ admin.name.charAt(0).toUpperCase() }}</div>
+            <div class="row-avatar circle-shape admin-bg">
+              @if (admin.photo) {
+              <img [src]="admin.photo" [alt]="admin.name" class="avatar-img" (error)="admin.photo = null" />
+              } @else {
+              {{ admin.name.charAt(0).toUpperCase() }}
+              }
+            </div>
             <div class="row-info-core">
               <div class="main-title">{{ admin.name }}</div>
               <div class="secondary-sub-lbl">{{ admin.email }}</div>
@@ -177,9 +185,9 @@
       </section>
 
       <section class="mesh-card members-card-style">
-        <div class="panel-card-header">
+        <div class="panel-card-header members-header-bg">
           <div class="header-title-left">
-            <mat-icon class="icon-accent-member">groups</mat-icon>
+            <mat-icon class="icon-accent-member">admin_panel_settings</mat-icon>
             <span class="title-text">Members</span>
             <span class="count-pill">{{ membersList().length }}</span>
           </div>
@@ -198,7 +206,13 @@
         <div class="mesh-list-scroll-box">
           @for (member of filteredMembersList(); track member.id) {
           <div class="item-density-row">
-            <div class="row-avatar circle-shape member-bg">{{ member.name.charAt(0).toUpperCase() }}</div>
+            <div class="row-avatar circle-shape member-bg">
+              @if (member.photo) {
+              <img [src]="member.photo" [alt]="member.name" class="avatar-img" (error)="member.photo = null" />
+              } @else {
+              {{ member.name.charAt(0).toUpperCase() }}
+              }
+            </div>
             <div class="row-info-core">
               <div class="main-title">{{ member.name }}</div>
               <div class="secondary-sub-lbl">{{ member.email }}</div>

@@ -28,6 +28,7 @@ export const committeeDetailsTypes = `
     id: Int!
     name: String!
     email: String!
+    photo: String
     isCommitteeAdmin: Int!
   }
 
@@ -133,6 +134,7 @@ export const committeeDetailsResolvers = {
           u.id,
           u.name,
           u.email,
+          u.profile_photo,
           COALESCE(cm.is_committee_admin, 0) AS is_committee_admin
         FROM users u
         INNER JOIN users_committees cm ON u.id = cm.user_id
@@ -159,6 +161,7 @@ export const committeeDetailsResolvers = {
           id: m.id,
           name: m.name,
           email: m.email,
+          photo: m.profile_photo || null,
           isCommitteeAdmin: Number(m.is_committee_admin)
         }))
       };

@@ -35,6 +35,7 @@ export class GroupDetailsService {
           id
           name
           email
+          photo
           isCommitteeAdmin
         }
       }

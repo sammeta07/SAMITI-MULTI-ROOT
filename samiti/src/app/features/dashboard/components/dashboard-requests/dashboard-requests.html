@@ -32,7 +32,7 @@
       
       @if (activeTab() === 'received') {
         <div class="received-subsection-head admin-section-head">
-          <h3><mat-icon>admin_panel_settings</mat-icon> Admin role requests <mat-icon class="sent-heading-inline-icon">call_received</mat-icon></h3>
+          <h3><mat-icon>admin_panel_settings</mat-icon> Admin role requests <span class="request-count-badge">{{ receivedAdminRequests().length }}</span> <mat-icon class="sent-heading-inline-icon">call_received</mat-icon></h3>
           <button type="button" class="section-toggle-btn" (click)="toggleSection('receivedAdmin')" [attr.aria-label]="isSectionExpanded('receivedAdmin') ? 'Collapse admin role requests' : 'Expand admin role requests'">
             <mat-icon>{{ isSectionExpanded('receivedAdmin') ? 'expand_less' : 'expand_more' }}</mat-icon>
           </button>
@@ -43,6 +43,7 @@
               <table class="samiti-high-scale-table">
                 <thead>
                   <tr>
+                    <th>S NO</th>
                     <th>Group Name</th>
                     <th>Requested By</th>
                     <th>Address</th>
@@ -58,6 +59,7 @@
                 <tbody>
                   @for (req of receivedAdminRequests(); track req.committeeId + '-' + req.userDetails.userId + '-' + req.requestType) {
                     <tr>
+                      <td><span class="table-text-normal">{{ $index + 1 }}</span></td>
                       <td>
                         <div class="table-profile-cell committee-title-cell">
                           <mat-icon class="committee-logo-icon">groups</mat-icon>
@@ -120,17 +122,18 @@
         }
 
         <div class="received-subsection-head member-section-head">
-          <h3><mat-icon>person</mat-icon> Member role requests <mat-icon class="sent-heading-inline-icon">call_received</mat-icon></h3>
+          <h3><mat-icon>person</mat-icon> Member role requests <span class="request-count-badge">{{ receivedMemberRequests().length }}</span> <mat-icon class="sent-heading-inline-icon">call_received</mat-icon></h3>
           <button type="button" class="section-toggle-btn" (click)="toggleSection('receivedMember')" [attr.aria-label]="isSectionExpanded('receivedMember') ? 'Collapse member role requests' : 'Expand member role requests'">
             <mat-icon>{{ isSectionExpanded('receivedMember') ? 'expand_less' : 'expand_more' }}</mat-icon>
           </button>
         </div>
         @if (isSectionExpanded('receivedMember')) {
           @if (receivedMemberRequests().length > 0) {
-            <div class="dense-table-container">
+            <div class="dense-table-container member-requests-scroll">
               <table class="samiti-high-scale-table">
                 <thead>
                   <tr>
+                    <th>S NO</th>
                     <th>Group Name</th>
                     <th>Requested By</th>
                     <th>Address</th>
@@ -146,6 +149,7 @@
                 <tbody>
                   @for (req of receivedMemberRequests(); track req.committeeId + '-' + req.userDetails.userId + '-' + req.requestType) {
                     <tr>
+                      <td><span class="table-text-normal">{{ $index + 1 }}</span></td>
                       <td>
                         <div class="table-profile-cell committee-title-cell">
                           <mat-icon class="committee-logo-icon">groups</mat-icon>
@@ -210,7 +214,7 @@
 
       @if (activeTab() === 'history') {
         <div class="received-subsection-head admin-section-head">
-          <h3><mat-icon>admin_panel_settings</mat-icon> Admin role requests <mat-icon class="sent-heading-inline-icon">history_toggle_off</mat-icon></h3>
+          <h3><mat-icon>admin_panel_settings</mat-icon> Admin role requests <span class="request-count-badge">{{ historyAdminRequests().length }}</span> <mat-icon class="sent-heading-inline-icon">history_toggle_off</mat-icon></h3>
           <button type="button" class="section-toggle-btn" (click)="toggleSection('historyAdmin')" [attr.aria-label]="isSectionExpanded('historyAdmin') ? 'Collapse admin role history' : 'Expand admin role history'">
             <mat-icon>{{ isSectionExpanded('historyAdmin') ? 'expand_less' : 'expand_more' }}</mat-icon>
           </button>
@@ -221,6 +225,7 @@
               <table class="samiti-high-scale-table">
                 <thead>
                   <tr>
+                    <th>S NO</th>
                     <th>Group Name</th>
                     <th>Requested By</th>
                     <th>Email Address</th>
@@ -234,6 +239,7 @@
                 <tbody>
                   @for (log of historyAdminRequests(); track log.committeeId + '-' + log.userDetails.userId + '-' + log.requestType + '-' + log.actionAtTime) {
                     <tr [class.row-state-accept]="log.status === 'ACCEPTED'" [class.row-state-reject]="log.status === 'REJECTED'">
+                      <td><span class="table-text-normal">{{ $index + 1 }}</span></td>
                       <td>
                         <div class="table-profile-cell committee-title-cell">
                           <mat-icon class="committee-logo-icon">groups</mat-icon>
@@ -295,17 +301,18 @@
         }
 
         <div class="received-subsection-head member-section-head">
-          <h3><mat-icon>person</mat-icon> Member role requests <mat-icon class="sent-heading-inline-icon">history_toggle_off</mat-icon></h3>
+          <h3><mat-icon>person</mat-icon> Member role requests <span class="request-count-badge">{{ historyMemberRequests().length }}</span> <mat-icon class="sent-heading-inline-icon">history_toggle_off</mat-icon></h3>
           <button type="button" class="section-toggle-btn" (click)="toggleSection('historyMember')" [attr.aria-label]="isSectionExpanded('historyMember') ? 'Collapse member role history' : 'Expand member role history'">
             <mat-icon>{{ isSectionExpanded('historyMember') ? 'expand_less' : 'expand_more' }}</mat-icon>
           </button>
         </div>
         @if (isSectionExpanded('historyMember')) {
           @if (historyMemberRequests().length > 0) {
-            <div class="dense-table-container">
+            <div class="dense-table-container member-requests-scroll">
               <table class="samiti-high-scale-table">
                 <thead>
                   <tr>
+                    <th>S NO</th>
                     <th>Group Name</th>
                     <th>Requested By</th>
                     <th>Email Address</th>
@@ -319,6 +326,7 @@
                 <tbody>
                   @for (log of historyMemberRequests(); track log.committeeId + '-' + log.userDetails.userId + '-' + log.requestType + '-' + log.actionAtTime) {
                     <tr [class.row-state-accept]="log.status === 'ACCEPTED'" [class.row-state-reject]="log.status === 'REJECTED'">
+                      <td><span class="table-text-normal">{{ $index + 1 }}</span></td>
                       <td>
                         <div class="table-profile-cell committee-title-cell">
                           <mat-icon class="committee-logo-icon">groups</mat-icon>
@@ -384,7 +392,7 @@
         @if (sentMemberRequests().length > 0 || sentAdminRequests().length > 0) {
           @if (sentAdminRequests().length > 0) {
             <div class="received-subsection-head admin-section-head">
-              <h3><mat-icon>admin_panel_settings</mat-icon> Admin role requests <mat-icon class="sent-heading-inline-icon">call_made</mat-icon></h3>
+              <h3><mat-icon>admin_panel_settings</mat-icon> Admin role requests <span class="request-count-badge">{{ sentAdminRequests().length }}</span> <mat-icon class="sent-heading-inline-icon">call_made</mat-icon></h3>
               <button type="button" class="section-toggle-btn" (click)="toggleSection('sentAdmin')" [attr.aria-label]="isSectionExpanded('sentAdmin') ? 'Collapse sent admin role requests' : 'Expand sent admin role requests'">
                 <mat-icon>{{ isSectionExpanded('sentAdmin') ? 'expand_less' : 'expand_more' }}</mat-icon>
               </button>
@@ -394,6 +402,7 @@
                 <table class="samiti-high-scale-table">
                   <thead>
                     <tr>
+                      <th>S NO</th>
                       <th>Group Name</th>
                       <th>Requested By</th>
                       <th>Address</th>
@@ -407,6 +416,7 @@
                   <tbody>
                     @for (sent of sentAdminRequests(); track sent.committeeId + '-' + sent.requestSentTime + '-' + sent.requestType) {
                       <tr [class.row-state-accept]="sent.status === 'ACCEPTED'" [class.row-state-reject]="sent.status === 'REJECTED'">
+                        <td><span class="table-text-normal">{{ $index + 1 }}</span></td>
                         <td>
                           <div class="table-profile-cell committee-title-cell">
                             <div class="committee-logo-avatar">
@@ -475,7 +485,7 @@
             }
           } @else {
             <div class="received-subsection-head admin-section-head">
-              <h3><mat-icon>admin_panel_settings</mat-icon> Admin role requests <mat-icon class="sent-heading-inline-icon">call_made</mat-icon></h3>
+              <h3><mat-icon>admin_panel_settings</mat-icon> Admin role requests <span class="request-count-badge">{{ sentAdminRequests().length }}</span> <mat-icon class="sent-heading-inline-icon">call_made</mat-icon></h3>
               <button type="button" class="section-toggle-btn" (click)="toggleSection('sentAdmin')" [attr.aria-label]="isSectionExpanded('sentAdmin') ? 'Collapse sent admin role requests' : 'Expand sent admin role requests'">
                 <mat-icon>{{ isSectionExpanded('sentAdmin') ? 'expand_less' : 'expand_more' }}</mat-icon>
               </button>
@@ -491,16 +501,17 @@
 
           @if (sentMemberRequests().length > 0) {
             <div class="received-subsection-head member-section-head">
-              <h3><mat-icon>person</mat-icon> Member role requests <mat-icon class="sent-heading-inline-icon">call_made</mat-icon></h3>
+              <h3><mat-icon>person</mat-icon> Member role requests <span class="request-count-badge">{{ sentMemberRequests().length }}</span> <mat-icon class="sent-heading-inline-icon">call_made</mat-icon></h3>
               <button type="button" class="section-toggle-btn" (click)="toggleSection('sentMember')" [attr.aria-label]="isSectionExpanded('sentMember') ? 'Collapse sent member role requests' : 'Expand sent member role requests'">
                 <mat-icon>{{ isSectionExpanded('sentMember') ? 'expand_less' : 'expand_more' }}</mat-icon>
               </button>
             </div>
             @if (isSectionExpanded('sentMember')) {
-              <div class="dense-table-container">
+              <div class="dense-table-container member-requests-scroll">
                 <table class="samiti-high-scale-table">
                   <thead>
                     <tr>
+                      <th>S NO</th>
                       <th>Group Name</th>
                       <th>Requested By</th>
                       <th>Address</th>
@@ -514,6 +525,7 @@
                   <tbody>
                     @for (sent of sentMemberRequests(); track sent.committeeId + '-' + sent.requestSentTime + '-' + sent.requestType) {
                       <tr [class.row-state-accept]="sent.status === 'ACCEPTED'" [class.row-state-reject]="sent.status === 'REJECTED'">
+                        <td><span class="table-text-normal">{{ $index + 1 }}</span></td>
                         <td>
                           <div class="table-profile-cell committee-title-cell">
                             <div class="committee-logo-avatar">

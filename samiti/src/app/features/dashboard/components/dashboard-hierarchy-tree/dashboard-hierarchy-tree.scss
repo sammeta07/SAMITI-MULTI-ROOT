@@ -162,6 +162,19 @@
   }
 }
 
+/* Distinct role-scope tinting for role header icons */
+.tree-flat-node-row.scope-admin .node-logo-avatar-wrapper.type-role {
+  background: rgba(249, 115, 22, 0.08);
+  color: #f97316;
+  border-color: rgba(249, 115, 22, 0.2);
+}
+
+.tree-flat-node-row.scope-member .node-logo-avatar-wrapper.type-role {
+  background: rgba(14, 165, 233, 0.1);
+  color: #0284c7;
+  border-color: rgba(14, 165, 233, 0.28);
+}
+
 .node-interactive-strip {
   display: flex;
   align-items: center;
