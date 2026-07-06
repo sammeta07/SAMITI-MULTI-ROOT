@@ -1,4 +1,4 @@
-const LOCAL_BACKEND_URL = 'http://localhost:3001';
+const LOCAL_BACKEND_URL = 'http://localhost:3000';
 
 export const environment = {
   production: false,

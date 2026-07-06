@@ -282,3 +282,32 @@
   border-radius: 8px;
   cursor: pointer;
 }
+
+/* ====== TYPE-BASED COLORING — SELECTED/ACTIVE NODE ONLY ====== */
+
+/* Type-specific selected state (overrides generic orange) */
+.tree-flat-node-row.type-group.is-selected {
+  background: rgba(249, 115, 22, 0.10);
+  border-left: 3px solid #f97316;
+}
+
+.tree-flat-node-row.type-event.is-selected {
+  background: rgba(14, 165, 233, 0.12);
+  border-left: 3px solid #0ea5e9;
+  border-radius: 6px;
+}
+
+.tree-flat-node-row.type-program.is-selected {
+  background: rgba(139, 92, 246, 0.12);
+  border-left: 3px solid #8b5cf6;
+  border-radius: 6px;
+}
+
+/* Type-specific label color when node is selected */
+.tree-flat-node-row.type-event .node-interactive-strip.is-selected {
+  .node-label-txt { color: #0284c7 !important; }
+}
+
+.tree-flat-node-row.type-program .node-interactive-strip.is-selected {
+  .node-label-txt { color: #7c3aed !important; }
+}

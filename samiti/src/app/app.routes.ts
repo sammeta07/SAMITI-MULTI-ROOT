@@ -29,6 +29,10 @@ export const routes: Routes = [
         loadComponent: () => import('./features/dashboard/components/event-details/event-details').then(m => m.EventDetailsComponent)
       },
       {
+        path: 'program/:id',
+        loadComponent: () => import('./features/dashboard/components/program-details/program-details').then(m => m.ProgramDetailsComponent)
+      },
+      {
         path: '',
         redirectTo: 'home',
         pathMatch: 'full'

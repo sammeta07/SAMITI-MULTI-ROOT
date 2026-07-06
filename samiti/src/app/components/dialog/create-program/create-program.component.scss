@@ -8,12 +8,11 @@
   box-sizing: border-box;
 }
 
-/* 🧼 Angular Material Overlay Surface Overrides */
 ::ng-deep {
   .mat-mdc-dialog-surface,
   .mat-mdc-dialogContainer {
     border-radius: 0 !important;
-    box-shadow: -4px 0 24px rgba(15, 23, 42, 0.08) !important;
+    box-shadow: -4px 0 24px rgba(109, 40, 217, 0.10) !important;
   }
 }
 
@@ -25,13 +24,13 @@
   background: #ffffff;
 }
 
-/* 🧭 TOOLBAR HEIGHT LINE AXIS SYSTEM */
+/* TOOLBAR */
 .drawer-synchronized-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
   padding: 0 20px !important;
-  height: 60px !important; 
+  height: 60px !important;
   min-height: 60px !important;
   background: #ffffff !important;
   border-bottom: 1px solid #e2e8f0;
@@ -44,7 +43,7 @@
     gap: 8px;
 
     .mode-indicator-icon {
-      color: #10b981;
+      color: #7c3aed;
       font-size: 1.35rem; width: 1.35rem; height: 1.35rem;
       display: inline-flex;
       align-items: center;
@@ -63,7 +62,7 @@
   .drawer-close-btn {
     color: #64748b !important;
     transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
-    
+
     &:hover {
       background: rgba(239, 68, 68, 0.08) !important;
       color: #ef4444 !important;
@@ -72,49 +71,39 @@
   }
 }
 
-/* 🥞 DATA INPUT DECK WORKSPACE SCROLL */
+/* BODY SCROLL AREA */
 .dialog-body {
   flex-grow: 1;
   padding: 24px;
   overflow-y: auto;
   background: #f8fafc;
   box-sizing: border-box;
+
   &::-webkit-scrollbar { width: 5px; }
   &::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 99px; }
 }
 
-.create-event-form {
+.create-program-form {
   display: flex;
   flex-direction: column;
   gap: 16px;
 }
 
-/* 🧱 RESPONSIVE FORM GRID STRUCTURE ROWS */
-.form-row-full {
-  width: 100%;
-}
+.form-row-full { width: 100%; }
 
 .form-row-split-grid {
   display: flex;
   align-items: center;
   gap: 14px;
 
-  > * {
-    flex: 1;
-    min-width: 0;
-  }
+  > * { flex: 1; min-width: 0; }
 }
 
 .samiti-custom-field {
   width: 100%;
-
-  .mat-mdc-form-field-hint {
-    color: #64748b !important;
-    font-size: 0.75rem;
-  }
 }
 
-/* 🎯 FORM ACTION FOOTER */
+/* FOOTER */
 .drawer-action-footer {
   height: 55px;
   min-height: 55px;
@@ -124,43 +113,32 @@
   display: flex;
   justify-content: flex-end;
   align-items: center;
-  gap: 8px;
+  gap: 10px;
   flex-shrink: 0;
   box-sizing: border-box;
-}
 
-.btn-cancel-flat {
-  color: #64748b !important;
-  font-weight: 600;
-  padding: 8px 16px;
+  .btn-cancel-flat {
+    color: #64748b !important;
+    font-weight: 600;
+    font-size: 0.85rem;
 
-  &:hover {
-    background: rgba(100, 116, 139, 0.08) !important;
-  }
-}
-
-.submit-action-btn {
-  background: linear-gradient(135deg, #10b981 0%, #059669 100%) !important;
-  color: #ffffff !important;
-  font-weight: 600;
-  padding: 8px 24px;
-  display: flex;
-  align-items: center;
-  gap: 8px;
-
-  mat-icon {
-    font-size: 1rem;
-    width: 1rem;
-    height: 1rem;
+    &:hover { background: rgba(100, 116, 139, 0.08) !important; }
   }
 
-  &:hover:not(:disabled) {
-    background: linear-gradient(135deg, #059669 0%, #047857 100%) !important;
-    box-shadow: 0 4px 12px rgba(16, 185, 129, 0.3);
-  }
+  .submit-action-btn {
+    background: #7c3aed !important;
+    color: #ffffff !important;
+    font-weight: 700 !important;
+    font-size: 0.85rem !important;
+    border-radius: 6px !important;
+    height: 38px !important;
+    gap: 6px;
+    display: inline-flex;
+    align-items: center;
 
-  &:disabled {
-    opacity: 0.5;
-    cursor: not-allowed;
+    mat-icon { font-size: 1rem; width: 1rem; height: 1rem; }
+
+    &:hover:not(:disabled) { background: #6d28d9 !important; }
+    &:disabled { opacity: 0.5; cursor: not-allowed; }
   }
 }

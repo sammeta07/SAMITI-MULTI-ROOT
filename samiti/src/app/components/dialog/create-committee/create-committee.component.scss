@@ -215,7 +215,9 @@
 
 /* 🥞 DENSE DRAWER ACTION FOOTER STRIP */
 .drawer-action-footer {
-  padding: 12px 20px;
+  height: 55px;
+  min-height: 55px;
+  padding: 0 20px;
   background: #ffffff;
   border-top: 1px solid #e2e8f0;
   display: flex;
@@ -223,6 +225,7 @@
   align-items: center;
   gap: 10px;
   flex-shrink: 0;
+  box-sizing: border-box;
   box-sizing: border-box;
 
   .btn-cancel-flat {

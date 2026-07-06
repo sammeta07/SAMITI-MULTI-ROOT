@@ -1,73 +1,192 @@
 <div class="event-details-workspace drawer-layout-shell">
 
   @if (isLoading()) {
-    <div class="spinner-loading-overlay">
-      <mat-progress-spinner mode="indeterminate" diameter="40"></mat-progress-spinner>
-      <span>Loading event details...</span>
-    </div>
+  <div class="spinner-loading-overlay">
+    <mat-progress-spinner mode="indeterminate" diameter="32"></mat-progress-spinner>
+    <span>Loading event details...</span>
+  </div>
   } @else if (eventData()) {
-    <div class="scrollable-workspace-body">
-      <div class="premium-header-section">
-        <div class="header-content-wrapper">
-          <div class="header-left">
-            <div class="event-avatar-premium">
-              @if (eventData()?.eventBanner || eventData()?.bannerImages?.length) {
-                <img [src]="eventData()?.eventBanner || eventData()?.bannerImages?.[0]" [alt]="eventData()?.eventName" class="avatar-image" />
+
+  <div class="workspace-body scrollable-container">
+
+    <!-- Action Buttons Row -->
+    <header class="workspace-action-header">
+      <button mat-stroked-button class="action-btn edit-btn" (click)="onEditEvent()">
+        <mat-icon>edit</mat-icon>Edit
+      </button>
+      <button mat-stroked-button class="action-btn delete-btn" (click)="onDeleteEvent()">
+        <mat-icon>delete</mat-icon>Delete
+      </button>
+      <button mat-stroked-button class="action-btn create-program-btn" (click)="onCreateProgram()">
+        <mat-icon>add</mat-icon>Program
+      </button>
+    </header>
+
+    <!-- Compact Hero Card -->
+    <section class="compact-hero-card">
+      <div class="hero-left-cluster">
+        <div class="avatar-premium-square event-avatar-style">
+          @if (eventData()?.eventBanner || eventData()?.bannerImages?.length) {
+          <img [src]="eventData()?.eventBanner || eventData()?.bannerImages?.[0]" [alt]="eventData()?.eventName" class="avatar-img" />
+          } @else {
+          <span class="avatar-glyph">{{ eventData()?.eventName?.charAt(0) || 'E' }}</span>
+          }
+        </div>
+        <div class="hero-meta-stack">
+          <h1>{{ eventData()?.eventName }}</h1>
+          <div class="inline-badge-row">
+            <span class="badge-item status-badge-{{ eventData()?.status?.toLowerCase() }}"><mat-icon>circle</mat-icon> {{ eventData()?.status }}</span>
+            <span class="badge-item"><mat-icon>category</mat-icon> {{ eventData()?.type || 'General' }}</span>
+            <span class="badge-item"><mat-icon>visibility</mat-icon> {{ eventData()?.visibility === 'VISIBLE' ? 'Public' : 'Private' }}</span>
+            @if (eventData()?.startDate) {
+            <span class="badge-item"><mat-icon>calendar_month</mat-icon> {{ eventData()?.startDate | date:'dd MMM yyyy' }}</span>
+            }
+            @if (eventData()?.endDate) {
+            <span class="badge-item"><mat-icon>event_busy</mat-icon> {{ eventData()?.endDate | date:'dd MMM yyyy' }}</span>
+            }
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Description -->
+    @if (eventData()?.description) {
+    <blockquote class="compact-desc-box">
+      <p>{{ eventData()?.description }}</p>
+    </blockquote>
+    }
+
+    <!-- Designations (UI only) -->
+    <section class="horizontal-full-card designations-section-style">
+      <div class="panel-card-header designations-header-bg">
+        <div class="header-title-left">
+          <mat-icon class="icon-accent-designation">badge</mat-icon>
+          <span class="title-text">Designations</span>
+        </div>
+      </div>
+      <div class="designations-grid">
+        <div class="designation-card adhyaksh-card">
+          <div class="designation-icon-wrap adhyaksh-icon"><mat-icon>person</mat-icon></div>
+          <div class="designation-info">
+            <span class="designation-title">Adhyaksh</span>
+            <span class="designation-name">—</span>
+          </div>
+        </div>
+        <div class="designation-card upadhyaksh-card">
+          <div class="designation-icon-wrap upadhyaksh-icon"><mat-icon>person_outline</mat-icon></div>
+          <div class="designation-info">
+            <span class="designation-title">Upadhyaksh</span>
+            <span class="designation-name">—</span>
+          </div>
+        </div>
+        <div class="designation-card casher-card">
+          <div class="designation-icon-wrap casher-icon"><mat-icon>account_balance_wallet</mat-icon></div>
+          <div class="designation-info">
+            <span class="designation-title">Casher</span>
+            <span class="designation-name">—</span>
+          </div>
+        </div>
+        <div class="designation-card anka-card">
+          <div class="designation-icon-wrap anka-icon"><mat-icon>calculate</mat-icon></div>
+          <div class="designation-info">
+            <span class="designation-title">Anka</span>
+            <span class="designation-name">—</span>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Programs Listing -->
+    <section class="horizontal-full-card programs-section-style">
+      <div class="panel-card-header">
+        <div class="header-title-left">
+          <mat-icon class="icon-accent-program">event_note</mat-icon>
+          <span class="title-text">Programs</span>
+          <span class="count-pill">0</span>
+        </div>
+      </div>
+      <div class="horizontal-list-container">
+        <div class="mini-empty-state">No programs available</div>
+      </div>
+    </section>
+
+    <!-- Admins + Members Split Grid -->
+    <main class="dashboard-split-grid">
+
+      <section class="mesh-card admins-card-style">
+        <div class="panel-card-header admins-header-bg">
+          <div class="header-title-left">
+            <mat-icon class="icon-accent-admin">admin_panel_settings</mat-icon>
+            <span class="title-text">Admins</span>
+            <span class="count-pill">{{ eventAdmins().length }}</span>
+          </div>
+        </div>
+        <div class="mesh-list-scroll-box">
+          @for (admin of eventAdmins(); track admin.id) {
+          <div class="item-density-row">
+            <div class="row-avatar circle-shape admin-bg">
+              @if (admin.photo) {
+              <img [src]="admin.photo" [alt]="admin.name" class="avatar-img" (error)="admin.photo = null" />
               } @else {
-                <div class="avatar-letter">{{ eventData()?.eventName?.charAt(0) || 'E' }}</div>
+              {{ admin.name.charAt(0).toUpperCase() }}
               }
             </div>
-
-            <div class="header-info-stack">
-              <h1>{{ eventData()?.eventName }}</h1>
-              <div class="info-badges">
-                <span class="badge-item"><mat-icon>event</mat-icon>{{ eventData()?.status }}</span>
-                <span class="badge-item"><mat-icon>category</mat-icon>{{ eventData()?.type || 'N/A' }}</span>
-                <span class="badge-item"><mat-icon>visibility</mat-icon>{{ eventData()?.visibility }}</span>
-              </div>
+            <div class="row-info-core">
+              <div class="main-title">{{ admin.name }}</div>
+              <div class="secondary-sub-lbl">{{ admin.email }}</div>
+            </div>
+            <div class="row-action-deck">
+              <button mat-icon-button class="circle-btn view-btn" title="View"><mat-icon>visibility</mat-icon></button>
+              <button mat-icon-button class="circle-btn delete-btn" title="Remove"><mat-icon>person_remove</mat-icon></button>
             </div>
           </div>
-
-          <button mat-stroked-button class="action-btn delete-btn" (click)="onDeleteEvent()">
-            <mat-icon>delete</mat-icon>
-            Delete Event
-          </button>
+          } @empty {
+          <div class="mini-empty-state">No administrators</div>
+          }
         </div>
-      </div>
+      </section>
 
-      <div class="content-grid">
-        <div class="info-card">
-          <div class="info-card-header">
-            <mat-icon>info</mat-icon>
-            <span>Overview</span>
-          </div>
-
-          <div class="info-grid">
-            <div class="info-row"><span>Event ID</span><strong>{{ eventData()?.eventId }}</strong></div>
-            <div class="info-row"><span>Committee ID</span><strong>{{ eventData()?.committeeId || 'N/A' }}</strong></div>
-            <div class="info-row"><span>Start Date</span><strong>{{ eventData()?.startDate || 'N/A' }}</strong></div>
-            <div class="info-row"><span>End Date</span><strong>{{ eventData()?.endDate || 'N/A' }}</strong></div>
-            <div class="info-row"><span>Created By</span><strong>{{ eventData()?.createdBy }}</strong></div>
-            <div class="info-row"><span>Updated By</span><strong>{{ eventData()?.updatedBy || 'N/A' }}</strong></div>
-            <div class="info-row"><span>Created At</span><strong>{{ eventData()?.createdAt || 'N/A' }}</strong></div>
+      <section class="mesh-card members-card-style">
+        <div class="panel-card-header members-header-bg">
+          <div class="header-title-left">
+            <mat-icon class="icon-accent-member">group</mat-icon>
+            <span class="title-text">Members</span>
+            <span class="count-pill">{{ eventMembers().length }}</span>
           </div>
         </div>
-
-        <div class="info-card description-card">
-          <div class="info-card-header">
-            <mat-icon>description</mat-icon>
-            <span>Description</span>
+        <div class="mesh-list-scroll-box">
+          @for (member of eventMembers(); track member.id) {
+          <div class="item-density-row">
+            <div class="row-avatar circle-shape member-bg">
+              @if (member.photo) {
+              <img [src]="member.photo" [alt]="member.name" class="avatar-img" (error)="member.photo = null" />
+              } @else {
+              {{ member.name.charAt(0).toUpperCase() }}
+              }
+            </div>
+            <div class="row-info-core">
+              <div class="main-title">{{ member.name }}</div>
+              <div class="secondary-sub-lbl">{{ member.email }}</div>
+            </div>
+            <div class="row-action-deck">
+              <button mat-icon-button class="circle-btn view-btn" title="View"><mat-icon>visibility</mat-icon></button>
+              <button mat-icon-button class="circle-btn delete-btn" title="Remove"><mat-icon>person_remove</mat-icon></button>
+            </div>
           </div>
-          <p>{{ eventData()?.description || 'No description available.' }}</p>
+          } @empty {
+          <div class="mini-empty-state">No members</div>
+          }
         </div>
-      </div>
-    </div>
+      </section>
+
+    </main>
+  </div>
   } @else {
-    <div class="empty-state-card">
-      <mat-icon>event_busy</mat-icon>
-      <h3>No Event Selected</h3>
-      <p>Select an event from the navigation tree to view its details.</p>
-    </div>
+  <div class="empty-layout-shell">
+    <mat-icon class="icon-off">event_busy</mat-icon>
+    <h3>No Event Selected</h3>
+    <p>Select an event from the navigation tree to view its details.</p>
+  </div>
   }
 
 </div>

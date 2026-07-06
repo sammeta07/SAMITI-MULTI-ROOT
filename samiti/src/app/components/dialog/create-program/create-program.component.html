@@ -1,34 +1,24 @@
 <div class="drawer-layout-shell">
-  
+
   <mat-toolbar class="drawer-synchronized-header">
     <div class="drawer-title-group">
-      <mat-icon class="mode-indicator-icon">add_event</mat-icon>
-      <h2>Create New Event</h2>
+      <mat-icon class="mode-indicator-icon">event_note</mat-icon>
+      <h2>Create New Program</h2>
     </div>
-    
     <button mat-icon-button type="button" class="drawer-close-btn" (click)="onCancel()" aria-label="Close dialog">
       <mat-icon>close</mat-icon>
     </button>
   </mat-toolbar>
 
   <div class="dialog-body">
-    <form class="create-event-form">
+    <form class="create-program-form">
 
-      <!-- EVENT NAME -->
+      <!-- PROGRAM NAME -->
       <div class="form-row-full">
         <mat-form-field appearance="outline" class="samiti-custom-field">
-          <mat-label>Event Name</mat-label>
-          <input matInput [(ngModel)]="eventName" name="eventName" placeholder="Ex. Annual Celebration" required>
-          <mat-icon matPrefix>event</mat-icon>
-        </mat-form-field>
-      </div>
-
-      <div class="form-row-full">
-        <mat-form-field appearance="outline" class="samiti-custom-field">
-          <mat-label>Event Display Name</mat-label>
-          <input matInput [(ngModel)]="eventDisplayName" name="eventDisplayName" maxlength="20" placeholder="Ex. Annual Celebr." required>
-          <mat-icon matPrefix>short_text</mat-icon>
-          <mat-hint>Max 20 characters allowed.</mat-hint>
+          <mat-label>Program Name</mat-label>
+          <input matInput [(ngModel)]="programName" name="programName" placeholder="Ex. Aarti Ceremony" required>
+          <mat-icon matPrefix>event_note</mat-icon>
         </mat-form-field>
       </div>
 
@@ -36,13 +26,13 @@
       <div class="form-row-full">
         <mat-form-field appearance="outline" class="samiti-custom-field">
           <mat-label>Description</mat-label>
-          <textarea matInput [(ngModel)]="description" name="description" placeholder="Enter event description..." rows="3"></textarea>
+          <textarea matInput [(ngModel)]="description" name="description" placeholder="Enter program description..." rows="3"></textarea>
           <mat-icon matPrefix>description</mat-icon>
         </mat-form-field>
       </div>
 
-      <!-- STATUS & TYPE -->
-      <div class="form-row-split-grid">
+      <!-- STATUS -->
+      <div class="form-row-full">
         <mat-form-field appearance="outline" class="samiti-custom-field">
           <mat-label>Status</mat-label>
           <mat-select [(ngModel)]="status" name="status" required>
@@ -51,16 +41,6 @@
             }
           </mat-select>
           <mat-icon matPrefix>info</mat-icon>
-        </mat-form-field>
-
-        <mat-form-field appearance="outline" class="samiti-custom-field">
-          <mat-label>Event Type</mat-label>
-          <mat-select [(ngModel)]="type" name="type">
-            @for (t of eventTypes; track t) {
-              <mat-option [value]="t">{{ t | titlecase }}</mat-option>
-            }
-          </mat-select>
-          <mat-icon matPrefix>category</mat-icon>
         </mat-form-field>
       </div>
 
@@ -83,20 +63,18 @@
         </mat-form-field>
       </div>
 
-
     </form>
   </div>
 
   <footer class="drawer-action-footer">
     <button mat-button type="button" class="btn-cancel-flat" (click)="onCancel()">Cancel</button>
-    
-    <button mat-flat-button 
-            type="button" 
-            class="submit-action-btn" 
+    <button mat-flat-button
+            type="button"
+            class="submit-action-btn"
             [disabled]="!isFormValid || isSubmitting()"
             (click)="onSubmit()">
-      <mat-icon>add_event</mat-icon>
-      <span>Create Event</span>
+      <mat-icon>add</mat-icon>
+      <span>{{ isSubmitting() ? 'Creating...' : 'Create Program' }}</span>
     </button>
   </footer>
 
