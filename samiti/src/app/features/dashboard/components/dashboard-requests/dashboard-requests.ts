@@ -1,223 +1,158 @@
-import { Component, inject, signal, OnInit, computed } from '@angular/core'; 
-import { CommonModule } from '@angular/common'; 
-import { MatIconModule } from '@angular/material/icon'; 
-import { DashboardRequestsService } from './dashboard-requests.service';
-import {
-  ActionTakenOnCommitteeMembershipRequestItem,
-  CancelSubmittedCommitteeMembershipRequestResponse,
-  CommitteeMembershipRequestType,
-  ReceivedCommitteeMembershipRequestItem,
-  SentCommitteeMembershipRequestItem
-} from './dashboard-requests.models';
-import { ConfirmDialogService } from '../../../../components/dialog/confirm/confirm-dialog.service';
-import { ConfirmDialogData } from '../../../../components/dialog/confirm/confirm-dialog.models';
+﻿import { Component, computed, inject, signal } from "@angular/core";
+import { CommonModule } from "@angular/common";
+import { MatTabsModule } from "@angular/material/tabs";
+import { MatExpansionModule } from "@angular/material/expansion";
+import { MatTableModule } from "@angular/material/table";
+import { MatButtonModule } from "@angular/material/button";
+import { MatIconModule } from "@angular/material/icon";
+import { MatProgressSpinnerModule } from "@angular/material/progress-spinner";
+import { DashboardRequestsService } from "./dashboard-requests.service";
 
 @Component({
-  selector: 'app-dashboard-requests',
-  standalone: true, 
-  imports: [CommonModule, MatIconModule],
-  templateUrl: './dashboard-requests.html',
-  styleUrl: './dashboard-requests.scss',
+  selector: "app-dashboard-requests",
+  standalone: true,
+  imports: [
+    CommonModule,
+    MatTabsModule,
+    MatExpansionModule,
+    MatTableModule,
+    MatButtonModule,
+    MatIconModule,
+    MatProgressSpinnerModule,
+  ],
+  templateUrl: "./dashboard-requests.html",
+  styleUrls: ["./dashboard-requests.scss"],
 })
-export class DashboardRequests implements OnInit {
-  private readonly requestsService = inject(DashboardRequestsService);
-  private readonly confirmDialog = inject(ConfirmDialogService);
+export class DashboardRequestsComponent {
+  private service = inject(DashboardRequestsService);
 
-  readonly activeTab = signal<'received' | 'history' | 'sent'>('sent'); 
-  readonly requests = signal<ReceivedCommitteeMembershipRequestItem[]>([]); 
-  readonly resolvedHistory = signal<ActionTakenOnCommitteeMembershipRequestItem[]>([]); 
-  readonly sentRequests = signal<SentCommitteeMembershipRequestItem[]>([]); 
-  readonly isLoading = signal<boolean>(false);
+  isLoading = signal(false);
 
-  readonly receivedMemberRequests = computed(() =>
-    this.requests().filter((request) => request.requestType === 'COMMITTEE_MEMBER')
+  /** Query Data */
+  receivedRequests = signal<any[]>([]);
+  sentRequests = signal<any[]>([]);
+  actionTakenOnRequests = signal<any[]>([]);
+
+  /** Computed: Received Tab - Admin Requests */
+  receivedAdminRequests = computed(() =>
+    this.receivedRequests()
+      .filter((r) => r.requestType === "COMMITTEE_ADMIN")
+      .sort((a, b) => new Date(b.requestSentTime).getTime() - new Date(a.requestSentTime).getTime())
   );
 
-  readonly receivedAdminRequests = computed(() =>
-    this.requests().filter((request) => request.requestType === 'COMMITTEE_ADMIN')
+  /** Computed: Received Tab - Member Requests */
+  receivedMemberRequests = computed(() =>
+    this.receivedRequests()
+      .filter((r) => r.requestType === "COMMITTEE_MEMBER")
+      .sort((a, b) => new Date(b.requestSentTime).getTime() - new Date(a.requestSentTime).getTime())
   );
 
-  readonly historyMemberRequests = computed(() =>
-    this.resolvedHistory().filter((request) => request.requestType === 'COMMITTEE_MEMBER')
+  /** Computed: Sent Tab - Admin Requests */
+  sentAdminRequests = computed(() =>
+    this.sentRequests()
+      .filter((r) => r.requestType === "COMMITTEE_ADMIN")
+      .sort((a, b) => new Date(b.requestSentTime).getTime() - new Date(a.requestSentTime).getTime())
   );
 
-  readonly historyAdminRequests = computed(() =>
-    this.resolvedHistory().filter((request) => request.requestType === 'COMMITTEE_ADMIN')
+  /** Computed: Sent Tab - Member Requests */
+  sentMemberRequests = computed(() =>
+    this.sentRequests()
+      .filter((r) => r.requestType === "COMMITTEE_MEMBER")
+      .sort((a, b) => new Date(b.requestSentTime).getTime() - new Date(a.requestSentTime).getTime())
   );
 
-  readonly sentMemberRequests = computed(() =>
-    this.sentRequests().filter((request) => request.requestType === 'COMMITTEE_MEMBER')
+  /** Computed: History Tab - Admin Actions */
+  historyAdminRequests = computed(() =>
+    this.actionTakenOnRequests()
+      .filter((r) => r.requestType === "COMMITTEE_ADMIN")
+      .sort((a, b) => new Date(b.actionAtTime).getTime() - new Date(a.actionAtTime).getTime())
   );
 
-  readonly sentAdminRequests = computed(() =>
-    this.sentRequests().filter((request) => request.requestType === 'COMMITTEE_ADMIN')
+  /** Computed: History Tab - Member Actions */
+  historyMemberRequests = computed(() =>
+    this.actionTakenOnRequests()
+      .filter((r) => r.requestType === "COMMITTEE_MEMBER")
+      .sort((a, b) => new Date(b.actionAtTime).getTime() - new Date(a.actionAtTime).getTime())
   );
 
-  readonly sectionExpanded = signal<Record<string, boolean>>({
-    receivedAdmin: true,
-    receivedMember: true,
-    historyAdmin: true,
-    historyMember: true,
-    sentAdmin: true,
-    sentMember: true
-  });
+  /** Table columns */
+  receivedColumns = ["index", "committee", "user", "email", "mobile", "sentOn", "resolvedBy", "actions"];
+  sentColumns = ["index", "committee", "user", "address", "year", "sentOn", "resolvedOn", "status", "actions"];
+  historyColumns = ["index", "committee", "user", "email", "mobile", "sentOn", "resolvedOn", "resolvedBy", "status"];
 
-  // 🚀 Track individual api loaders inside parallel streams
-  private isIncomingLoading = false;
-  private isHistoryLoading = false;
-  private isSentLoading = false;
-
-  ngOnInit() {
-    // 🔥 Menu click hote hi teeno APIs ek sath background mein load ho jayengi
-    this.loadAllRequestsParallel();
+  constructor() {
+    this.loadData();
   }
 
-  // 🚀 1. SMART SWITCH TAB: Ab tab badalne par koi API call nahi hogi, instant load hoga data signals se!
-  switchTab(tab: 'received' | 'history' | 'sent') {
-    this.activeTab.set(tab);
-  }
-
-  isSectionExpanded(sectionKey: string): boolean {
-    return this.sectionExpanded()[sectionKey] ?? true;
-  }
-
-  toggleSection(sectionKey: string) {
-    this.sectionExpanded.update((current) => ({
-      ...current,
-      [sectionKey]: !current[sectionKey]
-    }));
-  }
-
-  // 🚀 2. PARALLEL LOAD LOGIC: Handles master loading state across all three requests types
-  loadAllRequestsParallel() {
+  /** Load all three queries */
+  private loadData(): void {
     this.isLoading.set(true);
-    this.isIncomingLoading = true;
-    this.isHistoryLoading = true;
-    this.isSentLoading = true;
-
-    this.getReceivedRequests();
-    this.getHistoryRequestsLogs();
-    this.getSentRequestsList();
+    Promise.all([
+      this.service.getReceivedCommitteeMembershipRequestsForAdminCommittees().toPromise(),
+      this.service.getSentCommitteeMembershipRequestsByLoggedInUser().toPromise(),
+      this.service.getActionTakenOnCommitteeMembershipRequestsByLoggedInUser().toPromise(),
+    ])
+      .then(([received, sent, actionTaken]) => {
+        this.receivedRequests.set(received || []);
+        this.sentRequests.set(sent || []);
+        this.actionTakenOnRequests.set(actionTaken || []);
+      })
+      .catch((err: any) => console.error("Failed to load requests:", err))
+      .finally(() => this.isLoading.set(false));
   }
 
-  private checkGlobalLoaderState() {
-    // Agar teeno APIs ka data aa chuka hai, tabhi loader screen se hatega
-    if (!this.isIncomingLoading && !this.isHistoryLoading && !this.isSentLoading) {
-      this.isLoading.set(false);
-    }
-  }
-
-  getReceivedRequests() {
-    this.requestsService.getReceivedCommitteeMembershipRequestsForAdminCommittees().subscribe({
-      next: (response) => {
-        this.requests.set(response ?? []);
-        this.isIncomingLoading = false;
-        this.checkGlobalLoaderState();
-      },
-      error: () => {
-        this.isIncomingLoading = false;
-        this.checkGlobalLoaderState();
-      }
-    });
-  }
-
-  getHistoryRequestsLogs() { 
-    this.requestsService.getActionTakenOnCommitteeMembershipRequestsByLoggedInUser().subscribe({
-      next: (response) => {
-        this.resolvedHistory.set(response ?? []);
-        this.isHistoryLoading = false;
-        this.checkGlobalLoaderState();
-      },
-      error: () => {
-        this.isHistoryLoading = false;
-        this.checkGlobalLoaderState();
-      }
-    });
-  }
-
-  getSentRequestsList() {
-    this.requestsService.getSentCommitteeMembershipRequestsByLoggedInUser().subscribe({
-      next: (response) => {
-        this.sentRequests.set(response ?? []);
-        this.isSentLoading = false;
-        this.checkGlobalLoaderState(); // 🚀 Ab loader sahi time par off hoga aur counter update ho jayega!
-      },
-      error: () => {
-        this.isSentLoading = false;
-        this.checkGlobalLoaderState();
-      }
-    });
-  }
-
-  // Action complete hone ke baad fir se data pure pipeline me sync hoga
-  approveRequest(committeeId: number, userId: number) {
-    const dialogData: ConfirmDialogData = {
-      title: 'Accept Committee Membership Request',
-      message: 'Are you sure you want to accept this committee membership request?',
-      confirmText: 'Accept',
-      cancelText: 'Cancel'
-    };
-
-    const dialogRef = this.confirmDialog.open(dialogData);
-
-    dialogRef.afterClosed().subscribe((result) => {
-      if (!result?.confirmed) {
-        return;
-      }
-
-      this.requestsService.takeActionOnCommitteeMembershipRequest({ committeeId, targetUserId: userId, decisionAction: 'ACCEPTED' })
-        .subscribe({ next: () => this.loadAllRequestsParallel() });
-    });
-  }
-
-  rejectRequest(committeeId: number, userId: number) {
-    const dialogData: ConfirmDialogData = {
-      title: 'Reject Committee Membership Request',
-      message: 'Are you sure you want to reject this committee membership request?',
-      confirmText: 'Reject',
-      cancelText: 'Cancel'
-    };
-
-    const dialogRef = this.confirmDialog.open(dialogData);
-
-    dialogRef.afterClosed().subscribe((result) => {
-      if (!result?.confirmed) {
-        return;
-      }
-
-      this.requestsService.takeActionOnCommitteeMembershipRequest({ committeeId, targetUserId: userId, decisionAction: 'REJECTED' })
-        .subscribe({ next: () => this.loadAllRequestsParallel() });
-    });
-  }
-
-  cancelSentRequest(committeeId: number, committeeName: string) {
-    const dialogData: ConfirmDialogData = {
-      title: 'Cancel Submitted Committee Membership Request',
-      message: `Are you sure you want to cancel your request for "${committeeName}"?`,
-      confirmText: 'Cancel Request',
-      cancelText: 'Keep Request'
-    };
-
-    const dialogRef = this.confirmDialog.open(dialogData);
-
-    dialogRef.afterClosed().subscribe((result) => {
-      if (!result?.confirmed) {
-        return;
-      }
-
-      this.requestsService.cancelSubmittedCommitteeMembershipRequest(committeeId).subscribe({
-        next: () => {
-          this.loadAllRequestsParallel();
-        },
-        error: () => {
-          // Keep silent for now; existing loaders and refresh cycle handle recovery.
-        }
+  approveRequest(committeeId: string, userId: string): void {
+    this.isLoading.set(true);
+    this.service
+      .takeActionOnCommitteeMembershipRequest({
+        committeeId: Number(committeeId),
+        targetUserId: Number(userId),
+        decisionAction: "ACCEPTED"
+      })
+      .toPromise()
+      .then(() => this.loadData())
+      .catch((err: any) => {
+        console.error("Failed to approve request:", err);
+        this.isLoading.set(false);
       });
-    });
   }
 
-  getCommitteeInitial(committeeName: string | null | undefined): string {
-    return String(committeeName || '').trim().charAt(0).toUpperCase() || '?';
+  rejectRequest(committeeId: string, userId: string): void {
+    this.isLoading.set(true);
+    this.service
+      .takeActionOnCommitteeMembershipRequest({
+        committeeId: Number(committeeId),
+        targetUserId: Number(userId),
+        decisionAction: "REJECTED"
+      })
+      .toPromise()
+      .then(() => this.loadData())
+      .catch((err: any) => {
+        console.error("Failed to reject request:", err);
+        this.isLoading.set(false);
+      });
   }
 
+  cancelSentRequest(committeeId: string, committeeName: string): void {
+    const confirm = window.confirm(`Cancel request to join "${committeeName}"?`);
+    if (!confirm) return;
+    this.isLoading.set(true);
+    this.service
+      .cancelSubmittedCommitteeMembershipRequest(Number(committeeId))
+      .toPromise()
+      .then(() => this.loadData())
+      .catch((err: any) => {
+        console.error("Failed to cancel request:", err);
+        this.isLoading.set(false);
+      });
+  }
+
+  getInitials(name: string): string {
+    return (name || "N")
+      .split(" ")
+      .map((n) => n.charAt(0))
+      .join("")
+      .toUpperCase()
+      .slice(0, 2);
+  }
 }

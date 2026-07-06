@@ -18,7 +18,7 @@ export const routes: Routes = [
       },
       {
         path: 'requests',
-        loadComponent: () => import('./features/dashboard/components/dashboard-requests/dashboard-requests').then(m => m.DashboardRequests)
+        loadComponent: () => import('./features/dashboard/components/dashboard-requests/dashboard-requests').then(m => m.DashboardRequestsComponent)
       },
       {
         path: 'group/:id',
