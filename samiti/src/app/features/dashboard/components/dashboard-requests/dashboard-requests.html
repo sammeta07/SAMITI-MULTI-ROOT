@@ -14,23 +14,15 @@
           <span class="tab-count">{{ receivedAdminRequests().length + receivedMemberRequests().length }}</span>
         </ng-template>
 
-        <div class="tab-content-pane">
-          <mat-expansion-panel class="modern-panel" [expanded]="true">
-            <mat-expansion-panel-header class="panel-header">
-              <mat-panel-title>
-                <div class="title-wrapper">
-                  <div class="icon-avatar admin-type">
-                    <mat-icon>admin_panel_settings</mat-icon>
-                  </div>
-                  <span class="title-text">Admin Requests</span>
-                  <span class="panel-context-icon panel-context-icon--received">
-                    <mat-icon>call_received</mat-icon>
-                  </span>
-                  <span class="counter-badge">{{ receivedAdminRequests().length }}</span>
-                </div>
-              </mat-panel-title>
-            </mat-expansion-panel-header>
+        <mat-tab-group animationDuration="200ms" class="inner-tabs" mat-stretch-tabs="false" mat-align-tabs="start">
 
+          <mat-tab>
+            <ng-template mat-tab-label>
+              <mat-icon class="tab-icon">admin_panel_settings</mat-icon>
+              <span class="tab-label-text">Admin Requests</span>
+              <span class="tab-count">{{ receivedAdminRequests().length }}</span>
+            </ng-template>
+            <div class="inner-tab-content">
             @if (receivedAdminRequests().length > 0) {
               <div class="table-responsive">
                 <table mat-table [dataSource]="receivedAdminRequests()" class="modern-table">
@@ -131,24 +123,16 @@
                 <h4 class="empty-title">No admin requests received at the moment.</h4>
               </div>
             }
-          </mat-expansion-panel>
+            </div>
+          </mat-tab>
 
-          <mat-expansion-panel class="modern-panel" [expanded]="true">
-            <mat-expansion-panel-header class="panel-header">
-              <mat-panel-title>
-                <div class="title-wrapper">
-                  <div class="icon-avatar member-type">
-                    <mat-icon>person</mat-icon>
-                  </div>
-                  <span class="title-text">Membership Requests</span>
-                  <span class="panel-context-icon panel-context-icon--received">
-                    <mat-icon>call_received</mat-icon>
-                  </span>
-                  <span class="counter-badge">{{ receivedMemberRequests().length }}</span>
-                </div>
-              </mat-panel-title>
-            </mat-expansion-panel-header>
-
+          <mat-tab>
+            <ng-template mat-tab-label>
+              <mat-icon class="tab-icon">person</mat-icon>
+              <span class="tab-label-text">Membership Requests</span>
+              <span class="tab-count">{{ receivedMemberRequests().length }}</span>
+            </ng-template>
+            <div class="inner-tab-content">
             @if (receivedMemberRequests().length > 0) {
               <div class="table-responsive">
                 <table mat-table [dataSource]="receivedMemberRequests()" class="modern-table">
@@ -246,8 +230,10 @@
                 <h4 class="empty-title">No membership requests pending your confirmation.</h4>
               </div>
             }
-          </mat-expansion-panel>
-        </div>
+            </div>
+          </mat-tab>
+
+        </mat-tab-group>
       </mat-tab>
 
       <mat-tab>
@@ -257,23 +243,15 @@
           <span class="tab-count">{{ sentAdminRequests().length + sentMemberRequests().length }}</span>
         </ng-template>
 
-        <div class="tab-content-pane">
-          <mat-expansion-panel class="modern-panel" [expanded]="true">
-            <mat-expansion-panel-header class="panel-header">
-              <mat-panel-title>
-                <div class="title-wrapper">
-                  <div class="icon-avatar admin-type">
-                    <mat-icon>admin_panel_settings</mat-icon>
-                  </div>
-                  <span class="title-text">Admin Requests</span>
-                  <span class="panel-context-icon panel-context-icon--sent">
-                    <mat-icon>call_made</mat-icon>
-                  </span>
-                  <span class="counter-badge">{{ sentAdminRequests().length }}</span>
-                </div>
-              </mat-panel-title>
-            </mat-expansion-panel-header>
+        <mat-tab-group animationDuration="200ms" class="inner-tabs" mat-stretch-tabs="false" mat-align-tabs="start">
 
+          <mat-tab>
+            <ng-template mat-tab-label>
+              <mat-icon class="tab-icon">admin_panel_settings</mat-icon>
+              <span class="tab-label-text">Admin Requests</span>
+              <span class="tab-count">{{ sentAdminRequests().length }}</span>
+            </ng-template>
+            <div class="inner-tab-content">
             @if (sentAdminRequests().length > 0) {
               <div class="table-responsive">
                 <table mat-table [dataSource]="sentAdminRequests()" class="modern-table">
@@ -368,24 +346,16 @@
                 <h4 class="empty-title">You haven't dispatched any admin setup requests.</h4>
               </div>
             }
-          </mat-expansion-panel>
+            </div>
+          </mat-tab>
 
-          <mat-expansion-panel class="modern-panel" [expanded]="true">
-            <mat-expansion-panel-header class="panel-header">
-              <mat-panel-title>
-                <div class="title-wrapper">
-                  <div class="icon-avatar member-type">
-                    <mat-icon>person</mat-icon>
-                  </div>
-                  <span class="title-text">Membership Requests</span>
-                  <span class="panel-context-icon panel-context-icon--sent">
-                    <mat-icon>call_made</mat-icon>
-                  </span>
-                  <span class="counter-badge">{{ sentMemberRequests().length }}</span>
-                </div>
-              </mat-panel-title>
-            </mat-expansion-panel-header>
-
+          <mat-tab>
+            <ng-template mat-tab-label>
+              <mat-icon class="tab-icon">person</mat-icon>
+              <span class="tab-label-text">Membership Requests</span>
+              <span class="tab-count">{{ sentMemberRequests().length }}</span>
+            </ng-template>
+            <div class="inner-tab-content">
             @if (sentMemberRequests().length > 0) {
               <div class="table-responsive">
                 <table mat-table [dataSource]="sentMemberRequests()" class="modern-table">
@@ -480,8 +450,10 @@
                 <h4 class="empty-title">You have no sent out association requests logs pending.</h4>
               </div>
             }
-          </mat-expansion-panel>
-        </div>
+            </div>
+          </mat-tab>
+
+        </mat-tab-group>
       </mat-tab>
     </mat-tab-group>
   }
