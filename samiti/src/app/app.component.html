@@ -9,3 +9,26 @@
 </div>
 
 <app-notifier></app-notifier>
+
+@if (isGeolocationDenied()) {
+<div class="geo-blocker-overlay">
+  <div class="geo-blocker-card">
+    <div class="geo-icon-ring">
+      <mat-icon>location_off</mat-icon>
+    </div>
+    <h2>Location Access Required</h2>
+    <p>
+      Samiti ko aapki location chahiye taaki aas-paas ke groups aur events dikha sake.
+      Browser mein location permission enable karein aur page reload karein.
+    </p>
+    <div class="geo-steps">
+      <span><mat-icon>looks_one</mat-icon> Browser address bar mein lock icon click karein</span>
+      <span><mat-icon>looks_two</mat-icon> <strong>Location</strong> permission ko <strong>Allow</strong> karein</span>
+      <span><mat-icon>looks_3</mat-icon> Neeche <strong>Retry</strong> button dabayein</span>
+    </div>
+    <button mat-flat-button class="geo-retry-btn" (click)="reloadPage()">
+      <mat-icon>refresh</mat-icon> Retry
+    </button>
+  </div>
+</div>
+}

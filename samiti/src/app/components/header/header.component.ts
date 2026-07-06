@@ -80,6 +80,8 @@ export class HeaderComponent implements OnInit {
             long: position.coords.longitude
           };
           this.headerService.userLocationCords.set(body);
+          this.headerService.isGeolocationDenied.set(false);
+          this.headerService.isGeolocationChecking.set(false);
           this.headerService.getUserLocation(body).subscribe({
             next: (data) => {
               const place = data.address?.state_district || 'Location';
@@ -97,13 +99,16 @@ export class HeaderComponent implements OnInit {
           console.error('Error getting location:', error);
           this.locationName.set('Location denied');
           this.isLoading.set(false);
-          this.notifier.warn('Location permission denied.');
+          this.headerService.isGeolocationDenied.set(true);
+          this.headerService.isGeolocationChecking.set(false);
         }
       );
     } else {
       console.error('Geolocation is not supported by this browser.');
       this.locationName.set('Not supported');
       this.isLoading.set(false);
+      this.headerService.isGeolocationDenied.set(true);
+      this.headerService.isGeolocationChecking.set(false);
       this.notifier.info('Geolocation is not supported by this browser.');
     }
   }

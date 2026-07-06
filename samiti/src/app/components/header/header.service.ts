@@ -13,6 +13,11 @@ export class HeaderService {
   readonly loading = signal<boolean>(false);
   readonly error = signal<string | null>(null);
 
+  /** true while waiting for browser permission prompt */
+  readonly isGeolocationChecking = signal<boolean>(true);
+  /** true if user denied or geolocation unavailable */
+  readonly isGeolocationDenied = signal<boolean>(false);
+
   /**
    * Observable method to get user location.
    * Subscribed to from the header component.

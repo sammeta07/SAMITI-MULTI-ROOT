@@ -50,6 +50,8 @@ export class CreateCommitteeDialogComponent implements OnInit {
   public committeeName: string = '';
   public establishYear: number = 2026;
   public addressLocation: string = '';
+  public latitude: number | null = null;
+  public longitude: number | null = null;
   public primaryContact: string = '';
   public secondaryContact: string = '';
   public description: string = '';
@@ -78,6 +80,8 @@ export class CreateCommitteeDialogComponent implements OnInit {
       this.committeeName = committee.committeeName || '';
       this.establishYear = Number(committee.establishYear || 2026);
       this.addressLocation = committee.address || '';
+      this.latitude = committee.latitude != null ? Number(committee.latitude) : null;
+      this.longitude = committee.longitude != null ? Number(committee.longitude) : null;
       this.description = committee.description || '';
       this.existingCommitteeLogoUrl = committee.logo || null;
       this.committeeLogoPreviewUrl = committee.logo || null;
@@ -87,6 +91,11 @@ export class CreateCommitteeDialogComponent implements OnInit {
       this.secondaryContact = contacts[1] || '';
     } else {
       this.isEditMode = false;
+      const gps = this.headerService.userLocationCords();
+      if (gps) {
+        this.latitude = gps.lat;
+        this.longitude = gps.long;
+      }
     }
   }
 
@@ -146,7 +155,6 @@ export class CreateCommitteeDialogComponent implements OnInit {
   public async onSubmit(): Promise<void> {
     if (!this.isFormValid) return;
 
-    const coords = this.headerService.userLocationCords();
     const contactsArray: string[] = [this.primaryContact.trim()];
     if (this.secondaryContact?.trim()) {
       contactsArray.push(this.secondaryContact.trim());
@@ -175,8 +183,8 @@ export class CreateCommitteeDialogComponent implements OnInit {
       address: this.addressLocation.trim(),
       contact_numbers: contactsArray, // Dispatches clean mapped dynamic arrays back onto server database structures
       description: this.description.trim(),
-      latitude: coords ? coords.lat : 21.2211103,
-      longitude: coords ? coords.long : 81.4502262,
+      latitude: Number(this.latitude),
+      longitude: Number(this.longitude),
       logo: uploadedCommitteeLogoUrl || this.existingCommitteeLogoUrl || null
     };
 

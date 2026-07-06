@@ -60,6 +60,20 @@
         </mat-form-field>
       </div>
 
+      <div class="form-row-split-grid">
+        <mat-form-field appearance="outline" class="samiti-custom-field">
+          <mat-label>Latitude</mat-label>
+          <input matInput [(ngModel)]="latitude" name="latitude" type="number" placeholder="Auto-detected" disabled>
+          <mat-icon matPrefix>my_location</mat-icon>
+        </mat-form-field>
+
+        <mat-form-field appearance="outline" class="samiti-custom-field">
+          <mat-label>Longitude</mat-label>
+          <input matInput [(ngModel)]="longitude" name="longitude" type="number" placeholder="Auto-detected" disabled>
+          <mat-icon matPrefix>explore</mat-icon>
+        </mat-form-field>
+      </div>
+
       <div class="contact-numbers-section">
         <span class="section-label-tag"><mat-icon>contact_phone</mat-icon> Core Association Contacts</span>
         <div class="form-row-split-grid">
