@@ -25,13 +25,14 @@ export class EventDetailsService {
         id
         eventId
         committeeId
+        committeeAddress
         eventName
         eventDisplayName
         description
         eventBanner
         bannerImages
         status
-        type
+        category
         visibility
         startDate
         endDate

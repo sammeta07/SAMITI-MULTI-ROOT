@@ -2,9 +2,10 @@ export interface CreateProgramPayload {
   eventId: number;
   programName: string;
   description?: string;
-  status: 'UPCOMING' | 'ONGOING' | 'COMPLETED' | 'CANCELLED';
-  startDate: string | null;
-  endDate: string | null;
+  address?: string;
+  visibility: 'VISIBLE' | 'HIDDEN';
+  startDateTime: string;
+  endDateTime: string;
 }
 
 export interface CreateProgramResponse {
@@ -13,9 +14,11 @@ export interface CreateProgramResponse {
   eventId: number;
   programName: string;
   description?: string;
-  status: string;
-  startDate: string | null;
-  endDate: string | null;
+  address?: string;
+  visibility: string;
+  startDateTime: string;
+  endDateTime: string;
   createdBy: number;
+  updatedBy?: number | null;
   createdAt: string;
 }

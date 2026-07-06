@@ -1,4 +1,4 @@
-import { Component, inject, signal } from '@angular/core';
+import { Component, inject, OnInit, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { MatDialogModule, MatDialogRef, MAT_DIALOG_DATA } from '@angular/material/dialog';
@@ -14,6 +14,7 @@ import { CreateEventService } from './create-event.service';
 import { NotifierService } from '../../../shared/notifier/notifier.service';
 import { TextFormatService } from '../../../shared/services/text-format-service.service';
 import { AuthService } from '../../../core/services/auth.service';
+import { HeaderService } from '../../header/header.service';
 
 @Component({
   selector: 'app-create-event-dialog',
@@ -34,12 +35,13 @@ import { AuthService } from '../../../core/services/auth.service';
   templateUrl: './create-event.component.html',
   styleUrl: './create-event.component.scss'
 })
-export class CreateEventDialogComponent {
+export class CreateEventDialogComponent implements OnInit {
   private readonly dialogRef = inject(MatDialogRef<CreateEventDialogComponent>);
   private readonly createEventService = inject(CreateEventService);
   private readonly notifier = inject(NotifierService);
   private readonly textFormatService = inject(TextFormatService);
   private readonly authService = inject(AuthService);
+  private readonly headerService = inject(HeaderService);
 
   public readonly injectedData = inject(MAT_DIALOG_DATA, { optional: true });
 
@@ -47,8 +49,11 @@ export class CreateEventDialogComponent {
   public eventName: string = '';
   public eventDisplayName: string = '';
   public description: string = '';
+  public address: string = '';
+  public latitude: number | null = null;
+  public longitude: number | null = null;
   public status: 'UPCOMING' | 'ONGOING' | 'COMPLETED' | 'CANCELLED' = 'UPCOMING';
-  public type: string = 'puja';
+  public category: string = 'puja';
   public readonly visibility: 'VISIBLE' | 'HIDDEN' = 'HIDDEN';
   public startDate: Date | null = null;
   public endDate: Date | null = null;
@@ -57,6 +62,19 @@ export class CreateEventDialogComponent {
 
   public readonly eventTypes = ['puja', 'sports', 'meeting', 'celebration', 'workshop', 'other'];
   public readonly statuses = ['UPCOMING', 'ONGOING', 'COMPLETED', 'CANCELLED'];
+
+  ngOnInit(): void {
+    const committeeAddress = this.injectedData?.address || this.injectedData?.committeeAddress;
+    if (typeof committeeAddress === 'string' && committeeAddress.trim().length > 0) {
+      this.address = committeeAddress.trim();
+    }
+
+    const gps = this.headerService.userLocationCords();
+    if (gps) {
+      this.latitude = gps.lat;
+      this.longitude = gps.long;
+    }
+  }
 
   get isFormValid(): boolean {
     return (
@@ -92,11 +110,14 @@ export class CreateEventDialogComponent {
       eventName: this.eventName.trim(),
       eventDisplayName: this.eventDisplayName.trim(),
       description: this.description?.trim() || undefined,
+      address: this.address?.trim() || undefined,
       status: this.status,
-      type: this.type || undefined,
+      category: this.category || undefined,
       visibility: this.visibility,
       startDate: startDateStr,
-      endDate: endDateStr
+      endDate: endDateStr,
+      latitude: Number(this.latitude ?? 0),
+      longitude: Number(this.longitude ?? 0)
     };
 
     this.createEventService.createEvent(payload).subscribe({

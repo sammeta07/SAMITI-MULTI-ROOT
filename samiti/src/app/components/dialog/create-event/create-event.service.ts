@@ -21,12 +21,15 @@ export class CreateEventService {
         eventDisplayName
         committeeId
         description
+        address
         eventBanner
         status
-        type
+        category
         visibility
         startDate
         endDate
+        latitude
+        longitude
         bannerImages
         createdBy
         updatedBy
@@ -51,13 +54,16 @@ export class CreateEventService {
             eventName: payload.eventName,
             eventDisplayName: payload.eventDisplayName || null,
             description: payload.description || null,
+            address: payload.address || null,
             eventBanner: payload.eventBanner || null,
             bannerImageUrls: payload.bannerImageUrls || null,
             status: payload.status,
-            type: payload.type || null,
+            category: payload.category || null,
             visibility: payload.visibility,
             startDate: payload.startDate,
-            endDate: payload.endDate
+            endDate: payload.endDate,
+            latitude: payload.latitude,
+            longitude: payload.longitude
           }
         }
       },

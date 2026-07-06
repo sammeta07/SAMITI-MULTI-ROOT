@@ -41,6 +41,14 @@
         </mat-form-field>
       </div>
 
+      <div class="form-row-full">
+        <mat-form-field appearance="outline" class="samiti-custom-field">
+          <mat-label>Address</mat-label>
+          <input matInput [(ngModel)]="address" name="address" placeholder="Committee address" disabled>
+          <mat-icon matPrefix>place</mat-icon>
+        </mat-form-field>
+      </div>
+
       <!-- STATUS & TYPE -->
       <div class="form-row-split-grid">
         <mat-form-field appearance="outline" class="samiti-custom-field">
@@ -54,8 +62,8 @@
         </mat-form-field>
 
         <mat-form-field appearance="outline" class="samiti-custom-field">
-          <mat-label>Event Type</mat-label>
-          <mat-select [(ngModel)]="type" name="type">
+          <mat-label>Event Category</mat-label>
+          <mat-select [(ngModel)]="category" name="category">
             @for (t of eventTypes; track t) {
               <mat-option [value]="t">{{ t | titlecase }}</mat-option>
             }
@@ -80,6 +88,21 @@
           <mat-icon matPrefix>calendar_today</mat-icon>
           <mat-datepicker-toggle matSuffix [for]="endDatePicker"></mat-datepicker-toggle>
           <mat-datepicker #endDatePicker></mat-datepicker>
+        </mat-form-field>
+      </div>
+
+      <!-- COORDINATES (auto-detected, read-only) -->
+      <div class="form-row-split-grid">
+        <mat-form-field appearance="outline" class="samiti-custom-field" subscriptSizing="dynamic">
+          <mat-label>Latitude</mat-label>
+          <input matInput [(ngModel)]="latitude" name="latitude" type="number" placeholder="Auto-detected" disabled>
+          <mat-icon matPrefix>my_location</mat-icon>
+        </mat-form-field>
+
+        <mat-form-field appearance="outline" class="samiti-custom-field" subscriptSizing="dynamic">
+          <mat-label>Longitude</mat-label>
+          <input matInput [(ngModel)]="longitude" name="longitude" type="number" placeholder="Auto-detected" disabled>
+          <mat-icon matPrefix>explore</mat-icon>
         </mat-form-field>
       </div>
 

@@ -107,7 +107,20 @@
 
             <div class="event-col-info">
               <span class="main-title">{{ event.eventName }}</span>
-              <span class="secondary-sub-lbl">{{ event.type || 'Standard' }}</span>
+              <span class="secondary-sub-lbl">{{ event.category || 'Standard' }}</span>
+            </div>
+
+            <div class="event-col-visibility">
+              <div class="toggle-alignment-box">
+                <span class="visibility-indicator-text">Type: {{ event.type === 'PUBLIC' ? 'Public' : 'Private' }}</span>
+                <mat-slide-toggle
+                  class="density-toggle"
+                  [checked]="event.type === 'PUBLIC'"
+                  [disabled]="!isCurrentUserAdmin()"
+                  (change)="onEventTypeChange(event, $event.checked)">
+                  {{ event.type === 'PUBLIC' ? 'Public' : 'Private' }}
+                </mat-slide-toggle>
+              </div>
             </div>
 
             <div class="event-col-status">

@@ -76,10 +76,12 @@ export const eventsListTypes = `
     description: String
     eventBanner: String
     status: String!
-    type: String
+    category: String
+    type: String!
     visibility: String!
     startDate: String
     endDate: String
+    address: String
     createdBy: Int!
     updatedBy: Int
     createdAt: String
@@ -146,8 +148,10 @@ export const eventsListResolvers = {
            e.name AS eventName,
            ${supportsEventDisplayName ? "COALESCE(NULLIF(TRIM(e.display_name), ''), LEFT(e.name, 20))" : 'LEFT(e.name, 20)'} AS eventDisplayName,
            e.description,
+           e.address,
            e.status,
-           e.type,
+           e.category,
+           e.\`type\` AS type,
            e.visibility,
            DATE_FORMAT(e.start_date, '%Y-%m-%d') AS startDate,
            DATE_FORMAT(e.end_date, '%Y-%m-%d') AS endDate,

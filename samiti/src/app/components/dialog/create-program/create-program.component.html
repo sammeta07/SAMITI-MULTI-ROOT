@@ -31,35 +31,44 @@
         </mat-form-field>
       </div>
 
-      <!-- STATUS -->
-      <div class="form-row-full">
+      <!-- START DATE TIME & END DATE TIME -->
+      <div class="form-row-split-grid">
         <mat-form-field appearance="outline" class="samiti-custom-field">
-          <mat-label>Status</mat-label>
-          <mat-select [(ngModel)]="status" name="status" required>
-            @for (s of statuses; track s) {
-              <mat-option [value]="s">{{ s }}</mat-option>
-            }
-          </mat-select>
-          <mat-icon matPrefix>info</mat-icon>
+          <mat-label>Start Date Time</mat-label>
+          <input matInput [matDatepicker]="startPicker" [(ngModel)]="startDateTime" name="startDateTime" required>
+          <mat-datepicker-toggle matSuffix [for]="startPicker"></mat-datepicker-toggle>
+          <mat-datepicker #startPicker></mat-datepicker>
+          <mat-icon matPrefix>schedule</mat-icon>
+        </mat-form-field>
+
+        <mat-form-field appearance="outline" class="samiti-custom-field">
+          <mat-label>End Date Time</mat-label>
+          <input matInput [matDatepicker]="endPicker" [(ngModel)]="endDateTime" name="endDateTime" required>
+          <mat-datepicker-toggle matSuffix [for]="endPicker"></mat-datepicker-toggle>
+          <mat-datepicker #endPicker></mat-datepicker>
+          <mat-icon matPrefix>schedule</mat-icon>
         </mat-form-field>
       </div>
 
-      <!-- START DATE & END DATE -->
-      <div class="form-row-split-grid">
+      <div class="form-row-full">
         <mat-form-field appearance="outline" class="samiti-custom-field">
-          <mat-label>Start Date</mat-label>
-          <input matInput [matDatepicker]="startDatePicker" [(ngModel)]="startDate" name="startDate" required>
-          <mat-icon matPrefix>calendar_today</mat-icon>
-          <mat-datepicker-toggle matSuffix [for]="startDatePicker"></mat-datepicker-toggle>
-          <mat-datepicker #startDatePicker></mat-datepicker>
+          <mat-label>Address</mat-label>
+          <input matInput [(ngModel)]="address" name="address" placeholder="Committee address" disabled>
+          <mat-icon matPrefix>place</mat-icon>
+        </mat-form-field>
+      </div>
+
+      <div class="form-row-split-grid">
+        <mat-form-field appearance="outline" class="samiti-custom-field" subscriptSizing="dynamic">
+          <mat-label>Latitude</mat-label>
+          <input matInput [(ngModel)]="latitude" name="latitude" type="number" placeholder="Auto-detected" disabled>
+          <mat-icon matPrefix>my_location</mat-icon>
         </mat-form-field>
 
-        <mat-form-field appearance="outline" class="samiti-custom-field">
-          <mat-label>End Date</mat-label>
-          <input matInput [matDatepicker]="endDatePicker" [(ngModel)]="endDate" name="endDate">
-          <mat-icon matPrefix>calendar_today</mat-icon>
-          <mat-datepicker-toggle matSuffix [for]="endDatePicker"></mat-datepicker-toggle>
-          <mat-datepicker #endDatePicker></mat-datepicker>
+        <mat-form-field appearance="outline" class="samiti-custom-field" subscriptSizing="dynamic">
+          <mat-label>Longitude</mat-label>
+          <input matInput [(ngModel)]="longitude" name="longitude" type="number" placeholder="Auto-detected" disabled>
+          <mat-icon matPrefix>explore</mat-icon>
         </mat-form-field>
       </div>
 

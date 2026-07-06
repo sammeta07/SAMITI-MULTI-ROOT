@@ -101,13 +101,16 @@ export const createEventTypes = `
     eventDisplayName: String!
     committeeId: Int!
     description: String
+    address: String
     eventBanner: String
     bannerImages: [String!]!
     status: String!
-    type: String
+    category: String
     visibility: String!
     startDate: String
     endDate: String
+    latitude: Float!
+    longitude: Float!
     createdBy: Int!
     updatedBy: Int
     createdAt: String!
@@ -118,13 +121,16 @@ export const createEventTypes = `
     eventName: String!
     eventDisplayName: String!
     description: String
+    address: String
     eventBanner: String
     bannerImageUrls: [String!]
     status: String!
-    type: String
+    category: String
     visibility: String!
     startDate: String
     endDate: String
+    latitude: Float!
+    longitude: Float!
   }
 `;
 
@@ -142,11 +148,17 @@ export const createEventResolvers = {
       const eventName = normalizeOptionalText(input.eventName);
       const eventDisplayName = eventName ? buildEventDisplayName(eventName, input.eventDisplayName) : null;
       const description = normalizeOptionalText(input.description);
-      const type = normalizeOptionalText(input.type);
+      const address = normalizeOptionalText(input.address);
+      const category = normalizeOptionalText(input.category);
       const normalizedStatus = normalizeEnumInput(input.status, 'UPCOMING', ALLOWED_EVENT_STATUSES, 'status');
       const normalizedVisibility = normalizeEnumInput(input.visibility, 'VISIBLE', ALLOWED_EVENT_VISIBILITIES, 'visibility');
       const normalizedStartDate = normalizeDateInput(input.startDate, 'startDate');
       const normalizedEndDate = normalizeDateInput(input.endDate, 'endDate');
+      const latitude = Number(input.latitude);
+      const longitude = Number(input.longitude);
+
+      if (isNaN(latitude)) throwEventError('BAD_REQUEST', 'latitude must be a valid number');
+      if (isNaN(longitude)) throwEventError('BAD_REQUEST', 'longitude must be a valid number');
 
       if (!Number.isInteger(committeeId) || committeeId <= 0) {
         throwEventError('BAD_REQUEST', 'committeeId must be a positive integer');
@@ -204,34 +216,40 @@ export const createEventResolvers = {
 
         const result = supportsEventDisplayName
           ? await execute(
-              `INSERT INTO events (committee_id, name, display_name, description, status, type, visibility, start_date, end_date, created_by, updated_by, created_at)
-               VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW())`,
+              `INSERT INTO events (committee_id, name, display_name, description, address, status, category, visibility, start_date, end_date, latitude, longitude, created_by, updated_by, created_at)
+               VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW())`,
               [
                 committeeId,
                 eventName,
                 eventDisplayName,
                 description,
+                address,
                 normalizedStatus,
-                type,
+                category,
                 normalizedVisibility,
                 normalizedStartDate,
                 normalizedEndDate,
+                latitude,
+                longitude,
                 loggedInUserId,
                 loggedInUserId
               ]
             )
           : await execute(
-              `INSERT INTO events (committee_id, name, description, status, type, visibility, start_date, end_date, created_by, updated_by, created_at)
-               VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW())`,
+              `INSERT INTO events (committee_id, name, description, address, status, category, visibility, start_date, end_date, latitude, longitude, created_by, updated_by, created_at)
+               VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW())`,
               [
                 committeeId,
                 eventName,
                 description,
+                address,
                 normalizedStatus,
-                type,
+                category,
                 normalizedVisibility,
                 normalizedStartDate,
                 normalizedEndDate,
+                latitude,
+                longitude,
                 loggedInUserId,
                 loggedInUserId
               ]
@@ -262,13 +280,13 @@ export const createEventResolvers = {
             ? `SELECT id, id as eventId, name as eventName,
                       COALESCE(NULLIF(TRIM(display_name), ''), LEFT(name, 20)) as eventDisplayName,
                       committee_id as committeeId,
-                      description, status, type, visibility,
+                      description, address, status, category, visibility, latitude, longitude,
                       start_date as startDate, end_date as endDate, created_by as createdBy, updated_by as updatedBy, created_at as createdAt
                FROM events WHERE id = ?`
             : `SELECT id, id as eventId, name as eventName,
                       LEFT(name, 20) as eventDisplayName,
                       committee_id as committeeId,
-                      description, status, type, visibility,
+                      description, address, status, category, visibility, latitude, longitude,
                       start_date as startDate, end_date as endDate, created_by as createdBy, updated_by as updatedBy, created_at as createdAt
                FROM events WHERE id = ?`,
           [eventId]

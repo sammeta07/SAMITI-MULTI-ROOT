@@ -9,13 +9,14 @@ export interface EventDetailsPayload {
   id: number;
   eventId: number;
   committeeId?: number | null;
+  committeeAddress?: string | null;
   eventName: string;
   eventDisplayName: string;
   description?: string | null;
   eventBanner?: string | null;
   bannerImages: string[];
   status: string;
-  type?: string | null;
+  category?: string | null;
   visibility: string;
   startDate?: string | null;
   endDate?: string | null;

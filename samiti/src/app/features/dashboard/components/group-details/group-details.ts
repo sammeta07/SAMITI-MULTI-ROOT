@@ -182,6 +182,44 @@ export class GroupDetailsComponent implements OnInit {
     });
   }
 
+  public onEventTypeChange(eventItem: CommitteeEventListItem, isPublic: boolean): void {
+    if (!this.isCurrentUserAdmin()) {
+      this.notifier.warn('Only committee admins can update event type');
+      return;
+    }
+
+    const type: 'PUBLIC' | 'PRIVATE' = isPublic ? 'PUBLIC' : 'PRIVATE';
+
+    if (!eventItem?.eventId || eventItem.type === type) {
+      return;
+    }
+
+    const previousType = eventItem.type;
+    this.committeeEvents.update((currentEvents) =>
+      currentEvents.map((currentEvent) =>
+        currentEvent.eventId === eventItem.eventId ? { ...currentEvent, type } : currentEvent
+      )
+    );
+
+    this.groupDetailsService.updateEventType(eventItem.eventId, type).subscribe({
+      next: () => {
+        const formattedEventName = this.toTitleCase(eventItem.eventName || 'Event');
+        const typeMessage = type === 'PUBLIC'
+          ? `**${formattedEventName}** type is now Public`
+          : `**${formattedEventName}** type is now Private`;
+        this.notifier.success(typeMessage);
+      },
+      error: (err: HttpErrorResponse) => {
+        this.committeeEvents.update((currentEvents) =>
+          currentEvents.map((currentEvent) =>
+            currentEvent.eventId === eventItem.eventId ? { ...currentEvent, type: previousType } : currentEvent
+          )
+        );
+        this.notifier.error(err?.error?.message || 'Failed to update event type.');
+      }
+    });
+  }
+
   public onEditEvent(eventItem: CommitteeEventListItem): void {
     this.notifier.warn(`Edit event flow is not available yet for "${eventItem.eventName}".`);
   }
@@ -573,7 +611,8 @@ export class GroupDetailsComponent implements OnInit {
       hasBackdrop: true,
       panelClass: 'slide-in-dialog',
       data: {
-        committeeId: committee.committeeId
+        committeeId: committee.committeeId,
+        address: committee.address || ''
       }
     });
 
@@ -583,10 +622,6 @@ export class GroupDetailsComponent implements OnInit {
         this.notifier.success(`Event "${result.eventName}" created successfully!`);
         if (committee.committeeId) {
           this.fetchCommitteeEvents(committee.committeeId);
-        }
-
-        if (result.eventId) {
-          this.router.navigate(['/dashboard', 'event', result.eventId]);
         }
       }
     });

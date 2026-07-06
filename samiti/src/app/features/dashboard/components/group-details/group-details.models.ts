@@ -28,7 +28,8 @@ export interface CommitteeEventListItem {
   description?: string | null;
   eventBanner?: string | null;
   status: string;
-  type?: string | null;
+  category?: string | null;
+  type: 'PUBLIC' | 'PRIVATE';
   visibility: string;
   startDate?: string | null;
   endDate?: string | null;
@@ -40,6 +41,12 @@ export interface CommitteeEventListItem {
 export interface UpdatedEventVisibilityPayload {
   eventId: number;
   visibility: 'VISIBLE' | 'HIDDEN';
+  updatedBy: number;
+}
+
+export interface UpdatedEventTypePayload {
+  eventId: number;
+  type: 'PUBLIC' | 'PRIVATE';
   updatedBy: number;
 }
 

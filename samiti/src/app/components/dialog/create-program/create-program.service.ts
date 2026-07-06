@@ -20,10 +20,12 @@ export class CreateProgramService {
         eventId
         programName
         description
-        status
-        startDate
-        endDate
+        address
+        visibility
+        startDateTime
+        endDateTime
         createdBy
+        updatedBy
         createdAt
       }
     }`;

@@ -3,7 +3,7 @@ import { HttpClient } from '@angular/common/http';
 import { Observable } from 'rxjs';
 import { map } from 'rxjs/operators';
 import { environment } from '../../../../../environments/environment';
-import { CancelCommitteeMembershipRequestPayload, CommitteeDetailsPayload, CommitteeEventListItem, CommitteeMembershipRequestRole, DeletedEventPayload, SubmitCommitteeMembershipRequestPayload, UpdatedEventVisibilityPayload } from './group-details.models';
+import { CancelCommitteeMembershipRequestPayload, CommitteeDetailsPayload, CommitteeEventListItem, CommitteeMembershipRequestRole, DeletedEventPayload, SubmitCommitteeMembershipRequestPayload, UpdatedEventTypePayload, UpdatedEventVisibilityPayload } from './group-details.models';
 import { CommitteeMembershipRequestService } from '../../../../core/services/committee-membership-request.service';
 
 @Injectable({
@@ -67,6 +67,7 @@ export class GroupDetailsService {
         description
         eventBanner
         status
+        category
         type
         visibility
         startDate
@@ -114,6 +115,30 @@ export class GroupDetailsService {
       { withCredentials: true }
     ).pipe(
       map((res) => res.data.updateEventVisibility)
+    );
+  }
+
+  public updateEventType(eventId: number, type: 'PUBLIC' | 'PRIVATE'): Observable<UpdatedEventTypePayload> {
+    const query = `mutation UpdateEventType($eventId: Int!, $type: String!) {
+      updateEventType(eventId: $eventId, type: $type) {
+        eventId
+        type
+        updatedBy
+      }
+    }`;
+
+    return this.http.post<{ data: { updateEventType: UpdatedEventTypePayload } }>(
+      this.graphqlUrl,
+      {
+        query,
+        variables: {
+          eventId,
+          type
+        }
+      },
+      { withCredentials: true }
+    ).pipe(
+      map((res) => res.data.updateEventType)
     );
   }
 

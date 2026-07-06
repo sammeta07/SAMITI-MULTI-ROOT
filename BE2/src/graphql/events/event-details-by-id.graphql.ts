@@ -46,16 +46,18 @@ export const eventDetailsTypes = `
     id: Int!
     eventId: Int!
     committeeId: Int
+    committeeAddress: String
     eventName: String!
     eventDisplayName: String!
     description: String
     eventBanner: String
     bannerImages: [String!]!
     status: String!
-    type: String
+    category: String
     visibility: String!
     startDate: String
     endDate: String
+    address: String
     createdBy: Int!
     updatedBy: Int
     createdAt: String
@@ -79,22 +81,25 @@ export const eventDetailsResolvers = {
 
       const eventResult = await query<any[]>(`
         SELECT
-          id,
-          id AS eventId,
-          committee_id AS committeeId,
-          name AS eventName,
-          ${supportsEventDisplayName ? "COALESCE(NULLIF(TRIM(display_name), ''), LEFT(name, 20))" : 'LEFT(name, 20)'} AS eventDisplayName,
-          description,
-          status,
-          type,
-          visibility,
-          DATE_FORMAT(start_date, '%Y-%m-%d') AS startDate,
-          DATE_FORMAT(end_date, '%Y-%m-%d') AS endDate,
-          created_by AS createdBy,
-          updated_by AS updatedBy,
-          created_at AS createdAt
-        FROM events
-        WHERE id = ?
+          e.id,
+          e.id AS eventId,
+          e.committee_id AS committeeId,
+          c.address AS committeeAddress,
+          e.name AS eventName,
+          ${supportsEventDisplayName ? "COALESCE(NULLIF(TRIM(e.display_name), ''), LEFT(e.name, 20))" : 'LEFT(e.name, 20)'} AS eventDisplayName,
+          e.description,
+          e.address,
+          e.status,
+          e.category,
+          e.visibility,
+          DATE_FORMAT(e.start_date, '%Y-%m-%d') AS startDate,
+          DATE_FORMAT(e.end_date, '%Y-%m-%d') AS endDate,
+          e.created_by AS createdBy,
+          e.updated_by AS updatedBy,
+          e.created_at AS createdAt
+        FROM events e
+        LEFT JOIN committees c ON c.id = e.committee_id
+        WHERE e.id = ?
         LIMIT 1
       `, [eventId]);
 

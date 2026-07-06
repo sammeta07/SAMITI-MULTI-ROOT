@@ -1,0 +1,6 @@
+ALTER TABLE events
+  ADD COLUMN type ENUM('PUBLIC', 'PRIVATE') NOT NULL DEFAULT 'PRIVATE' AFTER category;
+
+UPDATE events
+SET type = 'PRIVATE'
+WHERE type IS NULL OR type = '';

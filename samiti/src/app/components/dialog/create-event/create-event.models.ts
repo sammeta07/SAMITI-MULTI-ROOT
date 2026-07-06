@@ -3,13 +3,16 @@ export interface CreateEventPayload {
   eventName: string;
   eventDisplayName?: string;
   description?: string;
+  address?: string;
   eventBanner?: string;
   bannerImageUrls?: string[];
   status: 'UPCOMING' | 'ONGOING' | 'COMPLETED' | 'CANCELLED';
-  type?: string;
+  category?: string;
   visibility: 'VISIBLE' | 'HIDDEN';
   startDate: string | null;
   endDate: string | null;
+  latitude: number;
+  longitude: number;
 }
 
 export interface CreateEventResponse {
@@ -19,13 +22,16 @@ export interface CreateEventResponse {
   eventDisplayName: string;
   committeeId: number;
   description?: string;
+  address?: string;
   eventBanner?: string;
   bannerImages: string[];
   status: string;
-  type?: string;
+  category?: string;
   visibility: string;
   startDate: string | null;
   endDate: string | null;
+  latitude: number;
+  longitude: number;
   createdBy: number;
   updatedBy: number;
   createdAt: string;

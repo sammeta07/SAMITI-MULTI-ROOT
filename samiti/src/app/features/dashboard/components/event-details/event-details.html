@@ -36,7 +36,7 @@
           <h1>{{ eventData()?.eventName }}</h1>
           <div class="inline-badge-row">
             <span class="badge-item status-badge-{{ eventData()?.status?.toLowerCase() }}"><mat-icon>circle</mat-icon> {{ eventData()?.status }}</span>
-            <span class="badge-item"><mat-icon>category</mat-icon> {{ eventData()?.type || 'General' }}</span>
+            <span class="badge-item"><mat-icon>category</mat-icon> {{ eventData()?.category || 'General' }}</span>
             <span class="badge-item"><mat-icon>visibility</mat-icon> {{ eventData()?.visibility === 'VISIBLE' ? 'Public' : 'Private' }}</span>
             @if (eventData()?.startDate) {
             <span class="badge-item"><mat-icon>calendar_month</mat-icon> {{ eventData()?.startDate | date:'dd MMM yyyy' }}</span>
