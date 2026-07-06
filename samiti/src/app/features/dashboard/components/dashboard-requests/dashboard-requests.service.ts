@@ -43,6 +43,7 @@ export class DashboardRequestsService {
         data {
           committeeId
           committeeName
+          committeeLogo
           address
           actionByUserId
           resolvedByName
@@ -171,6 +172,7 @@ export class DashboardRequestsService {
         data {
           committeeId
           committeeName
+          committeeLogo
           actionByUserId
           resolvedByName
           resolvedByPhoto

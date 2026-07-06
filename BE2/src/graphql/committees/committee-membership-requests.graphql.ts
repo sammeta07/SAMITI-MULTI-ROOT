@@ -26,6 +26,7 @@ export const committeeMembershipRequestsTypes = `
   type ReceivedCommitteeMembershipRequestItem {
     committeeId: Int!
     committeeName: String!
+    committeeLogo: String
     address: String
     actionByUserId: Int
     resolvedByName: String
@@ -57,6 +58,7 @@ export const committeeMembershipRequestsTypes = `
   type ActionTakenOnCommitteeMembershipRequestItem {
     committeeId: Int!
     committeeName: String!
+    committeeLogo: String
     actionByUserId: Int
     resolvedByName: String
     resolvedByPhoto: String
@@ -131,6 +133,7 @@ export const committeeMembershipRequestsResolvers = {
         `SELECT
             c.id                                            AS committee_id,
             c.committee_name,
+          c.logo                                          AS committee_logo,
             c.address,
             crr.action_by_user_id,
             action_user.name                                AS resolved_by_name,
@@ -162,6 +165,7 @@ export const committeeMembershipRequestsResolvers = {
         data: rows.map((row) => ({
           committeeId: Number(row.committee_id),
           committeeName: row.committee_name,
+          committeeLogo: row.committee_logo || null,
           address: row.address,
           actionByUserId: row.action_by_user_id ? Number(row.action_by_user_id) : null,
           resolvedByName: row.resolved_by_name,
@@ -247,6 +251,7 @@ export const committeeMembershipRequestsResolvers = {
         `SELECT
             c.id                                             AS committee_id,
             c.committee_name,
+          c.logo                                           AS committee_logo,
             crr.action_by_user_id,
             action_user.name                                 AS resolved_by_name,
             action_user.profile_photo                        AS resolved_by_photo,
@@ -276,6 +281,7 @@ export const committeeMembershipRequestsResolvers = {
         data: rows.map((row) => ({
           committeeId: Number(row.committee_id),
           committeeName: row.committee_name,
+          committeeLogo: row.committee_logo || null,
           actionByUserId: row.action_by_user_id ? Number(row.action_by_user_id) : null,
           resolvedByName: row.resolved_by_name,
           resolvedByPhoto: row.resolved_by_photo,

@@ -41,12 +41,29 @@
 
                   <ng-container matColumnDef="committee">
                     <th mat-header-cell *matHeaderCellDef>Committee</th>
-                    <td mat-cell *matCellDef="let element" class="font-semibold text-dark table-cell-committee">{{ element.committeeName }}</td>
+                    <td mat-cell *matCellDef="let element">
+                      <div class="table-person-cell">
+                        @if (element.committeeLogo) {
+                          <span class="table-avatar table-avatar--photo"><img [src]="element.committeeLogo" [alt]="element.committeeName"></span>
+                        } @else {
+                          <span class="table-avatar table-avatar--committee">{{ (element.committeeName || '?').charAt(0).toUpperCase() }}</span>
+                        }
+                        <span class="font-semibold text-dark table-cell-committee">{{ element.committeeName }}</span>
+                      </div>
+                    </td>
                   </ng-container>
 
                   <ng-container matColumnDef="user">
                     <th mat-header-cell *matHeaderCellDef>Requested By</th>
-                    <td mat-cell *matCellDef="let element" class="table-cell-user">{{ element.userDetails.name | titlecase }}</td>
+                    <td mat-cell *matCellDef="let element">
+                      <div class="table-person-cell">
+                        <span *ngIf="element.userDetails.photo" class="table-avatar table-avatar--photo">
+                          <img [src]="element.userDetails.photo" [alt]="element.userDetails.name">
+                        </span>
+                        <span *ngIf="!element.userDetails.photo" class="table-avatar table-avatar--photo table-avatar--fallback">{{ getInitials(element.userDetails.name) }}</span>
+                        <span class="table-cell-user">{{ element.userDetails.name | titlecase }}</span>
+                      </div>
+                    </td>
                   </ng-container>
 
                   <ng-container matColumnDef="email">
@@ -60,16 +77,21 @@
                   </ng-container>
 
                   <ng-container matColumnDef="sentOn">
-                    <th mat-header-cell *matHeaderCellDef>Sent On</th>
-                    <td mat-cell *matCellDef="let element" class="text-muted text-sm">{{ element.requestSentTime | date: "d MMM y" }}</td>
+                    <th mat-header-cell *matHeaderCellDef>Requested On</th>
+                    <td mat-cell *matCellDef="let element" class="text-muted text-sm">{{ element.requestSentTime | date: "d MMM y, h:mm a" }}</td>
                   </ng-container>
 
                   <ng-container matColumnDef="resolvedBy">
                     <th mat-header-cell *matHeaderCellDef>Resolved By</th>
                     <td mat-cell *matCellDef="let element">
-                      <span [class.pending-text]="!element.resolvedByName">
-                        {{ element.resolvedByName || "Pending" }}
-                      </span>
+                      <div *ngIf="element.resolvedByName" class="table-person-cell">
+                        <span *ngIf="element.resolvedByPhoto" class="table-avatar table-avatar--photo">
+                          <img [src]="element.resolvedByPhoto" [alt]="element.resolvedByName">
+                        </span>
+                        <span *ngIf="!element.resolvedByPhoto" class="table-avatar table-avatar--photo table-avatar--fallback">{{ getInitials(element.resolvedByName) }}</span>
+                        <span class="text-dark">{{ element.resolvedByName }}</span>
+                      </div>
+                      <span *ngIf="!element.resolvedByName" class="pending-text">Pending</span>
                     </td>
                   </ng-container>
 
@@ -124,11 +146,29 @@
                   </ng-container>
                   <ng-container matColumnDef="committee">
                     <th mat-header-cell *matHeaderCellDef>Committee</th>
-                    <td mat-cell *matCellDef="let element" class="font-semibold text-dark table-cell-committee">{{ element.committeeName }}</td>
+                    <td mat-cell *matCellDef="let element">
+                      <div class="table-person-cell">
+                        @if (element.committeeLogo) {
+                          <span class="table-avatar table-avatar--photo"><img [src]="element.committeeLogo" [alt]="element.committeeName"></span>
+                        } @else {
+                          <span class="table-avatar table-avatar--committee">{{ (element.committeeName || '?').charAt(0).toUpperCase() }}</span>
+                        }
+                        <span class="font-semibold text-dark table-cell-committee">{{ element.committeeName }}</span>
+                      </div>
+                    </td>
                   </ng-container>
                   <ng-container matColumnDef="user">
                     <th mat-header-cell *matHeaderCellDef>Requested By</th>
-                    <td mat-cell *matCellDef="let element" class="table-cell-user">{{ element.userDetails.name | titlecase }}</td>
+                    <td mat-cell *matCellDef="let element">
+                      <div class="table-person-cell">
+                        @if (element.userDetails.photo) {
+                          <span class="table-avatar table-avatar--photo"><img [src]="element.userDetails.photo" [alt]="element.userDetails.name"></span>
+                        } @else {
+                          <span class="table-avatar table-avatar--photo table-avatar--fallback">{{ getInitials(element.userDetails.name) }}</span>
+                        }
+                        <span class="table-cell-user">{{ element.userDetails.name | titlecase }}</span>
+                      </div>
+                    </td>
                   </ng-container>
                   <ng-container matColumnDef="email">
                     <th mat-header-cell *matHeaderCellDef>Email</th>
@@ -139,15 +179,24 @@
                     <td mat-cell *matCellDef="let element" class="text-muted font-mono">{{ element.userDetails.mobile || "—" }}</td>
                   </ng-container>
                   <ng-container matColumnDef="sentOn">
-                    <th mat-header-cell *matHeaderCellDef>Sent On</th>
-                    <td mat-cell *matCellDef="let element" class="text-muted text-sm">{{ element.requestSentTime | date: "d MMM y" }}</td>
+                    <th mat-header-cell *matHeaderCellDef>Requested On</th>
+                    <td mat-cell *matCellDef="let element" class="text-muted text-sm">{{ element.requestSentTime | date: "d MMM y, h:mm a" }}</td>
                   </ng-container>
                   <ng-container matColumnDef="resolvedBy">
                     <th mat-header-cell *matHeaderCellDef>Resolved By</th>
                     <td mat-cell *matCellDef="let element">
-                      <span [class.pending-text]="!element.resolvedByName">
-                        {{ element.resolvedByName || "Pending" }}
-                      </span>
+                      @if (element.resolvedByName) {
+                        <div class="table-person-cell">
+                          @if (element.resolvedByPhoto) {
+                            <span class="table-avatar table-avatar--photo"><img [src]="element.resolvedByPhoto" [alt]="element.resolvedByName"></span>
+                          } @else {
+                            <span class="table-avatar table-avatar--photo table-avatar--fallback">{{ getInitials(element.resolvedByName) }}</span>
+                          }
+                          <span class="text-dark">{{ element.resolvedByName }}</span>
+                        </div>
+                      } @else {
+                        <span class="pending-text">Pending</span>
+                      }
                     </td>
                   </ng-container>
                   <ng-container matColumnDef="actions">
@@ -210,11 +259,29 @@
                   </ng-container>
                   <ng-container matColumnDef="committee">
                     <th mat-header-cell *matHeaderCellDef>Committee</th>
-                    <td mat-cell *matCellDef="let element" class="font-semibold text-dark table-cell-committee">{{ element.committeeName }}</td>
+                    <td mat-cell *matCellDef="let element">
+                      <div class="table-person-cell">
+                        @if (element.committeeLogo) {
+                          <span class="table-avatar table-avatar--photo"><img [src]="element.committeeLogo" [alt]="element.committeeName"></span>
+                        } @else {
+                          <span class="table-avatar table-avatar--committee">{{ getInitials(element.committeeName) }}</span>
+                        }
+                        <span class="font-semibold text-dark table-cell-committee">{{ element.committeeName }}</span>
+                      </div>
+                    </td>
                   </ng-container>
                   <ng-container matColumnDef="user">
                     <th mat-header-cell *matHeaderCellDef>Requested By</th>
-                    <td mat-cell *matCellDef="let element">{{ element.requesterName || "N/A" }}</td>
+                    <td mat-cell *matCellDef="let element">
+                      <div class="table-person-cell">
+                        @if (element.requesterPhoto) {
+                          <span class="table-avatar table-avatar--photo"><img [src]="element.requesterPhoto" [alt]="element.requesterName || 'Requester'"></span>
+                        } @else {
+                          <span class="table-avatar table-avatar--photo table-avatar--fallback">{{ getInitials(element.requesterName || 'N/A') }}</span>
+                        }
+                        <span class="table-cell-user">{{ element.requesterName || "N/A" }}</span>
+                      </div>
+                    </td>
                   </ng-container>
                   <ng-container matColumnDef="address">
                     <th mat-header-cell *matHeaderCellDef>Address</th>
@@ -225,8 +292,8 @@
                     <td mat-cell *matCellDef="let element" class="font-mono">{{ element.establishYear }}</td>
                   </ng-container>
                   <ng-container matColumnDef="sentOn">
-                    <th mat-header-cell *matHeaderCellDef>Sent On</th>
-                    <td mat-cell *matCellDef="let element">{{ element.requestSentTime | date: "d MMM y" }}</td>
+                    <th mat-header-cell *matHeaderCellDef>Requested On</th>
+                    <td mat-cell *matCellDef="let element">{{ element.requestSentTime | date: "d MMM y, h:mm a" }}</td>
                   </ng-container>
                   <ng-container matColumnDef="resolvedOn">
                     <th mat-header-cell *matHeaderCellDef>Resolved On</th>
@@ -285,11 +352,29 @@
                   </ng-container>
                   <ng-container matColumnDef="committee">
                     <th mat-header-cell *matHeaderCellDef>Committee</th>
-                    <td mat-cell *matCellDef="let element" class="font-semibold text-dark">{{ element.committeeName }}</td>
+                    <td mat-cell *matCellDef="let element">
+                      <div class="table-person-cell">
+                        @if (element.committeeLogo) {
+                          <span class="table-avatar table-avatar--photo"><img [src]="element.committeeLogo" [alt]="element.committeeName"></span>
+                        } @else {
+                          <span class="table-avatar table-avatar--committee">{{ getInitials(element.committeeName) }}</span>
+                        }
+                        <span class="font-semibold text-dark table-cell-committee">{{ element.committeeName }}</span>
+                      </div>
+                    </td>
                   </ng-container>
                   <ng-container matColumnDef="user">
                     <th mat-header-cell *matHeaderCellDef>Requested By</th>
-                    <td mat-cell *matCellDef="let element">{{ element.requesterName || "N/A" }}</td>
+                    <td mat-cell *matCellDef="let element">
+                      <div class="table-person-cell">
+                        @if (element.requesterPhoto) {
+                          <span class="table-avatar table-avatar--photo"><img [src]="element.requesterPhoto" [alt]="element.requesterName || 'Requester'"></span>
+                        } @else {
+                          <span class="table-avatar table-avatar--photo table-avatar--fallback">{{ getInitials(element.requesterName || 'N/A') }}</span>
+                        }
+                        <span class="table-cell-user">{{ element.requesterName || "N/A" }}</span>
+                      </div>
+                    </td>
                   </ng-container>
                   <ng-container matColumnDef="address">
                     <th mat-header-cell *matHeaderCellDef>Address</th>
@@ -300,8 +385,8 @@
                     <td mat-cell *matCellDef="let element" class="font-mono">{{ element.establishYear }}</td>
                   </ng-container>
                   <ng-container matColumnDef="sentOn">
-                    <th mat-header-cell *matHeaderCellDef>Sent On</th>
-                    <td mat-cell *matCellDef="let element">{{ element.requestSentTime | date: "d MMM y" }}</td>
+                    <th mat-header-cell *matHeaderCellDef>Requested On</th>
+                    <td mat-cell *matCellDef="let element">{{ element.requestSentTime | date: "d MMM y, h:mm a" }}</td>
                   </ng-container>
                   <ng-container matColumnDef="resolvedOn">
                     <th mat-header-cell *matHeaderCellDef>Resolved On</th>
@@ -370,11 +455,29 @@
                   </ng-container>
                   <ng-container matColumnDef="committee">
                     <th mat-header-cell *matHeaderCellDef>Committee</th>
-                    <td mat-cell *matCellDef="let element" class="font-semibold text-dark">{{ element.committeeName }}</td>
+                    <td mat-cell *matCellDef="let element">
+                      <div class="table-person-cell">
+                        @if (element.committeeLogo) {
+                          <span class="table-avatar table-avatar--photo"><img [src]="element.committeeLogo" [alt]="element.committeeName"></span>
+                        } @else {
+                          <span class="table-avatar table-avatar--committee">{{ getInitials(element.committeeName) }}</span>
+                        }
+                        <span class="font-semibold text-dark table-cell-committee">{{ element.committeeName }}</span>
+                      </div>
+                    </td>
                   </ng-container>
                   <ng-container matColumnDef="user">
                     <th mat-header-cell *matHeaderCellDef>Requested By</th>
-                    <td mat-cell *matCellDef="let element" class="table-cell-user">{{ element.userDetails.name | titlecase }}</td>
+                    <td mat-cell *matCellDef="let element">
+                      <div class="table-person-cell">
+                        @if (element.userDetails.photo) {
+                          <span class="table-avatar table-avatar--photo"><img [src]="element.userDetails.photo" [alt]="element.userDetails.name"></span>
+                        } @else {
+                          <span class="table-avatar table-avatar--photo table-avatar--fallback">{{ getInitials(element.userDetails.name) }}</span>
+                        }
+                        <span class="table-cell-user">{{ element.userDetails.name | titlecase }}</span>
+                      </div>
+                    </td>
                   </ng-container>
                   <ng-container matColumnDef="email">
                     <th mat-header-cell *matHeaderCellDef>Email</th>
@@ -385,8 +488,8 @@
                     <td mat-cell *matCellDef="let element" class="text-muted font-mono">{{ element.userDetails.mobile || "—" }}</td>
                   </ng-container>
                   <ng-container matColumnDef="sentOn">
-                    <th mat-header-cell *matHeaderCellDef>Sent On</th>
-                    <td mat-cell *matCellDef="let element" class="text-muted text-sm">{{ element.requestSentTime | date: "d MMM y" }}</td>
+                    <th mat-header-cell *matHeaderCellDef>Requested On</th>
+                    <td mat-cell *matCellDef="let element" class="text-muted text-sm">{{ element.requestSentTime | date: "d MMM y, h:mm a" }}</td>
                   </ng-container>
                   <ng-container matColumnDef="resolvedOn">
                     <th mat-header-cell *matHeaderCellDef>Resolved On</th>
@@ -394,7 +497,20 @@
                   </ng-container>
                   <ng-container matColumnDef="resolvedBy">
                     <th mat-header-cell *matHeaderCellDef>Resolved By</th>
-                    <td mat-cell *matCellDef="let element">{{ element.resolvedByName || "—" }}</td>
+                    <td mat-cell *matCellDef="let element">
+                      @if (element.resolvedByName) {
+                        <div class="table-person-cell">
+                          @if (element.resolvedByPhoto) {
+                            <span class="table-avatar table-avatar--photo"><img [src]="element.resolvedByPhoto" [alt]="element.resolvedByName"></span>
+                          } @else {
+                            <span class="table-avatar table-avatar--photo table-avatar--fallback">{{ getInitials(element.resolvedByName) }}</span>
+                          }
+                          <span class="text-dark">{{ element.resolvedByName }}</span>
+                        </div>
+                      } @else {
+                        <span class="pending-text">—</span>
+                      }
+                    </td>
                   </ng-container>
                   <ng-container matColumnDef="status">
                     <th mat-header-cell *matHeaderCellDef>Status</th>
@@ -439,7 +555,16 @@
                   </ng-container>
                   <ng-container matColumnDef="committee">
                     <th mat-header-cell *matHeaderCellDef>Committee</th>
-                    <td mat-cell *matCellDef="let element" class="font-semibold text-dark table-cell-committee">{{ element.committeeName }}</td>
+                    <td mat-cell *matCellDef="let element">
+                      <div class="table-person-cell">
+                        @if (element.committeeLogo) {
+                          <span class="table-avatar table-avatar--photo"><img [src]="element.committeeLogo" [alt]="element.committeeName"></span>
+                        } @else {
+                          <span class="table-avatar table-avatar--committee">{{ getInitials(element.committeeName) }}</span>
+                        }
+                        <span class="font-semibold text-dark table-cell-committee">{{ element.committeeName }}</span>
+                      </div>
+                    </td>
                   </ng-container>
                   <ng-container matColumnDef="user">
                     <th mat-header-cell *matHeaderCellDef>Requested By</th>
@@ -454,8 +579,8 @@
                     <td mat-cell *matCellDef="let element" class="text-muted font-mono">{{ element.userDetails.mobile || "—" }}</td>
                   </ng-container>
                   <ng-container matColumnDef="sentOn">
-                    <th mat-header-cell *matHeaderCellDef>Sent On</th>
-                    <td mat-cell *matCellDef="let element" class="text-muted text-sm">{{ element.requestSentTime | date: "d MMM y" }}</td>
+                    <th mat-header-cell *matHeaderCellDef>Requested On</th>
+                    <td mat-cell *matCellDef="let element" class="text-muted text-sm">{{ element.requestSentTime | date: "d MMM y, h:mm a" }}</td>
                   </ng-container>
                   <ng-container matColumnDef="resolvedOn">
                     <th mat-header-cell *matHeaderCellDef>Resolved On</th>

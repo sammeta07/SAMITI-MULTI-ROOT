@@ -16,6 +16,7 @@ export interface CommitteeMembershipRequesterUserDetails {
 export interface ReceivedCommitteeMembershipRequestItem {
   committeeId: number;
   committeeName: string;
+  committeeLogo: string | null;
   address: string | null;
   actionByUserId: number | null;
   resolvedByName: string | null;
@@ -66,6 +67,7 @@ export interface TakeActionOnCommitteeMembershipRequestBody {
 export interface ActionTakenOnCommitteeMembershipRequestItem {
   committeeId: number;
   committeeName: string;
+  committeeLogo: string | null;
   actionByUserId: number | null;
   resolvedByName: string | null;
   resolvedByPhoto: string | null;
