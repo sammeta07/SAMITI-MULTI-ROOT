@@ -29,6 +29,9 @@
       <div class="committees-tabs-shell">
         <ng-template #committeeCardTemplate let-committee let-isAuth="isAuth" let-panelPrefix="panelPrefix">
           <mat-expansion-panel id="{{ panelPrefix }}-committee-{{ committee.id }}" [hideToggle]="false"
+            [expanded]="isPanelExpanded(panelPrefix, committee.id)"
+            (opened)="updatePanelExpandedState(panelPrefix, committee.id, true)"
+            (closed)="updatePanelExpandedState(panelPrefix, committee.id, false)"
             [class.panel-role-admin]="isAuth && committee.isCommitteeAdmin === 1"
             [class.panel-role-member]="isAuth && committee.isCommitteeMember === 1 && committee.isCommitteeAdmin !== 1"
             [class.panel-role-pending]="isAuth && committee.pendingRequestRole"

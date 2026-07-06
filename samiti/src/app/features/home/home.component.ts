@@ -1,7 +1,7 @@
-import { Component, inject, effect, ViewChild, AfterViewInit, ChangeDetectorRef } from '@angular/core';
+import { Component, inject, effect, ChangeDetectorRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { MatExpansionModule, MatAccordion } from '@angular/material/expansion';
+import { MatExpansionModule } from '@angular/material/expansion';
 import { MatTabsModule } from '@angular/material/tabs';
 import { MatIconModule } from '@angular/material/icon';
 import { MatButtonModule } from '@angular/material/button';
@@ -32,7 +32,7 @@ import { CommitteeListResponseGuestUser, CommitteeListRequestBackend, CommitteeA
   templateUrl: './home.component.html',
   styleUrl: './home.component.scss',
 })
-export class HomeComponent implements AfterViewInit {
+export class HomeComponent {
 private readonly headerService = inject(HeaderService);
   private readonly homeService = inject(HomeService);
   private readonly notifier = inject(NotifierService);
@@ -41,8 +41,8 @@ private readonly headerService = inject(HeaderService);
   private readonly dialog = inject(MatDialog); // Injecting MatDialog to open dialogs
   private readonly confirmDialog = inject(ConfirmDialogService); // Injecting ConfirmDialogService
 
-  @ViewChild('nearbyAccordion') nearbyAccordion!: MatAccordion;
-  @ViewChild('favouriteAccordion') favouriteAccordion!: MatAccordion;
+  private nearbyExpandedCommitteeIds = new Set<number>();
+  private favouriteExpandedCommitteeIds = new Set<number>();
 
   userLocationCords = this.headerService.userLocationCords;
   radiusOptions: number[] = [1, 5, 10, 25, 100, 1000];
@@ -91,8 +91,6 @@ constructor() {
     });
   }
 
-  ngAfterViewInit(): void {}
-
   onRadiusChange(event: Event) {
     const target = event.target as HTMLSelectElement;
     this.selectedCommitteeRadius = Number(target.value);
@@ -116,6 +114,7 @@ constructor() {
     fetch$.subscribe({
       next: (res) => {
         this.committeeList = Array.isArray(res) ? res : [res];
+        this.syncExpandedPanelState();
         this.cdr.detectChanges();
       },
       error: (error) => {
@@ -243,27 +242,51 @@ cancelRequest(id: number, event: Event): void {
   }
 
   expandNearby() {
-    if (this.nearbyAccordion) {
-      Promise.resolve().then(() => this.nearbyAccordion.openAll());
-    }
+    this.nearbyExpandedCommitteeIds = new Set(this.nearbyGroups.map(group => group.id));
   }
 
   collapseNearby() {
-    if (this.nearbyAccordion) {
-      Promise.resolve().then(() => this.nearbyAccordion.closeAll());
-    }
+    this.nearbyExpandedCommitteeIds.clear();
   }
 
   expandFavourites() {
-    if (this.favouriteAccordion) {
-      Promise.resolve().then(() => this.favouriteAccordion.openAll());
-    }
+    this.favouriteExpandedCommitteeIds = new Set(this.favouriteGroups.map(group => group.id));
   }
 
   collapseFavourites() {
-    if (this.favouriteAccordion) {
-      Promise.resolve().then(() => this.favouriteAccordion.closeAll());
+    this.favouriteExpandedCommitteeIds.clear();
+  }
+
+  isPanelExpanded(panelPrefix: 'nearby' | 'favourite', committeeId: number): boolean {
+    return panelPrefix === 'nearby'
+      ? this.nearbyExpandedCommitteeIds.has(committeeId)
+      : this.favouriteExpandedCommitteeIds.has(committeeId);
+  }
+
+  updatePanelExpandedState(panelPrefix: 'nearby' | 'favourite', committeeId: number, expanded: boolean): void {
+    const expandedSet = panelPrefix === 'nearby'
+      ? this.nearbyExpandedCommitteeIds
+      : this.favouriteExpandedCommitteeIds;
+
+    if (expanded) {
+      expandedSet.add(committeeId);
+      return;
     }
+
+    expandedSet.delete(committeeId);
+  }
+
+  private syncExpandedPanelState(): void {
+    const nearbyIds = new Set(this.nearbyGroups.map(group => group.id));
+    const favouriteIds = new Set(this.favouriteGroups.map(group => group.id));
+
+    this.nearbyExpandedCommitteeIds = new Set(
+      [...this.nearbyExpandedCommitteeIds].filter(id => nearbyIds.has(id))
+    );
+
+    this.favouriteExpandedCommitteeIds = new Set(
+      [...this.favouriteExpandedCommitteeIds].filter(id => favouriteIds.has(id))
+    );
   }
 
   getTruncatedDescription(description: string | null): string {
