@@ -31,8 +31,6 @@ export class DashboardRequestsComponent {
   /** Query Data */
   receivedRequests = signal<any[]>([]);
   sentRequests = signal<any[]>([]);
-  actionTakenOnRequests = signal<any[]>([]);
-
   /** Computed: Received Tab - Admin Requests */
   receivedAdminRequests = computed(() =>
     this.receivedRequests()
@@ -61,26 +59,10 @@ export class DashboardRequestsComponent {
       .sort((a, b) => new Date(b.requestSentTime).getTime() - new Date(a.requestSentTime).getTime())
   );
 
-  /** Computed: History Tab - Admin Actions */
-  historyAdminRequests = computed(() =>
-    this.actionTakenOnRequests()
-      .filter((r) => r.requestType === "COMMITTEE_ADMIN")
-      .sort((a, b) => new Date(b.actionAtTime).getTime() - new Date(a.actionAtTime).getTime())
-  );
-
-  /** Computed: History Tab - Member Actions */
-  historyMemberRequests = computed(() =>
-    this.actionTakenOnRequests()
-      .filter((r) => r.requestType === "COMMITTEE_MEMBER")
-      .sort((a, b) => new Date(b.actionAtTime).getTime() - new Date(a.actionAtTime).getTime())
-  );
-
   /** Table columns */
-  receivedAdminColumns = ["index", "committee", "user", "email", "mobile", "sentOn", "resolvedOn", "resolvedBy", "status", "actions"];
-  receivedColumns = ["index", "committee", "user", "email", "mobile", "sentOn", "resolvedOn", "resolvedBy", "status", "actions"];
-  sentColumns = ["index", "committee", "user", "address", "year", "sentOn", "resolvedOn", "status", "actions"];
-  historyColumns = ["index", "committee", "user", "email", "mobile", "sentOn", "resolvedOn", "resolvedBy", "status"];
-
+  receivedAdminColumns = ["index", "committee", "user", "mobile", "sentOn", "resolvedOn", "resolvedBy", "actions"];
+  receivedColumns = ["index", "committee", "user", "mobile", "sentOn", "resolvedOn", "resolvedBy", "actions"];
+  sentColumns = ["index", "committee", "user", "year", "sentOn", "resolvedOn", "resolvedBy", "actions"];
   constructor() {
     this.loadData();
   }
@@ -91,12 +73,10 @@ export class DashboardRequestsComponent {
     Promise.all([
       this.service.getReceivedCommitteeMembershipRequestsForAdminCommittees().toPromise(),
       this.service.getSentCommitteeMembershipRequestsByLoggedInUser().toPromise(),
-      this.service.getActionTakenOnCommitteeMembershipRequestsByLoggedInUser().toPromise(),
     ])
-      .then(([received, sent, actionTaken]) => {
+      .then(([received, sent]) => {
         this.receivedRequests.set(received || []);
         this.sentRequests.set(sent || []);
-        this.actionTakenOnRequests.set(actionTaken || []);
       })
       .catch((err: any) => console.error("Failed to load requests:", err))
       .finally(() => this.isLoading.set(false));

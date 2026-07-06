@@ -34,6 +34,7 @@ export interface SentCommitteeMembershipRequestItem {
   committeeLogo: string | null;
   requesterUserId: number;
   requesterName: string | null;
+  requesterEmail: string | null;
   requesterPhoto: string | null;
   actionByUserId: number | null;
   requestType: CommitteeMembershipRequestType;
@@ -66,16 +67,3 @@ export interface TakeActionOnCommitteeMembershipRequestBody {
   decisionAction: 'ACCEPTED' | 'REJECTED';
 }
 
-export interface ActionTakenOnCommitteeMembershipRequestItem {
-  committeeId: number;
-  committeeName: string;
-  committeeLogo: string | null;
-  actionByUserId: number | null;
-  resolvedByName: string | null;
-  resolvedByPhoto: string | null;
-  requestType: CommitteeMembershipRequestType;
-  requestSentTime: string | null;
-  actionAtTime: string;
-  status: 'ACCEPTED' | 'REJECTED';
-  userDetails: CommitteeMembershipRequesterUserDetails;
-}

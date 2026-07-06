@@ -44,6 +44,7 @@ export const committeeMembershipRequestsTypes = `
     committeeLogo: String
     requesterUserId: Int!
     requesterName: String
+    requesterEmail: String
     requesterPhoto: String
     actionByUserId: Int
     requestType: CommitteeMembershipRequestType!
@@ -57,30 +58,12 @@ export const committeeMembershipRequestsTypes = `
     resolvedAtTime: String
   }
 
-  type ActionTakenOnCommitteeMembershipRequestItem {
-    committeeId: Int!
-    committeeName: String!
-    committeeLogo: String
-    actionByUserId: Int
-    resolvedByName: String
-    resolvedByPhoto: String
-    requestType: CommitteeMembershipRequestType!
-    requestSentTime: String
-    actionAtTime: String
-    status: String!
-    userDetails: CommitteeMembershipRequesterUserDetails!
-  }
-
   type ReceivedCommitteeMembershipRequestsResponse {
     data: [ReceivedCommitteeMembershipRequestItem!]!
   }
 
   type SentCommitteeMembershipRequestsResponse {
     data: [SentCommitteeMembershipRequestItem!]!
-  }
-
-  type ActionTakenOnCommitteeMembershipRequestsResponse {
-    data: [ActionTakenOnCommitteeMembershipRequestItem!]!
   }
 
   type TakeActionOnCommitteeMembershipRequestResponse {
@@ -94,7 +77,6 @@ export const committeeMembershipRequestsTypes = `
 export const committeeMembershipRequestsQueryFields = `
   receivedCommitteeMembershipRequestsForAdminCommittees: ReceivedCommitteeMembershipRequestsResponse!
   sentCommitteeMembershipRequestsByLoggedInUser: SentCommitteeMembershipRequestsResponse!
-  actionTakenOnCommitteeMembershipRequestsByLoggedInUser: ActionTakenOnCommitteeMembershipRequestsResponse!
 `;
 
 export const committeeMembershipRequestsMutationFields = `
@@ -159,7 +141,7 @@ export const committeeMembershipRequestsResolvers = {
             ON admin_uc.committee_id = crr.committee_id
             AND admin_uc.user_id = ?
             AND admin_uc.is_committee_admin = 1
-         WHERE crr.status = 'PENDING'
+         WHERE crr.status IN ('PENDING', 'ACCEPTED', 'REJECTED')
            AND crr.requester_user_id <> ?
          ORDER BY crr.requested_at DESC`,
         [loggedInUserId, loggedInUserId]
@@ -202,6 +184,7 @@ export const committeeMembershipRequestsResolvers = {
             c.logo                                          AS committee_logo,
             crr.requester_user_id,
             requester_user.name                             AS requester_name,
+            requester_user.email                            AS requester_email,
             requester_user.profile_photo                    AS requester_photo,
             COALESCE(crr.action_by_user_id, crr.cancel_by_user_id) AS action_by_user_id,
             crr.request_role                               AS request_type,
@@ -234,6 +217,7 @@ export const committeeMembershipRequestsResolvers = {
           committeeLogo: row.committee_logo || null,
           requesterUserId: Number(row.requester_user_id),
           requesterName: row.requester_name,
+          requesterEmail: row.requester_email || null,
           requesterPhoto: row.requester_photo,
           actionByUserId: row.action_by_user_id ? Number(row.action_by_user_id) : null,
           requestType: row.request_type as 'COMMITTEE_MEMBER' | 'COMMITTEE_ADMIN',
@@ -245,65 +229,6 @@ export const committeeMembershipRequestsResolvers = {
           resolvedByEmail: row.resolved_by_email,
           resolvedByPhoto: row.resolved_by_photo,
           resolvedAtTime: row.resolved_at_time
-        }))
-      };
-    },
-
-    // ── Requests on which the logged-in user took action ──────────────────────
-    async actionTakenOnCommitteeMembershipRequestsByLoggedInUser(_: any, __: any, context: any) {
-      const loggedInUserId = await resolveLoggedInUserIdFromGraphQLContext(context);
-
-      const rows = await query<any[]>(
-        `SELECT
-            c.id                                             AS committee_id,
-            c.committee_name,
-          c.logo                                           AS committee_logo,
-            crr.action_by_user_id,
-            action_user.name                                 AS resolved_by_name,
-            action_user.profile_photo                        AS resolved_by_photo,
-            crr.request_role                                AS request_type,
-            DATE_FORMAT(crr.requested_at, '%Y-%m-%d %H:%i:%s') AS request_sent_time,
-            DATE_FORMAT(crr.action_at, '%Y-%m-%d %H:%i:%s') AS action_at_time,
-            crr.status,
-            u.id                                            AS user_id,
-            u.name,
-            u.email,
-            u.mobile,
-            u.date_of_birth,
-            u.gender,
-            u.profile_photo                                 AS photo
-         FROM committee_role_requests crr
-         INNER JOIN committees c ON c.id = crr.committee_id
-         INNER JOIN users u ON u.id = crr.requester_user_id
-         LEFT JOIN users action_user ON action_user.id = crr.action_by_user_id
-         WHERE crr.action_by_user_id = ?
-           AND crr.status IN ('ACCEPTED', 'REJECTED')
-           AND crr.requester_user_id <> ?
-         ORDER BY crr.action_at DESC`,
-        [loggedInUserId, loggedInUserId]
-      );
-
-      return {
-        data: rows.map((row) => ({
-          committeeId: Number(row.committee_id),
-          committeeName: row.committee_name,
-          committeeLogo: row.committee_logo || null,
-          actionByUserId: row.action_by_user_id ? Number(row.action_by_user_id) : null,
-          resolvedByName: row.resolved_by_name,
-          resolvedByPhoto: row.resolved_by_photo,
-          requestType: row.request_type as 'COMMITTEE_MEMBER' | 'COMMITTEE_ADMIN',
-          requestSentTime: row.request_sent_time,
-          actionAtTime: row.action_at_time,
-          status: String(row.status),
-          userDetails: {
-            userId: Number(row.user_id),
-            name: row.name,
-            email: row.email,
-            mobile: row.mobile,
-            dateOfBirth: row.date_of_birth,
-            gender: row.gender,
-            photo: row.photo
-          }
         }))
       };
     }

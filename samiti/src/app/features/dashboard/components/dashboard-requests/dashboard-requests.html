@@ -48,7 +48,12 @@
                         } @else {
                           <span class="table-avatar table-avatar--committee">{{ (element.committeeName || '?').charAt(0).toUpperCase() }}</span>
                         }
-                        <span class="font-semibold text-dark table-cell-committee">{{ element.committeeName }}</span>
+                        <div class="committee-info">
+                          <span class="committee-name">{{ element.committeeName }}</span>
+                          @if (element.address) {
+                            <span class="committee-address">{{ element.address }}</span>
+                          }
+                        </div>
                       </div>
                     </td>
                   </ng-container>
@@ -61,14 +66,12 @@
                           <img [src]="element.userDetails.photo" [alt]="element.userDetails.name">
                         </span>
                         <span *ngIf="!element.userDetails.photo" class="table-avatar table-avatar--photo table-avatar--fallback">{{ getInitials(element.userDetails.name) }}</span>
-                        <span class="table-cell-user">{{ element.userDetails.name | titlecase }}</span>
+                        <div class="committee-info">
+                          <span class="committee-name">{{ element.userDetails.name | titlecase }}</span>
+                          <span class="committee-address">{{ element.userDetails.email }}</span>
+                        </div>
                       </div>
                     </td>
-                  </ng-container>
-
-                  <ng-container matColumnDef="email">
-                    <th mat-header-cell *matHeaderCellDef>Email</th>
-                    <td mat-cell *matCellDef="let element" class="text-muted text-sm">{{ element.userDetails.email }}</td>
                   </ng-container>
 
                   <ng-container matColumnDef="mobile">
@@ -100,29 +103,26 @@
                     </td>
                   </ng-container>
 
-                  <ng-container matColumnDef="status">
-                    <th mat-header-cell *matHeaderCellDef>Status</th>
-                    <td mat-cell *matCellDef="let element">
-                      <span [ngClass]="'status-chip status-' + element.status.toLowerCase()">{{ element.status }}</span>
-                    </td>
-                  </ng-container>
-
                   <ng-container matColumnDef="actions">
                     <th mat-header-cell *matHeaderCellDef class="col-actions">Actions</th>
                     <td mat-cell *matCellDef="let element" class="col-actions">
-                      <div class="action-btn-group">
-                        <button mat-icon-button class="btn-action btn-reject" matTooltip="Reject" (click)="rejectRequest(element.committeeId, element.userDetails.userId)">
-                          <mat-icon>close</mat-icon>
-                        </button>
-                        <button mat-icon-button class="btn-action btn-approve" matTooltip="Approve" (click)="approveRequest(element.committeeId, element.userDetails.userId)">
-                          <mat-icon>check</mat-icon>
-                        </button>
-                      </div>
+                      @if (element.status === 'PENDING') {
+                        <div class="action-btn-group">
+                          <button mat-stroked-button class="btn-labeled btn-reject" (click)="rejectRequest(element.committeeId, element.userDetails.userId)">
+                            <mat-icon>close</mat-icon> Reject
+                          </button>
+                          <button mat-stroked-button class="btn-labeled btn-approve" (click)="approveRequest(element.committeeId, element.userDetails.userId)">
+                            <mat-icon>check</mat-icon> Accept
+                          </button>
+                        </div>
+                      } @else {
+                        <span [ngClass]="'status-chip status-' + element.status.toLowerCase()">{{ element.status }}</span>
+                      }
                     </td>
                   </ng-container>
 
                   <tr mat-header-row *matHeaderRowDef="receivedAdminColumns"></tr>
-                  <tr mat-row *matRowDef="let row; columns: receivedAdminColumns;"></tr>
+                  <tr mat-row *matRowDef="let row; columns: receivedAdminColumns;" [ngClass]="{'row-accepted': row.status === 'ACCEPTED', 'row-rejected': row.status === 'REJECTED'}"></tr>
                 </table>
               </div>
             } @else {
@@ -165,7 +165,12 @@
                         } @else {
                           <span class="table-avatar table-avatar--committee">{{ (element.committeeName || '?').charAt(0).toUpperCase() }}</span>
                         }
-                        <span class="font-semibold text-dark table-cell-committee">{{ element.committeeName }}</span>
+                        <div class="committee-info">
+                          <span class="committee-name">{{ element.committeeName }}</span>
+                          @if (element.address) {
+                            <span class="committee-address">{{ element.address }}</span>
+                          }
+                        </div>
                       </div>
                     </td>
                   </ng-container>
@@ -178,13 +183,12 @@
                         } @else {
                           <span class="table-avatar table-avatar--photo table-avatar--fallback">{{ getInitials(element.userDetails.name) }}</span>
                         }
-                        <span class="table-cell-user">{{ element.userDetails.name | titlecase }}</span>
+                        <div class="committee-info">
+                          <span class="committee-name">{{ element.userDetails.name | titlecase }}</span>
+                          <span class="committee-address">{{ element.userDetails.email }}</span>
+                        </div>
                       </div>
                     </td>
-                  </ng-container>
-                  <ng-container matColumnDef="email">
-                    <th mat-header-cell *matHeaderCellDef>Email</th>
-                    <td mat-cell *matCellDef="let element" class="text-muted text-sm">{{ element.userDetails.email }}</td>
                   </ng-container>
                   <ng-container matColumnDef="mobile">
                     <th mat-header-cell *matHeaderCellDef>Mobile</th>
@@ -215,27 +219,25 @@
                       }
                     </td>
                   </ng-container>
-                  <ng-container matColumnDef="status">
-                    <th mat-header-cell *matHeaderCellDef>Status</th>
-                    <td mat-cell *matCellDef="let element">
-                      <span [ngClass]="'status-chip status-' + element.status.toLowerCase()">{{ element.status }}</span>
-                    </td>
-                  </ng-container>
                   <ng-container matColumnDef="actions">
                     <th mat-header-cell *matHeaderCellDef class="col-actions">Actions</th>
                     <td mat-cell *matCellDef="let element" class="col-actions">
-                      <div class="action-btn-group">
-                        <button mat-icon-button class="btn-action btn-reject" matTooltip="Reject" (click)="rejectRequest(element.committeeId, element.userDetails.userId)">
-                          <mat-icon>close</mat-icon>
-                        </button>
-                        <button mat-icon-button class="btn-action btn-approve" matTooltip="Approve" (click)="approveRequest(element.committeeId, element.userDetails.userId)">
-                          <mat-icon>check</mat-icon>
-                        </button>
-                      </div>
+                      @if (element.status === 'PENDING') {
+                        <div class="action-btn-group">
+                          <button mat-stroked-button class="btn-labeled btn-reject" (click)="rejectRequest(element.committeeId, element.userDetails.userId)">
+                            <mat-icon>close</mat-icon> Reject
+                          </button>
+                          <button mat-stroked-button class="btn-labeled btn-approve" (click)="approveRequest(element.committeeId, element.userDetails.userId)">
+                            <mat-icon>check</mat-icon> Accept
+                          </button>
+                        </div>
+                      } @else {
+                        <span [ngClass]="'status-chip status-' + element.status.toLowerCase()">{{ element.status }}</span>
+                      }
                     </td>
                   </ng-container>
                   <tr mat-header-row *matHeaderRowDef="receivedColumns"></tr>
-                  <tr mat-row *matRowDef="let row; columns: receivedColumns;"></tr>
+                  <tr mat-row *matRowDef="let row; columns: receivedColumns;" [ngClass]="{'row-accepted': row.status === 'ACCEPTED', 'row-rejected': row.status === 'REJECTED'}"></tr>
                 </table>
               </div>
             } @else {
@@ -288,7 +290,12 @@
                         } @else {
                           <span class="table-avatar table-avatar--committee">{{ getInitials(element.committeeName) }}</span>
                         }
-                        <span class="font-semibold text-dark table-cell-committee">{{ element.committeeName }}</span>
+                        <div class="committee-info">
+                          <span class="committee-name">{{ element.committeeName }}</span>
+                          @if (element.address) {
+                            <span class="committee-address">{{ element.address }}</span>
+                          }
+                        </div>
                       </div>
                     </td>
                   </ng-container>
@@ -301,13 +308,14 @@
                         } @else {
                           <span class="table-avatar table-avatar--photo table-avatar--fallback">{{ getInitials(element.requesterName || 'N/A') }}</span>
                         }
-                        <span class="table-cell-user">{{ element.requesterName || "N/A" }}</span>
+                        <div class="committee-info">
+                          <span class="committee-name">{{ element.requesterName || 'N/A' }}</span>
+                          @if (element.requesterEmail) {
+                            <span class="committee-address">{{ element.requesterEmail }}</span>
+                          }
+                        </div>
                       </div>
                     </td>
-                  </ng-container>
-                  <ng-container matColumnDef="address">
-                    <th mat-header-cell *matHeaderCellDef>Address</th>
-                    <td mat-cell *matCellDef="let element" class="text-muted">{{ element.address || "—" }}</td>
                   </ng-container>
                   <ng-container matColumnDef="year">
                     <th mat-header-cell *matHeaderCellDef>Est. Year</th>
@@ -321,24 +329,37 @@
                     <th mat-header-cell *matHeaderCellDef>Resolved On</th>
                     <td mat-cell *matCellDef="let element">{{ element.resolvedAtTime ? (element.resolvedAtTime | date: "d MMM y") : "—" }}</td>
                   </ng-container>
-                  <ng-container matColumnDef="status">
-                    <th mat-header-cell *matHeaderCellDef>Status</th>
+                  <ng-container matColumnDef="resolvedBy">
+                    <th mat-header-cell *matHeaderCellDef>Resolved By</th>
                     <td mat-cell *matCellDef="let element">
-                      <span [ngClass]="'status-chip status-' + element.status.toLowerCase()">{{ element.status }}</span>
+                      @if (element.resolvedByName) {
+                        <div class="table-person-cell">
+                          @if (element.resolvedByPhoto) {
+                            <span class="table-avatar table-avatar--photo"><img [src]="element.resolvedByPhoto" [alt]="element.resolvedByName"></span>
+                          } @else {
+                            <span class="table-avatar table-avatar--photo table-avatar--fallback">{{ getInitials(element.resolvedByName) }}</span>
+                          }
+                          <span class="text-dark">{{ element.resolvedByName }}</span>
+                        </div>
+                      } @else {
+                        <span class="text-muted">—</span>
+                      }
                     </td>
                   </ng-container>
                   <ng-container matColumnDef="actions">
                     <th mat-header-cell *matHeaderCellDef class="col-actions">Actions</th>
                     <td mat-cell *matCellDef="let element" class="col-actions">
-                      @if (element.status === "PENDING") {
-                        <button mat-icon-button class="btn-action btn-cancel" matTooltip="Cancel Request" (click)="cancelSentRequest(element.committeeId, element.committeeName)">
-                          <mat-icon>cancel</mat-icon>
+                      @if (element.status === 'PENDING') {
+                        <button mat-stroked-button class="btn-labeled btn-cancel" (click)="cancelSentRequest(element.committeeId, element.committeeName)">
+                          <mat-icon>cancel</mat-icon> Cancel
                         </button>
+                      } @else {
+                        <span [ngClass]="'status-chip status-' + element.status.toLowerCase()">{{ element.status }}</span>
                       }
                     </td>
                   </ng-container>
                   <tr mat-header-row *matHeaderRowDef="sentColumns"></tr>
-                  <tr mat-row *matRowDef="let row; columns: sentColumns;"></tr>
+                  <tr mat-row *matRowDef="let row; columns: sentColumns;" [ngClass]="{'row-accepted': row.status === 'ACCEPTED', 'row-rejected': row.status === 'REJECTED', 'row-cancelled': row.status === 'CANCELLED'}"></tr>
                 </table>
               </div>
             } @else {
@@ -381,7 +402,12 @@
                         } @else {
                           <span class="table-avatar table-avatar--committee">{{ getInitials(element.committeeName) }}</span>
                         }
-                        <span class="font-semibold text-dark table-cell-committee">{{ element.committeeName }}</span>
+                        <div class="committee-info">
+                          <span class="committee-name">{{ element.committeeName }}</span>
+                          @if (element.address) {
+                            <span class="committee-address">{{ element.address }}</span>
+                          }
+                        </div>
                       </div>
                     </td>
                   </ng-container>
@@ -394,13 +420,14 @@
                         } @else {
                           <span class="table-avatar table-avatar--photo table-avatar--fallback">{{ getInitials(element.requesterName || 'N/A') }}</span>
                         }
-                        <span class="table-cell-user">{{ element.requesterName || "N/A" }}</span>
+                        <div class="committee-info">
+                          <span class="committee-name">{{ element.requesterName || 'N/A' }}</span>
+                          @if (element.requesterEmail) {
+                            <span class="committee-address">{{ element.requesterEmail }}</span>
+                          }
+                        </div>
                       </div>
                     </td>
-                  </ng-container>
-                  <ng-container matColumnDef="address">
-                    <th mat-header-cell *matHeaderCellDef>Address</th>
-                    <td mat-cell *matCellDef="let element" class="text-muted">{{ element.address || "—" }}</td>
                   </ng-container>
                   <ng-container matColumnDef="year">
                     <th mat-header-cell *matHeaderCellDef>Est. Year</th>
@@ -413,109 +440,6 @@
                   <ng-container matColumnDef="resolvedOn">
                     <th mat-header-cell *matHeaderCellDef>Resolved On</th>
                     <td mat-cell *matCellDef="let element">{{ element.resolvedAtTime ? (element.resolvedAtTime | date: "d MMM y") : "—" }}</td>
-                  </ng-container>
-                  <ng-container matColumnDef="status">
-                    <th mat-header-cell *matHeaderCellDef>Status</th>
-                    <td mat-cell *matCellDef="let element">
-                      <span [ngClass]="'status-chip status-' + element.status.toLowerCase()">{{ element.status }}</span>
-                    </td>
-                  </ng-container>
-                  <ng-container matColumnDef="actions">
-                    <th mat-header-cell *matHeaderCellDef class="col-actions">Actions</th>
-                    <td mat-cell *matCellDef="let element" class="col-actions">
-                      @if (element.status === "PENDING") {
-                        <button mat-icon-button class="btn-action btn-cancel" matTooltip="Cancel Request" (click)="cancelSentRequest(element.committeeId, element.committeeName)">
-                          <mat-icon>cancel</mat-icon>
-                        </button>
-                      }
-                    </td>
-                  </ng-container>
-                  <tr mat-header-row *matHeaderRowDef="sentColumns"></tr>
-                  <tr mat-row *matRowDef="let row; columns: sentColumns;"></tr>
-                </table>
-              </div>
-            } @else {
-              <div class="empty-state-container">
-                <div class="empty-icon-wrapper"><mat-icon class="empty-icon">person_off</mat-icon></div>
-                <h4 class="empty-title">You have no sent out association requests logs pending.</h4>
-              </div>
-            }
-          </mat-expansion-panel>
-        </div>
-      </mat-tab>
-
-      <mat-tab>
-        <ng-template mat-tab-label>
-          <mat-icon class="tab-icon">manage_history</mat-icon>
-          <span class="tab-label-text">History</span>
-          <span class="tab-count">{{ historyAdminRequests().length + historyMemberRequests().length }}</span>
-        </ng-template>
-
-        <div class="tab-content-pane">
-          <mat-expansion-panel class="modern-panel" [expanded]="true">
-            <mat-expansion-panel-header class="panel-header">
-              <mat-panel-title>
-                <div class="title-wrapper">
-                  <div class="icon-avatar admin-type">
-                    <mat-icon>admin_panel_settings</mat-icon>
-                  </div>
-                  <span class="title-text">Admin Requests</span>
-                  <span class="panel-context-icon panel-context-icon--history">
-                    <mat-icon>manage_history</mat-icon>
-                  </span>
-                  <span class="counter-badge">{{ historyAdminRequests().length }}</span>
-                </div>
-              </mat-panel-title>
-            </mat-expansion-panel-header>
-
-            @if (historyAdminRequests().length > 0) {
-              <div class="table-responsive">
-                <table mat-table [dataSource]="historyAdminRequests()" class="modern-table">
-                  <ng-container matColumnDef="index">
-                    <th mat-header-cell *matHeaderCellDef class="col-index">#</th>
-                    <td mat-cell *matCellDef="let element; let i = index" class="col-index font-medium">{{ i + 1 }}</td>
-                  </ng-container>
-                  <ng-container matColumnDef="committee">
-                    <th mat-header-cell *matHeaderCellDef>Committee</th>
-                    <td mat-cell *matCellDef="let element">
-                      <div class="table-person-cell">
-                        @if (element.committeeLogo) {
-                          <span class="table-avatar table-avatar--photo"><img [src]="element.committeeLogo" [alt]="element.committeeName"></span>
-                        } @else {
-                          <span class="table-avatar table-avatar--committee">{{ getInitials(element.committeeName) }}</span>
-                        }
-                        <span class="font-semibold text-dark table-cell-committee">{{ element.committeeName }}</span>
-                      </div>
-                    </td>
-                  </ng-container>
-                  <ng-container matColumnDef="user">
-                    <th mat-header-cell *matHeaderCellDef>Requested By</th>
-                    <td mat-cell *matCellDef="let element">
-                      <div class="table-person-cell">
-                        @if (element.userDetails.photo) {
-                          <span class="table-avatar table-avatar--photo"><img [src]="element.userDetails.photo" [alt]="element.userDetails.name"></span>
-                        } @else {
-                          <span class="table-avatar table-avatar--photo table-avatar--fallback">{{ getInitials(element.userDetails.name) }}</span>
-                        }
-                        <span class="table-cell-user">{{ element.userDetails.name | titlecase }}</span>
-                      </div>
-                    </td>
-                  </ng-container>
-                  <ng-container matColumnDef="email">
-                    <th mat-header-cell *matHeaderCellDef>Email</th>
-                    <td mat-cell *matCellDef="let element" class="text-muted text-sm">{{ element.userDetails.email }}</td>
-                  </ng-container>
-                  <ng-container matColumnDef="mobile">
-                    <th mat-header-cell *matHeaderCellDef>Mobile</th>
-                    <td mat-cell *matCellDef="let element" class="text-muted font-mono">{{ element.userDetails.mobile || "—" }}</td>
-                  </ng-container>
-                  <ng-container matColumnDef="sentOn">
-                    <th mat-header-cell *matHeaderCellDef>Requested On</th>
-                    <td mat-cell *matCellDef="let element" class="text-muted text-sm">{{ element.requestSentTime | date: "d MMM y, h:mm a" }}</td>
-                  </ng-container>
-                  <ng-container matColumnDef="resolvedOn">
-                    <th mat-header-cell *matHeaderCellDef>Resolved On</th>
-                    <td mat-cell *matCellDef="let element" class="text-sm text-dark">{{ element.actionAtTime | date: "d MMM y, h:mm a" }}</td>
                   </ng-container>
                   <ng-container matColumnDef="resolvedBy">
                     <th mat-header-cell *matHeaderCellDef>Resolved By</th>
@@ -530,102 +454,30 @@
                           <span class="text-dark">{{ element.resolvedByName }}</span>
                         </div>
                       } @else {
-                        <span class="pending-text">—</span>
+                        <span class="text-muted">—</span>
                       }
                     </td>
                   </ng-container>
-                  <ng-container matColumnDef="status">
-                    <th mat-header-cell *matHeaderCellDef>Status</th>
-                    <td mat-cell *matCellDef="let element">
-                      <span [ngClass]="'status-chip status-' + element.status.toLowerCase()">{{ element.status }}</span>
+                  <ng-container matColumnDef="actions">
+                    <th mat-header-cell *matHeaderCellDef class="col-actions">Actions</th>
+                    <td mat-cell *matCellDef="let element" class="col-actions">
+                      @if (element.status === 'PENDING') {
+                        <button mat-stroked-button class="btn-labeled btn-cancel" (click)="cancelSentRequest(element.committeeId, element.committeeName)">
+                          <mat-icon>cancel</mat-icon> Cancel
+                        </button>
+                      } @else {
+                        <span [ngClass]="'status-chip status-' + element.status.toLowerCase()">{{ element.status }}</span>
+                      }
                     </td>
                   </ng-container>
-                  <tr mat-header-row *matHeaderRowDef="historyColumns"></tr>
-                  <tr mat-row *matRowDef="let row; columns: historyColumns;"></tr>
-                </table>
-              </div>
-            } @else {
-              <div class="empty-state-container">
-                <div class="empty-icon-wrapper"><mat-icon class="empty-icon">history</mat-icon></div>
-                <h4 class="empty-title">There are no administrative records log files processed yet.</h4>
-              </div>
-            }
-          </mat-expansion-panel>
-
-          <mat-expansion-panel class="modern-panel" [expanded]="true">
-            <mat-expansion-panel-header class="panel-header">
-              <mat-panel-title>
-                <div class="title-wrapper">
-                  <div class="icon-avatar member-type">
-                    <mat-icon>person</mat-icon>
-                  </div>
-                  <span class="title-text">Membership Requests</span>
-                  <span class="panel-context-icon panel-context-icon--history">
-                    <mat-icon>manage_history</mat-icon>
-                  </span>
-                  <span class="counter-badge">{{ historyMemberRequests().length }}</span>
-                </div>
-              </mat-panel-title>
-            </mat-expansion-panel-header>
-
-            @if (historyMemberRequests().length > 0) {
-              <div class="table-responsive">
-                <table mat-table [dataSource]="historyMemberRequests()" class="modern-table">
-                  <ng-container matColumnDef="index">
-                    <th mat-header-cell *matHeaderCellDef class="col-index">#</th>
-                    <td mat-cell *matCellDef="let element; let i = index" class="col-index font-medium">{{ i + 1 }}</td>
-                  </ng-container>
-                  <ng-container matColumnDef="committee">
-                    <th mat-header-cell *matHeaderCellDef>Committee</th>
-                    <td mat-cell *matCellDef="let element">
-                      <div class="table-person-cell">
-                        @if (element.committeeLogo) {
-                          <span class="table-avatar table-avatar--photo"><img [src]="element.committeeLogo" [alt]="element.committeeName"></span>
-                        } @else {
-                          <span class="table-avatar table-avatar--committee">{{ getInitials(element.committeeName) }}</span>
-                        }
-                        <span class="font-semibold text-dark table-cell-committee">{{ element.committeeName }}</span>
-                      </div>
-                    </td>
-                  </ng-container>
-                  <ng-container matColumnDef="user">
-                    <th mat-header-cell *matHeaderCellDef>Requested By</th>
-                    <td mat-cell *matCellDef="let element" class="table-cell-user">{{ element.userDetails.name | titlecase }}</td>
-                  </ng-container>
-                  <ng-container matColumnDef="email">
-                    <th mat-header-cell *matHeaderCellDef>Email</th>
-                    <td mat-cell *matCellDef="let element" class="text-muted text-sm">{{ element.userDetails.email }}</td>
-                  </ng-container>
-                  <ng-container matColumnDef="mobile">
-                    <th mat-header-cell *matHeaderCellDef>Mobile</th>
-                    <td mat-cell *matCellDef="let element" class="text-muted font-mono">{{ element.userDetails.mobile || "—" }}</td>
-                  </ng-container>
-                  <ng-container matColumnDef="sentOn">
-                    <th mat-header-cell *matHeaderCellDef>Requested On</th>
-                    <td mat-cell *matCellDef="let element" class="text-muted text-sm">{{ element.requestSentTime | date: "d MMM y, h:mm a" }}</td>
-                  </ng-container>
-                  <ng-container matColumnDef="resolvedOn">
-                    <th mat-header-cell *matHeaderCellDef>Resolved On</th>
-                    <td mat-cell *matCellDef="let element" class="text-sm text-dark">{{ element.actionAtTime | date: "d MMM y, h:mm a" }}</td>
-                  </ng-container>
-                  <ng-container matColumnDef="resolvedBy">
-                    <th mat-header-cell *matHeaderCellDef>Resolved By</th>
-                    <td mat-cell *matCellDef="let element">{{ element.resolvedByName || "—" }}</td>
-                  </ng-container>
-                  <ng-container matColumnDef="status">
-                    <th mat-header-cell *matHeaderCellDef>Status</th>
-                    <td mat-cell *matCellDef="let element">
-                      <span [ngClass]="'status-chip status-' + element.status.toLowerCase()">{{ element.status }}</span>
-                    </td>
-                  </ng-container>
-                  <tr mat-header-row *matHeaderRowDef="historyColumns"></tr>
-                  <tr mat-row *matRowDef="let row; columns: historyColumns;"></tr>
+                  <tr mat-header-row *matHeaderRowDef="sentColumns"></tr>
+                  <tr mat-row *matRowDef="let row; columns: sentColumns;" [ngClass]="{'row-accepted': row.status === 'ACCEPTED', 'row-rejected': row.status === 'REJECTED', 'row-cancelled': row.status === 'CANCELLED'}"></tr>
                 </table>
               </div>
             } @else {
               <div class="empty-state-container">
                 <div class="empty-icon-wrapper"><mat-icon class="empty-icon">person_off</mat-icon></div>
-                <h4 class="empty-title">All cleared here! No member operations records available.</h4>
+                <h4 class="empty-title">You have no sent out association requests logs pending.</h4>
               </div>
             }
           </mat-expansion-panel>

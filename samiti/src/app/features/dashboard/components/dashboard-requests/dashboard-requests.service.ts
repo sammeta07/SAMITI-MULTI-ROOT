@@ -8,8 +8,7 @@ import {
   CancelSubmittedCommitteeMembershipRequestResponse,
   ReceivedCommitteeMembershipRequestItem,
   SentCommitteeMembershipRequestItem,
-  TakeActionOnCommitteeMembershipRequestBody,
-  ActionTakenOnCommitteeMembershipRequestItem
+  TakeActionOnCommitteeMembershipRequestBody
 } from './dashboard-requests.models';
 
 interface GraphQLErrorPayload {
@@ -87,6 +86,7 @@ export class DashboardRequestsService {
           committeeLogo
           requesterUserId
           requesterName
+          requesterEmail
           requesterPhoto
           actionByUserId
           requestType
@@ -168,43 +168,4 @@ export class DashboardRequestsService {
     );
   }
 
-  getActionTakenOnCommitteeMembershipRequestsByLoggedInUser(): Observable<ActionTakenOnCommitteeMembershipRequestItem[]> {
-    const query = `query ActionTakenOnCommitteeMembershipRequestsByLoggedInUser {
-      actionTakenOnCommitteeMembershipRequestsByLoggedInUser {
-        data {
-          committeeId
-          committeeName
-          committeeLogo
-          actionByUserId
-          resolvedByName
-          resolvedByPhoto
-          requestType
-          requestSentTime
-          actionAtTime
-          status
-          userDetails {
-            userId
-            name
-            email
-            mobile
-            dateOfBirth
-            gender
-            photo
-          }
-        }
-      }
-    }`;
-
-    return this.http.post<GraphQLResponseEnvelope<{ actionTakenOnCommitteeMembershipRequestsByLoggedInUser: { data: ActionTakenOnCommitteeMembershipRequestItem[] } }>>(this.graphqlUrl, { query }).pipe(
-      map((response) => {
-        return this.unwrapDataArray(
-          {
-            data: response.data?.actionTakenOnCommitteeMembershipRequestsByLoggedInUser,
-            errors: response.errors
-          },
-          'Failed to fetch action-taken membership requests'
-        );
-      })
-    );
-  }
 }
