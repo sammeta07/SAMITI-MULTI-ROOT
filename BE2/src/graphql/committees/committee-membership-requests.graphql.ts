@@ -33,6 +33,8 @@ export const committeeMembershipRequestsTypes = `
     resolvedByPhoto: String
     requestType: CommitteeMembershipRequestType!
     requestSentTime: String
+    resolvedAtTime: String
+    status: String!
     userDetails: CommitteeMembershipRequesterUserDetails!
   }
 
@@ -140,6 +142,8 @@ export const committeeMembershipRequestsResolvers = {
             action_user.profile_photo                       AS resolved_by_photo,
             crr.request_role                               AS request_type,
             DATE_FORMAT(crr.requested_at, '%Y-%m-%d %H:%i:%s') AS request_sent_time,
+            crr.status,
+            DATE_FORMAT(crr.action_at, '%Y-%m-%d %H:%i:%s')    AS resolved_at_time,
             u.id                                           AS user_id,
             u.name,
             u.email,
@@ -172,6 +176,8 @@ export const committeeMembershipRequestsResolvers = {
           resolvedByPhoto: row.resolved_by_photo,
           requestType: row.request_type as 'COMMITTEE_MEMBER' | 'COMMITTEE_ADMIN',
           requestSentTime: row.request_sent_time,
+          resolvedAtTime: row.resolved_at_time || null,
+          status: String(row.status),
           userDetails: {
             userId: Number(row.user_id),
             name: row.name,

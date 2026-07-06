@@ -23,6 +23,8 @@ export interface ReceivedCommitteeMembershipRequestItem {
   resolvedByPhoto: string | null;
   requestType: CommitteeMembershipRequestType;
   requestSentTime: string;
+  resolvedAtTime: string | null;
+  status: string;
   userDetails: CommitteeMembershipRequesterUserDetails;
 }
 

@@ -76,7 +76,8 @@ export class DashboardRequestsComponent {
   );
 
   /** Table columns */
-  receivedColumns = ["index", "committee", "user", "email", "mobile", "sentOn", "resolvedBy", "actions"];
+  receivedAdminColumns = ["index", "committee", "user", "email", "mobile", "sentOn", "resolvedOn", "resolvedBy", "status", "actions"];
+  receivedColumns = ["index", "committee", "user", "email", "mobile", "sentOn", "resolvedOn", "resolvedBy", "status", "actions"];
   sentColumns = ["index", "committee", "user", "address", "year", "sentOn", "resolvedOn", "status", "actions"];
   historyColumns = ["index", "committee", "user", "email", "mobile", "sentOn", "resolvedOn", "resolvedBy", "status"];
 

@@ -50,6 +50,8 @@ export class DashboardRequestsService {
           resolvedByPhoto
           requestType
           requestSentTime
+          resolvedAtTime
+          status
           userDetails {
             userId
             name
