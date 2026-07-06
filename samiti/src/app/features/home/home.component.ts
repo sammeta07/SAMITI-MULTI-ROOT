@@ -233,7 +233,7 @@ cancelRequest(id: number, event: Event): void {
         this.selectedTabIndex = targetTabIndex;
         this.cdr.detectChanges();
         this.scrollToCommittee(committeeId, targetTabIndex);
-        this.notifier.success(response.isFavourite ? 'Added to Favourites' : 'Removed from Favourites');
+        // this.notifier.success(response.isFavourite ? 'Added to Favourites' : 'Removed from Favourites');
       },
       error: (err) => {
         this.notifier.error(err?.message || 'Failed to update favourite status');

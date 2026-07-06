@@ -6,6 +6,7 @@ import { MatTableModule } from "@angular/material/table";
 import { MatButtonModule } from "@angular/material/button";
 import { MatIconModule } from "@angular/material/icon";
 import { MatProgressSpinnerModule } from "@angular/material/progress-spinner";
+import { MatSortModule, Sort } from "@angular/material/sort";
 import { DashboardRequestsService } from "./dashboard-requests.service";
 
 @Component({
@@ -19,6 +20,7 @@ import { DashboardRequestsService } from "./dashboard-requests.service";
     MatButtonModule,
     MatIconModule,
     MatProgressSpinnerModule,
+    MatSortModule,
   ],
   templateUrl: "./dashboard-requests.html",
   styleUrls: ["./dashboard-requests.scss"],
@@ -59,10 +61,22 @@ export class DashboardRequestsComponent {
       .sort((a, b) => new Date(b.requestSentTime).getTime() - new Date(a.requestSentTime).getTime())
   );
 
+  /** Sort states per table */
+  sortRA = signal<Sort>({ active: '', direction: '' });
+  sortRM = signal<Sort>({ active: '', direction: '' });
+  sortSA = signal<Sort>({ active: '', direction: '' });
+  sortSM = signal<Sort>({ active: '', direction: '' });
+
+  /** Sorted table data */
+  sortedReceivedAdminRequests  = computed(() => this.applySort(this.receivedAdminRequests(),  this.sortRA()));
+  sortedReceivedMemberRequests = computed(() => this.applySort(this.receivedMemberRequests(), this.sortRM()));
+  sortedSentAdminRequests      = computed(() => this.applySort(this.sentAdminRequests(),      this.sortSA()));
+  sortedSentMemberRequests     = computed(() => this.applySort(this.sentMemberRequests(),     this.sortSM()));
+
   /** Table columns */
   receivedAdminColumns = ["index", "committee", "user", "mobile", "sentOn", "resolvedOn", "resolvedBy", "actions"];
   receivedColumns = ["index", "committee", "user", "mobile", "sentOn", "resolvedOn", "resolvedBy", "actions"];
-  sentColumns = ["index", "committee", "user", "year", "sentOn", "resolvedOn", "resolvedBy", "actions"];
+  sentColumns = ["index", "committee", "year", "sentOn", "resolvedOn", "resolvedBy", "actions"];
   constructor() {
     this.loadData();
   }
@@ -135,5 +149,23 @@ export class DashboardRequestsComponent {
       .join("")
       .toUpperCase()
       .slice(0, 2);
+  }
+
+  private applySort(items: any[], sort: Sort): any[] {
+    if (!sort.active || !sort.direction) return items;
+    return [...items].sort((a, b) => {
+      let valA = '';
+      let valB = '';
+      switch (sort.active) {
+        case 'committee':  valA = a.committeeName ?? '';                              valB = b.committeeName ?? ''; break;
+        case 'user':       valA = a.userDetails?.name ?? a.requesterName ?? '';       valB = b.userDetails?.name ?? b.requesterName ?? ''; break;
+        case 'sentOn':     valA = a.requestSentTime ?? '';                            valB = b.requestSentTime ?? ''; break;
+        case 'resolvedOn': valA = a.resolvedAtTime ?? '';                             valB = b.resolvedAtTime ?? ''; break;
+        case 'resolvedBy': valA = a.resolvedByName ?? '';                             valB = b.resolvedByName ?? ''; break;
+        case 'actions':    valA = a.status ?? '';                                     valB = b.status ?? ''; break;
+      }
+      const cmp = valA.localeCompare(valB);
+      return sort.direction === 'asc' ? cmp : -cmp;
+    });
   }
 }

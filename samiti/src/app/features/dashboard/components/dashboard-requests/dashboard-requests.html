@@ -25,14 +25,14 @@
             <div class="inner-tab-content">
             @if (receivedAdminRequests().length > 0) {
               <div class="table-responsive">
-                <table mat-table [dataSource]="receivedAdminRequests()" class="modern-table">
+                <table mat-table matSort [dataSource]="sortedReceivedAdminRequests()" (matSortChange)="sortRA.set($event)" class="modern-table">
                   <ng-container matColumnDef="index">
                     <th mat-header-cell *matHeaderCellDef class="col-index">#</th>
                     <td mat-cell *matCellDef="let element; let i = index" class="col-index font-medium">{{ i + 1 }}</td>
                   </ng-container>
 
                   <ng-container matColumnDef="committee">
-                    <th mat-header-cell *matHeaderCellDef>Committee</th>
+                    <th mat-header-cell *matHeaderCellDef mat-sort-header>GROUP NAME</th>
                     <td mat-cell *matCellDef="let element">
                       <div class="table-person-cell">
                         @if (element.committeeLogo) {
@@ -51,7 +51,7 @@
                   </ng-container>
 
                   <ng-container matColumnDef="user">
-                    <th mat-header-cell *matHeaderCellDef>Requested By</th>
+                    <th mat-header-cell *matHeaderCellDef mat-sort-header>Requested By</th>
                     <td mat-cell *matCellDef="let element">
                       <div class="table-person-cell">
                         <span *ngIf="element.userDetails.photo" class="table-avatar table-avatar--photo">
@@ -68,21 +68,21 @@
 
                   <ng-container matColumnDef="mobile">
                     <th mat-header-cell *matHeaderCellDef>Mobile</th>
-                    <td mat-cell *matCellDef="let element" class="text-muted font-mono">{{ element.userDetails.mobile || "—" }}</td>
+                    <td mat-cell *matCellDef="let element" class="font-mono font-semibold text-dark">{{ element.userDetails.mobile || "—" }}</td>
                   </ng-container>
 
                   <ng-container matColumnDef="sentOn">
-                    <th mat-header-cell *matHeaderCellDef>Requested On</th>
+                    <th mat-header-cell *matHeaderCellDef mat-sort-header>Requested On</th>
                     <td mat-cell *matCellDef="let element" class="text-muted text-sm">{{ element.requestSentTime | date: "d MMM y, h:mm a" }}</td>
                   </ng-container>
 
                   <ng-container matColumnDef="resolvedOn">
-                    <th mat-header-cell *matHeaderCellDef>Resolved On</th>
+                    <th mat-header-cell *matHeaderCellDef mat-sort-header>Resolved On</th>
                     <td mat-cell *matCellDef="let element" class="text-sm text-dark">{{ element.resolvedAtTime ? (element.resolvedAtTime | date: "d MMM y, h:mm a") : "—" }}</td>
                   </ng-container>
 
                   <ng-container matColumnDef="resolvedBy">
-                    <th mat-header-cell *matHeaderCellDef>Resolved By</th>
+                    <th mat-header-cell *matHeaderCellDef mat-sort-header>Resolved By</th>
                     <td mat-cell *matCellDef="let element">
                       <div *ngIf="element.resolvedByName" class="table-person-cell">
                         <span *ngIf="element.resolvedByPhoto" class="table-avatar table-avatar--photo">
@@ -96,7 +96,7 @@
                   </ng-container>
 
                   <ng-container matColumnDef="actions">
-                    <th mat-header-cell *matHeaderCellDef class="col-actions">Actions</th>
+                    <th mat-header-cell *matHeaderCellDef class="col-actions" mat-sort-header>Actions</th>
                     <td mat-cell *matCellDef="let element" class="col-actions">
                       @if (element.status === 'PENDING') {
                         <div class="action-btn-group">
@@ -135,13 +135,13 @@
             <div class="inner-tab-content">
             @if (receivedMemberRequests().length > 0) {
               <div class="table-responsive">
-                <table mat-table [dataSource]="receivedMemberRequests()" class="modern-table">
+                <table mat-table matSort [dataSource]="sortedReceivedMemberRequests()" (matSortChange)="sortRM.set($event)" class="modern-table">
                   <ng-container matColumnDef="index">
                     <th mat-header-cell *matHeaderCellDef class="col-index">#</th>
                     <td mat-cell *matCellDef="let element; let i = index" class="col-index font-medium">{{ i + 1 }}</td>
                   </ng-container>
                   <ng-container matColumnDef="committee">
-                    <th mat-header-cell *matHeaderCellDef>Committee</th>
+                    <th mat-header-cell *matHeaderCellDef mat-sort-header>GROUP NAME</th>
                     <td mat-cell *matCellDef="let element">
                       <div class="table-person-cell">
                         @if (element.committeeLogo) {
@@ -159,7 +159,7 @@
                     </td>
                   </ng-container>
                   <ng-container matColumnDef="user">
-                    <th mat-header-cell *matHeaderCellDef>Requested By</th>
+                    <th mat-header-cell *matHeaderCellDef mat-sort-header>Requested By</th>
                     <td mat-cell *matCellDef="let element">
                       <div class="table-person-cell">
                         @if (element.userDetails.photo) {
@@ -176,18 +176,18 @@
                   </ng-container>
                   <ng-container matColumnDef="mobile">
                     <th mat-header-cell *matHeaderCellDef>Mobile</th>
-                    <td mat-cell *matCellDef="let element" class="text-muted font-mono">{{ element.userDetails.mobile || "—" }}</td>
+                    <td mat-cell *matCellDef="let element" class="font-mono font-semibold text-dark">{{ element.userDetails.mobile || "—" }}</td>
                   </ng-container>
                   <ng-container matColumnDef="sentOn">
-                    <th mat-header-cell *matHeaderCellDef>Requested On</th>
+                    <th mat-header-cell *matHeaderCellDef mat-sort-header>Requested On</th>
                     <td mat-cell *matCellDef="let element" class="text-muted text-sm">{{ element.requestSentTime | date: "d MMM y, h:mm a" }}</td>
                   </ng-container>
                   <ng-container matColumnDef="resolvedOn">
-                    <th mat-header-cell *matHeaderCellDef>Resolved On</th>
+                    <th mat-header-cell *matHeaderCellDef mat-sort-header>Resolved On</th>
                     <td mat-cell *matCellDef="let element" class="text-sm text-dark">{{ element.resolvedAtTime ? (element.resolvedAtTime | date: "d MMM y, h:mm a") : "—" }}</td>
                   </ng-container>
                   <ng-container matColumnDef="resolvedBy">
-                    <th mat-header-cell *matHeaderCellDef>Resolved By</th>
+                    <th mat-header-cell *matHeaderCellDef mat-sort-header>Resolved By</th>
                     <td mat-cell *matCellDef="let element">
                       @if (element.resolvedByName) {
                         <div class="table-person-cell">
@@ -204,7 +204,7 @@
                     </td>
                   </ng-container>
                   <ng-container matColumnDef="actions">
-                    <th mat-header-cell *matHeaderCellDef class="col-actions">Actions</th>
+                    <th mat-header-cell *matHeaderCellDef class="col-actions" mat-sort-header>Actions</th>
                     <td mat-cell *matCellDef="let element" class="col-actions">
                       @if (element.status === 'PENDING') {
                         <div class="action-btn-group">
@@ -254,13 +254,13 @@
             <div class="inner-tab-content">
             @if (sentAdminRequests().length > 0) {
               <div class="table-responsive">
-                <table mat-table [dataSource]="sentAdminRequests()" class="modern-table">
+                <table mat-table matSort [dataSource]="sortedSentAdminRequests()" (matSortChange)="sortSA.set($event)" class="modern-table">
                   <ng-container matColumnDef="index">
                     <th mat-header-cell *matHeaderCellDef class="col-index">#</th>
                     <td mat-cell *matCellDef="let element; let i = index" class="col-index font-medium">{{ i + 1 }}</td>
                   </ng-container>
                   <ng-container matColumnDef="committee">
-                    <th mat-header-cell *matHeaderCellDef>Committee</th>
+                    <th mat-header-cell *matHeaderCellDef mat-sort-header>GROUP NAME</th>
                     <td mat-cell *matCellDef="let element">
                       <div class="table-person-cell">
                         @if (element.committeeLogo) {
@@ -277,38 +277,20 @@
                       </div>
                     </td>
                   </ng-container>
-                  <ng-container matColumnDef="user">
-                    <th mat-header-cell *matHeaderCellDef>Requested By</th>
-                    <td mat-cell *matCellDef="let element">
-                      <div class="table-person-cell">
-                        @if (element.requesterPhoto) {
-                          <span class="table-avatar table-avatar--photo"><img [src]="element.requesterPhoto" [alt]="element.requesterName || 'Requester'"></span>
-                        } @else {
-                          <span class="table-avatar table-avatar--photo table-avatar--fallback">{{ getInitials(element.requesterName || 'N/A') }}</span>
-                        }
-                        <div class="committee-info">
-                          <span class="committee-name">{{ element.requesterName || 'N/A' }}</span>
-                          @if (element.requesterEmail) {
-                            <span class="committee-address">{{ element.requesterEmail }}</span>
-                          }
-                        </div>
-                      </div>
-                    </td>
-                  </ng-container>
                   <ng-container matColumnDef="year">
                     <th mat-header-cell *matHeaderCellDef>Est. Year</th>
                     <td mat-cell *matCellDef="let element" class="font-mono">{{ element.establishYear }}</td>
                   </ng-container>
                   <ng-container matColumnDef="sentOn">
-                    <th mat-header-cell *matHeaderCellDef>Requested On</th>
+                    <th mat-header-cell *matHeaderCellDef mat-sort-header>Requested On</th>
                     <td mat-cell *matCellDef="let element">{{ element.requestSentTime | date: "d MMM y, h:mm a" }}</td>
                   </ng-container>
                   <ng-container matColumnDef="resolvedOn">
-                    <th mat-header-cell *matHeaderCellDef>Resolved On</th>
-                    <td mat-cell *matCellDef="let element">{{ element.resolvedAtTime ? (element.resolvedAtTime | date: "d MMM y") : "—" }}</td>
+                    <th mat-header-cell *matHeaderCellDef mat-sort-header>Resolved On</th>
+                    <td mat-cell *matCellDef="let element">{{ element.resolvedAtTime ? (element.resolvedAtTime | date: "d MMM y, h:mm a") : "—" }}</td>
                   </ng-container>
                   <ng-container matColumnDef="resolvedBy">
-                    <th mat-header-cell *matHeaderCellDef>Resolved By</th>
+                    <th mat-header-cell *matHeaderCellDef mat-sort-header>Resolved By</th>
                     <td mat-cell *matCellDef="let element">
                       @if (element.resolvedByName) {
                         <div class="table-person-cell">
@@ -325,7 +307,7 @@
                     </td>
                   </ng-container>
                   <ng-container matColumnDef="actions">
-                    <th mat-header-cell *matHeaderCellDef class="col-actions">Actions</th>
+                    <th mat-header-cell *matHeaderCellDef class="col-actions" mat-sort-header>Actions</th>
                     <td mat-cell *matCellDef="let element" class="col-actions">
                       @if (element.status === 'PENDING') {
                         <button mat-stroked-button class="btn-labeled btn-cancel" (click)="cancelSentRequest(element.committeeId, element.committeeName)">
@@ -358,13 +340,13 @@
             <div class="inner-tab-content">
             @if (sentMemberRequests().length > 0) {
               <div class="table-responsive">
-                <table mat-table [dataSource]="sentMemberRequests()" class="modern-table">
+                <table mat-table matSort [dataSource]="sortedSentMemberRequests()" (matSortChange)="sortSM.set($event)" class="modern-table">
                   <ng-container matColumnDef="index">
                     <th mat-header-cell *matHeaderCellDef class="col-index">#</th>
                     <td mat-cell *matCellDef="let element; let i = index" class="col-index font-medium">{{ i + 1 }}</td>
                   </ng-container>
                   <ng-container matColumnDef="committee">
-                    <th mat-header-cell *matHeaderCellDef>Committee</th>
+                    <th mat-header-cell *matHeaderCellDef mat-sort-header>GROUP NAME</th>
                     <td mat-cell *matCellDef="let element">
                       <div class="table-person-cell">
                         @if (element.committeeLogo) {
@@ -381,38 +363,20 @@
                       </div>
                     </td>
                   </ng-container>
-                  <ng-container matColumnDef="user">
-                    <th mat-header-cell *matHeaderCellDef>Requested By</th>
-                    <td mat-cell *matCellDef="let element">
-                      <div class="table-person-cell">
-                        @if (element.requesterPhoto) {
-                          <span class="table-avatar table-avatar--photo"><img [src]="element.requesterPhoto" [alt]="element.requesterName || 'Requester'"></span>
-                        } @else {
-                          <span class="table-avatar table-avatar--photo table-avatar--fallback">{{ getInitials(element.requesterName || 'N/A') }}</span>
-                        }
-                        <div class="committee-info">
-                          <span class="committee-name">{{ element.requesterName || 'N/A' }}</span>
-                          @if (element.requesterEmail) {
-                            <span class="committee-address">{{ element.requesterEmail }}</span>
-                          }
-                        </div>
-                      </div>
-                    </td>
-                  </ng-container>
                   <ng-container matColumnDef="year">
                     <th mat-header-cell *matHeaderCellDef>Est. Year</th>
                     <td mat-cell *matCellDef="let element" class="font-mono">{{ element.establishYear }}</td>
                   </ng-container>
                   <ng-container matColumnDef="sentOn">
-                    <th mat-header-cell *matHeaderCellDef>Requested On</th>
+                    <th mat-header-cell *matHeaderCellDef mat-sort-header>Requested On</th>
                     <td mat-cell *matCellDef="let element">{{ element.requestSentTime | date: "d MMM y, h:mm a" }}</td>
                   </ng-container>
                   <ng-container matColumnDef="resolvedOn">
-                    <th mat-header-cell *matHeaderCellDef>Resolved On</th>
-                    <td mat-cell *matCellDef="let element">{{ element.resolvedAtTime ? (element.resolvedAtTime | date: "d MMM y") : "—" }}</td>
+                    <th mat-header-cell *matHeaderCellDef mat-sort-header>Resolved On</th>
+                    <td mat-cell *matCellDef="let element">{{ element.resolvedAtTime ? (element.resolvedAtTime | date: "d MMM y, h:mm a") : "—" }}</td>
                   </ng-container>
                   <ng-container matColumnDef="resolvedBy">
-                    <th mat-header-cell *matHeaderCellDef>Resolved By</th>
+                    <th mat-header-cell *matHeaderCellDef mat-sort-header>Resolved By</th>
                     <td mat-cell *matCellDef="let element">
                       @if (element.resolvedByName) {
                         <div class="table-person-cell">
@@ -429,7 +393,7 @@
                     </td>
                   </ng-container>
                   <ng-container matColumnDef="actions">
-                    <th mat-header-cell *matHeaderCellDef class="col-actions">Actions</th>
+                    <th mat-header-cell *matHeaderCellDef class="col-actions" mat-sort-header>Actions</th>
                     <td mat-cell *matCellDef="let element" class="col-actions">
                       @if (element.status === 'PENDING') {
                         <button mat-stroked-button class="btn-labeled btn-cancel" (click)="cancelSentRequest(element.committeeId, element.committeeName)">

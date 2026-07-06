@@ -79,7 +79,9 @@
 }
 
 .tree-flat-node-row.is-selected {
-  border-left: 2px solid #f97316;
+  background: rgba(249, 115, 22, 0.07);
+  border-radius: 8px;
+  border-left: 3px solid #f97316;
 
   .node-actions-right-aligned {
     opacity: 1;
@@ -186,7 +188,15 @@
   transition: all 0.15s ease;
 
   &.is-selected {
-    .node-label-txt { color: #f97316 !important; font-weight: 700 !important; }
+    .node-label-txt { color: #ea580c !important; font-weight: 700 !important; }
+    .node-logo-avatar-wrapper { border-color: rgba(249, 115, 22, 0.4); }
+  }
+
+  &.static-menu-item.is-selected {
+    background: rgba(249, 115, 22, 0.10);
+    border-radius: 8px;
+    border-left: 3px solid #f97316;
+    .node-label-txt { color: #ea580c !important; font-weight: 700 !important; }
   }
 
   &.is-just-selected {
@@ -221,6 +231,12 @@
 }
 
 .tree-flat-node-row:hover .node-actions-right-aligned { opacity: 1; }
+
+.tree-flat-node-row:not(.is-selected):hover {
+  background: #f1f5f9;
+  border-radius: 8px;
+  cursor: pointer;
+}
 
 .status-badge-tag {
   font-size: 0.68rem; font-weight: 700; padding: 1px 6px; border-radius: 4px; margin-left: auto; text-transform: uppercase;
@@ -259,4 +275,10 @@
 
 .tree-flat-node-row .node-interactive-strip:hover {
   background: transparent;
+}
+
+.static-menu-item:not(.is-selected):hover {
+  background: #f1f5f9;
+  border-radius: 8px;
+  cursor: pointer;
 }
