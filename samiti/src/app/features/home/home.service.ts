@@ -40,7 +40,7 @@ export class HomeService {
             committeeName
             contactNumbers
             description
-            distanceKm
+            distanceMeters
             committeeLogo
             establishYear
             events {
@@ -52,6 +52,7 @@ export class HomeService {
               startDate
               endDate
               eventBanner
+              bannerImages
             }
           }
         }`;
@@ -82,7 +83,7 @@ export class HomeService {
             committeeName
             contactNumbers
             description
-            distanceKm
+            distanceMeters
             committeeLogo
             establishYear
             isCommitteeAdmin
@@ -98,6 +99,7 @@ export class HomeService {
               startDate
               endDate
               eventBanner
+              bannerImages
             }
           }
         }`;

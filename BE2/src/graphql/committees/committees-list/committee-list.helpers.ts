@@ -7,6 +7,7 @@ export interface EventSummaryRow {
   startDate: string | null;
   endDate: string | null;
   eventBanner: string | null;
+  bannerImages: string[];
 }
 
 export function parseContactNumbers(value: unknown): string[] {
@@ -35,6 +36,7 @@ export function normalizeEventSummaryRow(event: any): EventSummaryRow {
     visibility: String(event.visibility || 'VISIBLE'),
     startDate: event.startDate || null,
     endDate: event.endDate || null,
-    eventBanner: event.eventBanner || null
+    eventBanner: event.eventBanner || null,
+    bannerImages: Array.isArray(event.bannerImages) ? event.bannerImages : (event.eventBanner ? [event.eventBanner] : [])
   };
 }

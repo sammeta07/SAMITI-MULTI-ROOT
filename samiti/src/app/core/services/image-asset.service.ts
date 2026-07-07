@@ -165,9 +165,9 @@ export class ImageAssetService {
       return {
         usageContext,
         preferredResizeMode: 'INSIDE',
-        maxWidth: 1920,
-        maxHeight: 1080,
-        targetQuality: 72,
+        maxWidth: 900,
+        maxHeight: 506,
+        targetQuality: 55,
         forceSquareCrop: false
       };
     }

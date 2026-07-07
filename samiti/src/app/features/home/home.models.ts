@@ -18,6 +18,7 @@ export interface CommitteeEvent {
   startDate?: string | null;
   endDate?: string | null;
   eventBanner?: string | null;
+  bannerImages: string[];
 }
 
 export interface CommitteeGuestItem {
@@ -26,7 +27,7 @@ export interface CommitteeGuestItem {
   committeeName: string;
   contactNumbers: string[];
   description: string;
-  distanceKm: number;
+  distanceMeters: number;
   committeeLogo: string | null;
   establishYear: number;
   events: CommitteeEvent[];

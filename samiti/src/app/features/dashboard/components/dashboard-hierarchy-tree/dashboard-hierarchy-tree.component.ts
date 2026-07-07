@@ -394,13 +394,14 @@ export class DashboardHierarchyTreeComponent implements OnInit {
   }
 
   public onNodeClick(node: TreeNode): void {
+    console.log('node',node);
     if (node.type === 'role') return;
 
     this.activeStaticMenu.set(null); // Clear static highlights when tree node gets selected
     this.selectedNode.set(node);
     this.triggerNodeHighlight(node);
 
-    if (node.type === 'group' || node.type === 'event') {
+    if (node.type === 'group' || node.type === 'event' || node.type === 'program') {
       if (!node.id) {
         this.notifier.warn(`Unable to open ${node.type} details.`);
         return;

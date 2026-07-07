@@ -4,10 +4,13 @@ export interface ProgramDetailsPayload {
   eventId?: number | null;
   programName: string;
   description?: string | null;
+  address?: string | null;
   status: string;
+  visibility?: string | null;
   startDate?: string | null;
   endDate?: string | null;
   createdBy?: number | null;
+  updatedBy?: number | null;
   createdAt?: string | null;
 }
 

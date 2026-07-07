@@ -20,6 +20,8 @@
       <button mat-stroked-button class="action-btn create-program-btn" (click)="onCreateProgram()">
         <mat-icon>add</mat-icon>Program
       </button>
+      <input #bannerFileInput type="file" accept="image/*" multiple style="display:none"
+             (change)="onBannerFilesSelected($event)" />
     </header>
 
     <!-- Compact Hero Card -->
@@ -55,6 +57,69 @@
       <p>{{ eventData()?.description }}</p>
     </blockquote>
     }
+
+    <!-- Banner Images -->
+    <section class="banner-images-section">
+      <div class="panel-card-header banner-header-bg">
+        <div class="header-title-left">
+          <mat-icon class="icon-accent-banner">photo_library</mat-icon>
+          <span class="title-text">Banner Images</span>
+          <span class="count-pill">{{ bannerCount }}/{{ MAX_BANNERS }}</span>
+        </div>
+        <button mat-stroked-button class="banner-add-btn"
+                [disabled]="!canUploadMoreBanners || isBannerUploading()"
+                (click)="onAddBannerClick()"
+                [matTooltip]="canUploadMoreBanners ? 'Upload up to ' + (MAX_BANNERS - bannerCount) + ' more image(s)' : 'Maximum ' + MAX_BANNERS + ' banners reached'">
+          @if (isBannerUploading()) {
+            <mat-progress-spinner mode="indeterminate" diameter="14" strokeWidth="2"></mat-progress-spinner>
+          } @else {
+            <mat-icon>add_photo_alternate</mat-icon>
+          }
+          <span>Add</span>
+        </button>
+      </div>
+
+      @if (bannerCount > 0) {
+      <div class="banner-grid">
+        @for (imgUrl of eventData()!.bannerImages; track imgUrl) {
+        <div class="banner-image-card">
+          <img [src]="imgUrl" [alt]="eventData()?.eventName" class="banner-img" />
+          <button mat-icon-button class="banner-delete-btn" title="Delete banner"
+                  (click)="onDeleteBanner(imgUrl)">
+            <mat-icon>delete</mat-icon>
+          </button>
+        </div>
+        }
+        @if (canUploadMoreBanners) {
+        <button type="button" class="banner-upload-tile"
+                [disabled]="isBannerUploading()"
+                (click)="onAddBannerClick()">
+          @if (isBannerUploading()) {
+            <mat-progress-spinner mode="indeterminate" diameter="20" strokeWidth="2"></mat-progress-spinner>
+          } @else {
+            <mat-icon>add_photo_alternate</mat-icon>
+            <span>Add Banner</span>
+          }
+        </button>
+        }
+      </div>
+      } @else {
+      <div class="banner-empty-state">
+        <mat-icon>image_not_supported</mat-icon>
+        <p>No banner images uploaded yet.</p>
+        <button mat-flat-button class="banner-empty-upload-btn"
+                [disabled]="isBannerUploading()"
+                (click)="onAddBannerClick()">
+          @if (isBannerUploading()) {
+            <mat-progress-spinner mode="indeterminate" diameter="14" strokeWidth="2"></mat-progress-spinner>
+          } @else {
+            <mat-icon>add_photo_alternate</mat-icon>
+          }
+          <span>Upload Banner</span>
+        </button>
+      </div>
+      }
+    </section>
 
     <!-- Designations (UI only) -->
     <section class="horizontal-full-card designations-section-style">

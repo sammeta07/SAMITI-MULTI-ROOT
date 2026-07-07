@@ -8,7 +8,7 @@ export const authCommitteeTypes = `
     committeeName: String!
     contactNumbers: [String!]!
     description: String!
-    distanceKm: Float!
+    distanceMeters: Float!
     committeeLogo: String
     establishYear: Int!
     isCommitteeAdmin: Int!
@@ -88,27 +88,39 @@ export const authCommitteesResolvers = {
             type,
             visibility,
             DATE_FORMAT(start_date, '%Y-%m-%d') AS startDate,
-            DATE_FORMAT(end_date, '%Y-%m-%d') AS endDate,
-            (
-              SELECT ema.media_url
-              FROM event_media_assets ema
-              WHERE ema.event_id = events.id
-              ORDER BY ema.sort_order ASC, ema.id ASC
-              LIMIT 1
-            ) AS eventBanner
+            DATE_FORMAT(end_date, '%Y-%m-%d') AS endDate
           FROM events
           WHERE committee_id IN (${placeholders})
           ORDER BY start_date DESC, created_at DESC
         `, committeeIds);
 
+        const eventIds = eventRows.map((e: any) => e.eventId);
+        let bannersMap: Record<number, string[]> = {};
+        if (eventIds.length > 0) {
+          const bannerPlaceholders = eventIds.map(() => '?').join(',');
+          const bannerRows = await query<any[]>(`
+            SELECT event_id AS eventId, media_url AS mediaUrl
+            FROM event_media_assets
+            WHERE event_id IN (${bannerPlaceholders})
+            ORDER BY sort_order ASC, id ASC
+          `, eventIds);
+          bannersMap = bannerRows.reduce((map: Record<number, string[]>, row: any) => {
+            const eid = Number(row.eventId);
+            if (!map[eid]) map[eid] = [];
+            map[eid].push(row.mediaUrl);
+            return map;
+          }, {});
+        }
+
         eventsMap = eventRows.reduce((map: Record<number, any[]>, event: any) => {
           const committeeId = Number(event.committeeId);
-          if (!map[committeeId]) {
-            map[committeeId] = [];
-          }
+          if (!map[committeeId]) map[committeeId] = [];
+          const banners = bannersMap[Number(event.eventId)] || [];
           map[committeeId].push(normalizeEventSummaryRow({
             ...event,
-            eventName: event.eventName || event.name || ''
+            eventName: event.eventName || event.name || '',
+            eventBanner: banners[0] || null,
+            bannerImages: banners
           }));
           return map;
         }, {});
@@ -126,7 +138,7 @@ export const authCommitteesResolvers = {
           committeeName: item.committee_name || '',
           contactNumbers: parseContactNumbers(item.contact_numbers),
           description: item.description || '',
-          distanceKm: Number(item.distanceKm?.toFixed?.(2) ?? item.distanceKm ?? 0),
+          distanceMeters: Math.round((Number(item.distanceKm) || 0) * 1000),
           committeeLogo: item.logo || null,
           establishYear: item.establish_year ?? 0,
           isCommitteeAdmin: Number(item.is_committee_admin),

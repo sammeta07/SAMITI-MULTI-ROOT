@@ -38,4 +38,12 @@ export class TextFormatService {
       .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
       .join(' ');
   }
+
+  toSentenceCase(value: unknown): string {
+    const normalized = String(value ?? '')
+      .trim()
+      .replace(/\s+/g, ' ')
+      .toLowerCase();
+    return normalized.replace(/(^\s*[a-z])|([.!?]\s*[a-z])/g, (segment) => segment.toUpperCase());
+  }
 }

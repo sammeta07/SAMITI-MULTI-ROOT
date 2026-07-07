@@ -44,12 +44,6 @@ export interface UpdatedEventVisibilityPayload {
   updatedBy: number;
 }
 
-export interface UpdatedEventTypePayload {
-  eventId: number;
-  type: 'PUBLIC' | 'PRIVATE';
-  updatedBy: number;
-}
-
 export interface DeletedEventPayload {
   eventId: number;
   eventName: string;

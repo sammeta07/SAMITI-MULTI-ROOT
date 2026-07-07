@@ -9,7 +9,6 @@
 
   <div class="workspace-body scrollable-container">
 
-    <!-- Action Buttons Row -->
     <header class="workspace-action-header">
       <button mat-stroked-button class="action-btn edit-btn" (click)="onEditProgram()">
         <mat-icon>edit</mat-icon>Edit
@@ -22,7 +21,6 @@
       </button>
     </header>
 
-    <!-- Compact Hero Card -->
     <section class="compact-hero-card">
       <div class="hero-left-cluster">
         <div class="avatar-premium-square program-avatar-style">
@@ -40,19 +38,20 @@
             @if (programData()?.endDate) {
             <span class="badge-item"><mat-icon>event_busy</mat-icon> {{ programData()?.endDate | date:'dd MMM yyyy' }}</span>
             }
+            @if (programData()?.address) {
+            <span class="badge-item"><mat-icon>place</mat-icon> {{ programData()?.address }}</span>
+            }
           </div>
         </div>
       </div>
     </section>
 
-    <!-- Description -->
     @if (programData()?.description) {
     <blockquote class="compact-desc-box">
       <p>{{ programData()?.description }}</p>
     </blockquote>
     }
 
-    <!-- Tasks Listing -->
     <section class="horizontal-full-card tasks-section-style">
       <div class="panel-card-header">
         <div class="header-title-left">
@@ -79,7 +78,7 @@
           </div>
         </div>
         } @empty {
-        <div class="mini-empty-state">No tasks available</div>
+        <div class="mini-empty-state">No tasks available yet</div>
         }
       </div>
     </section>
@@ -88,8 +87,8 @@
   } @else {
   <div class="empty-layout-shell">
     <mat-icon class="icon-off">event_note</mat-icon>
-    <h3>No Program Selected</h3>
-    <p>Select a program from the navigation tree to view its details.</p>
+    <h3>Program Details</h3>
+    <p>Detailed page is not available yet for program.</p>
   </div>
   }
 

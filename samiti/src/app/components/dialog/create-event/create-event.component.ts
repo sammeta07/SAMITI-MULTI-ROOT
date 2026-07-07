@@ -59,6 +59,7 @@ export class CreateEventDialogComponent implements OnInit {
   public endDate: Date | null = null;
 
   public readonly isSubmitting = signal<boolean>(false);
+  public readonly type = signal<'PUBLIC' | 'PRIVATE'>('PUBLIC');
 
   public readonly eventTypes = ['puja', 'sports', 'meeting', 'celebration', 'workshop', 'other'];
   public readonly statuses = ['UPCOMING', 'ONGOING', 'COMPLETED', 'CANCELLED'];
@@ -68,6 +69,9 @@ export class CreateEventDialogComponent implements OnInit {
     if (typeof committeeAddress === 'string' && committeeAddress.trim().length > 0) {
       this.address = committeeAddress.trim();
     }
+
+    const injectedEventType = this.injectedData?.eventType;
+    this.type.set(injectedEventType === 'PRIVATE' ? 'PRIVATE' : 'PUBLIC');
 
     const gps = this.headerService.userLocationCords();
     if (gps) {
@@ -114,6 +118,7 @@ export class CreateEventDialogComponent implements OnInit {
       status: this.status,
       category: this.category || undefined,
       visibility: this.visibility,
+      type: this.type(),
       startDate: startDateStr,
       endDate: endDateStr,
       latitude: Number(this.latitude ?? 0),

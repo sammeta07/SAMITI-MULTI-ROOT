@@ -1,9 +1,63 @@
 <div class="group-details-workspace drawer-layout-shell">
 
   @if (isLoading()) {
-  <div class="spinner-loading-overlay">
-    <mat-progress-spinner mode="indeterminate" diameter="32"></mat-progress-spinner>
-    <span>Loading group configuration...</span>
+  <div class="workspace-body scrollable-container skeleton-wrapper" aria-busy="true" aria-live="polite">
+    <div class="skeleton-status-banner">
+      <mat-progress-spinner mode="indeterminate" diameter="20"></mat-progress-spinner>
+      <span>Loading group workspace…</span>
+    </div>
+
+    <!-- Hero card skeleton -->
+    <section class="compact-hero-card skeleton-card">
+      <div class="hero-left-cluster">
+        <div class="skeleton-box skeleton-avatar"></div>
+        <div class="hero-meta-stack" style="flex:1;">
+          <div class="skeleton-box skeleton-line lg" style="width:55%;"></div>
+          <div class="skeleton-box skeleton-line sm" style="width:80%; margin-top:8px;"></div>
+        </div>
+      </div>
+      <div class="skeleton-box skeleton-chip"></div>
+    </section>
+
+    <!-- Description skeleton -->
+    <div class="skeleton-box skeleton-line" style="width:92%;"></div>
+
+    <!-- Events section skeleton -->
+    <section class="horizontal-full-card skeleton-card">
+      <div class="skeleton-section-head">
+        <div class="skeleton-box skeleton-line sm" style="width:120px;"></div>
+      </div>
+      @for (row of skeletonRows; track row) {
+      <div class="skeleton-event-row">
+        <div class="skeleton-box skeleton-avatar sq"></div>
+        <div style="flex:1;">
+          <div class="skeleton-box skeleton-line sm" style="width:45%;"></div>
+          <div class="skeleton-box skeleton-line xs" style="width:70%; margin-top:6px;"></div>
+        </div>
+        <div class="skeleton-box skeleton-chip sm"></div>
+      </div>
+      }
+    </section>
+
+    <!-- Admins + Members skeleton -->
+    <div class="dashboard-split-grid">
+      @for (col of [1,2]; track col) {
+      <section class="mesh-card skeleton-card">
+        <div class="skeleton-section-head">
+          <div class="skeleton-box skeleton-line sm" style="width:90px;"></div>
+        </div>
+        @for (row of skeletonRows; track row) {
+        <div class="skeleton-member-row">
+          <div class="skeleton-box skeleton-avatar circle"></div>
+          <div style="flex:1;">
+            <div class="skeleton-box skeleton-line xs" style="width:50%;"></div>
+            <div class="skeleton-box skeleton-line xs" style="width:75%; margin-top:6px;"></div>
+          </div>
+        </div>
+        }
+      </section>
+      }
+    </div>
   </div>
   } @else if (groupData()) {
 
@@ -38,8 +92,8 @@
       </button>
       }
       @if (isCurrentUserAdmin()) {
-      <button mat-stroked-button class="action-btn create-event-btn" (click)="onCreateEvent()">
-        <mat-icon>add_event</mat-icon>Event
+      <button mat-stroked-button class="action-btn create-event-btn" (click)="onCreateEvent('PUBLIC')" matTooltip="By default this event will be hidden from public view. You can change this setting later.">
+        <mat-icon>calendar_add_on</mat-icon>Public Event
       </button>
       }
     </header>
@@ -106,43 +160,30 @@
             </div>
 
             <div class="event-col-info">
-              <span class="main-title">{{ event.eventName }}</span>
-              <span class="secondary-sub-lbl">{{ event.category || 'Standard' }}</span>
-            </div>
-
-            <div class="event-col-visibility">
-              <div class="toggle-alignment-box">
-                <span class="visibility-indicator-text">Type: {{ event.type === 'PUBLIC' ? 'Public' : 'Private' }}</span>
-                <mat-slide-toggle
-                  class="density-toggle"
-                  [checked]="event.type === 'PUBLIC'"
-                  [disabled]="!isCurrentUserAdmin()"
-                  (change)="onEventTypeChange(event, $event.checked)">
-                  {{ event.type === 'PUBLIC' ? 'Public' : 'Private' }}
-                </mat-slide-toggle>
+              <span class="main-title event-main-title">{{ event.eventName | titlecase }}</span>
+              <div class="event-meta-row">
+                <span class="event-category-pill">{{ (event.category || 'Standard') | titlecase }}</span>
+                <span class="status-tag tag-{{event.status.toLowerCase() || 'upcoming'}}">{{ event.status }}</span>
+                <span class="event-date-pill">
+                  <span class="label">Start:</span> {{ event.startDate ? (event.startDate | date:'dd MMM yyyy') : 'N/A' }}
+                </span>
+                <span class="event-date-pill">
+                  <span class="label">End:</span> {{ event.endDate ? (event.endDate | date:'dd MMM yyyy') : 'N/A' }}
+                </span>
               </div>
             </div>
 
-            <div class="event-col-status">
-              <span class="status-tag tag-{{event.status.toLowerCase() || 'upcoming'}}">{{ event.status }}</span>
-            </div>
-
-            <div class="event-col-timeline">
-              <div class="timeline-date-node"><mat-icon>calendar_month</mat-icon> <span class="lbl">Start:</span> {{ event.startDate ? (event.startDate | date:'dd MMM yyyy') : 'N/A' }}</div>
-              <div class="timeline-date-node"><mat-icon>event_busy</mat-icon> <span class="lbl">End:&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span>{{ event.endDate ? (event.endDate | date:'dd MMM yyyy') : 'N/A' }}</div>
-            </div>
-
-            <div class="event-col-visibility">
-              <div class="toggle-alignment-box">
-                <span class="visibility-indicator-text">{{ event.visibility === 'VISIBLE' ? 'Public' : 'Private' }}</span>
+            <div class="event-col-controls">
+                <span class="event-type-pill" [ngClass]="event.type === 'PUBLIC' ? 'type-public' : 'type-private'">
+                  {{ event.type === 'PUBLIC' ? 'Public' : 'Private' }}
+                </span>
                 <mat-slide-toggle
                   class="density-toggle"
                   [checked]="event.visibility === 'VISIBLE'"
                   [disabled]="!isCurrentUserAdmin()"
                   (change)="onEventVisibilityChange(event, $event.checked)">
-                  {{ event.visibility === 'VISIBLE' ? 'Show' : 'Hide' }}
+                  {{ event.visibility }}
                 </mat-slide-toggle>
-              </div>
             </div>
 
             <div class="event-col-actions">
@@ -200,7 +241,7 @@
       <section class="mesh-card members-card-style">
         <div class="panel-card-header members-header-bg">
           <div class="header-title-left">
-            <mat-icon class="icon-accent-member">admin_panel_settings</mat-icon>
+            <mat-icon class="icon-accent-member">groups</mat-icon>
             <span class="title-text">Members</span>
             <span class="count-pill">{{ membersList().length }}</span>
           </div>

@@ -31,7 +31,6 @@
   justify-content: space-between;
   align-items: center;
   padding: 0 20px !important;
-  height: 60px !important; 
   min-height: 60px !important;
   background: #ffffff !important;
   border-bottom: 1px solid #e2e8f0;
@@ -40,14 +39,28 @@
 
   .drawer-title-group {
     display: flex;
-    align-items: center;
+    align-items: flex-start;
     gap: 8px;
+
+    .drawer-title-text {
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+
+      p {
+        margin: 0;
+        font-size: 0.75rem;
+        color: #64748b;
+        line-height: 1.2;
+      }
+    }
 
     .mode-indicator-icon {
       color: #10b981;
       font-size: 1.35rem; width: 1.35rem; height: 1.35rem;
       display: inline-flex;
       align-items: center;
+      margin-top: 2px;
     }
 
     h2 {

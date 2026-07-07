@@ -13,9 +13,10 @@ import { createEventTypes, createEventMutationFields, createEventResolvers } fro
 import { eventDetailsTypes, eventDetailsQueryFields, eventDetailsResolvers } from './events/event-details-by-id.graphql';
 import { eventsListTypes, eventsListQueryFields, eventsListResolvers } from './events/events-list-by-committee.graphql';
 import { updateEventVisibilityTypes, updateEventVisibilityMutationFields, updateEventVisibilityResolvers } from './events/update-event-visibility.graphql';
-import { updateEventTypeTypes, updateEventTypeMutationFields, updateEventTypeResolvers } from './events/update-event-type.graphql';
+import { uploadEventBannerImagesTypes, uploadEventBannerImagesMutationFields, uploadEventBannerImagesResolvers } from './events/upload-event-banner-images.graphql';
 import { deleteEventTypes, deleteEventMutationFields, deleteEventResolvers } from './events/delete-event.graphql';
 import { createProgramTypes, createProgramMutationFields, createProgramResolvers } from './programs/create-program.graphql';
+import { programDetailsTypes, programDetailsQueryFields, programDetailsResolvers } from './programs/program-details-by-id.graphql';
 import { authCommitteeTypes, authCommitteeQueryFields, authCommitteesResolvers } from './committees/committees-list/auth-user-committees-list.graphql';
 import { guestCommitteeTypes, guestCommitteeQueryFields, guestCommitteesResolvers } from './committees/committees-list/guest-user-committees-list.graphql';
 import { cancelCommitteeMembershipRequestTypes, cancelCommitteeMembershipRequestMutationFields, cancelCommitteeMembershipRequestResolvers } from './committees/user-requests/cancel-committee-membership-request.graphql';
@@ -40,10 +41,11 @@ export const typeDefs = `
   ${imageAssetUploadTypes}
   ${createEventTypes}
   ${createProgramTypes}
+  ${programDetailsTypes}
   ${eventDetailsTypes}
   ${eventsListTypes}
   ${updateEventVisibilityTypes}
-  ${updateEventTypeTypes}
+  ${uploadEventBannerImagesTypes}
   ${deleteEventTypes}
 
   type Query {
@@ -54,6 +56,7 @@ export const typeDefs = `
     ${userRelationalAnalyticsQueryFields}
     ${hierarchyTreeQueryFields}
     ${committeeDetailsQueryFields}
+    ${programDetailsQueryFields}
     ${eventDetailsQueryFields}
     ${eventsListQueryFields}
   }
@@ -68,7 +71,7 @@ export const typeDefs = `
     ${createEventMutationFields}
     ${createProgramMutationFields}
     ${updateEventVisibilityMutationFields}
-    ${updateEventTypeMutationFields}
+    ${uploadEventBannerImagesMutationFields}
     ${deleteEventMutationFields}
     ${toggleCommitteeFavouriteMutationFields}
     ${cancelCommitteeMembershipRequestMutationFields}
@@ -86,6 +89,7 @@ export const resolvers = {
     ...userRelationalAnalyticsResolvers.Query,
     ...hierarchyTreeResolvers.Query,
     ...committeeDetailsResolvers.Query,
+    ...programDetailsResolvers.Query,
     ...eventDetailsResolvers.Query,
     ...eventsListResolvers.Query
   },
@@ -99,7 +103,7 @@ export const resolvers = {
     ...createEventResolvers.Mutation,
     ...createProgramResolvers.Mutation,
     ...updateEventVisibilityResolvers.Mutation,
-    ...updateEventTypeResolvers.Mutation,
+    ...uploadEventBannerImagesResolvers.Mutation,
     ...deleteEventResolvers.Mutation,
     ...toggleCommitteeFavouriteResolvers.Mutation,
     ...cancelCommitteeMembershipRequestResolvers.Mutation,

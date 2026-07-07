@@ -12,6 +12,11 @@ export interface DeletedEventPayload {
   deletedAt: string;
 }
 
+export interface UploadEventBannerImagesPayload {
+  eventId: number;
+  bannerImages: string[];
+}
+
 @Injectable({
   providedIn: 'root'
 })
@@ -72,6 +77,40 @@ export class EventDetailsService {
       { withCredentials: true }
     ).pipe(
       map((res) => res.data.deleteEvent)
+    );
+  }
+
+  public uploadEventBannerImages(eventId: number, bannerImageUrls: string[]): Observable<UploadEventBannerImagesPayload> {
+    const mutation = `mutation UploadEventBannerImages($eventId: Int!, $bannerImageUrls: [String!]!) {
+      uploadEventBannerImages(eventId: $eventId, bannerImageUrls: $bannerImageUrls) {
+        eventId
+        bannerImages
+      }
+    }`;
+
+    return this.http.post<{ data: { uploadEventBannerImages: UploadEventBannerImagesPayload } }>(
+      this.graphqlUrl,
+      { query: mutation, variables: { eventId, bannerImageUrls } },
+      { withCredentials: true }
+    ).pipe(
+      map((res) => res.data.uploadEventBannerImages)
+    );
+  }
+
+  public deleteEventBannerImage(eventId: number, mediaUrl: string): Observable<UploadEventBannerImagesPayload> {
+    const mutation = `mutation DeleteEventBannerImage($eventId: Int!, $mediaUrl: String!) {
+      deleteEventBannerImage(eventId: $eventId, mediaUrl: $mediaUrl) {
+        eventId
+        bannerImages
+      }
+    }`;
+
+    return this.http.post<{ data: { deleteEventBannerImage: UploadEventBannerImagesPayload } }>(
+      this.graphqlUrl,
+      { query: mutation, variables: { eventId, mediaUrl } },
+      { withCredentials: true }
+    ).pipe(
+      map((res) => res.data.deleteEventBannerImage)
     );
   }
 }

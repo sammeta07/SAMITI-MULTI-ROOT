@@ -9,6 +9,7 @@ export interface CreateEventPayload {
   status: 'UPCOMING' | 'ONGOING' | 'COMPLETED' | 'CANCELLED';
   category?: string;
   visibility: 'VISIBLE' | 'HIDDEN';
+  type: 'PUBLIC' | 'PRIVATE';
   startDate: string | null;
   endDate: string | null;
   latitude: number;
@@ -28,6 +29,7 @@ export interface CreateEventResponse {
   status: string;
   category?: string;
   visibility: string;
+  type: 'PUBLIC' | 'PRIVATE';
   startDate: string | null;
   endDate: string | null;
   latitude: number;

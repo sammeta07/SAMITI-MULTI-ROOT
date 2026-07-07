@@ -10,6 +10,7 @@ import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
 import { MatExpansionModule } from '@angular/material/expansion';
 import { MatSlideToggleModule } from '@angular/material/slide-toggle';
+import { MatTooltipModule } from '@angular/material/tooltip';
 import { HttpErrorResponse } from '@angular/common/http';
 import { GroupDetailsService } from './group-details.service';
 import { NotifierService } from '../../../../shared/notifier/notifier.service';
@@ -38,6 +39,7 @@ import { DashboardHierarchyTreeService } from '../dashboard-hierarchy-tree/dashb
     MatInputModule,
     MatExpansionModule,
     MatSlideToggleModule,
+    MatTooltipModule,
   ],
   templateUrl: './group-details.html',
   styleUrl: './group-details.scss'
@@ -68,6 +70,9 @@ export class GroupDetailsComponent implements OnInit {
   // Lists holding structured members segment arrays securely typed
   public readonly adminsList = signal<CommitteeRosterMember[]>([]);
   public readonly membersList = signal<CommitteeRosterMember[]>([]);
+
+  // Placeholder rows used to render skeleton loaders while data loads
+  public readonly skeletonRows = [1, 2, 3];
 
 // 🔐 Computed signals for role-based button visibility
   public readonly isCurrentUserAdmin = computed(() => this.isAdmin());
@@ -178,44 +183,6 @@ export class GroupDetailsComponent implements OnInit {
           )
         );
         this.notifier.error(err?.error?.message || 'Failed to update event visibility.');
-      }
-    });
-  }
-
-  public onEventTypeChange(eventItem: CommitteeEventListItem, isPublic: boolean): void {
-    if (!this.isCurrentUserAdmin()) {
-      this.notifier.warn('Only committee admins can update event type');
-      return;
-    }
-
-    const type: 'PUBLIC' | 'PRIVATE' = isPublic ? 'PUBLIC' : 'PRIVATE';
-
-    if (!eventItem?.eventId || eventItem.type === type) {
-      return;
-    }
-
-    const previousType = eventItem.type;
-    this.committeeEvents.update((currentEvents) =>
-      currentEvents.map((currentEvent) =>
-        currentEvent.eventId === eventItem.eventId ? { ...currentEvent, type } : currentEvent
-      )
-    );
-
-    this.groupDetailsService.updateEventType(eventItem.eventId, type).subscribe({
-      next: () => {
-        const formattedEventName = this.toTitleCase(eventItem.eventName || 'Event');
-        const typeMessage = type === 'PUBLIC'
-          ? `**${formattedEventName}** type is now Public`
-          : `**${formattedEventName}** type is now Private`;
-        this.notifier.success(typeMessage);
-      },
-      error: (err: HttpErrorResponse) => {
-        this.committeeEvents.update((currentEvents) =>
-          currentEvents.map((currentEvent) =>
-            currentEvent.eventId === eventItem.eventId ? { ...currentEvent, type: previousType } : currentEvent
-          )
-        );
-        this.notifier.error(err?.error?.message || 'Failed to update event type.');
       }
     });
   }
@@ -585,7 +552,7 @@ export class GroupDetailsComponent implements OnInit {
   }
 
   // 🎉 CREATE NEW EVENT DIALOG PIPELINE
-  public onCreateEvent(): void {
+  public onCreateEvent(eventType: 'PUBLIC' | 'PRIVATE'): void {
     const committee = this.groupData();
     if (!committee) {
       this.notifier.error('No committee selected');
@@ -612,7 +579,8 @@ export class GroupDetailsComponent implements OnInit {
       panelClass: 'slide-in-dialog',
       data: {
         committeeId: committee.committeeId,
-        address: committee.address || ''
+        address: committee.address || '',
+        eventType
       }
     });
 

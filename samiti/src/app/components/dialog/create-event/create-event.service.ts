@@ -26,6 +26,7 @@ export class CreateEventService {
         status
         category
         visibility
+        type
         startDate
         endDate
         latitude
@@ -60,6 +61,7 @@ export class CreateEventService {
             status: payload.status,
             category: payload.category || null,
             visibility: payload.visibility,
+            type: payload.type,
             startDate: payload.startDate,
             endDate: payload.endDate,
             latitude: payload.latitude,

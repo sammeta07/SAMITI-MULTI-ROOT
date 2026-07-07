@@ -1,4 +1,4 @@
-import { Component, inject, effect, ChangeDetectorRef } from '@angular/core';
+import { Component, inject, effect, ChangeDetectorRef, OnDestroy } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { MatExpansionModule } from '@angular/material/expansion';
@@ -14,7 +14,8 @@ import { AuthService } from '../../core/services/auth.service';
 import { CreateCommitteeDialogComponent } from '../../components/dialog/create-committee/create-committee.component';
 import { ConfirmDialogService } from '../../components/dialog/confirm/confirm-dialog.service';
 import { ConfirmDialogData } from '../../components/dialog/confirm/confirm-dialog.models';
-import { CommitteeListResponseGuestUser, CommitteeListRequestBackend, CommitteeAuthItem, CommitteesList, JoinCommitteeRequestBody, JoinCommitteeApiResponse, ToggleCommitteeFavouriteResponse, CancelRequestApiResponse } from './home.models';
+import { CommitteeListResponseGuestUser, CommitteeListRequestBackend, CommitteeAuthItem, CommitteesList, CommitteeEvent, JoinCommitteeRequestBody, JoinCommitteeApiResponse, ToggleCommitteeFavouriteResponse, CancelRequestApiResponse } from './home.models';
+import { TextFormatPipe } from '../../shared/pipe/text-format-pipe.pipe';
 
 @Component({
   selector: 'app-home',
@@ -28,11 +29,12 @@ import { CommitteeListResponseGuestUser, CommitteeListRequestBackend, CommitteeA
     MatButtonModule,
     MatTooltipModule,
     MatDialogModule,
+    TextFormatPipe,
   ],
   templateUrl: './home.component.html',
   styleUrl: './home.component.scss',
 })
-export class HomeComponent {
+export class HomeComponent implements OnDestroy {
 private readonly headerService = inject(HeaderService);
   private readonly homeService = inject(HomeService);
   private readonly notifier = inject(NotifierService);
@@ -43,6 +45,9 @@ private readonly headerService = inject(HeaderService);
 
   private nearbyExpandedCommitteeIds = new Set<number>();
   private favouriteExpandedCommitteeIds = new Set<number>();
+  private readonly carouselIndices = new Map<number, number>();
+  private carouselTimer: ReturnType<typeof setInterval> | null = null;
+  private readonly CAROUSEL_INTERVAL_MS = 3500;
 
   userLocationCords = this.headerService.userLocationCords;
   radiusOptions: number[] = [1, 5, 10, 25, 100, 1000];
@@ -51,6 +56,7 @@ private readonly headerService = inject(HeaderService);
   selectedTabIndex: number = 0;
   committeeList: CommitteesList[] = [];
   copiedCommitteeId: string | null = null;
+  isCommitteeListLoading: boolean = true;
 
   // 🛠️ Reactive Computed Getter: Sync changes natively across header operations
   get isLoggedIn(): boolean {
@@ -71,6 +77,96 @@ private readonly headerService = inject(HeaderService);
   get favouriteGroups(): CommitteesList[] {
     if (!this.isLoggedIn) return [];
     return this.committeeList.filter(c => this.isAuthItem(c) && c.isFavourite === 1);
+  }
+
+  // ─── Event year tabs helpers ──────────────────────────────
+  readonly currentYear: number = new Date().getFullYear();
+
+  private extractEventYear(event: CommitteeEvent): number | null {
+    if (!event.startDate) return null;
+    const year = new Date(event.startDate).getFullYear();
+    return Number.isNaN(year) ? null : year;
+  }
+
+  getCommitteeEventYears(committee: CommitteesList): number[] {
+    const years = new Set<number>([this.currentYear]);
+    for (const event of committee.events) {
+      const year = this.extractEventYear(event);
+      if (year) years.add(year);
+    }
+    const collected = Array.from(years);
+    const maxYear = Math.max(...collected);
+    const minYear = Math.min(...collected);
+    const continuousYears: number[] = [];
+    for (let year = maxYear; year >= minYear; year--) {
+      continuousYears.push(year);
+    }
+    return continuousYears;
+  }
+
+  getEventsByYear(committee: CommitteesList, year: number): CommitteeEvent[] {
+    return committee.events.filter((event) => this.extractEventYear(event) === year);
+  }
+
+  getDefaultYearTabIndex(committee: CommitteesList): number {
+    const years = this.getCommitteeEventYears(committee);
+    const index = years.indexOf(this.currentYear);
+    return index >= 0 ? index : 0;
+  }
+
+  // ─── Open committee location in Google Maps for navigation ─────────
+  openCommitteeInMaps(committee: CommitteesList, event: Event): void {
+    event.stopPropagation();
+    const address = (committee.address || '').trim();
+    if (!address) {
+      this.notifier.warn('No address available for navigation');
+      return;
+    }
+    const mapsUrl = `https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(address)}`;
+    window.open(mapsUrl, '_blank', 'noopener,noreferrer');
+  }
+
+  // ─── Banner carousel helpers ───────────────────────────────────────
+  getBannerIndex(eventId: number): number {
+    return this.carouselIndices.get(eventId) ?? 0;
+  }
+
+  nextBanner(eventId: number, count: number, e: Event): void {
+    e.stopPropagation();
+    const current = this.getBannerIndex(eventId);
+    this.carouselIndices.set(eventId, (current + 1) % count);
+  }
+
+  prevBanner(eventId: number, count: number, e: Event): void {
+    e.stopPropagation();
+    const current = this.getBannerIndex(eventId);
+    this.carouselIndices.set(eventId, (current - 1 + count) % count);
+  }
+
+  private startCarouselAutoPlay(): void {
+    this.stopCarouselAutoPlay();
+    this.carouselTimer = setInterval(() => {
+      for (const committee of this.committeeList) {
+        for (const event of committee.events) {
+          if ((event.bannerImages?.length ?? 0) > 1) {
+            const current = this.carouselIndices.get(event.eventId) ?? 0;
+            this.carouselIndices.set(event.eventId, (current + 1) % event.bannerImages.length);
+          }
+        }
+      }
+      this.cdr.detectChanges();
+    }, this.CAROUSEL_INTERVAL_MS);
+  }
+
+  private stopCarouselAutoPlay(): void {
+    if (this.carouselTimer !== null) {
+      clearInterval(this.carouselTimer);
+      this.carouselTimer = null;
+    }
+  }
+
+  ngOnDestroy(): void {
+    this.stopCarouselAutoPlay();
   }
 
 constructor() {
@@ -114,10 +210,13 @@ constructor() {
     fetch$.subscribe({
       next: (res) => {
         this.committeeList = Array.isArray(res) ? res : [res];
+        this.isCommitteeListLoading = false;
         this.syncExpandedPanelState();
+        this.startCarouselAutoPlay();
         this.cdr.detectChanges();
       },
       error: (error) => {
+        this.isCommitteeListLoading = false;
         this.notifier.error(error?.message || error?.error || 'Failed to fetch committees');
         this.cdr.detectChanges();
       }
