@@ -3,7 +3,7 @@ import { HttpClient } from '@angular/common/http';
 import { Observable } from 'rxjs';
 import { map } from 'rxjs/operators';
 import { environment } from '../../../../environments/environment';
-import { CreateProgramPayload, CreateProgramResponse } from './create-program.models';
+import { CreateProgramPayload, CreateProgramResponse, UpdateProgramPayload, UpdateProgramResponse } from './create-program.models';
 
 @Injectable({
   providedIn: 'root'
@@ -35,6 +35,33 @@ export class CreateProgramService {
       { withCredentials: true }
     ).pipe(
       map(res => res.data.createProgram)
+    );
+  }
+
+  public updateProgram(payload: UpdateProgramPayload): Observable<UpdateProgramResponse> {
+    const mutation = `mutation UpdateProgram($input: UpdateProgramInput!) {
+      updateProgram(input: $input) {
+        id
+        programId
+        eventId
+        programName
+        address
+        status
+        visibility
+        startDateTime
+        endDateTime
+        createdBy
+        updatedBy
+        createdAt
+      }
+    }`;
+
+    return this.http.post<{ data: { updateProgram: UpdateProgramResponse } }>(
+      this.graphqlUrl,
+      { query: mutation, variables: { input: payload } },
+      { withCredentials: true }
+    ).pipe(
+      map((res) => res.data.updateProgram)
     );
   }
 }

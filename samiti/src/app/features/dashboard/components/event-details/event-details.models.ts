@@ -17,8 +17,11 @@ export interface EventDetailsPayload {
   status: string;
   category?: string | null;
   visibility: string;
+  type?: 'PUBLIC' | 'PRIVATE' | string;
   startDate?: string | null;
   endDate?: string | null;
+  latitude?: number | null;
+  longitude?: number | null;
   createdBy: number;
   updatedBy?: number | null;
   createdAt?: string | null;

@@ -54,9 +54,12 @@ export const eventDetailsTypes = `
     status: String!
     category: String
     visibility: String!
+    type: String
     startDate: String
     endDate: String
     address: String
+    latitude: Float
+    longitude: Float
     createdBy: Int!
     updatedBy: Int
     createdAt: String
@@ -90,8 +93,11 @@ export const eventDetailsResolvers = {
           e.status,
           e.category,
           e.visibility,
+          e.type,
           DATE_FORMAT(e.start_date, '%Y-%m-%d') AS startDate,
           DATE_FORMAT(e.end_date, '%Y-%m-%d') AS endDate,
+          e.latitude,
+          e.longitude,
           e.created_by AS createdBy,
           e.updated_by AS updatedBy,
           e.created_at AS createdAt

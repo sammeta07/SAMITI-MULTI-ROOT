@@ -14,7 +14,7 @@ import { MatTooltipModule } from '@angular/material/tooltip';
 import { HttpErrorResponse } from '@angular/common/http';
 import { GroupDetailsService } from './group-details.service';
 import { NotifierService } from '../../../../shared/notifier/notifier.service';
-import { CancelCommitteeMembershipRequestPayload, CommitteeEventListItem, CommitteeProfileMeta, CommitteeRosterMember, CommitteeDetailsPayload, DeletedEventPayload, SubmitCommitteeMembershipRequestPayload } from './group-details.models';
+import { CancelCommitteeMembershipRequestPayload, CommitteeEventListItem, CommitteeProfileMeta, CommitteeRosterMember, CommitteeDetailsPayload, SubmitCommitteeMembershipRequestPayload } from './group-details.models';
 import { ConfirmDialogService } from '../../../../components/dialog/confirm/confirm-dialog.service';
 import { ConfirmDialogData } from '../../../../components/dialog/confirm/confirm-dialog.models';
 import { CreateEventDialogComponent } from '../../../../components/dialog/create-event/create-event.component';
@@ -191,48 +191,6 @@ export class GroupDetailsComponent implements OnInit {
 
   public onEditEvent(eventItem: CommitteeEventListItem): void {
     this.notifier.warn(`Edit event flow is not available yet for "${eventItem.eventName}".`);
-  }
-
-  public onDeleteEvent(eventItem: CommitteeEventListItem): void {
-    if (!this.isCurrentUserAdmin()) {
-      this.notifier.warn('Only committee admins can delete events');
-      return;
-    }
-
-    if (!eventItem?.eventId) {
-      this.notifier.error('Invalid event selected for deletion');
-      return;
-    }
-
-    const dialogData: ConfirmDialogData = {
-      title: 'Delete Event',
-      message: `Are you sure you want to delete "${eventItem.eventName}"? This action will also remove linked members, media, programs, and tasks.`,
-      confirmText: 'Delete',
-      cancelText: 'Cancel'
-    };
-
-    const dialogRef = this.confirmDialog.open(dialogData);
-
-    dialogRef.afterClosed().subscribe((result) => {
-      if (!result?.confirmed) {
-        return;
-      }
-
-      const previousEvents = this.committeeEvents();
-      this.committeeEvents.set(previousEvents.filter((event) => event.eventId !== eventItem.eventId));
-
-      this.groupDetailsService.deleteEvent(eventItem.eventId).subscribe({
-        next: (response: DeletedEventPayload) => {
-          const formattedEventName = this.toTitleCase(response?.eventName || eventItem.eventName || 'Event');
-          this.hierarchyTreeService.triggerHierarchyTreeRefresh();
-          this.notifier.success(`**${formattedEventName}** has been deleted successfully`);
-        },
-        error: (err: HttpErrorResponse) => {
-          this.committeeEvents.set(previousEvents);
-          this.notifier.error(err?.error?.message || 'Failed to delete event.');
-        }
-      });
-    });
   }
 
   private toTitleCase(value: string): string {
@@ -590,6 +548,7 @@ export class GroupDetailsComponent implements OnInit {
       if (result) {
         this.notifier.success(`Event "${result.eventName}" created successfully!`);
         if (committee.committeeId) {
+          this.hierarchyTreeService.triggerHierarchyTreeRefresh();
           this.fetchCommitteeEvents(committee.committeeId);
         }
       }

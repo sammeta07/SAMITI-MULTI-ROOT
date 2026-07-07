@@ -36,3 +36,29 @@ export interface CreateEventResponse {
   updatedBy: number;
   createdAt: string;
 }
+
+export interface UpdateEventPayload extends CreateEventPayload {
+  eventId: number;
+}
+
+export interface UpdateEventResponse {
+  id: number;
+  eventId: number;
+  eventName: string;
+  eventDisplayName: string;
+  committeeId: number;
+  address?: string;
+  eventBanner?: string;
+  bannerImages: string[];
+  status: string;
+  category?: string;
+  visibility: string;
+  type: 'PUBLIC' | 'PRIVATE';
+  startDate: string | null;
+  endDate: string | null;
+  latitude: number;
+  longitude: number;
+  createdBy: number;
+  updatedBy: number;
+  createdAt: string;
+}

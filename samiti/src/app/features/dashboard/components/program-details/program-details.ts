@@ -1,6 +1,7 @@
 import { Component, inject, OnInit, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ActivatedRoute } from '@angular/router';
+import { MatDialog } from '@angular/material/dialog';
 import { MatIconModule } from '@angular/material/icon';
 import { MatButtonModule } from '@angular/material/button';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
@@ -9,6 +10,8 @@ import { HttpErrorResponse } from '@angular/common/http';
 import { ProgramDetailsPayload, ProgramTask } from './program-details.models';
 import { ProgramDetailsService } from './program-details.service';
 import { NotifierService } from '../../../../shared/notifier/notifier.service';
+import { DashboardHierarchyTreeService } from '../dashboard-hierarchy-tree/dashboard-hierarchy-tree.service';
+import { CreateProgramDialogComponent } from '../../../../components/dialog/create-program/create-program.component';
 
 @Component({
   selector: 'app-program-details',
@@ -25,8 +28,10 @@ import { NotifierService } from '../../../../shared/notifier/notifier.service';
 })
 export class ProgramDetailsComponent implements OnInit {
   private readonly route = inject(ActivatedRoute);
+  private readonly dialog = inject(MatDialog);
   private readonly notifier = inject(NotifierService);
   private readonly programDetailsService = inject(ProgramDetailsService);
+  private readonly hierarchyTreeService = inject(DashboardHierarchyTreeService);
 
   public readonly isLoading = signal<boolean>(false);
   public readonly programData = signal<ProgramDetailsPayload | null>(null);
@@ -61,7 +66,42 @@ export class ProgramDetailsComponent implements OnInit {
   }
 
   public onEditProgram(): void {
-    // TODO: implement edit dialog
+    const currentProgram = this.programData();
+    if (!currentProgram?.programId || !currentProgram?.eventId) {
+      this.notifier.error('No program available for editing');
+      return;
+    }
+
+    document.body.classList.add('dialog-open');
+    const dialogRef = this.dialog.open(CreateProgramDialogComponent, {
+      position: { right: '0', top: '0' },
+      height: '100%',
+      width: '50%',
+      autoFocus: true,
+      disableClose: true,
+      hasBackdrop: true,
+      panelClass: 'slide-in-dialog',
+      data: {
+        programId: currentProgram.programId,
+        eventId: currentProgram.eventId,
+        programName: currentProgram.programName,
+        address: currentProgram.address || '',
+        visibility: currentProgram.visibility,
+        startDate: currentProgram.startDate,
+        endDate: currentProgram.endDate
+      }
+    });
+
+    dialogRef.afterClosed().subscribe((result) => {
+      document.body.classList.remove('dialog-open');
+      if (!result) {
+        return;
+      }
+
+      this.hierarchyTreeService.triggerHierarchyTreeRefresh();
+      this.fetchProgramDetails(String(currentProgram.programId));
+      this.notifier.success(`Program "${result.programName || currentProgram.programName}" updated successfully!`);
+    });
   }
 
   public onDeleteProgram(): void {

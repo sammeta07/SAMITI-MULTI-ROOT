@@ -9,21 +9,6 @@
 
   <div class="workspace-body scrollable-container">
 
-    <!-- Action Buttons Row -->
-    <header class="workspace-action-header">
-      <button mat-stroked-button class="action-btn edit-btn" (click)="onEditEvent()">
-        <mat-icon>edit</mat-icon>Edit
-      </button>
-      <button mat-stroked-button class="action-btn delete-btn" (click)="onDeleteEvent()">
-        <mat-icon>delete</mat-icon>Delete
-      </button>
-      <button mat-stroked-button class="action-btn create-program-btn" (click)="onCreateProgram()">
-        <mat-icon>add</mat-icon>Program
-      </button>
-      <input #bannerFileInput type="file" accept="image/*" multiple style="display:none"
-             (change)="onBannerFilesSelected($event)" />
-    </header>
-
     <!-- Summary Card -->
     <section class="gd-committee-card">
       <div class="committee-card-grid">
@@ -65,6 +50,13 @@
           </div>
 
           <div class="directions-status-row">
+            <mat-slide-toggle
+              class="event-visibility-toggle"
+              [checked]="eventData()?.visibility === 'VISIBLE'"
+              [disabled]="isVisibilityUpdating()"
+              (change)="onEventVisibilityChange($event.checked)">
+              {{ eventData()?.visibility }}
+            </mat-slide-toggle>
             <button mat-stroked-button class="action-btn edit-btn" (click)="onEditEvent()">
               <mat-icon>edit</mat-icon>Edit
             </button>
@@ -142,6 +134,15 @@
       </div>
       }
     </section>
+
+    <input
+      #bannerFileInput
+      type="file"
+      accept="image/*"
+      multiple
+      hidden
+      (change)="onBannerFilesSelected($event)"
+    />
 
     <!-- Designations (UI only) -->
     <section class="horizontal-full-card designations-section-style">

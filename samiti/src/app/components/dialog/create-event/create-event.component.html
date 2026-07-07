@@ -2,10 +2,10 @@
   
   <mat-toolbar class="drawer-synchronized-header">
     <div class="drawer-title-group">
-      <mat-icon class="mode-indicator-icon">add_event</mat-icon>
+      <mat-icon class="mode-indicator-icon">{{ submitButtonIcon }}</mat-icon>
       <div class="drawer-title-text">
-        <h2>Create Public Event</h2>
-        <p>by default this event will be hidden from public</p>
+        <h2>{{ dialogTitle }}</h2>
+        <p>{{ dialogSubtitle }}</p>
       </div>
     </div>
     
@@ -112,8 +112,8 @@
             class="submit-action-btn" 
             [disabled]="!isFormValid || isSubmitting()"
             (click)="onSubmit()">
-      <mat-icon>add_event</mat-icon>
-      <span>Create Event</span>
+      <mat-icon>{{ submitButtonIcon }}</mat-icon>
+      <span>{{ submitButtonLabel }}</span>
     </button>
   </footer>
 

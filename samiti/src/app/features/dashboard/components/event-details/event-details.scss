@@ -185,6 +185,13 @@
   .create-program-btn { color: #7c3aed !important; border-color: rgba(124, 58, 237, 0.3) !important; }
 }
 
+.event-visibility-toggle {
+  transform: scale(0.72);
+  transform-origin: right center;
+  margin-right: -4px;
+  height: auto;
+}
+
 .card-paragraph-summary-area { grid-column: 1 / 4; border-top: 1px dashed #e2e8f0; padding-top: 5px; }
 .summary-paragraph-text { font-size: 0.78rem; color: #64748b; line-height: 1.35; margin: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 100%; display: block; }
 

@@ -5,6 +5,7 @@ import { MatDialog } from '@angular/material/dialog';
 import { MatIconModule } from '@angular/material/icon';
 import { MatButtonModule } from '@angular/material/button';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
+import { MatSlideToggleModule } from '@angular/material/slide-toggle';
 import { HttpErrorResponse } from '@angular/common/http';
 import { firstValueFrom } from 'rxjs';
 import { EventDetailsService } from './event-details.service';
@@ -14,6 +15,7 @@ import { ConfirmDialogService } from '../../../../components/dialog/confirm/conf
 import { ConfirmDialogData } from '../../../../components/dialog/confirm/confirm-dialog.models';
 import { DashboardHierarchyTreeService } from '../dashboard-hierarchy-tree/dashboard-hierarchy-tree.service';
 import { CreateProgramDialogComponent } from '../../../../components/dialog/create-program/create-program.component';
+import { CreateEventDialogComponent } from '../../../../components/dialog/create-event/create-event.component';
 import { ImageAssetService } from '../../../../core/services/image-asset.service';
 import { MatTooltipModule } from '@angular/material/tooltip';
 
@@ -25,13 +27,14 @@ import { MatTooltipModule } from '@angular/material/tooltip';
     MatIconModule,
     MatButtonModule,
     MatProgressSpinnerModule,
+    MatSlideToggleModule,
     MatTooltipModule
   ],
   templateUrl: './event-details.html',
   styleUrl: './event-details.scss'
 })
 export class EventDetailsComponent implements OnInit {
-  @ViewChild('bannerFileInput') private readonly bannerFileInput!: ElementRef<HTMLInputElement>;
+  @ViewChild('bannerFileInput') private readonly bannerFileInput?: ElementRef<HTMLInputElement>;
 
   private readonly route = inject(ActivatedRoute);
   private readonly router = inject(Router);
@@ -44,6 +47,7 @@ export class EventDetailsComponent implements OnInit {
 
   public readonly isLoading = signal<boolean>(false);
   public readonly isBannerUploading = signal<boolean>(false);
+  public readonly isVisibilityUpdating = signal<boolean>(false);
   public readonly eventData = signal<EventDetailsPayload | null>(null);
   public readonly eventAdmins = signal<EventPerson[]>([]);
   public readonly eventMembers = signal<EventPerson[]>([]);
@@ -84,10 +88,55 @@ export class EventDetailsComponent implements OnInit {
   }
 
   public onEditEvent(): void {
-    // TODO: implement edit dialog
+    const currentEvent = this.eventData();
+    if (!currentEvent?.eventId || !currentEvent?.committeeId) {
+      this.notifier.error('No event available for editing');
+      return;
+    }
+
+    document.body.classList.add('dialog-open');
+    const dialogRef = this.dialog.open(CreateEventDialogComponent, {
+      position: { right: '0', top: '0' },
+      height: '100%',
+      width: '50%',
+      autoFocus: true,
+      disableClose: true,
+      hasBackdrop: true,
+      panelClass: 'slide-in-dialog',
+      data: {
+        eventId: currentEvent.eventId,
+        committeeId: currentEvent.committeeId,
+        address: currentEvent.committeeAddress || '',
+        eventType: currentEvent.type === 'PRIVATE' ? 'PRIVATE' : 'PUBLIC',
+        visibility: currentEvent.visibility,
+        eventName: currentEvent.eventName,
+        eventDisplayName: currentEvent.eventDisplayName,
+        status: currentEvent.status,
+        category: currentEvent.category,
+        startDate: currentEvent.startDate,
+        endDate: currentEvent.endDate,
+        latitude: currentEvent.latitude,
+        longitude: currentEvent.longitude
+      }
+    });
+
+    dialogRef.afterClosed().subscribe((result) => {
+      document.body.classList.remove('dialog-open');
+      if (!result) {
+        return;
+      }
+
+      this.hierarchyTreeService.triggerHierarchyTreeRefresh();
+      this.fetchEventDetails(String(currentEvent.eventId));
+    });
   }
 
   public onAddBannerClick(): void {
+    if (!this.bannerFileInput?.nativeElement) {
+      this.notifier.error('File picker is not ready. Please try again.');
+      return;
+    }
+
     this.bannerFileInput.nativeElement.value = '';
     this.bannerFileInput.nativeElement.click();
   }
@@ -187,6 +236,43 @@ export class EventDetailsComponent implements OnInit {
         if (result.programId) {
           this.router.navigate(['/dashboard', 'program', result.programId]);
         }
+      }
+    });
+  }
+
+  public onEventVisibilityChange(isVisible: boolean): void {
+    const currentEvent = this.eventData();
+    if (!currentEvent?.eventId) {
+      this.notifier.error('No event available for visibility update');
+      return;
+    }
+
+    if (this.isVisibilityUpdating()) {
+      return;
+    }
+
+    const visibility: 'VISIBLE' | 'HIDDEN' = isVisible ? 'VISIBLE' : 'HIDDEN';
+    if (currentEvent.visibility === visibility) {
+      return;
+    }
+
+    const previousVisibility = currentEvent.visibility;
+    this.isVisibilityUpdating.set(true);
+    this.eventData.update((prev) => (prev ? { ...prev, visibility } : prev));
+
+    this.eventDetailsService.updateEventVisibility(currentEvent.eventId, visibility).subscribe({
+      next: () => {
+        const formattedEventName = this.toTitleCase(currentEvent.eventName || 'Event');
+        const visibilityMessage = visibility === 'VISIBLE'
+          ? `**${formattedEventName}** is now visible to all the public`
+          : `**${formattedEventName}** is now hidden to all the public`;
+        this.notifier.success(visibilityMessage);
+        this.isVisibilityUpdating.set(false);
+      },
+      error: (err: HttpErrorResponse) => {
+        this.eventData.update((prev) => (prev ? { ...prev, visibility: previousVisibility } : prev));
+        this.notifier.error(err?.error?.message || 'Failed to update event visibility.');
+        this.isVisibilityUpdating.set(false);
       }
     });
   }

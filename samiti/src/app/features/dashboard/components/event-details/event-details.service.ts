@@ -17,6 +17,12 @@ export interface UploadEventBannerImagesPayload {
   bannerImages: string[];
 }
 
+export interface UpdatedEventVisibilityPayload {
+  eventId: number;
+  visibility: 'VISIBLE' | 'HIDDEN';
+  updatedBy: number;
+}
+
 @Injectable({
   providedIn: 'root'
 })
@@ -38,8 +44,11 @@ export class EventDetailsService {
         status
         category
         visibility
+        type
         startDate
         endDate
+        latitude
+        longitude
         createdBy
         updatedBy
         createdAt
@@ -110,6 +119,30 @@ export class EventDetailsService {
       { withCredentials: true }
     ).pipe(
       map((res) => res.data.deleteEventBannerImage)
+    );
+  }
+
+  public updateEventVisibility(eventId: number, visibility: 'VISIBLE' | 'HIDDEN'): Observable<UpdatedEventVisibilityPayload> {
+    const query = `mutation UpdateEventVisibility($eventId: Int!, $visibility: String!) {
+      updateEventVisibility(eventId: $eventId, visibility: $visibility) {
+        eventId
+        visibility
+        updatedBy
+      }
+    }`;
+
+    return this.http.post<{ data: { updateEventVisibility: UpdatedEventVisibilityPayload } }>(
+      this.graphqlUrl,
+      {
+        query,
+        variables: {
+          eventId,
+          visibility
+        }
+      },
+      { withCredentials: true }
+    ).pipe(
+      map((res) => res.data.updateEventVisibility)
     );
   }
 }

@@ -53,17 +53,25 @@ export class CreateEventDialogComponent implements OnInit {
   public longitude: number | null = null;
   public status: 'UPCOMING' | 'ONGOING' | 'COMPLETED' | 'CANCELLED' = 'UPCOMING';
   public category: string = 'puja';
-  public readonly visibility: 'VISIBLE' | 'HIDDEN' = 'HIDDEN';
+  public visibility: 'VISIBLE' | 'HIDDEN' = 'HIDDEN';
   public startDate: Date | null = null;
   public endDate: Date | null = null;
 
   public readonly isSubmitting = signal<boolean>(false);
   public readonly type = signal<'PUBLIC' | 'PRIVATE'>('PUBLIC');
+  public readonly isEditMode = signal<boolean>(false);
+  public readonly editingEventId = signal<number | null>(null);
 
   public readonly eventTypes = ['puja', 'sports', 'meeting', 'celebration', 'workshop', 'other'];
   public readonly statuses = ['UPCOMING', 'ONGOING', 'COMPLETED', 'CANCELLED'];
 
   ngOnInit(): void {
+    const injectedEventId = Number(this.injectedData?.eventId);
+    if (Number.isInteger(injectedEventId) && injectedEventId > 0) {
+      this.isEditMode.set(true);
+      this.editingEventId.set(injectedEventId);
+    }
+
     const committeeAddress = this.injectedData?.address || this.injectedData?.committeeAddress;
     if (typeof committeeAddress === 'string' && committeeAddress.trim().length > 0) {
       this.address = committeeAddress.trim();
@@ -72,11 +80,82 @@ export class CreateEventDialogComponent implements OnInit {
     const injectedEventType = this.injectedData?.eventType;
     this.type.set(injectedEventType === 'PRIVATE' ? 'PRIVATE' : 'PUBLIC');
 
-    const gps = this.headerService.userLocationCords();
-    if (gps) {
-      this.latitude = gps.lat;
-      this.longitude = gps.long;
+    const injectedVisibility = String(this.injectedData?.visibility || '').toUpperCase();
+    if (injectedVisibility === 'VISIBLE' || injectedVisibility === 'HIDDEN') {
+      this.visibility = injectedVisibility;
     }
+
+    const injectedEventName = this.injectedData?.eventName;
+    if (typeof injectedEventName === 'string' && injectedEventName.trim().length > 0) {
+      this.eventName = injectedEventName.trim();
+    }
+
+    const injectedEventDisplayName = this.injectedData?.eventDisplayName;
+    if (typeof injectedEventDisplayName === 'string' && injectedEventDisplayName.trim().length > 0) {
+      this.eventDisplayName = injectedEventDisplayName.trim();
+    }
+
+    const injectedStatus = String(this.injectedData?.status || '').toUpperCase();
+    if (this.statuses.includes(injectedStatus)) {
+      this.status = injectedStatus as 'UPCOMING' | 'ONGOING' | 'COMPLETED' | 'CANCELLED';
+    }
+
+    const injectedCategory = this.injectedData?.category;
+    if (typeof injectedCategory === 'string' && injectedCategory.trim().length > 0) {
+      this.category = injectedCategory.trim().toLowerCase();
+    }
+
+    const injectedStartDate = this.parseDateInput(this.injectedData?.startDate);
+    if (injectedStartDate) {
+      this.startDate = injectedStartDate;
+    }
+
+    const injectedEndDate = this.parseDateInput(this.injectedData?.endDate);
+    if (injectedEndDate) {
+      this.endDate = injectedEndDate;
+    }
+
+    const injectedLatitude = Number(this.injectedData?.latitude);
+    if (!Number.isNaN(injectedLatitude)) {
+      this.latitude = injectedLatitude;
+    }
+
+    const injectedLongitude = Number(this.injectedData?.longitude);
+    if (!Number.isNaN(injectedLongitude)) {
+      this.longitude = injectedLongitude;
+    }
+
+    if (this.latitude === null || this.longitude === null) {
+      const gps = this.headerService.userLocationCords();
+      if (gps) {
+        this.latitude = gps.lat;
+        this.longitude = gps.long;
+      }
+    }
+  }
+
+  public get dialogTitle(): string {
+    if (this.isEditMode()) {
+      return 'Edit Event';
+    }
+
+    return this.type() === 'PRIVATE' ? 'Create Private Event' : 'Create Public Event';
+  }
+
+  public get dialogSubtitle(): string {
+    if (this.isEditMode()) {
+      return 'Update event information and save changes';
+    }
+
+    return 'by default this event will be hidden from public';
+  }
+
+  public get submitButtonLabel(): string {
+    return this.isEditMode() ? 'Save Changes' : 'Create Event';
+  }
+
+  public get submitButtonIcon(): string {
+    return this.isEditMode() ? 'save' : 'add_event';
   }
 
   get isFormValid(): boolean {
@@ -123,26 +202,58 @@ export class CreateEventDialogComponent implements OnInit {
       longitude: Number(this.longitude ?? 0)
     };
 
-    this.createEventService.createEvent(payload).subscribe({
+    if (this.isEditMode()) {
+      const eventId = Number(this.editingEventId());
+      if (!Number.isInteger(eventId) || eventId <= 0) {
+        this.notifier.error('Event ID not provided for update');
+        this.isSubmitting.set(false);
+        return;
+      }
+    }
+
+    const request$ = this.isEditMode()
+      ? this.createEventService.updateEvent({
+          ...payload,
+          eventId: Number(this.editingEventId())
+        })
+      : this.createEventService.createEvent(payload);
+
+    request$.subscribe({
       next: (response) => {
         this.isSubmitting.set(false);
         const rawUserName = this.authService.getStoredUserData()?.name || 'User';
         const displayUserName = this.textFormatService.toTitleCase(rawUserName);
         const displayEventName = this.textFormatService.toTitleCase(response.eventName || this.eventName);
 
-        this.notifier.success(
-          `Hi, **${displayUserName}**! You have successfully created the event **${displayEventName}**.`,
-          'Event Created'
-        );
+        if (this.isEditMode()) {
+          this.notifier.success(
+            `Hi, **${displayUserName}**! You have successfully updated the event **${displayEventName}**.`,
+            'Event Updated'
+          );
+        } else {
+          this.notifier.success(
+            `Hi, **${displayUserName}**! You have successfully created the event **${displayEventName}**.`,
+            'Event Created'
+          );
+        }
         this.dialogRef.close(response);
       },
       error: (error) => {
         this.isSubmitting.set(false);
-        const errorMessage = error?.error?.errors?.[0]?.message || 'Failed to create event';
+        const errorMessage = error?.error?.errors?.[0]?.message || (this.isEditMode() ? 'Failed to update event' : 'Failed to create event');
         this.notifier.error(errorMessage);
-        console.error('Create event error:', error);
+        console.error(this.isEditMode() ? 'Update event error:' : 'Create event error:', error);
       }
     });
+  }
+
+  private parseDateInput(value: unknown): Date | null {
+    if (typeof value !== 'string' || value.trim().length === 0) {
+      return null;
+    }
+
+    const parsedDate = new Date(`${value.trim()}T00:00:00`);
+    return Number.isNaN(parsedDate.getTime()) ? null : parsedDate;
   }
 }
 

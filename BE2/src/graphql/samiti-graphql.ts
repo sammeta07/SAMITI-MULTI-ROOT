@@ -10,12 +10,14 @@ import { toggleCommitteeFavouriteTypes, toggleCommitteeFavouriteMutationFields, 
 import { hierarchyTreeTypes, hierarchyTreeQueryFields, hierarchyTreeResolvers } from './committees/hierarchy-tree.graphql';
 import { committeeDetailsTypes, committeeDetailsQueryFields, committeeDetailsResolvers } from './committees/committee-details-by-id.graphql';
 import { createEventTypes, createEventMutationFields, createEventResolvers } from './events/create-event.graphql';
+import { updateEventTypes, updateEventMutationFields, updateEventResolvers } from './events/update-event.graphql';
 import { eventDetailsTypes, eventDetailsQueryFields, eventDetailsResolvers } from './events/event-details-by-id.graphql';
 import { eventsListTypes, eventsListQueryFields, eventsListResolvers } from './events/events-list-by-committee.graphql';
 import { updateEventVisibilityTypes, updateEventVisibilityMutationFields, updateEventVisibilityResolvers } from './events/update-event-visibility.graphql';
 import { uploadEventBannerImagesTypes, uploadEventBannerImagesMutationFields, uploadEventBannerImagesResolvers } from './events/upload-event-banner-images.graphql';
 import { deleteEventTypes, deleteEventMutationFields, deleteEventResolvers } from './events/delete-event.graphql';
 import { createProgramTypes, createProgramMutationFields, createProgramResolvers } from './programs/create-program.graphql';
+import { updateProgramTypes, updateProgramMutationFields, updateProgramResolvers } from './programs/update-program.graphql';
 import { programDetailsTypes, programDetailsQueryFields, programDetailsResolvers } from './programs/program-details-by-id.graphql';
 import { authCommitteeTypes, authCommitteeQueryFields, authCommitteesResolvers } from './committees/committees-list/auth-user-committees-list.graphql';
 import { guestCommitteeTypes, guestCommitteeQueryFields, guestCommitteesResolvers } from './committees/committees-list/guest-user-committees-list.graphql';
@@ -40,7 +42,9 @@ export const typeDefs = `
   ${userRelationalAnalyticsTypes}
   ${imageAssetUploadTypes}
   ${createEventTypes}
+  ${updateEventTypes}
   ${createProgramTypes}
+  ${updateProgramTypes}
   ${programDetailsTypes}
   ${eventDetailsTypes}
   ${eventsListTypes}
@@ -69,7 +73,9 @@ export const typeDefs = `
     ${createCommitteeMutationFields}
     ${updateCommitteeMutationFields}
     ${createEventMutationFields}
+    ${updateEventMutationFields}
     ${createProgramMutationFields}
+    ${updateProgramMutationFields}
     ${updateEventVisibilityMutationFields}
     ${uploadEventBannerImagesMutationFields}
     ${deleteEventMutationFields}
@@ -101,7 +107,9 @@ export const resolvers = {
     ...createCommitteeResolvers.Mutation,
     ...updateCommitteeResolvers.Mutation,
     ...createEventResolvers.Mutation,
+    ...updateEventResolvers.Mutation,
     ...createProgramResolvers.Mutation,
+    ...updateProgramResolvers.Mutation,
     ...updateEventVisibilityResolvers.Mutation,
     ...uploadEventBannerImagesResolvers.Mutation,
     ...deleteEventResolvers.Mutation,

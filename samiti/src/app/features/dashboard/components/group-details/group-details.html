@@ -125,7 +125,7 @@
             </button>
             <button mat-stroked-button class="action-btn create-event-btn" (click)="onCreateEvent('PUBLIC')"
               matTooltip="By default this event will be hidden from public view. You can change this setting later.">
-              <mat-icon>calendar_add_on</mat-icon>Public Event
+              <mat-icon>add</mat-icon>Public Event
             </button>
             }
           </div>
@@ -149,34 +149,24 @@
         } @else {
           @for (event of committeeEvents(); track event.eventId) {
           <div class="event-aligned-row">
-            <div class="event-col-avatar">
-              <div class="row-avatar square-shape">
-                @if (event.eventBanner) {
-                  <img [src]="event.eventBanner" [alt]="event.eventName" class="avatar-img" />
-                } @else {
-                  {{ event.eventName.charAt(0).toUpperCase() }}
-                }
-              </div>
-            </div>
-
             <div class="event-col-info">
               <span class="main-title event-main-title">{{ event.eventName | titlecase }}</span>
               <div class="event-meta-row">
-                <span class="event-category-pill">{{ (event.category || 'Standard') | titlecase }}</span>
-                <span class="status-tag tag-{{event.status.toLowerCase() || 'upcoming'}}">{{ event.status }}</span>
-                <span class="event-date-pill">
+                <span class="event-pill event-category-pill">{{ (event.category || 'Standard') | titlecase }}</span>
+                <span class="event-pill status-tag tag-{{event.status.toLowerCase() || 'upcoming'}}">{{ event.status }}</span>
+                <span class="event-pill event-type-pill" [ngClass]="event.type === 'PUBLIC' ? 'type-public' : 'type-private'">
+                  {{ event.type === 'PUBLIC' ? 'Public' : 'Private' }}
+                </span>
+                <span class="event-pill event-date-pill">
                   <span class="label">Start:</span> {{ event.startDate ? (event.startDate | date:'dd MMM yyyy') : 'N/A' }}
                 </span>
-                <span class="event-date-pill">
+                <span class="event-pill event-date-pill">
                   <span class="label">End:</span> {{ event.endDate ? (event.endDate | date:'dd MMM yyyy') : 'N/A' }}
                 </span>
               </div>
             </div>
 
             <div class="event-col-controls">
-                <span class="event-type-pill" [ngClass]="event.type === 'PUBLIC' ? 'type-public' : 'type-private'">
-                  {{ event.type === 'PUBLIC' ? 'Public' : 'Private' }}
-                </span>
                 <mat-slide-toggle
                   class="density-toggle"
                   [checked]="event.visibility === 'VISIBLE'"
@@ -184,12 +174,6 @@
                   (change)="onEventVisibilityChange(event, $event.checked)">
                   {{ event.visibility }}
                 </mat-slide-toggle>
-            </div>
-
-            <div class="event-col-actions">
-              <div class="row-action-deck">
-                <button mat-icon-button class="circle-btn delete-btn" title="Delete" [disabled]="!isCurrentUserAdmin()" (click)="onDeleteEvent(event)"><mat-icon>delete</mat-icon></button>
-              </div>
             </div>
           </div>
           } @empty {
@@ -205,7 +189,7 @@
         <div class="panel-card-header admins-header-bg">
           <div class="header-title-left">
             <mat-icon class="icon-accent-admin">admin_panel_settings</mat-icon>
-            <span class="title-text">Admins</span>
+            <span class="title-text">Group Admins</span>
             <span class="count-pill">{{ adminsList().length }}</span>
           </div>
         </div>
@@ -221,7 +205,7 @@
               }
             </div>
             <div class="row-info-core">
-              <div class="main-title">{{ admin.name }}</div>
+              <div class="main-title">{{ admin.name | textFormatPipe:'title' }}</div>
               <div class="secondary-sub-lbl">{{ admin.email }}</div>
             </div>
             <div class="row-action-deck">
@@ -241,8 +225,8 @@
       <section class="mesh-card members-card-style">
         <div class="panel-card-header members-header-bg">
           <div class="header-title-left">
-            <mat-icon class="icon-accent-member">groups</mat-icon>
-            <span class="title-text">Members</span>
+            <mat-icon class="icon-accent-member">admin_panel_settings</mat-icon>
+            <span class="title-text">Group Members</span>
             <span class="count-pill">{{ membersList().length }}</span>
           </div>
 
@@ -268,7 +252,7 @@
               }
             </div>
             <div class="row-info-core">
-              <div class="main-title">{{ member.name }}</div>
+              <div class="main-title">{{ member.name | textFormatPipe:'title' }}</div>
               <div class="secondary-sub-lbl">{{ member.email }}</div>
             </div>
             <div class="row-action-deck">
