@@ -7,7 +7,6 @@ export const authCommitteeTypes = `
     address: String!
     committeeName: String!
     contactNumbers: [String!]!
-    description: String!
     distanceMeters: Float!
     committeeLogo: String
     establishYear: Int!
@@ -57,7 +56,6 @@ export const authCommitteesResolvers = {
           c.address,
           c.logo,
           c.contact_numbers,
-          c.description,
           COALESCE(cm.is_committee_admin, 0)  AS is_committee_admin,
           COALESCE(cm.is_committee_member, 0) AS is_committee_member,
           COALESCE(cm.is_favourite, 0)        AS is_favourite,
@@ -137,7 +135,6 @@ export const authCommitteesResolvers = {
           address: item.address || '',
           committeeName: item.committee_name || '',
           contactNumbers: parseContactNumbers(item.contact_numbers),
-          description: item.description || '',
           distanceMeters: Math.round((Number(item.distanceKm) || 0) * 1000),
           committeeLogo: item.logo || null,
           establishYear: item.establish_year ?? 0,

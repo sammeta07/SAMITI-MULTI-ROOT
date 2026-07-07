@@ -48,7 +48,6 @@ export class CreateEventDialogComponent implements OnInit {
   // Form bindings
   public eventName: string = '';
   public eventDisplayName: string = '';
-  public description: string = '';
   public address: string = '';
   public latitude: number | null = null;
   public longitude: number | null = null;
@@ -113,7 +112,6 @@ export class CreateEventDialogComponent implements OnInit {
       committeeId: Number(committeeId),
       eventName: this.eventName.trim(),
       eventDisplayName: this.eventDisplayName.trim(),
-      description: this.description?.trim() || undefined,
       address: this.address?.trim() || undefined,
       status: this.status,
       category: this.category || undefined,

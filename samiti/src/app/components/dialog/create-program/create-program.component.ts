@@ -39,7 +39,6 @@ export class CreateProgramDialogComponent implements OnInit {
 
   // Form bindings
   public programName: string = '';
-  public description: string = '';
   public address: string = '';
   public visibility: 'VISIBLE' | 'HIDDEN' = 'HIDDEN';
   public latitude: number | null = null;
@@ -101,7 +100,6 @@ export class CreateProgramDialogComponent implements OnInit {
     this.createProgramService.createProgram({
       eventId,
       programName: this.programName.trim(),
-      description: this.description.trim() || undefined,
       address: this.address.trim() || undefined,
       visibility: this.visibility,
       startDateTime: this.formatDateForApi(this.startDateTime) as string,

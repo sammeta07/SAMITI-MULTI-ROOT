@@ -22,7 +22,6 @@
 | id           | int              | NO   | PRI | NULL              | auto_increment    |
 | committee_id | int              | YES  | MUL | NULL              |                   |
 | name   | varchar(255)     | NO   |     | NULL              |                   |
-| description  | LONGTEXT         | YES  |     | NULL              |                   |
 | event_banner | LONGTEXT         | YES  |     | NULL              | (base64/URL)      |
 | status       | varchar(50)      | NO   |     | UPCOMING          |                   |
 | type         | varchar(100)     | YES  |     | NULL              |                   |
@@ -42,7 +41,6 @@
 | `id` | int | NO | auto_increment | Primary key - Event ID |
 | `committee_id` | int | YES | - | Foreign key to committees table |
 | `name` | varchar(255) | NO | - | Event name/title |
-| `description` | LONGTEXT | YES | - | Detailed event description |
 | `event_banner` | LONGTEXT | YES | - | Event banner image (base64 encoded or URL) |
 | `status` | varchar(50) | NO | UPCOMING | Event status: `UPCOMING`, `ONGOING`, `COMPLETED`, `CANCELLED` |
 | `type` | varchar(100) | YES | - | Event type: `puja`, `sports`, `meeting`, `celebration`, `workshop`, `other` |

@@ -18,7 +18,6 @@ export const guestCommitteeTypes = `
     address: String!
     committeeName: String!
     contactNumbers: [String!]!
-    description: String!
     distanceMeters: Float!
     committeeLogo: String
     establishYear: Int!
@@ -44,7 +43,6 @@ export const guestCommitteesResolvers = {
           address,
           logo,
           contact_numbers,
-          description,
           (6371 * acos(
             cos(radians(?)) * cos(radians(latitude)) * cos(radians(longitude) - radians(?)) + 
             sin(radians(?)) * sin(radians(latitude))
@@ -107,7 +105,6 @@ export const guestCommitteesResolvers = {
         address: item.address || '',
         committeeName: item.committee_name || '',
         contactNumbers: parseContactNumbers(item.contact_numbers),
-        description: item.description || '',
         distanceMeters: Math.round((Number(item.distanceKm) || 0) * 1000),
         committeeLogo: item.logo || null,
         establishYear: Number(item.establish_year) || 0,

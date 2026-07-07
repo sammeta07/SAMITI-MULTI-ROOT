@@ -101,7 +101,6 @@ export const createEventTypes = `
     eventName: String!
     eventDisplayName: String!
     committeeId: Int!
-    description: String
     address: String
     eventBanner: String
     bannerImages: [String!]!
@@ -122,7 +121,6 @@ export const createEventTypes = `
     committeeId: Int!
     eventName: String!
     eventDisplayName: String!
-    description: String
     address: String
     eventBanner: String
     bannerImageUrls: [String!]
@@ -150,7 +148,6 @@ export const createEventResolvers = {
       const committeeId = Number(input.committeeId);
       const eventName = normalizeOptionalText(input.eventName);
       const eventDisplayName = eventName ? buildEventDisplayName(eventName, input.eventDisplayName) : null;
-      const description = normalizeOptionalText(input.description);
       const address = normalizeOptionalText(input.address);
       const category = normalizeOptionalText(input.category);
       const normalizedStatus = normalizeEnumInput(input.status, 'UPCOMING', ALLOWED_EVENT_STATUSES, 'status');
@@ -220,13 +217,12 @@ export const createEventResolvers = {
 
         const result = supportsEventDisplayName
           ? await execute(
-              `INSERT INTO events (committee_id, name, display_name, description, address, status, category, visibility, type, start_date, end_date, latitude, longitude, created_by, updated_by, created_at)
-               VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW())`,
+              `INSERT INTO events (committee_id, name, display_name, address, status, category, visibility, type, start_date, end_date, latitude, longitude, created_by, updated_by, created_at)
+               VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW())`,
               [
                 committeeId,
                 eventName,
                 eventDisplayName,
-                description,
                 address,
                 normalizedStatus,
                 category,
@@ -241,12 +237,11 @@ export const createEventResolvers = {
               ]
             )
           : await execute(
-              `INSERT INTO events (committee_id, name, description, address, status, category, visibility, type, start_date, end_date, latitude, longitude, created_by, updated_by, created_at)
+              `INSERT INTO events (committee_id, name, address, status, category, visibility, type, start_date, end_date, latitude, longitude, created_by, updated_by, created_at)
                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW())`,
               [
                 committeeId,
                 eventName,
-                description,
                 address,
                 normalizedStatus,
                 category,
@@ -286,13 +281,13 @@ export const createEventResolvers = {
             ? `SELECT id, id as eventId, name as eventName,
                       COALESCE(NULLIF(TRIM(display_name), ''), LEFT(name, 20)) as eventDisplayName,
                       committee_id as committeeId,
-                      description, address, status, category, visibility, \`type\`, latitude, longitude,
+                      address, status, category, visibility, \`type\`, latitude, longitude,
                       start_date as startDate, end_date as endDate, created_by as createdBy, updated_by as updatedBy, created_at as createdAt
                FROM events WHERE id = ?`
             : `SELECT id, id as eventId, name as eventName,
                       LEFT(name, 20) as eventDisplayName,
                       committee_id as committeeId,
-                      description, address, status, category, visibility, \`type\`, latitude, longitude,
+                      address, status, category, visibility, \`type\`, latitude, longitude,
                       start_date as startDate, end_date as endDate, created_by as createdBy, updated_by as updatedBy, created_at as createdAt
                FROM events WHERE id = ?`,
           [eventId]

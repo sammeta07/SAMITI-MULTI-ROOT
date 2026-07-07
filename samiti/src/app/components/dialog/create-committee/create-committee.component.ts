@@ -1,18 +1,15 @@
 import { Component, inject, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { MatDialog, MatDialogModule, MatDialogRef, MAT_DIALOG_DATA } from '@angular/material/dialog';
+import { MatDialogModule, MatDialogRef, MAT_DIALOG_DATA } from '@angular/material/dialog';
 import { MatButtonModule } from '@angular/material/button';
 import { MatInputModule } from '@angular/material/input';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatIconModule } from '@angular/material/icon';
-import { firstValueFrom } from 'rxjs';
 import { HeaderService } from '../../../components/header/header.service';
 import { NotifierService } from '../../../shared/notifier/notifier.service';
 import { CreateCommitteeService } from './create-committee.service';
 import { MatToolbar } from '@angular/material/toolbar';
-import { ImageAssetService } from '../../../core/services/image-asset.service';
-import { ImageCropperDialogComponent } from '../../../shared/components/image-cropper-dialog/image-cropper-dialog.component';
 import { TextFormatService } from '../../../shared/services/text-format-service.service';
 import { AuthService } from '../../../core/services/auth.service';
 import { Router } from '@angular/router';
@@ -38,8 +35,6 @@ export class CreateCommitteeDialogComponent implements OnInit {
   private readonly createCommitteeService = inject(CreateCommitteeService);
   private readonly notifier = inject(NotifierService);
   private readonly headerService = inject(HeaderService);
-  private readonly imageAssetService = inject(ImageAssetService);
-  private readonly dialog = inject(MatDialog);
   private readonly textFormatService = inject(TextFormatService);
   private readonly authService = inject(AuthService);
   private readonly router = inject(Router);
@@ -54,11 +49,6 @@ export class CreateCommitteeDialogComponent implements OnInit {
   public longitude: number | null = null;
   public primaryContact: string = '';
   public secondaryContact: string = '';
-  public description: string = '';
-  public committeeLogoPreviewUrl: string | null = null;
-  public selectedCommitteeLogoFile: File | null = null;
-  public isUploadingCommitteeLogo: boolean = false;
-  public existingCommitteeLogoUrl: string | null = null;
 
   public isEditMode: boolean = false;
   private committeeIdForEdit: number | null = null;
@@ -82,9 +72,6 @@ export class CreateCommitteeDialogComponent implements OnInit {
       this.addressLocation = committee.address || '';
       this.latitude = committee.latitude != null ? Number(committee.latitude) : null;
       this.longitude = committee.longitude != null ? Number(committee.longitude) : null;
-      this.description = committee.description || '';
-      this.existingCommitteeLogoUrl = committee.logo || null;
-      this.committeeLogoPreviewUrl = committee.logo || null;
 
       const contacts = Array.isArray(committee.contactNumbers) ? committee.contactNumbers : [];
       this.primaryContact = contacts[0] || '';
@@ -104,52 +91,12 @@ export class CreateCommitteeDialogComponent implements OnInit {
       !!this.committeeName?.trim() &&
       !!this.establishYear &&
       !!this.addressLocation?.trim() &&
-      !!this.primaryContact?.trim() &&
-      !!this.description?.trim()
+      !!this.primaryContact?.trim()
     );
   }
 
   public onCancel(): void {
     this.dialogRef.close(false);
-  }
-
-  public async onCommitteeLogoFileSelected(event: Event): Promise<void> {
-    const inputElement = event.target as HTMLInputElement;
-    const selectedFile = inputElement.files?.[0] || null;
-
-    if (!selectedFile) {
-      return;
-    }
-
-    const selectedOrCroppedFile = await firstValueFrom(
-      this.dialog.open(ImageCropperDialogComponent, {
-        width: 'min(92vw, 920px)',
-        data: {
-          file: selectedFile,
-          title: 'Crop Committee Logo',
-          maintainAspectRatio: true,
-          aspectRatio: 1
-        }
-      }).afterClosed()
-    );
-
-    if (!selectedOrCroppedFile) {
-      return;
-    }
-
-    this.selectedCommitteeLogoFile = selectedOrCroppedFile;
-
-    const reader = new FileReader();
-    reader.onload = () => {
-      this.committeeLogoPreviewUrl = String(reader.result || '');
-    };
-    reader.readAsDataURL(selectedOrCroppedFile);
-  }
-
-  public clearCommitteeLogoSelection(): void {
-    this.selectedCommitteeLogoFile = null;
-    this.existingCommitteeLogoUrl = null;
-    this.committeeLogoPreviewUrl = null;
   }
 
   public async onSubmit(): Promise<void> {
@@ -160,32 +107,13 @@ export class CreateCommitteeDialogComponent implements OnInit {
       contactsArray.push(this.secondaryContact.trim());
     }
 
-    let uploadedCommitteeLogoUrl: string | null = null;
-    if (this.selectedCommitteeLogoFile) {
-      try {
-        this.isUploadingCommitteeLogo = true;
-        const uploadedLogoMetadata = await firstValueFrom(
-          this.imageAssetService.uploadSingleImageForCommitteeLogo(this.selectedCommitteeLogoFile)
-        );
-        uploadedCommitteeLogoUrl = uploadedLogoMetadata.publicAbsoluteUrl;
-      } catch (uploadError: unknown) {
-        const typedUploadError = uploadError as { message?: string };
-        this.notifier.error(typedUploadError.message || 'Failed to upload committee logo.');
-        this.isUploadingCommitteeLogo = false;
-        return;
-      }
-      this.isUploadingCommitteeLogo = false;
-    }
-
     const payload = {
       name: this.committeeName.trim(),
       establish_year: Number(this.establishYear),
       address: this.addressLocation.trim(),
-      contact_numbers: contactsArray, // Dispatches clean mapped dynamic arrays back onto server database structures
-      description: this.description.trim(),
+      contact_numbers: contactsArray,
       latitude: Number(this.latitude),
-      longitude: Number(this.longitude),
-      logo: uploadedCommitteeLogoUrl || this.existingCommitteeLogoUrl || null
+      longitude: Number(this.longitude)
     };
 
     if (this.isEditMode && this.committeeIdForEdit) {

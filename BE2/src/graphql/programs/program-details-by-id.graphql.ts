@@ -45,7 +45,6 @@ export const programDetailsTypes = `
     programId: Int!
     eventId: Int
     programName: String!
-    description: String
     address: String
     status: String!
     visibility: String!
@@ -77,7 +76,6 @@ export const programDetailsResolvers = {
            p.id AS programId,
            p.event_id AS eventId,
            p.name AS programName,
-           p.description,
            p.address,
            p.status,
            p.visibility,
@@ -126,7 +124,6 @@ export const programDetailsResolvers = {
         programId: program.programId,
         eventId: program.eventId,
         programName: program.programName,
-        description: program.description,
         address: program.address,
         status: program.status,
         visibility: program.visibility,

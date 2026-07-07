@@ -19,7 +19,6 @@ export class CreateProgramService {
         programId
         eventId
         programName
-        description
         address
         visibility
         startDateTime

@@ -39,7 +39,6 @@ export class HomeService {
             address
             committeeName
             contactNumbers
-            description
             distanceMeters
             committeeLogo
             establishYear
@@ -82,7 +81,6 @@ export class HomeService {
             address
             committeeName
             contactNumbers
-            description
             distanceMeters
             committeeLogo
             establishYear

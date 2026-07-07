@@ -16,29 +16,6 @@
   <div class="dialog-body">
     <form class="create-committee-form" #committeeForm="ngForm">
       <div class="form-row-full">
-        <div class="logo-upload-section">
-          @if (committeeLogoPreviewUrl) {
-            <div class="logo-preview-container">
-              <img [src]="committeeLogoPreviewUrl" alt="Committee Logo" class="logo-preview-image">
-              <button mat-icon-button type="button" class="remove-logo-btn" (click)="clearCommitteeLogoSelection()" title="Remove logo">
-                <mat-icon>close</mat-icon>
-              </button>
-            </div>
-          } @else {
-            <div class="logo-upload-placeholder">
-              <mat-icon>image</mat-icon>
-              <span>Upload group logo (single image)</span>
-            </div>
-          }
-
-          <input #committeeLogoInput type="file" hidden accept="image/*" (change)="onCommitteeLogoFileSelected($event)">
-          <button mat-stroked-button type="button" class="upload-logo-btn" (click)="committeeLogoInput.click()">
-            <mat-icon>upload_file</mat-icon>Upload Logo
-          </button>
-        </div>
-      </div>
-      
-      <div class="form-row-full">
         <mat-form-field appearance="outline" class="samiti-custom-field">
           <mat-label>Group Name</mat-label>
           <input matInput [(ngModel)]="committeeName" name="committeeName" placeholder="Ex. Rudra Boys Club" required>
@@ -77,14 +54,6 @@
         </div>
       </div>
 
-      <div class="form-row-full">
-        <mat-form-field appearance="outline" class="samiti-custom-field">
-          <mat-label>Description</mat-label>
-          <textarea matInput [(ngModel)]="description" name="description" placeholder="Describe the committee's purpose and activities..." required rows="4"></textarea>
-          <mat-icon matPrefix>description</mat-icon>
-        </mat-form-field>
-      </div>
-
       <div class="form-row-split-grid">
         <mat-form-field appearance="outline" class="samiti-custom-field">
           <mat-label>Latitude</mat-label>
@@ -108,10 +77,10 @@
     <button mat-flat-button 
             type="button" 
             class="submit-action-btn" 
-          [disabled]="!isFormValid || isUploadingCommitteeLogo" 
+          [disabled]="!isFormValid" 
             (click)="onSubmit()">
       <mat-icon>{{ isEditMode ? 'save_as' : 'check_circle' }}</mat-icon>
-          <span>{{ isUploadingCommitteeLogo ? 'Uploading Logo...' : (isEditMode ? 'Save Changes' : 'Create Group') }}</span>
+          <span>{{ isEditMode ? 'Save Changes' : 'Create Group' }}</span>
     </button>
   </footer>
 

@@ -399,11 +399,6 @@ cancelRequest(id: number, event: Event): void {
     );
   }
 
-  getTruncatedDescription(description: string | null): string {
-    if (!description) return '';
-    return description.length > 100 ? description.substring(0, 100) + '...' : description;
-  }
-
   getDistanceFromUser(committee: any): string {
     if (committee?.distance == null) return '';
     const distanceMeters = committee.distance;

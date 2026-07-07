@@ -7,10 +7,8 @@ type CommitteeRow = RowDataPacket & {
   establish_year: number;
   address: string;
   contact_numbers: string | string[] | null;
-  description: string;
   latitude: number;
   longitude: number;
-  logo: string | null;
   created_by: number;
   created_at: string;
 };
@@ -26,8 +24,6 @@ export const updateCommitteeTypes = `
     latitude: Float!
     longitude: Float!
     contactNumbers: [String!]!
-    description: String!
-    logo: String
   }
 `;
 
@@ -50,8 +46,6 @@ export const updateCommitteeResolvers = {
           latitude: number;
           longitude: number;
           contactNumbers: string[];
-          description: string;
-          logo?: string | null;
         };
       },
       context: any
@@ -85,17 +79,15 @@ export const updateCommitteeResolvers = {
         stateId = 7,
         latitude,
         longitude,
-        contactNumbers,
-        description,
-        logo = null
+        contactNumbers
       } = args.input;
 
       if (!committeeId) {
         throw new Error('Committee ID is required');
       }
 
-      if (!committeeName?.trim() || !address?.trim() || !description?.trim()) {
-        throw new Error('Committee name, address and description are required');
+      if (!committeeName?.trim() || !address?.trim()) {
+        throw new Error('Committee name and address are required');
       }
 
       if (!Array.isArray(contactNumbers) || contactNumbers.length === 0) {
@@ -139,9 +131,7 @@ export const updateCommitteeResolvers = {
              state_id = ?,
              latitude = ?,
              longitude = ?,
-             contact_numbers = ?,
-             description = ?,
-             logo = ?
+             contact_numbers = ?
          WHERE id = ?`,
         [
           committeeName.trim(),
@@ -152,8 +142,6 @@ export const updateCommitteeResolvers = {
           latitude,
           longitude,
           JSON.stringify(cleanContacts),
-          description.trim(),
-          logo,
           committeeId
         ]
       );
@@ -165,10 +153,8 @@ export const updateCommitteeResolvers = {
           establish_year,
           address,
           contact_numbers,
-          description,
           latitude,
           longitude,
-          logo,
           created_by,
           created_at
         FROM committees
@@ -195,10 +181,8 @@ export const updateCommitteeResolvers = {
           establishYear: Number(updated.establish_year),
           address: updated.address,
           contactNumbers: contactNumbersArray,
-          description: updated.description,
           latitude: Number(updated.latitude),
           longitude: Number(updated.longitude),
-          logo: updated.logo,
           createdBy: Number(updated.created_by),
           createdAt: updated.created_at
         }

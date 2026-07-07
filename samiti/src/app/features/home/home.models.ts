@@ -26,7 +26,6 @@ export interface CommitteeGuestItem {
   address: string;
   committeeName: string;
   contactNumbers: string[];
-  description: string;
   distanceMeters: number;
   committeeLogo: string | null;
   establishYear: number;

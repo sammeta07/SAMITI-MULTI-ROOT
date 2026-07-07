@@ -7,10 +7,8 @@ type CommitteeRow = RowDataPacket & {
   establish_year: number;
   address: string;
   contact_numbers: string | string[] | null;
-  description: string;
   latitude: number;
   longitude: number;
-  logo: string | null;
   created_by: number;
   created_at: string;
 };
@@ -22,10 +20,8 @@ export const createCommitteeTypes = `
     establishYear: Int!
     address: String!
     contactNumbers: [String!]!
-    description: String!
     latitude: Float!
     longitude: Float!
-    logo: String
     createdBy: Int!
     createdAt: String!
   }
@@ -44,8 +40,6 @@ export const createCommitteeTypes = `
     latitude: Float!
     longitude: Float!
     contactNumbers: [String!]!
-    description: String!
-    logo: String
   }
 `;
 
@@ -68,8 +62,6 @@ export const createCommitteeResolvers = {
           latitude: number;
           longitude: number;
           contactNumbers: string[];
-          description: string;
-          logo?: string | null;
         };
       },
       context: any
@@ -103,15 +95,13 @@ export const createCommitteeResolvers = {
         stateId = 7,
         latitude,
         longitude,
-        contactNumbers,
-        description,
-        logo = null
+        contactNumbers
       } = args.input;
 
       const normalizedEstablishYear = Number(establishYear ?? establish_year);
 
-      if (!committeeName?.trim() || !address?.trim() || !description?.trim()) {
-        throw new Error('Committee name, address and description are required');
+      if (!committeeName?.trim() || !address?.trim()) {
+        throw new Error('Committee name and address are required');
       }
 
       if (!Number.isFinite(normalizedEstablishYear) || normalizedEstablishYear <= 0) {
@@ -147,10 +137,8 @@ export const createCommitteeResolvers = {
           latitude,
           longitude,
           contact_numbers,
-          description,
-          logo,
           created_at
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW())`,
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, NOW())`,
         [
           committeeName.trim(),
           normalizedEstablishYear,
@@ -160,9 +148,7 @@ export const createCommitteeResolvers = {
           stateId,
           latitude,
           longitude,
-          JSON.stringify(cleanContacts),
-          description.trim(),
-          logo
+          JSON.stringify(cleanContacts)
         ]
       );
 
@@ -193,10 +179,8 @@ export const createCommitteeResolvers = {
           establish_year,
           address,
           contact_numbers,
-          description,
           latitude,
           longitude,
-          logo,
           created_by,
           created_at
         FROM committees
@@ -223,10 +207,8 @@ export const createCommitteeResolvers = {
           establishYear: Number(created.establish_year),
           address: created.address,
           contactNumbers: contactNumbersArray,
-          description: created.description,
           latitude: Number(created.latitude),
           longitude: Number(created.longitude),
-          logo: created.logo,
           createdBy: Number(created.created_by),
           createdAt: created.created_at
         }

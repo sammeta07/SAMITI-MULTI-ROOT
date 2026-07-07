@@ -70,7 +70,6 @@ export class DashboardHierarchyTreeService {
         id
         committeeId
         committeeName
-        description
         address
         establishYear
         logo

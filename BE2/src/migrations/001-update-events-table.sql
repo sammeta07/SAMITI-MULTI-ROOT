@@ -2,7 +2,6 @@
 -- Date: 2026-06-29
 
 -- Step 1: Add new columns to events table
-ALTER TABLE events ADD COLUMN description LONGTEXT NULL COMMENT 'Event description';
 ALTER TABLE events ADD COLUMN event_banner LONGTEXT NULL COMMENT 'Event banner image (base64 or URL)';
 ALTER TABLE events ADD COLUMN status VARCHAR(50) NOT NULL DEFAULT 'UPCOMING' COMMENT 'Event status: UPCOMING, ONGOING, COMPLETED, CANCELLED';
 ALTER TABLE events ADD COLUMN type VARCHAR(100) NULL COMMENT 'Event type: puja, sports, meeting, celebration, workshop, other';

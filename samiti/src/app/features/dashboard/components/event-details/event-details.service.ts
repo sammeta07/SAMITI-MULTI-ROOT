@@ -33,7 +33,6 @@ export class EventDetailsService {
         committeeAddress
         eventName
         eventDisplayName
-        description
         eventBanner
         bannerImages
         status

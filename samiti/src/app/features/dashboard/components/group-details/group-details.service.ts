@@ -20,7 +20,6 @@ export class GroupDetailsService {
         id
         committeeId
         committeeName
-        description
         address
         establishYear
         logo
@@ -64,7 +63,6 @@ export class GroupDetailsService {
         committeeId
         eventName
         eventDisplayName
-        description
         eventBanner
         status
         category

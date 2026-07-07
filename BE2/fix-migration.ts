@@ -11,8 +11,10 @@ async function fixMigration() {
     console.log('✅ Connected to MySQL');
 
     const statements = [
-      // Add description column if missing
-      `ALTER TABLE events ADD COLUMN description LONGTEXT NULL COMMENT 'Event description'`,
+      // Remove description columns from legacy tables if present
+      `ALTER TABLE committees DROP COLUMN description`,
+      `ALTER TABLE events DROP COLUMN description`,
+      `ALTER TABLE programs DROP COLUMN description`,
       
       // Add foreign key constraints with correct user table primary key (id, not user_id)
       `ALTER TABLE events ADD CONSTRAINT fk_events_committee FOREIGN KEY (committee_id) REFERENCES committees(committee_id) ON DELETE CASCADE`,
@@ -30,6 +32,8 @@ async function fixMigration() {
           console.log('⚠️  Column already exists (skipping)');
         } else if (error.code === 'ER_DUP_KEYNAME') {
           console.log('⚠️  Constraint already exists (skipping)');
+        } else if (error.code === 'ER_CANT_DROP_FIELD_OR_KEY' || error.code === 'ER_BAD_FIELD_ERROR') {
+          console.log('⚠️  Column not present (skipping)');
         } else {
           console.log(`⚠️  Error: ${error.code} - ${error.message}`);
         }

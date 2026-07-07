@@ -2,7 +2,6 @@ export interface CreateEventPayload {
   committeeId: number;
   eventName: string;
   eventDisplayName?: string;
-  description?: string;
   address?: string;
   eventBanner?: string;
   bannerImageUrls?: string[];
@@ -22,7 +21,6 @@ export interface CreateEventResponse {
   eventName: string;
   eventDisplayName: string;
   committeeId: number;
-  description?: string;
   address?: string;
   eventBanner?: string;
   bannerImages: string[];

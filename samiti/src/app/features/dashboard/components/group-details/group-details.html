@@ -19,7 +19,7 @@
       <div class="skeleton-box skeleton-chip"></div>
     </section>
 
-    <!-- Description skeleton -->
+    <!-- Summary skeleton -->
     <div class="skeleton-box skeleton-line" style="width:92%;"></div>
 
     <!-- Events section skeleton -->
@@ -130,14 +130,6 @@
             }
           </div>
         </div>
-
-        @if (groupData()?.description) {
-        <div class="card-paragraph-summary-area">
-          <p class="summary-paragraph-text" [matTooltip]="groupData()!.description" matTooltipPosition="above">
-            {{ groupData()?.description | textFormatPipe:'sentence' }}
-          </p>
-        </div>
-        }
 
       </div>
     </div>

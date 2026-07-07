@@ -19,7 +19,6 @@ export class ProgramDetailsService {
         programId
         eventId
         programName
-        description
         address
         status
         visibility

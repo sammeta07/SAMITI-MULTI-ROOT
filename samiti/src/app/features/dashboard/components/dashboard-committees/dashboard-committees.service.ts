@@ -20,7 +20,6 @@ export class DashboardCommitteesService {
         establishYear
         address
         contactNumbers
-        description
         latitude
         longitude
         logo
@@ -39,7 +38,6 @@ export class DashboardCommitteesService {
             establishYear: payload.establishYear ?? payload.establish_year,
             address: payload.address,
             contactNumbers: payload.contactNumbers ?? payload.contact_numbers,
-            description: payload.description,
             latitude: payload.latitude,
             longitude: payload.longitude,
             logo: payload.logo

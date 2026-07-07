@@ -28,10 +28,8 @@ createCommittee(body: CreateCommitteePayload): Observable<any> {
                             establishYear
                             address
                             contactNumbers
-                            description
                             latitude
                             longitude
-                            logo
                             createdBy
                             createdAt
                         }
@@ -46,10 +44,8 @@ createCommittee(body: CreateCommitteePayload): Observable<any> {
                             establishYear: body.establish_year,
                             address: body.address,
                             contactNumbers: body.contact_numbers,
-                            description: body.description,
                             latitude: body.latitude,
-                            longitude: body.longitude,
-                            logo: body.logo
+                            longitude: body.longitude
                         }
                     }
                 }).pipe(
@@ -71,10 +67,8 @@ updateCommittee(body: UpdateCommitteePayload): Observable<any> {
                             establishYear
                             address
                             contactNumbers
-                            description
                             latitude
                             longitude
-                            logo
                             createdBy
                             createdAt
                         }
@@ -90,10 +84,8 @@ updateCommittee(body: UpdateCommitteePayload): Observable<any> {
                             establishYear: body.establish_year,
                             address: body.address,
                             contactNumbers: body.contact_numbers,
-                            description: body.description,
                             latitude: body.latitude,
-                            longitude: body.longitude,
-                            logo: body.logo
+                            longitude: body.longitude
                         }
                     }
                 }).pipe(

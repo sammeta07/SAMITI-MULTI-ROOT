@@ -3,7 +3,6 @@ export interface ProgramDetailsPayload {
   programId: number;
   eventId?: number | null;
   programName: string;
-  description?: string | null;
   address?: string | null;
   status: string;
   visibility?: string | null;

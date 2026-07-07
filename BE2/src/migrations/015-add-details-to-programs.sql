@@ -1,8 +1,7 @@
 ALTER TABLE programs
   ADD COLUMN start_date_time DATETIME NULL AFTER name,
   ADD COLUMN end_date_time DATETIME NULL AFTER start_date_time,
-  ADD COLUMN description LONGTEXT NULL AFTER end_date_time,
-  ADD COLUMN address VARCHAR(255) NULL AFTER description,
+  ADD COLUMN address VARCHAR(255) NULL AFTER end_date_time,
   ADD COLUMN visibility VARCHAR(50) NULL AFTER address,
   ADD COLUMN created_by INT NULL AFTER visibility,
   ADD COLUMN updated_by INT NULL AFTER created_by;

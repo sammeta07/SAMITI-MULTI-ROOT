@@ -1,7 +1,6 @@
 export interface CreateProgramPayload {
   eventId: number;
   programName: string;
-  description?: string;
   address?: string;
   visibility: 'VISIBLE' | 'HIDDEN';
   startDateTime: string;
@@ -13,7 +12,6 @@ export interface CreateProgramResponse {
   programId: number;
   eventId: number;
   programName: string;
-  description?: string;
   address?: string;
   visibility: string;
   startDateTime: string;

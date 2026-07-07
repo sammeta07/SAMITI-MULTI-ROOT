@@ -253,7 +253,6 @@ export class GroupDetailsComponent implements OnInit {
             id: data.id,
             committeeId: data.committeeId,
             committeeName: data.committeeName,
-            description: data.description,
             address: data.address,
             establishYear: data.establishYear,
             logo: data.logo,

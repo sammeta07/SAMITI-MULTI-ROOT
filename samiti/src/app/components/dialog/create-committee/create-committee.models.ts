@@ -4,10 +4,8 @@ export interface CreateCommitteeRequest {
   establish_year: number;
   address: string;
   contact_numbers: string[];
-  description: string;
   latitude: number;   // Location filters ke liye coordinates compulsory hain
   longitude: number;  // Location filters ke liye coordinates compulsory hain
-  logo: string | null; // 🚀 Added: Direct integration parameter standard
 }
 
 // Alias for backward compatibility - Payload sent to backend
@@ -16,10 +14,8 @@ export interface CreateCommitteePayload {
   establish_year: number;
   address: string;
   contact_numbers: string[];
-  description: string;
   latitude: number;
   longitude: number;
-  logo: string | null; // 🚀 Added
 }
 
 export interface UpdateCommitteePayload extends CreateCommitteePayload {
@@ -33,10 +29,8 @@ export interface CreateCommitteeApiResponse {
   establishYear: number;
   address: string;
   contactNumbers: string[];
-  description: string;
   latitude: number;
   longitude: number;
-  logo: string | null;
   createdBy: number;
   createdAt: string;
 }

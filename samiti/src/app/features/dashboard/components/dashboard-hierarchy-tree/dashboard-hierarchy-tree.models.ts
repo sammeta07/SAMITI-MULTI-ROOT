@@ -25,7 +25,6 @@ export interface CommitteeDetailsPayload {
   id: number;
   committeeId: number;
   committeeName: string;
-  description: string;
   address: string;
   establishYear: number;
   logo: string | null;

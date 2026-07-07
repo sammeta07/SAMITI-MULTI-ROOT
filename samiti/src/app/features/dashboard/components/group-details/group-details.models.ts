@@ -2,7 +2,6 @@ export interface CommitteeProfileMeta {
   id?: number;
   committeeId?: number;
   committeeName: string;
-  description: string;
   address: string;
   establishYear: number;
   logo: string | null;
@@ -25,7 +24,6 @@ export interface CommitteeEventListItem {
   committeeId: number;
   eventName: string;
   eventDisplayName: string;
-  description?: string | null;
   eventBanner?: string | null;
   status: string;
   category?: string | null;
@@ -55,7 +53,6 @@ export interface CommitteeDetailsPayload {
   id: number;
   committeeId: number;
   committeeName: string;
-  description: string;
   address: string;
   establishYear: number;
   logo: string | null;

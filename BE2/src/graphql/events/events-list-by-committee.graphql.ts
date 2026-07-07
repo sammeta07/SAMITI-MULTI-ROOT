@@ -73,7 +73,6 @@ export const eventsListTypes = `
     committeeId: Int
     eventName: String!
     eventDisplayName: String!
-    description: String
     eventBanner: String
     status: String!
     category: String
@@ -147,7 +146,6 @@ export const eventsListResolvers = {
            e.committee_id AS committeeId,
            e.name AS eventName,
            ${supportsEventDisplayName ? "COALESCE(NULLIF(TRIM(e.display_name), ''), LEFT(e.name, 20))" : 'LEFT(e.name, 20)'} AS eventDisplayName,
-           e.description,
            e.address,
            e.status,
            e.category,

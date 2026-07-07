@@ -80,7 +80,6 @@ export const createProgramTypes = `
     programId: Int!
     eventId: Int!
     programName: String!
-    description: String
     address: String
     status: String!
     visibility: String!
@@ -94,7 +93,6 @@ export const createProgramTypes = `
   input CreateProgramInput {
     eventId: Int!
     programName: String!
-    description: String
     address: String
     visibility: String
     startDateTime: String!
@@ -114,7 +112,6 @@ export const createProgramResolvers = {
 
       const eventId = Number(input.eventId);
       const programName = normalizeOptionalText(input.programName);
-      const description = normalizeOptionalText(input.description);
       const address = normalizeOptionalText(input.address);
       const visibility = normalizeVisibility(input.visibility);
       const startDateTime = normalizeDateTimeInput(input.startDateTime, 'startDateTime');
@@ -167,20 +164,18 @@ export const createProgramResolvers = {
            name,
            start_date_time,
            end_date_time,
-           description,
            address,
            status,
            visibility,
            created_by,
            updated_by,
            created_at
-         ) VALUES (?, ?, ?, ?, ?, ?, 'UPCOMING', ?, ?, ?, NOW())`,
+         ) VALUES (?, ?, ?, ?, ?, 'UPCOMING', ?, ?, ?, NOW())`,
         [
           eventId,
           programName,
           startDateTime,
           endDateTime,
-          description,
           address,
           visibility,
           loggedInUserId,
@@ -196,7 +191,6 @@ export const createProgramResolvers = {
            id AS programId,
            event_id AS eventId,
            name AS programName,
-           description,
            address,
            status,
            visibility,

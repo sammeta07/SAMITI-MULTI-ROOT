@@ -62,7 +62,6 @@ export interface MyCommitteeDetailedItem {
   establishYear: number;
   address: string;
   logo: string | null;
-  description: string;
   membershipStatus: string;
   isAdminPrivilege: boolean;
   adminsCount: number;

@@ -36,7 +36,6 @@ export const committeeDetailsTypes = `
     id: Int!
     committeeId: Int!
     committeeName: String!
-    description: String!
     address: String!
     establishYear: Int!
     logo: String
@@ -85,7 +84,6 @@ export const committeeDetailsResolvers = {
         SELECT 
           id,
           committee_name,
-          description,
           address,
           establish_year,
           logo,
@@ -146,7 +144,6 @@ export const committeeDetailsResolvers = {
         id: committee.id,
         committeeId: committee.id,
         committeeName: committee.committee_name,
-        description: committee.description,
         address: committee.address,
         establishYear: committee.establish_year,
         logo: committee.logo || null,

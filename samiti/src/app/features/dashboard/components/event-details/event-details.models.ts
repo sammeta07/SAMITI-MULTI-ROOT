@@ -12,7 +12,6 @@ export interface EventDetailsPayload {
   committeeAddress?: string | null;
   eventName: string;
   eventDisplayName: string;
-  description?: string | null;
   eventBanner?: string | null;
   bannerImages: string[];
   status: string;

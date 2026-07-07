@@ -97,55 +97,6 @@
   width: 100%;
 }
 
-.logo-upload-section {
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-  background: #f1f5f9;
-  border: 2px dashed #cbd5e1;
-  border-radius: 8px;
-  padding: 12px;
-}
-
-.logo-preview-container {
-  position: relative;
-  width: 120px;
-  height: 120px;
-  border-radius: 10px;
-  overflow: hidden;
-
-  .logo-preview-image {
-    width: 100%;
-    height: 100%;
-    object-fit: cover;
-  }
-
-  .remove-logo-btn {
-    position: absolute;
-    top: 6px;
-    right: 6px;
-    background: rgba(0, 0, 0, 0.5);
-    color: #fff !important;
-  }
-}
-
-.logo-upload-placeholder {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  color: #64748b;
-
-  mat-icon {
-    color: #94a3b8;
-  }
-}
-
-.upload-logo-btn {
-  align-self: flex-start;
-  color: #f97316 !important;
-  border-color: #f97316 !important;
-}
-
 .form-row-split-grid {
   display: flex;
   align-items: center;
