@@ -36,7 +36,7 @@
   display: flex;
   justify-content: flex-end;
   align-items: center;
-  gap: 4px;
+  gap: 6px;
   width: 100%;
   flex-wrap: wrap;
 
@@ -53,14 +53,140 @@
     border: 1px solid #cbd5e1 !important;
     color: #334155 !important;
 
-    mat-icon { font-size: 0.9rem !important; width: 0.9rem !important; height: 0.9rem !important; }
+    mat-icon { font-size: 0.95rem !important; width: 0.95rem !important; height: 0.95rem !important; }
     &:hover:not(:disabled) { background: #f8fafc !important; border-color: #94a3b8 !important; }
+    &:disabled { opacity: 0.5; cursor: not-allowed; }
   }
 
   .edit-btn          { color: #2563eb !important; border-color: rgba(37, 99, 235, 0.3) !important; }
   .delete-btn        { color: #dc2626 !important; border-color: rgba(220, 38, 38, 0.3) !important; background: #fef2f2; }
   .create-program-btn  { color: #7c3aed !important; border-color: rgba(124, 58, 237, 0.3) !important; }
 }
+
+/* GROUP-STYLE SUMMARY CARD */
+.gd-committee-card {
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-left: 4px solid #3b82f6;
+  border-radius: 12px;
+  padding: 10px 16px;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.03);
+}
+
+.committee-card-grid { display: grid; width: 100%; grid-template-columns: 58px 1fr 190px; grid-template-rows: auto auto; row-gap: 6px; column-gap: 14px; align-items: start; }
+.card-logo-area { display: flex; flex-direction: column; align-items: center; gap: 5px; }
+
+.committee-avatar { width: 54px; height: 54px; border-radius: 11px; object-fit: cover; border: 1px solid #e2e8f0; }
+.committee-avatar-fallback { width: 54px; height: 54px; border-radius: 11px; background: linear-gradient(135deg, #3b82f6, #1d4ed8); color: #ffffff; display: flex; align-items: center; justify-content: center; font-size: 1.4rem; font-weight: 700; }
+.committee-avatar-fallback.event-avatar-fallback { background: linear-gradient(135deg, #3b82f6, #1d4ed8); }
+
+.card-main-info-area { display: flex; flex-direction: column; gap: 3px; }
+.card-title-row { display: flex; align-items: center; gap: 6px; }
+.committee-display-name { font-size: 0.98rem; font-weight: 700; color: #0f172a; margin: 0; }
+.card-location-row { display: flex; align-items: center; gap: 4px; color: #475569; font-size: 0.82rem; }
+.location-text-trim { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+.card-actions-identity-area { grid-column: 3 / 4; grid-row: 1 / 2; display: flex; flex-direction: column; align-items: flex-end; gap: 6px; box-sizing: border-box; }
+
+.identity-top-row { display: flex; align-items: center; gap: 6px; flex-wrap: nowrap; }
+
+.meta-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  height: 24px;
+  box-sizing: border-box;
+  padding: 0 9px;
+  border-radius: 999px;
+  white-space: nowrap;
+  font-size: 0.7rem;
+  font-weight: 600;
+  border: 1px solid #dbe4f0;
+  background: #f8fafc;
+  color: #64748b;
+
+  mat-icon { font-size: 0.72rem; width: 0.72rem; height: 0.72rem; }
+}
+
+.status-pill {
+  text-transform: uppercase;
+  letter-spacing: 0.2px;
+}
+
+.category-pill {
+  background: #eff6ff;
+  color: #1d4ed8;
+  border-color: #bfdbfe;
+}
+
+.visibility-pill {
+  background: #ffffff;
+  color: #475569;
+}
+
+.date-pill {
+  background: #ffffff;
+  color: #475569;
+}
+
+.status-badge-upcoming {
+  color: #1e40af;
+  background: #eff6ff;
+  border-color: #bfdbfe;
+}
+
+.status-badge-ongoing {
+  color: #166534;
+  background: #f0fdf4;
+  border-color: #bbf7d0;
+}
+
+.status-badge-completed {
+  color: #374151;
+  background: #f3f4f6;
+  border-color: #e5e7eb;
+}
+
+.status-badge-cancelled {
+  color: #991b1b;
+  background: #fef2f2;
+  border-color: #fecaca;
+}
+
+.directions-status-row {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 6px;
+  flex-wrap: nowrap;
+
+  .action-btn {
+    height: 24px !important;
+    padding: 0 8px !important;
+    font-size: 0.7rem !important;
+    font-weight: 600 !important;
+    border-radius: 999px !important;
+    display: inline-flex !important;
+    align-items: center !important;
+    gap: 4px !important;
+    background: #ffffff;
+    border: 1px solid #cbd5e1 !important;
+    color: #334155 !important;
+    white-space: nowrap;
+    flex-shrink: 0;
+
+    mat-icon { font-size: 0.85rem !important; width: 0.85rem !important; height: 0.85rem !important; }
+    &:hover:not(:disabled) { background: #f8fafc !important; border-color: #94a3b8 !important; }
+    &:disabled { opacity: 0.5; cursor: not-allowed; }
+  }
+
+  .edit-btn { color: #2563eb !important; border-color: rgba(37, 99, 235, 0.3) !important; }
+  .delete-btn { color: #dc2626 !important; border-color: rgba(220, 38, 38, 0.3) !important; background: #fef2f2; }
+  .create-program-btn { color: #7c3aed !important; border-color: rgba(124, 58, 237, 0.3) !important; }
+}
+
+.card-paragraph-summary-area { grid-column: 1 / 4; border-top: 1px dashed #e2e8f0; padding-top: 5px; }
+.summary-paragraph-text { font-size: 0.78rem; color: #64748b; line-height: 1.35; margin: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 100%; display: block; }
 
 /* COMPACT HERO CARD */
 .compact-hero-card {

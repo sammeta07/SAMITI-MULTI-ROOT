@@ -1,6 +1,7 @@
 import { Component, inject, effect, ChangeDetectorRef, OnDestroy } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
+import { Router } from '@angular/router';
 import { MatExpansionModule } from '@angular/material/expansion';
 import { MatTabsModule } from '@angular/material/tabs';
 import { MatIconModule } from '@angular/material/icon';
@@ -39,6 +40,7 @@ private readonly headerService = inject(HeaderService);
   private readonly homeService = inject(HomeService);
   private readonly notifier = inject(NotifierService);
   private readonly cdr = inject(ChangeDetectorRef);
+  private readonly router = inject(Router);
   private readonly authService = inject(AuthService); // Injecting core centralized state signal
   private readonly dialog = inject(MatDialog); // Injecting MatDialog to open dialogs
   private readonly confirmDialog = inject(ConfirmDialogService); // Injecting ConfirmDialogService
@@ -124,6 +126,15 @@ private readonly headerService = inject(HeaderService);
     }
     const mapsUrl = `https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(address)}`;
     window.open(mapsUrl, '_blank', 'noopener,noreferrer');
+  }
+
+  openEventDetails(eventId: number, event: Event): void {
+    event.stopPropagation();
+    if (!eventId) {
+      return;
+    }
+
+    this.router.navigate(['/dashboard/event', eventId]);
   }
 
   // ─── Banner carousel helpers ───────────────────────────────────────

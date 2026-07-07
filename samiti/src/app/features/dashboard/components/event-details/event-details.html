@@ -24,39 +24,69 @@
              (change)="onBannerFilesSelected($event)" />
     </header>
 
-    <!-- Compact Hero Card -->
-    <section class="compact-hero-card">
-      <div class="hero-left-cluster">
-        <div class="avatar-premium-square event-avatar-style">
+    <!-- Summary Card -->
+    <section class="gd-committee-card">
+      <div class="committee-card-grid">
+
+        <div class="card-logo-area">
           @if (eventData()?.eventBanner || eventData()?.bannerImages?.length) {
-          <img [src]="eventData()?.eventBanner || eventData()?.bannerImages?.[0]" [alt]="eventData()?.eventName" class="avatar-img" />
+          <img [src]="eventData()?.eventBanner || eventData()?.bannerImages?.[0]" [alt]="eventData()?.eventName" class="committee-avatar" />
           } @else {
-          <span class="avatar-glyph">{{ eventData()?.eventName?.charAt(0) || 'E' }}</span>
+          <div class="committee-avatar-fallback event-avatar-fallback">{{ eventData()?.eventName?.charAt(0) || 'E' }}</div>
           }
         </div>
-        <div class="hero-meta-stack">
-          <h1>{{ eventData()?.eventName }}</h1>
-          <div class="inline-badge-row">
-            <span class="badge-item status-badge-{{ eventData()?.status?.toLowerCase() }}"><mat-icon>circle</mat-icon> {{ eventData()?.status }}</span>
-            <span class="badge-item"><mat-icon>category</mat-icon> {{ eventData()?.category || 'General' }}</span>
-            <span class="badge-item"><mat-icon>visibility</mat-icon> {{ eventData()?.visibility === 'VISIBLE' ? 'Public' : 'Private' }}</span>
-            @if (eventData()?.startDate) {
-            <span class="badge-item"><mat-icon>calendar_month</mat-icon> {{ eventData()?.startDate | date:'dd MMM yyyy' }}</span>
-            }
-            @if (eventData()?.endDate) {
-            <span class="badge-item"><mat-icon>event_busy</mat-icon> {{ eventData()?.endDate | date:'dd MMM yyyy' }}</span>
-            }
+
+        <div class="card-main-info-area">
+          <div class="card-title-row">
+            <h3 class="committee-display-name">{{ eventData()?.eventName }}</h3>
+          </div>
+          <div class="card-location-row">
+            <span class="location-text-trim">{{ eventData()?.committeeAddress || eventData()?.category || 'General event' }}</span>
           </div>
         </div>
+
+        <div class="card-actions-identity-area">
+          <div class="identity-top-row">
+            <span class="meta-pill status-pill status-badge-{{ eventData()?.status?.toLowerCase() }}">
+              <mat-icon>circle</mat-icon>{{ eventData()?.status }}
+            </span>
+            <span class="meta-pill category-pill">
+              <mat-icon>category</mat-icon>{{ eventData()?.category || 'General' }}
+            </span>
+            <span class="meta-pill visibility-pill">
+              <mat-icon>visibility</mat-icon>{{ eventData()?.visibility === 'VISIBLE' ? 'Public' : 'Private' }}
+            </span>
+            @if (eventData()?.startDate) {
+            <span class="meta-pill date-pill"><mat-icon>calendar_month</mat-icon> {{ eventData()?.startDate | date:'dd MMM yyyy' }}</span>
+            }
+            @if (eventData()?.endDate) {
+            <span class="meta-pill date-pill"><mat-icon>event_busy</mat-icon> {{ eventData()?.endDate | date:'dd MMM yyyy' }}</span>
+            }
+          </div>
+
+          <div class="directions-status-row">
+            <button mat-stroked-button class="action-btn edit-btn" (click)="onEditEvent()">
+              <mat-icon>edit</mat-icon>Edit
+            </button>
+            <button mat-stroked-button class="action-btn delete-btn" (click)="onDeleteEvent()">
+              <mat-icon>delete</mat-icon>Delete
+            </button>
+            <button mat-stroked-button class="action-btn create-program-btn" (click)="onCreateProgram()">
+              <mat-icon>add</mat-icon>Program
+            </button>
+          </div>
+        </div>
+
+        @if (eventData()?.description) {
+        <div class="card-paragraph-summary-area">
+          <p class="summary-paragraph-text" [matTooltip]="eventData()!.description" matTooltipPosition="above">
+            {{ eventData()?.description }}
+          </p>
+        </div>
+        }
+
       </div>
     </section>
-
-    <!-- Description -->
-    @if (eventData()?.description) {
-    <blockquote class="compact-desc-box">
-      <p>{{ eventData()?.description }}</p>
-    </blockquote>
-    }
 
     <!-- Banner Images -->
     <section class="banner-images-section">

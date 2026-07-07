@@ -112,37 +112,34 @@
                     </div>
                   </div>
 
-                  <button type="button" class="proximity-display-row"
-                    (click)="openCommitteeInMaps(committee, $event)"
-                    matTooltip="Navigate with Google Maps" matTooltipPosition="above">
-                    <mat-icon class="compass-pointer-icon">directions</mat-icon>
-                    <span class="spatial-distance-metric">{{ committee.distanceMeters }} m</span>
-                  </button>
-
-                  @if (isAuth) {
-                  <div class="committee-action-footer">
-                    @if (committee.isCommitteeAdmin === 1) {
-                    <span class="badge-pill admin-pill">ADMIN</span>
-                    } @else if (committee.isCommitteeMember === 1) {
-                    <span class="badge-pill member-pill">MEMBER</span>
-                    } @else if (committee.pendingRequestRole) {
-                    <div class="pending-action-group">
-                      <span class="badge-pill pending-pill">{{ committee.pendingRequestRole === 'COMMITTEE_ADMIN' ? 'ADMIN PENDING' : 'PENDING' }}</span>
-                      <button mat-button type="button" class="cancel-request-btn"
-                        (click)="cancelRequest(committee.id, $event)">
-                        <mat-icon>close</mat-icon>
-                        <span>Cancel</span>
-                      </button>
-                    </div>
-                    } @else {
-                    <button mat-flat-button type="button" class="join-committee-btn"
-                      (click)="onRequestMemberRole(committee.id, $event)">
-                      <mat-icon>group_add</mat-icon>
-                      <span>Join</span>
-                    </button>
+                  <div class="directions-status-row">
+                    @if (isAuth) {
+                      @if (committee.isCommitteeAdmin === 1) {
+                        <span class="badge-pill admin-pill">ADMIN</span>
+                      } @else if (committee.isCommitteeMember === 1) {
+                        <span class="badge-pill member-pill">MEMBER</span>
+                      } @else if (committee.pendingRequestRole) {
+                        <span class="badge-pill pending-pill">{{ committee.pendingRequestRole === 'COMMITTEE_ADMIN' ? 'ADMIN PENDING' : 'PENDING' }}</span>
+                        <button mat-button type="button" class="cancel-request-btn"
+                          (click)="cancelRequest(committee.id, $event)">
+                          <mat-icon>close</mat-icon>
+                          <span>Cancel</span>
+                        </button>
+                      } @else {
+                        <button mat-flat-button type="button" class="join-committee-btn"
+                          (click)="onRequestMemberRole(committee.id, $event)">
+                          <mat-icon>group_add</mat-icon>
+                          <span>Join</span>
+                        </button>
+                      }
                     }
+                    <button type="button" class="proximity-display-row"
+                      (click)="openCommitteeInMaps(committee, $event)"
+                      matTooltip="Navigate with Google Maps" matTooltipPosition="above">
+                      <mat-icon class="compass-pointer-icon">directions</mat-icon>
+                      <span class="spatial-distance-metric">{{ committee.distanceMeters }} m</span>
+                    </button>
                   </div>
-                  }
                 </div>
 
                 <div class="card-paragraph-summary-area">
@@ -167,57 +164,64 @@
                   <div class="committee-events-shell">
                     @for (event of getEventsByYear(committee, year); track event.eventId) {
                     <div class="event-card">
-                      <div class="event-card-banner">
-                        @if (event.bannerImages.length > 1) {
-                          <!-- Multi-image carousel -->
-                          <div class="banner-carousel">
-                            <img [src]="event.bannerImages[getBannerIndex(event.eventId)]"
-                                 [alt]="event.eventName"
-                                 class="event-banner-img" />
-                            <button class="carousel-btn carousel-btn-prev"
-                                    (click)="prevBanner(event.eventId, event.bannerImages.length, $event)"
-                                    aria-label="Previous banner">
-                              <mat-icon>chevron_left</mat-icon>
-                            </button>
-                            <button class="carousel-btn carousel-btn-next"
-                                    (click)="nextBanner(event.eventId, event.bannerImages.length, $event)"
-                                    aria-label="Next banner">
-                              <mat-icon>chevron_right</mat-icon>
-                            </button>
-                            <div class="carousel-dots">
-                              @for (img of event.bannerImages; track $index) {
-                                <span class="carousel-dot" [class.active]="getBannerIndex(event.eventId) === $index"></span>
-                              }
+                      <div class="event-card-surface">
+                        <div class="event-card-banner" role="button" tabindex="0" (click)="openEventDetails(event.eventId, $event)">
+                          @if (event.bannerImages.length > 1) {
+                            <div class="banner-carousel">
+                              <img [src]="event.bannerImages[getBannerIndex(event.eventId)]"
+                                   [alt]="event.eventName"
+                                   class="event-banner-img" />
+                              <button class="carousel-btn carousel-btn-prev"
+                                      (click)="prevBanner(event.eventId, event.bannerImages.length, $event)"
+                                      aria-label="Previous banner">
+                                <mat-icon>chevron_left</mat-icon>
+                              </button>
+                              <button class="carousel-btn carousel-btn-next"
+                                      (click)="nextBanner(event.eventId, event.bannerImages.length, $event)"
+                                      aria-label="Next banner">
+                                <mat-icon>chevron_right</mat-icon>
+                              </button>
+                              <div class="carousel-dots">
+                                @for (img of event.bannerImages; track $index) {
+                                  <span class="carousel-dot" [class.active]="getBannerIndex(event.eventId) === $index"></span>
+                                }
+                              </div>
                             </div>
-                          </div>
-                        } @else if (event.bannerImages.length === 1 || event.eventBanner) {
-                          <img [src]="event.bannerImages[0] || event.eventBanner" [alt]="event.eventName" class="event-banner-img" />
-                        } @else {
-                          <div class="event-banner-placeholder">
-                            <mat-icon>event</mat-icon>
-                          </div>
-                        }
-                        <span class="event-status-badge event-status-{{ event.status | lowercase }}">{{ event.status }}</span>
-                      </div>
-                      <div class="event-card-body">
-                        <h4 class="event-card-title">{{ event.eventName | titlecase }}</h4>
-                        <div class="event-card-chips">
-                          @if (event.type) {
-                          <span class="ecc ecc-type-{{ event.type | lowercase }}">{{ event.type | titlecase }}</span>
+                          } @else if (event.bannerImages.length === 1 || event.eventBanner) {
+                            <img [src]="event.bannerImages[0] || event.eventBanner" [alt]="event.eventName" class="event-banner-img" />
+                          } @else {
+                            <div class="event-banner-placeholder">
+                              <mat-icon>event</mat-icon>
+                            </div>
                           }
-                          <span class="ecc ecc-vis-{{ event.visibility | lowercase }}">{{ event.visibility | titlecase }}</span>
+                          <div class="event-banner-overlay">
+                            <span class="event-status-badge event-status-{{ event.status | lowercase }}">{{ event.status }}</span>
+                            <span class="event-visibility-badge">{{ event.visibility === 'VISIBLE' ? 'Public' : 'Private' }}</span>
+                          </div>
                         </div>
-                        <div class="event-card-meta">
-                          @if (event.startDate) {
-                          <span class="event-meta-chip">
-                            <mat-icon>calendar_today</mat-icon>{{ event.startDate | date:'dd MMM yyyy' }}
-                          </span>
-                          }
-                          @if (event.endDate) {
-                          <span class="event-meta-chip">
-                            <mat-icon>event_available</mat-icon>{{ event.endDate | date:'dd MMM yyyy' }}
-                          </span>
-                          }
+
+                        <div class="event-card-body">
+                          <div class="event-card-topline">
+                            <h4 class="event-card-title">{{ event.eventName | titlecase }}</h4>
+                            <button mat-icon-button type="button" class="event-open-btn" title="Open event" (click)="openEventDetails(event.eventId, $event)">
+                              <mat-icon>open_in_new</mat-icon>
+                            </button>
+                          </div>
+                          <div class="event-card-meta">
+                            <span class="event-meta-chip event-type-chip">
+                              <mat-icon>category</mat-icon>{{ event.type === 'PUBLIC' ? 'Public' : 'Private' }}
+                            </span>
+                            @if (event.startDate) {
+                            <span class="event-meta-chip">
+                              <mat-icon>calendar_today</mat-icon>{{ event.startDate | date:'dd MMM yyyy' }}
+                            </span>
+                            }
+                            @if (event.endDate) {
+                            <span class="event-meta-chip">
+                              <mat-icon>event_available</mat-icon>{{ event.endDate | date:'dd MMM yyyy' }}
+                            </span>
+                            }
+                          </div>
                         </div>
                       </div>
                     </div>
@@ -315,7 +319,7 @@
 
           <mat-tab>
             <ng-template mat-tab-label>
-              <mat-icon>favorite</mat-icon>
+              <mat-icon>favorite_border</mat-icon>
               <span>Favourites</span>
               <span class="tab-badge">{{ favouriteGroups.length }}</span>
             </ng-template>

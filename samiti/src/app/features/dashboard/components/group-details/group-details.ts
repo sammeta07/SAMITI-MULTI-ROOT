@@ -24,6 +24,7 @@ import { PromoteMemberDialogService } from '../../../../components/dialog/promot
 import { DemoteMemberDialogService } from '../../../../components/dialog/demote-member/demote-member.service';
 import { RemoveMemberDialogService } from '../../../../components/dialog/remove-member/remove-member.service';
 import { DashboardHierarchyTreeService } from '../dashboard-hierarchy-tree/dashboard-hierarchy-tree.service';
+import { TextFormatPipe } from '../../../../shared/pipe/text-format-pipe.pipe';
 
 @Component({
   selector: 'app-group-details',
@@ -40,6 +41,7 @@ import { DashboardHierarchyTreeService } from '../dashboard-hierarchy-tree/dashb
     MatExpansionModule,
     MatSlideToggleModule,
     MatTooltipModule,
+    TextFormatPipe,
   ],
   templateUrl: './group-details.html',
   styleUrl: './group-details.scss'

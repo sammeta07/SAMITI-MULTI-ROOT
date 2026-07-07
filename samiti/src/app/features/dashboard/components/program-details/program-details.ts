@@ -4,6 +4,7 @@ import { ActivatedRoute } from '@angular/router';
 import { MatIconModule } from '@angular/material/icon';
 import { MatButtonModule } from '@angular/material/button';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
+import { MatTooltipModule } from '@angular/material/tooltip';
 import { HttpErrorResponse } from '@angular/common/http';
 import { ProgramDetailsPayload, ProgramTask } from './program-details.models';
 import { ProgramDetailsService } from './program-details.service';
@@ -16,7 +17,8 @@ import { NotifierService } from '../../../../shared/notifier/notifier.service';
     CommonModule,
     MatIconModule,
     MatButtonModule,
-    MatProgressSpinnerModule
+    MatProgressSpinnerModule,
+    MatTooltipModule
   ],
   templateUrl: './program-details.html',
   styleUrl: './program-details.scss'
