@@ -18,6 +18,7 @@ import { uploadEventBannerImagesTypes, uploadEventBannerImagesMutationFields, up
 import { deleteEventTypes, deleteEventMutationFields, deleteEventResolvers } from './events/delete-event.graphql';
 import { createProgramTypes, createProgramMutationFields, createProgramResolvers } from './programs/create-program.graphql';
 import { updateProgramTypes, updateProgramMutationFields, updateProgramResolvers } from './programs/update-program.graphql';
+import { uploadProgramBannerImagesTypes, uploadProgramBannerImagesMutationFields, uploadProgramBannerImagesResolvers } from './programs/upload-program-banner-images.graphql';
 import { programDetailsTypes, programDetailsQueryFields, programDetailsResolvers } from './programs/program-details-by-id.graphql';
 import { authCommitteeTypes, authCommitteeQueryFields, authCommitteesResolvers } from './committees/committees-list/auth-user-committees-list.graphql';
 import { guestCommitteeTypes, guestCommitteeQueryFields, guestCommitteesResolvers } from './committees/committees-list/guest-user-committees-list.graphql';
@@ -45,6 +46,7 @@ export const typeDefs = `
   ${updateEventTypes}
   ${createProgramTypes}
   ${updateProgramTypes}
+  ${uploadProgramBannerImagesTypes}
   ${programDetailsTypes}
   ${eventDetailsTypes}
   ${eventsListTypes}
@@ -76,6 +78,7 @@ export const typeDefs = `
     ${updateEventMutationFields}
     ${createProgramMutationFields}
     ${updateProgramMutationFields}
+    ${uploadProgramBannerImagesMutationFields}
     ${updateEventVisibilityMutationFields}
     ${uploadEventBannerImagesMutationFields}
     ${deleteEventMutationFields}
@@ -110,6 +113,7 @@ export const resolvers = {
     ...updateEventResolvers.Mutation,
     ...createProgramResolvers.Mutation,
     ...updateProgramResolvers.Mutation,
+    ...uploadProgramBannerImagesResolvers.Mutation,
     ...updateEventVisibilityResolvers.Mutation,
     ...uploadEventBannerImagesResolvers.Mutation,
     ...deleteEventResolvers.Mutation,

@@ -1,3 +1,4 @@
+import { RowDataPacket } from 'mysql2/promise';
 import { query } from '../../config/db';
 
 function throwProgramError(code: string, message: string): never {
@@ -45,6 +46,8 @@ export const programDetailsTypes = `
     programId: Int!
     eventId: Int
     programName: String!
+    programBanner: String
+    bannerImages: [String!]!
     address: String
     status: String!
     visibility: String!
@@ -119,11 +122,21 @@ export const programDetailsResolvers = {
         }
       }
 
+      const bannerImageRows = await query<Array<RowDataPacket & { mediaUrl: string }>>(
+        `SELECT media_url AS mediaUrl
+         FROM program_media_assets
+         WHERE program_id = ?
+         ORDER BY sort_order ASC, id ASC`,
+        [programId]
+      );
+
       return {
         id: program.id,
         programId: program.programId,
         eventId: program.eventId,
         programName: program.programName,
+        programBanner: bannerImageRows[0]?.mediaUrl || null,
+        bannerImages: bannerImageRows.map((row) => row.mediaUrl),
         address: program.address,
         status: program.status,
         visibility: program.visibility,

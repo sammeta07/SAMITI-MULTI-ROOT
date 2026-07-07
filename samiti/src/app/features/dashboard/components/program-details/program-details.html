@@ -13,7 +13,11 @@
       <div class="committee-card-grid">
 
         <div class="card-logo-area">
+          @if (programData()?.programBanner || programData()?.bannerImages?.length) {
+          <img [src]="programData()?.programBanner || programData()?.bannerImages?.[0]" [alt]="programData()?.programName" class="committee-avatar" />
+          } @else {
           <div class="committee-avatar-fallback program-avatar-fallback">{{ programData()?.programName?.charAt(0) || 'P' }}</div>
+          }
         </div>
 
         <div class="card-main-info-area">
@@ -53,6 +57,77 @@
 
       </div>
     </section>
+
+    <section class="banner-images-section">
+      <div class="panel-card-header banner-header-bg">
+        <div class="header-title-left">
+          <mat-icon class="icon-accent-banner">photo_library</mat-icon>
+          <span class="title-text">Banner Images</span>
+          <span class="count-pill">{{ bannerCount }}/{{ MAX_BANNERS }}</span>
+        </div>
+        <button mat-stroked-button class="banner-add-btn"
+                [disabled]="!canUploadMoreBanners || isBannerUploading()"
+                (click)="onAddProgramBannerClick()"
+                [matTooltip]="canUploadMoreBanners ? 'Upload up to ' + (MAX_BANNERS - bannerCount) + ' more image(s)' : 'Maximum ' + MAX_BANNERS + ' banners reached'">
+          @if (isBannerUploading()) {
+            <mat-progress-spinner mode="indeterminate" diameter="14" strokeWidth="2"></mat-progress-spinner>
+          } @else {
+            <mat-icon>add_photo_alternate</mat-icon>
+          }
+          <span>Add</span>
+        </button>
+      </div>
+
+      @if (bannerCount > 0) {
+      <div class="banner-grid">
+        @for (imgUrl of programData()!.bannerImages; track imgUrl) {
+        <div class="banner-image-card">
+          <img [src]="imgUrl" [alt]="programData()?.programName" class="banner-img" />
+          <button mat-icon-button class="banner-delete-btn" title="Delete banner"
+                  (click)="onDeleteProgramBanner(imgUrl)">
+            <mat-icon>delete</mat-icon>
+          </button>
+        </div>
+        }
+        @if (canUploadMoreBanners) {
+        <button type="button" class="banner-upload-tile"
+                [disabled]="isBannerUploading()"
+                (click)="onAddProgramBannerClick()">
+          @if (isBannerUploading()) {
+            <mat-progress-spinner mode="indeterminate" diameter="20" strokeWidth="2"></mat-progress-spinner>
+          } @else {
+            <mat-icon>add_photo_alternate</mat-icon>
+            <span>Add Banner</span>
+          }
+        </button>
+        }
+      </div>
+      } @else {
+      <div class="banner-empty-state">
+        <mat-icon>image_not_supported</mat-icon>
+        <p>No banner images uploaded yet.</p>
+        <button mat-flat-button class="banner-empty-upload-btn"
+                [disabled]="isBannerUploading()"
+                (click)="onAddProgramBannerClick()">
+          @if (isBannerUploading()) {
+            <mat-progress-spinner mode="indeterminate" diameter="14" strokeWidth="2"></mat-progress-spinner>
+          } @else {
+            <mat-icon>add_photo_alternate</mat-icon>
+          }
+          <span>Upload Banner</span>
+        </button>
+      </div>
+      }
+    </section>
+
+    <input
+      #programBannerFileInput
+      type="file"
+      accept="image/*"
+      multiple
+      hidden
+      (change)="onProgramBannerFilesSelected($event)"
+    />
 
     <section class="horizontal-full-card tasks-section-style">
       <div class="panel-card-header">
