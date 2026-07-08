@@ -18,6 +18,7 @@ export interface CommitteeMember {
   id: number;
   name: string;
   email: string;
+  committeeRole?: 'COMMITTEE_MEMBER' | 'COMMITTEE_ADMIN' | null;
   isCommitteeAdmin: number;
 }
 

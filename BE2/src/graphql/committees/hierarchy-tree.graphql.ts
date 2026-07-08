@@ -68,15 +68,11 @@ export const hierarchyTreeResolvers = {
            c.id AS committee_id,
            c.committee_name,
            c.logo,
-           cm.is_committee_admin,
-           cm.is_committee_member
+           cm.committee_role
          FROM users_committees cm
          INNER JOIN committees c ON c.id = cm.committee_id
          WHERE cm.user_id = ?
-           AND (
-             COALESCE(cm.is_committee_admin, 0) = 1
-             OR COALESCE(cm.is_committee_member, 0) = 1
-           )
+           AND cm.committee_role IN ('COMMITTEE_MEMBER', 'COMMITTEE_ADMIN')
          ORDER BY c.committee_name ASC`,
         [loggedInUserId]
       );
@@ -111,14 +107,14 @@ export const hierarchyTreeResolvers = {
           childIds: new Set<string>()
         };
 
-        if (Number(row.is_committee_admin) === 1) {
+        if (String(row.committee_role || '') === 'COMMITTEE_ADMIN') {
           committeeNode.roles.add('ADMIN');
           adminCommitteeIds.add(committeeId);
         }
-        if (Number(row.is_committee_member) === 1 && Number(row.is_committee_admin) !== 1) {
+        if (String(row.committee_role || '') === 'COMMITTEE_MEMBER') {
           memberOnlyCommitteeIds.add(committeeId);
         }
-        if (Number(row.is_committee_member) === 1) {
+        if (String(row.committee_role || '') === 'COMMITTEE_MEMBER' || String(row.committee_role || '') === 'COMMITTEE_ADMIN') {
           committeeNode.roles.add('MEMBER');
         }
 

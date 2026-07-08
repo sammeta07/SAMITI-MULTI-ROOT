@@ -140,7 +140,7 @@ export const committeeMembershipRequestsResolvers = {
          INNER JOIN users_committees admin_uc
             ON admin_uc.committee_id = crr.committee_id
             AND admin_uc.user_id = ?
-            AND admin_uc.is_committee_admin = 1
+          AND admin_uc.committee_role = 'COMMITTEE_ADMIN'
          WHERE crr.status IN ('PENDING', 'ACCEPTED', 'REJECTED')
            AND crr.requester_user_id <> ?
          ORDER BY crr.requested_at DESC`,
@@ -249,7 +249,9 @@ export const committeeMembershipRequestsResolvers = {
       // Verify actor is an accepted admin
       const adminValidationRows = await query<any[]>(
         `SELECT user_id FROM users_committees
-         WHERE committee_id = ? AND user_id = ? AND is_committee_admin = 1
+         WHERE committee_id = ?
+           AND user_id = ?
+           AND committee_role = 'COMMITTEE_ADMIN'
          LIMIT 1`,
         [committeeId, loggedInUserId]
       );
@@ -283,24 +285,25 @@ export const committeeMembershipRequestsResolvers = {
       if (decisionAction === 'ACCEPTED') {
         if (requestRole === 'COMMITTEE_ADMIN') {
           await execute(
-            `INSERT INTO users_committees (committee_id, user_id, is_committee_admin, is_committee_member, is_favourite)
-             VALUES (?, ?, 1, 1, 0)
-             ON DUPLICATE KEY UPDATE is_committee_admin = 1, is_committee_member = 1`,
+            `INSERT INTO users_committees (committee_id, user_id, committee_role, is_favourite)
+             VALUES (?, ?, 'COMMITTEE_ADMIN', 0)
+             ON DUPLICATE KEY UPDATE committee_role = 'COMMITTEE_ADMIN'`,
             [committeeId, targetUserId]
           );
         } else {
           await execute(
-            `INSERT INTO users_committees (committee_id, user_id, is_committee_admin, is_committee_member, is_favourite)
-             VALUES (?, ?, 0, 1, 0)
-             ON DUPLICATE KEY UPDATE is_committee_member = 1`,
+            `INSERT INTO users_committees (committee_id, user_id, committee_role, is_favourite)
+             VALUES (?, ?, 'COMMITTEE_MEMBER', 0)
+             ON DUPLICATE KEY UPDATE
+               committee_role = CASE WHEN committee_role = 'COMMITTEE_ADMIN' THEN 'COMMITTEE_ADMIN' ELSE 'COMMITTEE_MEMBER' END`,
             [committeeId, targetUserId]
           );
         }
       } else {
         // REJECTED — ensure row exists but not promoted
         await execute(
-          `INSERT INTO users_committees (committee_id, user_id, is_committee_admin, is_committee_member, is_favourite)
-           VALUES (?, ?, 0, 0, 0)
+          `INSERT INTO users_committees (committee_id, user_id, committee_role, is_favourite)
+           VALUES (?, ?, NULL, 0)
            ON DUPLICATE KEY UPDATE committee_id = committee_id`,
           [committeeId, targetUserId]
         );

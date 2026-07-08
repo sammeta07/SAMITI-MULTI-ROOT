@@ -84,6 +84,7 @@ export class HomeService {
             distanceMeters
             committeeLogo
             establishYear
+            committeeRole
             isCommitteeAdmin
             isCommitteeMember
             pendingRequestRole

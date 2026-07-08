@@ -156,9 +156,9 @@ export const createCommitteeResolvers = {
 
       // Creator becomes immediate admin+member — no request workflow needed
       await execute(
-        `INSERT INTO users_committees (committee_id, user_id, is_committee_admin, is_committee_member, is_favourite)
-         VALUES (?, ?, 1, 1, 0)
-         ON DUPLICATE KEY UPDATE is_committee_admin = 1, is_committee_member = 1`,
+        `INSERT INTO users_committees (committee_id, user_id, committee_role, is_favourite)
+         VALUES (?, ?, 'COMMITTEE_ADMIN', 0)
+         ON DUPLICATE KEY UPDATE committee_role = 'COMMITTEE_ADMIN'`,
         [newCommitteeId, loggedInUserId]
       );
 

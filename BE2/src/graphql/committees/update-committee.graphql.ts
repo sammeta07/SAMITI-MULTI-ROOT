@@ -113,7 +113,7 @@ export const updateCommitteeResolvers = {
          FROM users_committees
          WHERE committee_id = ?
            AND user_id = ?
-           AND is_committee_admin = 1
+           AND committee_role = 'COMMITTEE_ADMIN'
          LIMIT 1`,
         [committeeId, loggedInUserId]
       );

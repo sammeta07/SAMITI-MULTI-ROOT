@@ -105,7 +105,7 @@ export const deleteEventResolvers = {
       const adminCheck = await query<any[]>(
         `SELECT user_id
          FROM users_committees
-         WHERE committee_id = ? AND user_id = ? AND is_committee_admin = 1
+         WHERE committee_id = ? AND user_id = ? AND committee_role = 'COMMITTEE_ADMIN'
          LIMIT 1`,
         [Number(event.committeeId), loggedInUserId]
       );

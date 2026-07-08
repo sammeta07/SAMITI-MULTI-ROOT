@@ -61,12 +61,17 @@ export const submitCommitteeMembershipRequestResolvers = {
 
       // Get current membership state
       const membershipRows = await query<any[]>(
-        `SELECT is_committee_admin, is_committee_member
-         FROM users_committees
-         WHERE committee_id = ? AND user_id = ?
-         LIMIT 1`,
+        `SELECT committee_role
+        FROM users_committees
+        WHERE committee_id = ? AND user_id = ?
+        LIMIT 1`,
         [committeeId, loggedInUserId]
       );
+
+      const membership = membershipRows[0] || null;
+      const committeeRole = String(membership?.committee_role || '');
+      const isCommitteeAdmin = Boolean(membership && committeeRole === 'COMMITTEE_ADMIN');
+      const isCommitteeMember = Boolean(membership && (committeeRole === 'COMMITTEE_MEMBER' || committeeRole === 'COMMITTEE_ADMIN'));
 
       // Check existing pending request for this role
       const existingPendingRows = await query<any[]>(
@@ -78,11 +83,11 @@ export const submitCommitteeMembershipRequestResolvers = {
 
       if (requestRole === 'COMMITTEE_ADMIN') {
         // Must be accepted member first
-        if (membershipRows.length === 0 || Number(membershipRows[0].is_committee_member) !== 1) {
+        if (!isCommitteeMember) {
           throw new Error('Only accepted committee members can request admin role');
         }
         // Already admin
-        if (Number(membershipRows[0].is_committee_admin) === 1) {
+        if (isCommitteeAdmin) {
           return {
             committeeId,
             requestedByUserId: loggedInUserId,
@@ -95,7 +100,7 @@ export const submitCommitteeMembershipRequestResolvers = {
 
       if (requestRole === 'COMMITTEE_MEMBER') {
         // Already an accepted member
-        if (membershipRows.length > 0 && Number(membershipRows[0].is_committee_member) === 1) {
+        if (isCommitteeMember) {
           return {
             committeeId,
             requestedByUserId: loggedInUserId,
@@ -127,8 +132,8 @@ export const submitCommitteeMembershipRequestResolvers = {
 
       // Ensure a users_committees row exists (for favourite/state tracking)
       await execute(
-        `INSERT INTO users_committees (committee_id, user_id, is_committee_admin, is_committee_member, is_favourite)
-         VALUES (?, ?, 0, 0, 0)
+        `INSERT INTO users_committees (committee_id, user_id, committee_role, is_favourite)
+         VALUES (?, ?, NULL, 0)
          ON DUPLICATE KEY UPDATE committee_id = committee_id`,
         [committeeId, loggedInUserId]
       );

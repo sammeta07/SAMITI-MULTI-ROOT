@@ -35,6 +35,7 @@ export class GroupDetailsService {
           name
           email
           photo
+          committeeRole
           isCommitteeAdmin
         }
       }

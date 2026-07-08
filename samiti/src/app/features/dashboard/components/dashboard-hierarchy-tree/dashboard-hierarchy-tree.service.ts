@@ -81,6 +81,7 @@ export class DashboardHierarchyTreeService {
           id
           name
           email
+          committeeRole
           isCommitteeAdmin
         }
       }

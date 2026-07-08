@@ -70,10 +70,18 @@ private readonly headerService = inject(HeaderService);
     if (!this.isLoggedIn) return this.committeeList;
     return this.committeeList.filter(c =>
       this.isAuthItem(c) &&
-      c.isCommitteeMember !== 1 &&
-      c.isCommitteeAdmin !== 1 &&
+      !this.hasCommitteeMembership(c) &&
       !c.isFavourite
     );
+  }
+
+  private hasCommitteeMembership(committee: CommitteeAuthItem): boolean {
+    const role = String(committee.committeeRole || '').toUpperCase();
+    if (role === 'COMMITTEE_MEMBER' || role === 'COMMITTEE_ADMIN') {
+      return true;
+    }
+
+    return committee.isCommitteeMember === 1 || committee.isCommitteeAdmin === 1;
   }
 
   get favouriteGroups(): CommitteesList[] {

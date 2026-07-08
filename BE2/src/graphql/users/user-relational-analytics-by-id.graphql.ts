@@ -16,6 +16,7 @@ type UserCommitteeAffiliationSnapshotRow = RowDataPacket & {
   committee_id: number;
   committee_name: string;
   logo: string | null;
+  committee_role: string | null;
   is_committee_admin: number;
 };
 
@@ -50,6 +51,7 @@ export const userRelationalAnalyticsTypes = `
     committeeId: Int!
     committeeName: String!
     logo: String
+    committeeRole: String
     isCommitteeAdmin: Int!
   }
 
@@ -167,11 +169,12 @@ export const userRelationalAnalyticsResolvers = {
           c.id AS committee_id,
           c.committee_name,
           c.logo,
-          cm.is_committee_admin
+          cm.committee_role,
+          CASE WHEN cm.committee_role = 'COMMITTEE_ADMIN' THEN 1 ELSE 0 END AS is_committee_admin
          FROM users_committees cm
          INNER JOIN committees c ON cm.committee_id = c.id
          WHERE cm.user_id = ?
-           AND cm.is_committee_member = 1`,
+           AND cm.committee_role IN ('COMMITTEE_MEMBER', 'COMMITTEE_ADMIN')`,
         [userId]
       );
 
@@ -186,7 +189,7 @@ export const userRelationalAnalyticsResolvers = {
          WHERE e.committee_id IN (
            SELECT committee_id
            FROM users_committees
-           WHERE user_id = ? AND is_committee_admin = 1
+           WHERE user_id = ? AND committee_role = 'COMMITTEE_ADMIN'
          )`,
         [userId]
       ).catch(() => []);
@@ -226,6 +229,7 @@ export const userRelationalAnalyticsResolvers = {
               committeeId: Number(row.committee_id),
               committeeName: row.committee_name,
               logo: row.logo,
+              committeeRole: row.committee_role || null,
               isCommitteeAdmin: Number(row.is_committee_admin)
             })),
             programsOwned: userProgramOwnershipSnapshotRows.map((row) => ({

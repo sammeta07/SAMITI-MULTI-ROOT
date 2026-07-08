@@ -51,6 +51,7 @@ export class ViewUserDialogService {
               committeeId
               committeeName
               logo
+              committeeRole
               isCommitteeAdmin
             }
             programsOwned {

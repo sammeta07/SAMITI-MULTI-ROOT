@@ -227,8 +227,12 @@ export class GroupDetailsComponent implements OnInit {
           
           // Split members into explicit buckets rows natively matching schema types
           const membersPool = data.members || [];
-          this.adminsList.set(membersPool.filter((m: CommitteeRosterMember) => Number(m.isCommitteeAdmin) === 1));
-          this.membersList.set(membersPool.filter((m: CommitteeRosterMember) => Number(m.isCommitteeAdmin) !== 1));
+          this.adminsList.set(
+            membersPool.filter((m: CommitteeRosterMember) => String(m.committeeRole || '').toUpperCase() === 'COMMITTEE_ADMIN' || Number(m.isCommitteeAdmin) === 1)
+          );
+          this.membersList.set(
+            membersPool.filter((m: CommitteeRosterMember) => String(m.committeeRole || '').toUpperCase() === 'COMMITTEE_MEMBER' || Number(m.isCommitteeAdmin) !== 1)
+          );
           this.fetchCommitteeEvents(data.committeeId);
         } else {
           this.notifier.error('Failed to parse committee details.');

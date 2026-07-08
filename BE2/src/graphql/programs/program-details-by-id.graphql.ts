@@ -104,7 +104,7 @@ export const programDetailsResolvers = {
 
       if (visibility === 'HIDDEN') {
         const committeeMembership = await query<any[]>(
-          `SELECT is_committee_member, is_committee_admin
+          `SELECT committee_role
            FROM users_committees
            WHERE committee_id = ? AND user_id = ?
            LIMIT 1`,
@@ -114,7 +114,7 @@ export const programDetailsResolvers = {
         const membership = committeeMembership[0];
         const hasCommitteeAccess = Boolean(
           membership &&
-          (Number(membership.is_committee_member) === 1 || Number(membership.is_committee_admin) === 1)
+          (String(membership.committee_role || '') === 'COMMITTEE_MEMBER' || String(membership.committee_role || '') === 'COMMITTEE_ADMIN')
         );
 
         if (!hasCommitteeAccess) {

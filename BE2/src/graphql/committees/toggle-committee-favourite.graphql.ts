@@ -39,8 +39,8 @@ export const toggleCommitteeFavouriteResolvers = {
       const normalizedFavourite = isFavourite === 1 ? 1 : 0;
 
       await execute(
-        `INSERT INTO users_committees (committee_id, user_id, is_committee_admin, is_committee_member, is_favourite)
-         VALUES (?, ?, 0, 0, ?)
+        `INSERT INTO users_committees (committee_id, user_id, committee_role, is_favourite)
+         VALUES (?, ?, NULL, ?)
          ON DUPLICATE KEY UPDATE is_favourite = VALUES(is_favourite)`,
         [committeeId, loggedInUserId, normalizedFavourite]
       );

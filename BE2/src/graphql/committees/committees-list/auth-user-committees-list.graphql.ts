@@ -10,6 +10,7 @@ export const authCommitteeTypes = `
     distanceMeters: Float!
     committeeLogo: String
     establishYear: Int!
+    committeeRole: String
     isCommitteeAdmin: Int!
     isCommitteeMember: Int!
     pendingRequestRole: String
@@ -56,8 +57,9 @@ export const authCommitteesResolvers = {
           c.address,
           c.logo,
           c.contact_numbers,
-          COALESCE(cm.is_committee_admin, 0)  AS is_committee_admin,
-          COALESCE(cm.is_committee_member, 0) AS is_committee_member,
+          cm.committee_role AS committee_role,
+          CASE WHEN cm.committee_role = 'COMMITTEE_ADMIN' THEN 1 ELSE 0 END AS is_committee_admin,
+          CASE WHEN cm.committee_role IN ('COMMITTEE_MEMBER', 'COMMITTEE_ADMIN') THEN 1 ELSE 0 END AS is_committee_member,
           COALESCE(cm.is_favourite, 0)        AS is_favourite,
           crr.request_role                    AS pending_request_role,
           (6371 * acos(
@@ -138,6 +140,7 @@ export const authCommitteesResolvers = {
           distanceMeters: Math.round((Number(item.distanceKm) || 0) * 1000),
           committeeLogo: item.logo || null,
           establishYear: item.establish_year ?? 0,
+          committeeRole: item.committee_role || null,
           isCommitteeAdmin: Number(item.is_committee_admin),
           isCommitteeMember: Number(item.is_committee_member),
           pendingRequestRole: item.pending_request_role || null,

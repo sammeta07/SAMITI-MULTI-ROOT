@@ -36,6 +36,7 @@ export interface UserCommitteeAffiliationSpec {
   committeeId: number;
   committeeName: string;
   logo: string | null;
+  committeeRole?: 'COMMITTEE_MEMBER' | 'COMMITTEE_ADMIN' | null;
   isCommitteeAdmin: number; // 🧱 1 for Admin role, 0 for Member role
 }
 

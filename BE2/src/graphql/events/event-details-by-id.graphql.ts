@@ -501,7 +501,7 @@ export const eventDetailsResolvers = {
       const visibility = String(event.visibility || '').toUpperCase();
 
       const committeeMembership = await query<any[]>(
-        `SELECT is_committee_member, is_committee_admin
+        `SELECT committee_role
          FROM users_committees
          WHERE committee_id = ? AND user_id = ?
          LIMIT 1`,
@@ -511,15 +511,15 @@ export const eventDetailsResolvers = {
       const membership = committeeMembership[0];
       const hasCommitteeAccess = Boolean(
         membership &&
-        (Number(membership.is_committee_member) === 1 || Number(membership.is_committee_admin) === 1)
+        (String(membership.committee_role || '') === 'COMMITTEE_MEMBER' || String(membership.committee_role || '') === 'COMMITTEE_ADMIN')
       );
 
       if (visibility === 'HIDDEN' && !hasCommitteeAccess) {
         throwEventError('FORBIDDEN', 'You are not allowed to access this event');
       }
 
-      const canManageVotingRoles = Boolean(membership && Number(membership.is_committee_admin) === 1);
-      const canSelfNominate = Boolean(membership && Number(membership.is_committee_member) === 1 && Number(membership.is_committee_admin) !== 1);
+      const canManageVotingRoles = Boolean(membership && String(membership.committee_role || '') === 'COMMITTEE_ADMIN');
+      const canSelfNominate = Boolean(membership && String(membership.committee_role || '') === 'COMMITTEE_MEMBER');
       const currentCommitteeRole = canManageVotingRoles
         ? 'COMMITTEE_ADMIN'
         : canSelfNominate
@@ -528,8 +528,8 @@ export const eventDetailsResolvers = {
 
       const committeeCountRows = await query<Array<RowDataPacket & { memberCount: number; adminCount: number }>>(
         `SELECT
-           SUM(CASE WHEN is_committee_member = 1 AND is_committee_admin <> 1 THEN 1 ELSE 0 END) AS memberCount,
-           SUM(CASE WHEN is_committee_admin = 1 THEN 1 ELSE 0 END) AS adminCount
+           SUM(CASE WHEN committee_role = 'COMMITTEE_MEMBER' THEN 1 ELSE 0 END) AS memberCount,
+           SUM(CASE WHEN committee_role = 'COMMITTEE_ADMIN' THEN 1 ELSE 0 END) AS adminCount
          FROM users_committees
          WHERE committee_id = ?`,
         [Number(event.committeeId)]
@@ -715,14 +715,14 @@ export const eventDetailsResolvers = {
       const event = eventRows[0];
 
       const membershipRows = await query<any[]>(
-        `SELECT is_committee_admin
+        `SELECT committee_role
          FROM users_committees
          WHERE committee_id = ? AND user_id = ?
          LIMIT 1`,
         [Number(event.committeeId), loggedInUserId]
       );
 
-      const isCommitteeAdmin = Boolean(membershipRows[0] && Number(membershipRows[0].is_committee_admin) === 1);
+      const isCommitteeAdmin = Boolean(membershipRows[0] && String(membershipRows[0].committee_role || '') === 'COMMITTEE_ADMIN');
       if (!isCommitteeAdmin) {
         throwEventError('FORBIDDEN', 'Only committee admin can configure event voting roles');
       }
@@ -825,7 +825,7 @@ export const eventDetailsResolvers = {
       const event = eventRows[0];
 
       const membershipRows = await query<Array<RowDataPacket & { isCommitteeAdmin: number }>>(
-        `SELECT is_committee_admin AS isCommitteeAdmin
+        `SELECT CASE WHEN committee_role = 'COMMITTEE_ADMIN' THEN 1 ELSE 0 END AS isCommitteeAdmin
          FROM users_committees
          WHERE committee_id = ? AND user_id = ?
          LIMIT 1`,
@@ -894,7 +894,7 @@ export const eventDetailsResolvers = {
       const event = eventRows[0];
 
       const membershipRows = await query<Array<RowDataPacket & { isCommitteeAdmin: number }>>(
-        `SELECT is_committee_admin AS isCommitteeAdmin
+        `SELECT CASE WHEN committee_role = 'COMMITTEE_ADMIN' THEN 1 ELSE 0 END AS isCommitteeAdmin
          FROM users_committees
          WHERE committee_id = ? AND user_id = ?
          LIMIT 1`,
@@ -963,7 +963,7 @@ export const eventDetailsResolvers = {
       const event = eventRows[0];
 
       const membershipRows = await query<Array<RowDataPacket & { isCommitteeAdmin: number }>>(
-        `SELECT is_committee_admin AS isCommitteeAdmin
+        `SELECT CASE WHEN committee_role = 'COMMITTEE_ADMIN' THEN 1 ELSE 0 END AS isCommitteeAdmin
          FROM users_committees
          WHERE committee_id = ? AND user_id = ?
          LIMIT 1`,
@@ -1028,7 +1028,7 @@ export const eventDetailsResolvers = {
       const event = eventRows[0];
 
       const membershipRows = await query<Array<RowDataPacket & { isCommitteeAdmin: number }>>(
-        `SELECT is_committee_admin AS isCommitteeAdmin
+        `SELECT CASE WHEN committee_role = 'COMMITTEE_ADMIN' THEN 1 ELSE 0 END AS isCommitteeAdmin
          FROM users_committees
          WHERE committee_id = ? AND user_id = ?
          LIMIT 1`,
@@ -1099,7 +1099,7 @@ export const eventDetailsResolvers = {
       const event = eventRows[0];
 
       const membershipRows = await query<Array<RowDataPacket & { isCommitteeAdmin: number }>>(
-        `SELECT is_committee_admin AS isCommitteeAdmin
+        `SELECT CASE WHEN committee_role = 'COMMITTEE_ADMIN' THEN 1 ELSE 0 END AS isCommitteeAdmin
          FROM users_committees
          WHERE committee_id = ? AND user_id = ?
          LIMIT 1`,
@@ -1178,7 +1178,7 @@ export const eventDetailsResolvers = {
       const event = eventRows[0];
 
       const membershipRows = await query<Array<RowDataPacket & { isCommitteeAdmin: number }>>(
-        `SELECT is_committee_admin AS isCommitteeAdmin
+        `SELECT CASE WHEN committee_role = 'COMMITTEE_ADMIN' THEN 1 ELSE 0 END AS isCommitteeAdmin
          FROM users_committees
          WHERE committee_id = ? AND user_id = ?
          LIMIT 1`,
@@ -1248,8 +1248,8 @@ export const eventDetailsResolvers = {
         isCommitteeAdmin: number;
       }>>(
         `SELECT
-           is_committee_member AS isCommitteeMember,
-           is_committee_admin AS isCommitteeAdmin
+           CASE WHEN committee_role IN ('COMMITTEE_MEMBER', 'COMMITTEE_ADMIN') THEN 1 ELSE 0 END AS isCommitteeMember,
+           CASE WHEN committee_role = 'COMMITTEE_ADMIN' THEN 1 ELSE 0 END AS isCommitteeAdmin
          FROM users_committees
          WHERE committee_id = ? AND user_id = ?
          LIMIT 1`,
@@ -1350,8 +1350,8 @@ export const eventDetailsResolvers = {
         isCommitteeAdmin: number;
       }>>(
         `SELECT
-           is_committee_member AS isCommitteeMember,
-           is_committee_admin AS isCommitteeAdmin
+           CASE WHEN committee_role IN ('COMMITTEE_MEMBER', 'COMMITTEE_ADMIN') THEN 1 ELSE 0 END AS isCommitteeMember,
+           CASE WHEN committee_role = 'COMMITTEE_ADMIN' THEN 1 ELSE 0 END AS isCommitteeAdmin
          FROM users_committees
          WHERE committee_id = ? AND user_id = ?
          LIMIT 1`,

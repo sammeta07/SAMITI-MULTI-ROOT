@@ -15,6 +15,7 @@ export interface CommitteeRosterMember {
   name: string;
   email: string;
   photo?: string | null;
+  committeeRole?: 'COMMITTEE_MEMBER' | 'COMMITTEE_ADMIN' | null;
   isCommitteeAdmin: number; // 1 for true, 0 for false
 }
 
