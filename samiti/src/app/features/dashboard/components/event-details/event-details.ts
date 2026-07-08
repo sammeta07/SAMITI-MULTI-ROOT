@@ -6,10 +6,11 @@ import { MatIconModule } from '@angular/material/icon';
 import { MatButtonModule } from '@angular/material/button';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatSlideToggleModule } from '@angular/material/slide-toggle';
+import { MatTabsModule } from '@angular/material/tabs';
 import { HttpErrorResponse } from '@angular/common/http';
 import { firstValueFrom } from 'rxjs';
 import { EventDetailsService } from './event-details.service';
-import { EventDetailsPayload, EventPerson } from './event-details.models';
+import { EventDetailsPayload, EventMappedVotingRole, EventPerson } from './event-details.models';
 import { NotifierService } from '../../../../shared/notifier/notifier.service';
 import { ConfirmDialogService } from '../../../../components/dialog/confirm/confirm-dialog.service';
 import { ConfirmDialogData } from '../../../../components/dialog/confirm/confirm-dialog.models';
@@ -18,6 +19,8 @@ import { CreateProgramDialogComponent } from '../../../../components/dialog/crea
 import { CreateEventDialogComponent } from '../../../../components/dialog/create-event/create-event.component';
 import { ImageAssetService } from '../../../../core/services/image-asset.service';
 import { MatTooltipModule } from '@angular/material/tooltip';
+import { MatCardModule } from '@angular/material/card';
+import { AuthService } from '../../../../core/services/auth.service';
 
 @Component({
   selector: 'app-event-details',
@@ -28,7 +31,9 @@ import { MatTooltipModule } from '@angular/material/tooltip';
     MatButtonModule,
     MatProgressSpinnerModule,
     MatSlideToggleModule,
-    MatTooltipModule
+    MatTabsModule,
+    MatTooltipModule,
+    MatCardModule
   ],
   templateUrl: './event-details.html',
   styleUrl: './event-details.scss'
@@ -42,6 +47,7 @@ export class EventDetailsComponent implements OnInit {
   private readonly notifier = inject(NotifierService);
   private readonly eventDetailsService = inject(EventDetailsService);
   private readonly imageAssetService = inject(ImageAssetService);
+  private readonly authService = inject(AuthService);
   private readonly confirmDialog = inject(ConfirmDialogService);
   private readonly hierarchyTreeService = inject(DashboardHierarchyTreeService);
 
@@ -51,8 +57,95 @@ export class EventDetailsComponent implements OnInit {
   public readonly eventData = signal<EventDetailsPayload | null>(null);
   public readonly eventAdmins = signal<EventPerson[]>([]);
   public readonly eventMembers = signal<EventPerson[]>([]);
+  public readonly selectedVotingRoleIds = signal<number[]>([]);
+  public readonly isSavingVotingRoles = signal<boolean>(false);
+  public readonly isLockingVotingRoles = signal<boolean>(false);
+  public readonly isSubmittingNomination = signal<boolean>(false);
 
   public readonly MAX_BANNERS = 5;
+
+  public get programsCount(): number {
+    return this.eventData()?.programs?.length ?? 0;
+  }
+
+  public get canManageVotingRoles(): boolean {
+    return this.eventData()?.canManageVotingRoles ?? false;
+  }
+
+  public get isVotingRolesLocked(): boolean {
+    return Boolean(this.eventData()?.votingRolesLocked);
+  }
+
+  public get canEditVotingRoles(): boolean {
+    return this.canManageVotingRoles && !this.isVotingRolesLocked;
+  }
+
+  public get currentEventMappedRoleCount(): number {
+    return this.eventData()?.mappedVotingRoles?.length ?? 0;
+  }
+
+  public get currentEventDisplayTitle(): string {
+    const rawName = String(this.eventData()?.eventName || '').trim();
+    if (!rawName) {
+      return 'Event';
+    }
+
+    return rawName
+      .toLowerCase()
+      .split(/\s+/)
+      .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
+      .join(' ');
+  }
+
+  public get votingGridLayoutClass(): string {
+    if (this.currentEventMappedRoleCount <= 1) {
+      return 'voting-nomination-grid-single';
+    }
+
+    if (this.currentEventMappedRoleCount === 2) {
+      return 'voting-nomination-grid-double';
+    }
+
+    return 'voting-nomination-grid-multi';
+  }
+
+  public get votingDisplayCards(): Array<{ slot: number; role: EventMappedVotingRole }> {
+    const mappedRoles = this.eventData()?.mappedVotingRoles ?? [];
+    const presidentRole = mappedRoles.find((role) => this.isPresidentRole(role)) || null;
+    const remainingRoles = mappedRoles.filter((role) => role !== presidentRole);
+    const orderedRoles = presidentRole ? [presidentRole, ...remainingRoles] : mappedRoles;
+
+    return orderedRoles.map((role, index) => ({
+      slot: index + 1,
+      role
+    }));
+  }
+
+  public get isCurrentUserOnlyMember(): boolean {
+    return Boolean(this.eventData()?.canSelfNominate);
+  }
+
+  public get currentCommitteeRoleLabel(): string {
+    const role = String(this.eventData()?.currentCommitteeRole || 'NONE').toUpperCase();
+    if (role === 'COMMITTEE_ADMIN') {
+      return 'Group Admin';
+    }
+
+    if (role === 'COMMITTEE_MEMBER') {
+      return 'Group Member';
+    }
+
+    return 'No Group Role';
+  }
+
+  public get currentLoggedInUserId(): number {
+    return Number(this.authService.getStoredUserData()?.id || 0);
+  }
+
+  public isCurrentUserNominee(userId?: number | null): boolean {
+    const normalizedUserId = Number(userId);
+    return Number.isInteger(normalizedUserId) && normalizedUserId > 0 && normalizedUserId === this.currentLoggedInUserId;
+  }
 
   public get bannerCount(): number {
     return this.eventData()?.bannerImages?.length ?? 0;
@@ -73,18 +166,323 @@ export class EventDetailsComponent implements OnInit {
 
   private fetchEventDetails(id: string): void {
     this.isLoading.set(true);
+    this.eventData.set(null);
+    this.eventAdmins.set([]);
+    this.eventMembers.set([]);
+    this.selectedVotingRoleIds.set([]);
+    this.isSubmittingNomination.set(false);
 
     this.eventDetailsService.getEventDetails(id).subscribe({
       next: (data: EventDetailsPayload) => {
         this.eventData.set(data ?? null);
+        this.populateEventPeople(data ?? null);
+        this.selectedVotingRoleIds.set(
+          (data?.mappedVotingRoles || [])
+            .map((role) => Number(role.roleId))
+            .filter((roleId) => Number.isInteger(roleId) && roleId > 0)
+        );
+        this.isSubmittingNomination.set(false);
         this.isLoading.set(false);
       },
       error: (err: HttpErrorResponse) => {
         this.notifier.error(err?.error?.message || 'Failed to load event details.');
         this.eventData.set(null);
+        this.eventAdmins.set([]);
+        this.eventMembers.set([]);
+        this.selectedVotingRoleIds.set([]);
+        this.isSubmittingNomination.set(false);
         this.isLoading.set(false);
       }
     });
+  }
+
+  public isNominatedForRole(roleId?: number | null): boolean {
+    const normalizedRoleId = Number(roleId);
+    if (!Number.isInteger(normalizedRoleId) || normalizedRoleId <= 0) {
+      return false;
+    }
+
+    return Number(this.eventData()?.myNominatedRoleId || 0) === normalizedRoleId;
+  }
+
+  public get hasAlreadyNominated(): boolean {
+    return Number(this.eventData()?.myNominatedRoleId || 0) > 0;
+  }
+
+  public onToggleNomination(roleId?: number | null): void {
+    const normalizedRoleId = Number(roleId);
+    if (!Number.isInteger(normalizedRoleId) || normalizedRoleId <= 0) {
+      return;
+    }
+
+    if (!this.isVotingRolesLocked) {
+      this.notifier.warn('Wait for your admin to lock roles before nomination starts.');
+      return;
+    }
+
+    if (!this.isCurrentUserOnlyMember) {
+      this.notifier.warn('Only members can add nomination in voting cards.');
+      return;
+    }
+
+    if (this.isSubmittingNomination()) {
+      return;
+    }
+
+    const currentEventId = Number(this.eventData()?.eventId || 0);
+    if (!Number.isInteger(currentEventId) || currentEventId <= 0) {
+      this.notifier.error('Event context not found for nomination.');
+      return;
+    }
+
+    if (this.isNominatedForRole(normalizedRoleId)) {
+      this.isSubmittingNomination.set(true);
+      this.eventDetailsService.withdrawEventVotingRole(currentEventId, normalizedRoleId).subscribe({
+        next: (payload) => {
+          this.eventData.update((prev) => {
+            if (!prev) {
+              return prev;
+            }
+
+            return {
+              ...prev,
+              mappedVotingRoles: payload.mappedVotingRoles,
+              totalNominations: payload.totalNominations,
+              myNominatedRoleId: payload.myNominatedRoleId
+            };
+          });
+
+          this.notifier.success('Nomination withdrawn successfully.');
+          this.isSubmittingNomination.set(false);
+        },
+        error: (err: HttpErrorResponse) => {
+          this.notifier.error(err?.error?.message || 'Failed to withdraw nomination.');
+          this.isSubmittingNomination.set(false);
+        }
+      });
+      return;
+    }
+
+    if (this.hasAlreadyNominated) {
+      this.notifier.warn('You can nominate only once and only for one role in this event.');
+      return;
+    }
+
+    this.isSubmittingNomination.set(true);
+    this.eventDetailsService.nominateEventVotingRole(currentEventId, normalizedRoleId).subscribe({
+      next: (payload) => {
+        this.eventData.update((prev) => {
+          if (!prev) {
+            return prev;
+          }
+
+          return {
+            ...prev,
+            mappedVotingRoles: payload.mappedVotingRoles,
+            totalNominations: payload.totalNominations,
+            myNominatedRoleId: payload.myNominatedRoleId
+          };
+        });
+
+        this.notifier.success('Nomination submitted successfully. You cannot nominate again in this event until you withdraw it.');
+        this.isSubmittingNomination.set(false);
+      },
+      error: (err: HttpErrorResponse) => {
+        this.notifier.error(err?.error?.message || 'Failed to submit nomination.');
+        this.isSubmittingNomination.set(false);
+      }
+    });
+  }
+
+  public getRoleNominationCount(roleId?: number | null): number {
+    const normalizedRoleId = Number(roleId);
+    if (!Number.isInteger(normalizedRoleId) || normalizedRoleId <= 0) {
+      return 0;
+    }
+
+    const role = (this.eventData()?.mappedVotingRoles || []).find((mappedRole) => Number(mappedRole.roleId) === normalizedRoleId);
+    return Number(role?.nominationCount || 0);
+  }
+
+  public isPresidentRole(role?: EventMappedVotingRole | null): boolean {
+    const normalizedRoleName = `${role?.roleName || ''} ${role?.englishName || ''} ${role?.hindiName || ''}`.toUpperCase();
+    return normalizedRoleName.includes('ADHYAKSHA') || normalizedRoleName.includes('ADHYAKSH') || normalizedRoleName.includes('PRESIDENT');
+  }
+
+  public getVotingRoleIcon(role?: EventMappedVotingRole | null): string {
+    const normalizedRoleName = `${role?.roleName || ''} ${role?.englishName || ''} ${role?.hindiName || ''}`.toUpperCase();
+
+    if (normalizedRoleName.includes('ADHYAKSHA') || normalizedRoleName.includes('PRESIDENT')) {
+      return 'military_tech';
+    }
+
+    if (normalizedRoleName.includes('UPADHYAKSHA') || normalizedRoleName.includes('VICE')) {
+      return 'workspace_premium';
+    }
+
+    if (normalizedRoleName.includes('SECRETARY') || normalizedRoleName.includes('SACHIV')) {
+      return 'assignment_ind';
+    }
+
+    if (normalizedRoleName.includes('CASHIER') || normalizedRoleName.includes('TREASURER')) {
+      return 'account_balance_wallet';
+    }
+
+    return 'how_to_vote';
+  }
+
+  public isRoleMapped(roleId?: number | null): boolean {
+    const normalizedRoleId = Number(roleId);
+    if (!Number.isInteger(normalizedRoleId) || normalizedRoleId <= 0) {
+      return false;
+    }
+
+    return this.selectedVotingRoleIds().includes(normalizedRoleId);
+  }
+
+  public onToggleVotingRole(roleId: number, checked: boolean): void {
+    if (!this.canEditVotingRoles) {
+      return;
+    }
+
+    const normalizedRoleId = Number(roleId);
+    if (!Number.isInteger(normalizedRoleId) || normalizedRoleId <= 0) {
+      return;
+    }
+
+    const currentIds = this.selectedVotingRoleIds();
+    if (checked) {
+      if (!currentIds.includes(normalizedRoleId)) {
+        this.selectedVotingRoleIds.set([...currentIds, normalizedRoleId]);
+      }
+      return;
+    }
+
+    this.selectedVotingRoleIds.set(currentIds.filter((id) => id !== normalizedRoleId));
+  }
+
+  public onSaveVotingRoles(): void {
+    const currentEvent = this.eventData();
+    if (!currentEvent?.eventId) {
+      this.notifier.error('No event available for role mapping');
+      return;
+    }
+
+    if (!this.canManageVotingRoles) {
+      this.notifier.error('Only committee admin can manage event voting roles');
+      return;
+    }
+
+    if (this.isVotingRolesLocked) {
+      this.notifier.warn('Voting role selection is locked for this event. Changes are disabled.');
+      return;
+    }
+
+    if (this.isSavingVotingRoles()) {
+      return;
+    }
+
+    const roleIds = Array.from(new Set(this.selectedVotingRoleIds().filter((roleId) => Number.isInteger(roleId) && roleId > 0)));
+
+    this.isSavingVotingRoles.set(true);
+    this.eventDetailsService.updateEventVotingRoles(currentEvent.eventId, roleIds).subscribe({
+      next: () => {
+        this.notifier.success('Voting roles mapped to event successfully.');
+        this.isSavingVotingRoles.set(false);
+        this.fetchEventDetails(String(currentEvent.eventId));
+      },
+      error: (err: HttpErrorResponse) => {
+        this.notifier.error(err?.error?.message || 'Failed to save event voting roles.');
+        this.isSavingVotingRoles.set(false);
+      }
+    });
+  }
+
+  public onLockVotingRoles(): void {
+    const currentEvent = this.eventData();
+    if (!currentEvent?.eventId) {
+      this.notifier.error('No event available for role locking');
+      return;
+    }
+
+    if (!this.canManageVotingRoles) {
+      this.notifier.error('Only committee admin can lock event voting roles');
+      return;
+    }
+
+    if (this.isVotingRolesLocked) {
+      this.notifier.warn('Voting role selection is already locked for this event.');
+      return;
+    }
+
+    if (this.isSavingVotingRoles() || this.isLockingVotingRoles()) {
+      return;
+    }
+
+    const roleIds = Array.from(new Set(this.selectedVotingRoleIds().filter((roleId) => Number.isInteger(roleId) && roleId > 0)));
+    if (!roleIds.length) {
+      this.notifier.warn('Select at least one role before locking voting role selection.');
+      return;
+    }
+
+    const dialogData: ConfirmDialogData = {
+      title: 'Lock Voting Role Selection',
+      message: 'Are you sure you want to lock role selection for this event? After locking, even committee admin cannot change mapped voting roles.',
+      confirmText: 'Lock Roles',
+      cancelText: 'Cancel'
+    };
+
+    const dialogRef = this.confirmDialog.open(dialogData);
+    dialogRef.afterClosed().subscribe((result) => {
+      if (!result?.confirmed) {
+        return;
+      }
+
+      this.isLockingVotingRoles.set(true);
+      this.eventDetailsService.updateEventVotingRoles(currentEvent.eventId, roleIds).subscribe({
+        next: () => {
+          this.eventDetailsService.lockEventVotingRoles(currentEvent.eventId).subscribe({
+            next: () => {
+              this.notifier.success('Voting role selection has been locked successfully.');
+              this.isLockingVotingRoles.set(false);
+              this.fetchEventDetails(String(currentEvent.eventId));
+            },
+            error: (err: HttpErrorResponse) => {
+              this.notifier.error(err?.error?.message || 'Failed to lock voting role selection.');
+              this.isLockingVotingRoles.set(false);
+            }
+          });
+        },
+        error: (err: HttpErrorResponse) => {
+          this.notifier.error(err?.error?.message || 'Failed to save selected roles before locking.');
+          this.isLockingVotingRoles.set(false);
+        }
+      });
+    });
+  }
+
+  private populateEventPeople(data: EventDetailsPayload | null): void {
+    const participants = data?.eventParticipants ?? [];
+    const admins: EventPerson[] = [];
+    const members: EventPerson[] = [];
+
+    for (const participant of participants) {
+      const person: EventPerson = {
+        id: Number(participant.userId),
+        name: participant.name,
+        email: participant.email,
+        photo: participant.photo || null
+      };
+
+      if (participant.designation.includes('ADMIN')) {
+        admins.push(person);
+      } else {
+        members.push(person);
+      }
+    }
+
+    this.eventAdmins.set(admins);
+    this.eventMembers.set(members);
   }
 
   public onEditEvent(): void {
@@ -238,6 +636,14 @@ export class EventDetailsComponent implements OnInit {
         }
       }
     });
+  }
+
+  public onOpenProgram(programId: number): void {
+    if (!Number.isInteger(programId) || programId <= 0) {
+      return;
+    }
+
+    this.router.navigate(['/dashboard', 'program', programId]);
   }
 
   public onEventVisibilityChange(isVisible: boolean): void {

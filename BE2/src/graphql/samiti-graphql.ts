@@ -11,7 +11,7 @@ import { hierarchyTreeTypes, hierarchyTreeQueryFields, hierarchyTreeResolvers } 
 import { committeeDetailsTypes, committeeDetailsQueryFields, committeeDetailsResolvers } from './committees/committee-details-by-id.graphql';
 import { createEventTypes, createEventMutationFields, createEventResolvers } from './events/create-event.graphql';
 import { updateEventTypes, updateEventMutationFields, updateEventResolvers } from './events/update-event.graphql';
-import { eventDetailsTypes, eventDetailsQueryFields, eventDetailsResolvers } from './events/event-details-by-id.graphql';
+import { eventDetailsTypes, eventDetailsQueryFields, eventDetailsMutationFields, eventDetailsResolvers } from './events/event-details-by-id.graphql';
 import { eventsListTypes, eventsListQueryFields, eventsListResolvers } from './events/events-list-by-committee.graphql';
 import { updateEventVisibilityTypes, updateEventVisibilityMutationFields, updateEventVisibilityResolvers } from './events/update-event-visibility.graphql';
 import { uploadEventBannerImagesTypes, uploadEventBannerImagesMutationFields, uploadEventBannerImagesResolvers } from './events/upload-event-banner-images.graphql';
@@ -86,6 +86,7 @@ export const typeDefs = `
     ${cancelCommitteeMembershipRequestMutationFields}
     ${submitCommitteeMembershipRequestMutationFields}
     ${committeeMembershipRequestsMutationFields}
+    ${eventDetailsMutationFields}
   }
 `;
 
@@ -120,6 +121,7 @@ export const resolvers = {
     ...toggleCommitteeFavouriteResolvers.Mutation,
     ...cancelCommitteeMembershipRequestResolvers.Mutation,
     ...submitCommitteeMembershipRequestResolvers.Mutation,
-    ...committeeMembershipRequestsResolvers.Mutation
+    ...committeeMembershipRequestsResolvers.Mutation,
+    ...eventDetailsResolvers.Mutation
   }
 };

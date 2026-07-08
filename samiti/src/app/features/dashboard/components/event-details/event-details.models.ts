@@ -1,8 +1,56 @@
+export interface EventAvailableRole {
+  roleId?: number | null;
+  roleName: string;
+  roleCode?: string | null;
+  hindiName?: string | null;
+  englishName?: string | null;
+}
+
+export interface EventMappedVotingRole {
+  roleId: number;
+  roleName: string;
+  hindiName?: string | null;
+  englishName?: string | null;
+  sortOrder: number;
+  nominationCount: number;
+  isNominatedByCurrentUser: boolean;
+  nominees: Array<{
+    userId: number;
+    name: string;
+    email: string;
+    photo?: string | null;
+  }>;
+}
 export interface EventPerson {
   id: number;
   name: string;
   email: string;
   photo?: string | null;
+}
+
+export interface EventParticipant {
+  userId: number;
+  name: string;
+  email: string;
+  photo?: string | null;
+  designation: string;
+  membershipStatus: string;
+}
+
+export interface EventDesignationSummary {
+  designation: string;
+  memberCount: number;
+}
+
+export interface EventProgramSummary {
+  id: number;
+  programId: number;
+  programName: string;
+  status: string;
+  visibility: string;
+  startDate?: string | null;
+  endDate?: string | null;
+  programBanner?: string | null;
 }
 
 export interface EventDetailsPayload {
@@ -25,4 +73,18 @@ export interface EventDetailsPayload {
   createdBy: number;
   updatedBy?: number | null;
   createdAt?: string | null;
+  programs: EventProgramSummary[];
+  eventParticipants: EventParticipant[];
+  designationSummary: EventDesignationSummary[];
+  eligibleVoterCount: number;
+  availableRoles: EventAvailableRole[];
+  mappedVotingRoles: EventMappedVotingRole[];
+  canManageVotingRoles: boolean;
+  canSelfNominate: boolean;
+  currentCommitteeRole: string;
+  committeeMemberCount: number;
+  committeeAdminCount: number;
+  votingRolesLocked: boolean;
+  totalNominations: number;
+  myNominatedRoleId?: number | null;
 }
