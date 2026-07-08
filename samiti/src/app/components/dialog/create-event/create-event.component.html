@@ -78,7 +78,7 @@
 
         <mat-form-field appearance="outline" class="samiti-custom-field">
           <mat-label>End Date</mat-label>
-          <input matInput [matDatepicker]="endDatePicker" [(ngModel)]="endDate" name="endDate">
+          <input matInput [matDatepicker]="endDatePicker" [(ngModel)]="endDate" name="endDate" required>
           <mat-icon matPrefix>calendar_today</mat-icon>
           <mat-datepicker-toggle matSuffix [for]="endDatePicker"></mat-datepicker-toggle>
           <mat-datepicker #endDatePicker></mat-datepicker>

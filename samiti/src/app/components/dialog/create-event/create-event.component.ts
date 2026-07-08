@@ -164,7 +164,8 @@ export class CreateEventDialogComponent implements OnInit {
       !!this.eventDisplayName?.trim() &&
       this.eventDisplayName.trim().length <= 20 &&
       !!this.status &&
-      !!this.startDate
+      !!this.startDate &&
+      !!this.endDate
     );
   }
 
@@ -224,6 +225,9 @@ export class CreateEventDialogComponent implements OnInit {
         const rawUserName = this.authService.getStoredUserData()?.name || 'User';
         const displayUserName = this.textFormatService.toTitleCase(rawUserName);
         const displayEventName = this.textFormatService.toTitleCase(response.eventName || this.eventName);
+        const displayCommitteeName = this.textFormatService.toTitleCase(
+          String(this.injectedData?.committeeName || '').trim() || 'Committee'
+        );
 
         if (this.isEditMode()) {
           this.notifier.success(
@@ -232,7 +236,7 @@ export class CreateEventDialogComponent implements OnInit {
           );
         } else {
           this.notifier.success(
-            `Hi, **${displayUserName}**! You have successfully created the event **${displayEventName}**.`,
+            `Hi, **${displayUserName}**! You have successfully created the event **${displayEventName}** in group **${displayCommitteeName}**.`,
             'Event Created'
           );
         }

@@ -47,6 +47,31 @@ export interface LockEventVotingRolesPayload {
   votingRolesLocked: boolean;
 }
 
+export interface UnlockEventVotingRolesPayload {
+  eventId: number;
+  votingRolesLocked: boolean;
+}
+
+export interface StartEventNominationsPayload {
+  eventId: number;
+  votingPhaseState: number;
+}
+
+export interface StopEventNominationsPayload {
+  eventId: number;
+  votingPhaseState: number;
+}
+
+export interface AllowEventVotingPayload {
+  eventId: number;
+  votingEnabled: boolean;
+}
+
+export interface StopEventVotingPayload {
+  eventId: number;
+  votingClosed: boolean;
+}
+
 export interface NominateEventVotingRolePayload {
   eventId: number;
   roleId: number;
@@ -171,6 +196,9 @@ export class EventDetailsService {
         committeeMemberCount
         committeeAdminCount
         votingRolesLocked
+        votingEnabled
+        votingClosed
+        votingPhaseState
         totalNominations
         myNominatedRoleId
       }
@@ -323,6 +351,106 @@ export class EventDetailsService {
       { withCredentials: true }
     ).pipe(
       map((res) => res.data.lockEventVotingRoles)
+    );
+  }
+
+  public unlockEventVotingRoles(eventId: number): Observable<UnlockEventVotingRolesPayload> {
+    const mutation = `mutation UnlockEventVotingRoles($eventId: Int!) {
+      unlockEventVotingRoles(eventId: $eventId) {
+        eventId
+        votingRolesLocked
+      }
+    }`;
+
+    return this.http.post<{ data: { unlockEventVotingRoles: UnlockEventVotingRolesPayload } }>(
+      this.graphqlUrl,
+      {
+        query: mutation,
+        variables: {
+          eventId
+        }
+      },
+      { withCredentials: true }
+    ).pipe(
+      map((res) => res.data.unlockEventVotingRoles)
+    );
+  }
+
+  public startEventNominations(eventId: number): Observable<StartEventNominationsPayload> {
+    const mutation = `mutation StartEventNominations($eventId: Int!) {
+      startEventNominations(eventId: $eventId) {
+        eventId
+        votingPhaseState
+      }
+    }`;
+
+    return this.http.post<{ data: { startEventNominations: StartEventNominationsPayload } }>(
+      this.graphqlUrl,
+      { query: mutation, variables: { eventId } },
+      { withCredentials: true }
+    ).pipe(
+      map((res) => res.data.startEventNominations)
+    );
+  }
+
+  public stopEventNominations(eventId: number): Observable<StopEventNominationsPayload> {
+    const mutation = `mutation StopEventNominations($eventId: Int!) {
+      stopEventNominations(eventId: $eventId) {
+        eventId
+        votingPhaseState
+      }
+    }`;
+
+    return this.http.post<{ data: { stopEventNominations: StopEventNominationsPayload } }>(
+      this.graphqlUrl,
+      { query: mutation, variables: { eventId } },
+      { withCredentials: true }
+    ).pipe(
+      map((res) => res.data.stopEventNominations)
+    );
+  }
+
+  public allowEventVoting(eventId: number): Observable<AllowEventVotingPayload> {
+    const mutation = `mutation AllowEventVoting($eventId: Int!) {
+      allowEventVoting(eventId: $eventId) {
+        eventId
+        votingEnabled
+      }
+    }`;
+
+    return this.http.post<{ data: { allowEventVoting: AllowEventVotingPayload } }>(
+      this.graphqlUrl,
+      {
+        query: mutation,
+        variables: {
+          eventId
+        }
+      },
+      { withCredentials: true }
+    ).pipe(
+      map((res) => res.data.allowEventVoting)
+    );
+  }
+
+  public stopEventVoting(eventId: number): Observable<StopEventVotingPayload> {
+    const mutation = `mutation StopEventVoting($eventId: Int!) {
+      stopEventVoting(eventId: $eventId) {
+        eventId
+        votingClosed
+      }
+    }`;
+
+    return this.http.post<{ data: { stopEventVoting: StopEventVotingPayload } }>(
+      this.graphqlUrl,
+      {
+        query: mutation,
+        variables: {
+          eventId
+        }
+      },
+      { withCredentials: true }
+    ).pipe(
+      map((res) => res.data.stopEventVoting)
     );
   }
 

@@ -85,6 +85,9 @@ export interface EventDetailsPayload {
   committeeMemberCount: number;
   committeeAdminCount: number;
   votingRolesLocked: boolean;
+  votingEnabled: boolean;
+  votingClosed: boolean;
+  votingPhaseState: number;
   totalNominations: number;
   myNominatedRoleId?: number | null;
 }

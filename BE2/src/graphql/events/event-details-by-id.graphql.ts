@@ -2,9 +2,52 @@ import { query } from '../../config/db';
 import { RowDataPacket } from 'mysql2/promise';
 import { hasEventsDisplayNameColumn } from './event-display-name-support';
 import { hasEventsVotingRolesLockedColumn } from './event-voting-roles-lock-support';
+import { hasEventsVotingPhaseStateColumn } from './event-voting-phase-support';
+
+async function hasEventsVotingEnabledColumn(): Promise<boolean> {
+  const rows = await query<any[]>(
+    `SELECT 1 AS column_exists
+     FROM INFORMATION_SCHEMA.COLUMNS
+     WHERE TABLE_SCHEMA = DATABASE()
+       AND TABLE_NAME = 'events'
+       AND COLUMN_NAME = 'voting_enabled'
+     LIMIT 1`
+  );
+
+  return rows.length > 0;
+}
+
+async function hasEventsVotingClosedColumn(): Promise<boolean> {
+  const rows = await query<any[]>(
+    `SELECT 1 AS column_exists
+     FROM INFORMATION_SCHEMA.COLUMNS
+     WHERE TABLE_SCHEMA = DATABASE()
+       AND TABLE_NAME = 'events'
+       AND COLUMN_NAME = 'voting_closed'
+     LIMIT 1`
+  );
+
+  return rows.length > 0;
+}
 
 function throwEventError(code: string, message: string): never {
   throw new Error(`${code}: ${message}`);
+}
+
+function getEventVotingPhaseState(event: any, supportsVotingPhaseState: boolean): number {
+  if (supportsVotingPhaseState) {
+    return Number(event?.votingPhaseState || 0);
+  }
+
+  if (Number(event?.votingClosed || 0) === 1) {
+    return 4;
+  }
+
+  if (Number(event?.votingEnabled || 0) === 1) {
+    return 3;
+  }
+
+  return 0;
 }
 
 function getAccessToken(context: any): string {
@@ -282,6 +325,31 @@ export const eventDetailsTypes = `
     votingRolesLocked: Boolean!
   }
 
+  type UnlockEventVotingRolesPayload {
+    eventId: Int!
+    votingRolesLocked: Boolean!
+  }
+
+  type StartEventNominationsPayload {
+    eventId: Int!
+    votingPhaseState: Int!
+  }
+
+  type StopEventNominationsPayload {
+    eventId: Int!
+    votingPhaseState: Int!
+  }
+
+  type AllowEventVotingPayload {
+    eventId: Int!
+    votingEnabled: Boolean!
+  }
+
+  type StopEventVotingPayload {
+    eventId: Int!
+    votingClosed: Boolean!
+  }
+
   type NominateEventVotingRolePayload {
     eventId: Int!
     roleId: Int!
@@ -356,6 +424,9 @@ export const eventDetailsTypes = `
     committeeMemberCount: Int!
     committeeAdminCount: Int!
     votingRolesLocked: Boolean!
+    votingEnabled: Boolean!
+    votingClosed: Boolean!
+    votingPhaseState: Int!
     totalNominations: Int!
     myNominatedRoleId: Int
   }
@@ -368,6 +439,11 @@ export const eventDetailsQueryFields = `
 export const eventDetailsMutationFields = `
   updateEventVotingRoles(eventId: Int!, roleIds: [Int!]!): UpdateEventVotingRolesPayload!
   lockEventVotingRoles(eventId: Int!): LockEventVotingRolesPayload!
+  unlockEventVotingRoles(eventId: Int!): UnlockEventVotingRolesPayload!
+  startEventNominations(eventId: Int!): StartEventNominationsPayload!
+  stopEventNominations(eventId: Int!): StopEventNominationsPayload!
+  allowEventVoting(eventId: Int!): AllowEventVotingPayload!
+  stopEventVoting(eventId: Int!): StopEventVotingPayload!
   nominateEventVotingRole(eventId: Int!, roleId: Int!): NominateEventVotingRolePayload!
   withdrawEventVotingRole(eventId: Int!, roleId: Int!): WithdrawEventVotingRolePayload!
 `;
@@ -383,6 +459,9 @@ export const eventDetailsResolvers = {
       const loggedInUserId = await getLoggedInUserId(context);
       const supportsEventDisplayName = await hasEventsDisplayNameColumn();
       const supportsVotingRolesLocked = await hasEventsVotingRolesLockedColumn();
+      const supportsVotingEnabled = await hasEventsVotingEnabledColumn();
+      const supportsVotingClosed = await hasEventsVotingClosedColumn();
+      const supportsVotingPhaseState = await hasEventsVotingPhaseStateColumn();
 
       const eventResult = await query<any[]>(`
         SELECT
@@ -405,6 +484,9 @@ export const eventDetailsResolvers = {
           e.updated_by AS updatedBy,
           e.created_at AS createdAt,
           ${supportsVotingRolesLocked ? 'COALESCE(e.voting_roles_locked, 0)' : '0'} AS votingRolesLocked
+          ${supportsVotingEnabled ? ', COALESCE(e.voting_enabled, 0) AS votingEnabled' : ', 0 AS votingEnabled'}
+          ${supportsVotingClosed ? ', COALESCE(e.voting_closed, 0) AS votingClosed' : ', 0 AS votingClosed'}
+          ${supportsVotingPhaseState ? ', COALESCE(e.voting_phase_state, 0) AS votingPhaseState' : ', 0 AS votingPhaseState'}
         FROM events e
         LEFT JOIN committees c ON c.id = e.committee_id
         WHERE e.id = ?
@@ -589,6 +671,9 @@ export const eventDetailsResolvers = {
         committeeMemberCount,
         committeeAdminCount,
         votingRolesLocked: Number(event.votingRolesLocked || 0) === 1,
+        votingEnabled: Number(event.votingEnabled || 0) === 1,
+        votingClosed: Number(event.votingClosed || 0) === 1,
+        votingPhaseState: getEventVotingPhaseState(event, supportsVotingPhaseState),
         totalNominations: Number(nominationMeta.totalNominations || 0),
         myNominatedRoleId: nominationMeta.myNominatedRoleId !== null ? Number(nominationMeta.myNominatedRoleId) : null
       };
@@ -607,12 +692,16 @@ export const eventDetailsResolvers = {
 
       const loggedInUserId = await getLoggedInUserId(context);
       const supportsVotingRolesLocked = await hasEventsVotingRolesLockedColumn();
+      const supportsVotingEnabled = await hasEventsVotingEnabledColumn();
+      const supportsVotingClosed = await hasEventsVotingClosedColumn();
 
       const eventRows = await query<any[]>(
         `SELECT
            id,
            committee_id AS committeeId,
-           ${supportsVotingRolesLocked ? 'COALESCE(voting_roles_locked, 0)' : '0'} AS votingRolesLocked
+           ${supportsVotingRolesLocked ? 'COALESCE(voting_roles_locked, 0)' : '0'} AS votingRolesLocked,
+             ${supportsVotingEnabled ? 'COALESCE(voting_enabled, 0)' : '0'} AS votingEnabled,
+             ${supportsVotingClosed ? 'COALESCE(voting_closed, 0)' : '0'} AS votingClosed
          FROM events
          WHERE id = ?
          LIMIT 1`,
@@ -640,6 +729,14 @@ export const eventDetailsResolvers = {
 
       if (Number(event.votingRolesLocked || 0) === 1) {
         throwEventError('FORBIDDEN', 'Voting role selection is locked for this event and cannot be changed');
+      }
+
+      if (Number(event.votingEnabled || 0) === 1) {
+        throwEventError('FORBIDDEN', 'Voting is already enabled for this event; role selection cannot be changed');
+      }
+
+      if (Number(event.votingClosed || 0) === 1) {
+        throwEventError('FORBIDDEN', 'Voting has been closed for this event; role selection cannot be changed');
       }
 
       if (roleIds.length > 0) {
@@ -676,6 +773,227 @@ export const eventDetailsResolvers = {
     },
 
     async lockEventVotingRoles(_: any, args: { eventId: number }, context: any) {
+      const eventId = Number(args?.eventId);
+      if (!Number.isInteger(eventId) || eventId <= 0) {
+        throwEventError('BAD_REQUEST', 'eventId must be a positive integer');
+      }
+
+      const supportsVotingRolesLocked = await hasEventsVotingRolesLockedColumn();
+      const supportsVotingEnabled = await hasEventsVotingEnabledColumn();
+      const supportsVotingClosed = await hasEventsVotingClosedColumn();
+      const supportsVotingPhaseState = await hasEventsVotingPhaseStateColumn();
+      if (!supportsVotingRolesLocked) {
+        throwEventError('INTERNAL', 'Voting roles lock column is missing. Please run latest migrations.');
+      }
+      if (!supportsVotingEnabled) {
+        throwEventError('INTERNAL', 'Voting enabled column is missing. Please run latest migrations.');
+      }
+      if (!supportsVotingClosed) {
+        throwEventError('INTERNAL', 'Voting closed column is missing. Please run latest migrations.');
+      }
+      if (!supportsVotingPhaseState) {
+        throwEventError('INTERNAL', 'Voting phase state column is missing. Please run latest migrations.');
+      }
+
+      const loggedInUserId = await getLoggedInUserId(context);
+
+      const eventRows = await query<Array<RowDataPacket & {
+        id: number;
+        committeeId: number;
+        votingRolesLocked: number;
+        votingEnabled: number;
+        votingClosed: number;
+        votingPhaseState: number;
+      }>>(
+        `SELECT
+           id,
+           committee_id AS committeeId,
+           COALESCE(voting_roles_locked, 0) AS votingRolesLocked,
+           COALESCE(voting_enabled, 0) AS votingEnabled,
+           COALESCE(voting_closed, 0) AS votingClosed,
+           COALESCE(voting_phase_state, 0) AS votingPhaseState
+         FROM events
+         WHERE id = ?
+         LIMIT 1`,
+        [eventId]
+      );
+
+      if (!eventRows.length) {
+        throwEventError('NOT_FOUND', 'Event not found');
+      }
+
+      const event = eventRows[0];
+
+      const membershipRows = await query<Array<RowDataPacket & { isCommitteeAdmin: number }>>(
+        `SELECT is_committee_admin AS isCommitteeAdmin
+         FROM users_committees
+         WHERE committee_id = ? AND user_id = ?
+         LIMIT 1`,
+        [Number(event.committeeId), loggedInUserId]
+      );
+
+      const isCommitteeAdmin = Boolean(membershipRows[0] && Number(membershipRows[0].isCommitteeAdmin) === 1);
+      if (!isCommitteeAdmin) {
+        throwEventError('FORBIDDEN', 'Only committee admin can lock voting role selection');
+      }
+
+      if (Number(event.votingRolesLocked || 0) !== 1) {
+        await query(
+          `UPDATE events
+           SET voting_roles_locked = 1,
+               voting_phase_state = 0,
+               voting_enabled = 0,
+               voting_closed = 0,
+               updated_by = ?
+           WHERE id = ?`,
+          [loggedInUserId, eventId]
+        );
+      }
+
+      return {
+        eventId,
+        votingRolesLocked: true
+      };
+    },
+
+    async startEventNominations(_: any, args: { eventId: number }, context: any) {
+      const eventId = Number(args?.eventId);
+      if (!Number.isInteger(eventId) || eventId <= 0) {
+        throwEventError('BAD_REQUEST', 'eventId must be a positive integer');
+      }
+
+      const supportsVotingRolesLocked = await hasEventsVotingRolesLockedColumn();
+      const supportsVotingPhaseState = await hasEventsVotingPhaseStateColumn();
+      if (!supportsVotingRolesLocked || !supportsVotingPhaseState) {
+        throwEventError('INTERNAL', 'Voting phase columns are missing. Please run latest migrations.');
+      }
+
+      const loggedInUserId = await getLoggedInUserId(context);
+
+      const eventRows = await query<Array<RowDataPacket & {
+        id: number;
+        committeeId: number;
+        votingRolesLocked: number;
+        votingPhaseState: number;
+      }>>(
+        `SELECT
+           id,
+           committee_id AS committeeId,
+           COALESCE(voting_roles_locked, 0) AS votingRolesLocked,
+           COALESCE(voting_phase_state, 0) AS votingPhaseState
+         FROM events
+         WHERE id = ?
+         LIMIT 1`,
+        [eventId]
+      );
+
+      if (!eventRows.length) {
+        throwEventError('NOT_FOUND', 'Event not found');
+      }
+
+      const event = eventRows[0];
+
+      const membershipRows = await query<Array<RowDataPacket & { isCommitteeAdmin: number }>>(
+        `SELECT is_committee_admin AS isCommitteeAdmin
+         FROM users_committees
+         WHERE committee_id = ? AND user_id = ?
+         LIMIT 1`,
+        [Number(event.committeeId), loggedInUserId]
+      );
+
+      const isCommitteeAdmin = Boolean(membershipRows[0] && Number(membershipRows[0].isCommitteeAdmin) === 1);
+      if (!isCommitteeAdmin) {
+        throwEventError('FORBIDDEN', 'Only committee admin can start nominations');
+      }
+
+      if (Number(event.votingRolesLocked || 0) !== 1) {
+        throwEventError('BAD_REQUEST', 'Lock voting roles before starting nominations');
+      }
+
+      if (Number(event.votingPhaseState || 0) !== 0) {
+        throwEventError('BAD_REQUEST', 'Nominations have already been started for this event');
+      }
+
+      await query(
+        `UPDATE events
+         SET voting_phase_state = 1,
+             updated_by = ?
+         WHERE id = ?`,
+        [loggedInUserId, eventId]
+      );
+
+      return {
+        eventId,
+        votingPhaseState: 1
+      };
+    },
+
+    async stopEventNominations(_: any, args: { eventId: number }, context: any) {
+      const eventId = Number(args?.eventId);
+      if (!Number.isInteger(eventId) || eventId <= 0) {
+        throwEventError('BAD_REQUEST', 'eventId must be a positive integer');
+      }
+
+      const supportsVotingPhaseState = await hasEventsVotingPhaseStateColumn();
+      if (!supportsVotingPhaseState) {
+        throwEventError('INTERNAL', 'Voting phase state column is missing. Please run latest migrations.');
+      }
+
+      const loggedInUserId = await getLoggedInUserId(context);
+
+      const eventRows = await query<Array<RowDataPacket & {
+        id: number;
+        committeeId: number;
+        votingPhaseState: number;
+      }>>(
+        `SELECT
+           id,
+           committee_id AS committeeId,
+           COALESCE(voting_phase_state, 0) AS votingPhaseState
+         FROM events
+         WHERE id = ?
+         LIMIT 1`,
+        [eventId]
+      );
+
+      if (!eventRows.length) {
+        throwEventError('NOT_FOUND', 'Event not found');
+      }
+
+      const event = eventRows[0];
+
+      const membershipRows = await query<Array<RowDataPacket & { isCommitteeAdmin: number }>>(
+        `SELECT is_committee_admin AS isCommitteeAdmin
+         FROM users_committees
+         WHERE committee_id = ? AND user_id = ?
+         LIMIT 1`,
+        [Number(event.committeeId), loggedInUserId]
+      );
+
+      const isCommitteeAdmin = Boolean(membershipRows[0] && Number(membershipRows[0].isCommitteeAdmin) === 1);
+      if (!isCommitteeAdmin) {
+        throwEventError('FORBIDDEN', 'Only committee admin can stop nominations');
+      }
+
+      if (Number(event.votingPhaseState || 0) !== 1) {
+        throwEventError('BAD_REQUEST', 'Nominations are not active for this event');
+      }
+
+      await query(
+        `UPDATE events
+         SET voting_phase_state = 2,
+             updated_by = ?
+         WHERE id = ?`,
+        [loggedInUserId, eventId]
+      );
+
+      return {
+        eventId,
+        votingPhaseState: 2
+      };
+    },
+
+    async unlockEventVotingRoles(_: any, args: { eventId: number }, context: any) {
       const eventId = Number(args?.eventId);
       if (!Number.isInteger(eventId) || eventId <= 0) {
         throwEventError('BAD_REQUEST', 'eventId must be a positive integer');
@@ -719,13 +1037,13 @@ export const eventDetailsResolvers = {
 
       const isCommitteeAdmin = Boolean(membershipRows[0] && Number(membershipRows[0].isCommitteeAdmin) === 1);
       if (!isCommitteeAdmin) {
-        throwEventError('FORBIDDEN', 'Only committee admin can lock voting role selection');
+        throwEventError('FORBIDDEN', 'Only committee admin can allow voting');
       }
 
-      if (Number(event.votingRolesLocked || 0) !== 1) {
+      if (Number(event.votingRolesLocked || 0) !== 0) {
         await query(
           `UPDATE events
-           SET voting_roles_locked = 1,
+           SET voting_roles_locked = 0,
                updated_by = ?
            WHERE id = ?`,
           [loggedInUserId, eventId]
@@ -734,7 +1052,165 @@ export const eventDetailsResolvers = {
 
       return {
         eventId,
-        votingRolesLocked: true
+        votingRolesLocked: false
+      };
+    },
+
+    async allowEventVoting(_: any, args: { eventId: number }, context: any) {
+      const eventId = Number(args?.eventId);
+      if (!Number.isInteger(eventId) || eventId <= 0) {
+        throwEventError('BAD_REQUEST', 'eventId must be a positive integer');
+      }
+
+      const supportsVotingEnabled = await hasEventsVotingEnabledColumn();
+      const supportsVotingClosed = await hasEventsVotingClosedColumn();
+      const supportsVotingPhaseState = await hasEventsVotingPhaseStateColumn();
+      if (!supportsVotingEnabled || !supportsVotingClosed || !supportsVotingPhaseState) {
+        throwEventError('INTERNAL', 'Voting phase columns are missing. Please run latest migrations.');
+      }
+
+      const loggedInUserId = await getLoggedInUserId(context);
+
+      const eventRows = await query<Array<RowDataPacket & {
+        id: number;
+        committeeId: number;
+        votingRolesLocked: number;
+        votingEnabled: number;
+        votingClosed: number;
+        votingPhaseState: number;
+      }>>(
+        `SELECT
+           id,
+           committee_id AS committeeId,
+           COALESCE(voting_roles_locked, 0) AS votingRolesLocked,
+           COALESCE(voting_enabled, 0) AS votingEnabled,
+           COALESCE(voting_closed, 0) AS votingClosed,
+           COALESCE(voting_phase_state, 0) AS votingPhaseState
+         FROM events
+         WHERE id = ?
+         LIMIT 1`,
+        [eventId]
+      );
+
+      if (!eventRows.length) {
+        throwEventError('NOT_FOUND', 'Event not found');
+      }
+
+      const event = eventRows[0];
+
+      const membershipRows = await query<Array<RowDataPacket & { isCommitteeAdmin: number }>>(
+        `SELECT is_committee_admin AS isCommitteeAdmin
+         FROM users_committees
+         WHERE committee_id = ? AND user_id = ?
+         LIMIT 1`,
+        [Number(event.committeeId), loggedInUserId]
+      );
+
+      const isCommitteeAdmin = Boolean(membershipRows[0] && Number(membershipRows[0].isCommitteeAdmin) === 1);
+      if (!isCommitteeAdmin) {
+        throwEventError('FORBIDDEN', 'Only committee admin can allow voting');
+      }
+
+      if (Number(event.votingRolesLocked || 0) !== 1) {
+        throwEventError('BAD_REQUEST', 'Lock voting roles before allowing voting');
+      }
+
+      if (Number(event.votingPhaseState || 0) !== 2) {
+        throwEventError('BAD_REQUEST', 'Stop nominations before starting voting');
+      }
+
+      if (Number(event.votingEnabled || 0) !== 1) {
+        await query(
+          `UPDATE events
+           SET voting_enabled = 1,
+               voting_closed = 0,
+               voting_phase_state = 3,
+               updated_by = ?
+           WHERE id = ?`,
+          [loggedInUserId, eventId]
+        );
+      }
+
+      return {
+        eventId,
+        votingEnabled: true
+      };
+    },
+
+    async stopEventVoting(_: any, args: { eventId: number }, context: any) {
+      const eventId = Number(args?.eventId);
+      if (!Number.isInteger(eventId) || eventId <= 0) {
+        throwEventError('BAD_REQUEST', 'eventId must be a positive integer');
+      }
+
+      const supportsVotingEnabled = await hasEventsVotingEnabledColumn();
+      const supportsVotingClosed = await hasEventsVotingClosedColumn();
+      const supportsVotingPhaseState = await hasEventsVotingPhaseStateColumn();
+      if (!supportsVotingEnabled || !supportsVotingClosed || !supportsVotingPhaseState) {
+        throwEventError('INTERNAL', 'Voting phase columns are missing. Please run latest migrations.');
+      }
+
+      const loggedInUserId = await getLoggedInUserId(context);
+
+      const eventRows = await query<Array<RowDataPacket & {
+        id: number;
+        committeeId: number;
+        votingEnabled: number;
+        votingClosed: number;
+        votingPhaseState: number;
+      }>>(
+        `SELECT
+           id,
+           committee_id AS committeeId,
+           COALESCE(voting_enabled, 0) AS votingEnabled,
+           COALESCE(voting_closed, 0) AS votingClosed,
+           COALESCE(voting_phase_state, 0) AS votingPhaseState
+         FROM events
+         WHERE id = ?
+         LIMIT 1`,
+        [eventId]
+      );
+
+      if (!eventRows.length) {
+        throwEventError('NOT_FOUND', 'Event not found');
+      }
+
+      const event = eventRows[0];
+
+      const membershipRows = await query<Array<RowDataPacket & { isCommitteeAdmin: number }>>(
+        `SELECT is_committee_admin AS isCommitteeAdmin
+         FROM users_committees
+         WHERE committee_id = ? AND user_id = ?
+         LIMIT 1`,
+        [Number(event.committeeId), loggedInUserId]
+      );
+
+      const isCommitteeAdmin = Boolean(membershipRows[0] && Number(membershipRows[0].isCommitteeAdmin) === 1);
+      if (!isCommitteeAdmin) {
+        throwEventError('FORBIDDEN', 'Only committee admin can stop voting');
+      }
+
+      if (Number(event.votingEnabled || 0) !== 1) {
+        throwEventError('BAD_REQUEST', 'Voting is not active for this event');
+      }
+
+      if (Number(event.votingPhaseState || 0) !== 3) {
+        throwEventError('BAD_REQUEST', 'Voting must be started before it can be stopped');
+      }
+
+      await query(
+        `UPDATE events
+         SET voting_enabled = 0,
+             voting_closed = 1,
+             voting_phase_state = 4,
+             updated_by = ?
+         WHERE id = ?`,
+        [loggedInUserId, eventId]
+      );
+
+      return {
+        eventId,
+        votingClosed: true
       };
     },
 
@@ -752,8 +1228,14 @@ export const eventDetailsResolvers = {
 
       const loggedInUserId = await getLoggedInUserId(context);
 
-      const eventRows = await query<Array<RowDataPacket & { id: number; committeeId: number }>>(
-        `SELECT id, committee_id AS committeeId FROM events WHERE id = ? LIMIT 1`,
+      const eventRows = await query<Array<RowDataPacket & { id: number; committeeId: number; votingPhaseState: number }>>(
+        `SELECT
+           id,
+           committee_id AS committeeId,
+           COALESCE(voting_phase_state, 0) AS votingPhaseState
+         FROM events
+         WHERE id = ?
+         LIMIT 1`,
         [eventId]
       );
 
@@ -778,6 +1260,10 @@ export const eventDetailsResolvers = {
       const isOnlyMember = Boolean(membership && Number(membership.isCommitteeMember) === 1 && Number(membership.isCommitteeAdmin) !== 1);
       if (!isOnlyMember) {
         throwEventError('FORBIDDEN', 'Only group members can nominate themselves');
+      }
+
+      if (Number(eventRows[0].votingPhaseState || 0) !== 1) {
+        throwEventError('FORBIDDEN', 'Nominations are not open for this event');
       }
 
       const mappedRoleRows = await query<Array<RowDataPacket & { roleId: number }>>(
@@ -844,8 +1330,14 @@ export const eventDetailsResolvers = {
 
       const loggedInUserId = await getLoggedInUserId(context);
 
-      const eventRows = await query<Array<RowDataPacket & { id: number; committeeId: number }>>(
-        `SELECT id, committee_id AS committeeId FROM events WHERE id = ? LIMIT 1`,
+      const eventRows = await query<Array<RowDataPacket & { id: number; committeeId: number; votingPhaseState: number }>>(
+        `SELECT
+           id,
+           committee_id AS committeeId,
+           COALESCE(voting_phase_state, 0) AS votingPhaseState
+         FROM events
+         WHERE id = ?
+         LIMIT 1`,
         [eventId]
       );
 
@@ -870,6 +1362,10 @@ export const eventDetailsResolvers = {
       const isOnlyMember = Boolean(membership && Number(membership.isCommitteeMember) === 1 && Number(membership.isCommitteeAdmin) !== 1);
       if (!isOnlyMember) {
         throwEventError('FORBIDDEN', 'Only group members can withdraw their nomination');
+      }
+
+      if (Number(eventRows[0].votingPhaseState || 0) !== 1) {
+        throwEventError('FORBIDDEN', 'Nomination withdrawal is closed because nominations are not open for this event');
       }
 
       const existingNominationRows = await query<Array<RowDataPacket & { roleId: number }>>(

@@ -538,6 +538,7 @@ export class GroupDetailsComponent implements OnInit {
       panelClass: 'slide-in-dialog',
       data: {
         committeeId: committee.committeeId,
+        committeeName: committee.committeeName || '',
         address: committee.address || '',
         eventType
       }
@@ -546,7 +547,6 @@ export class GroupDetailsComponent implements OnInit {
     dialogRef.afterClosed().subscribe((result) => {
       document.body.classList.remove('dialog-open');
       if (result) {
-        this.notifier.success(`Event "${result.eventName}" created successfully!`);
         if (committee.committeeId) {
           this.hierarchyTreeService.triggerHierarchyTreeRefresh();
           this.fetchCommitteeEvents(committee.committeeId);

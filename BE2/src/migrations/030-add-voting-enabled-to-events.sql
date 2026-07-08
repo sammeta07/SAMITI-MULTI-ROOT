@@ -1,0 +1,2 @@
+ALTER TABLE events
+ADD COLUMN voting_enabled TINYINT(1) NOT NULL DEFAULT 0;

@@ -1,0 +1,2 @@
+ALTER TABLE events
+ADD COLUMN voting_closed TINYINT(1) NOT NULL DEFAULT 0;
