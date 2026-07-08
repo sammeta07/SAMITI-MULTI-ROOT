@@ -159,7 +159,13 @@
                     @for (event of getEventsByYear(committee, year); track event.eventId) {
                     <div class="event-card">
                       <div class="event-card-surface">
-                        <div class="event-card-banner" role="button" tabindex="0" (click)="openEventDetails(event.eventId, $event)">
+                        <div class="event-card-banner"
+                             role="button"
+                             tabindex="0"
+                             [ngStyle]="(event.bannerImages.length || event.eventBanner)
+                               ? {'background-image': 'url(' + (event.bannerImages.length ? event.bannerImages[getBannerIndex(event.eventId)] : event.eventBanner) + ')'}
+                               : null"
+                             (click)="openEventDetails(event.eventId, $event)">
                           @if (event.bannerImages.length > 1) {
                             <div class="banner-carousel">
                               <img [src]="event.bannerImages[getBannerIndex(event.eventId)]"
@@ -190,7 +196,7 @@
                           }
                           <div class="event-banner-overlay">
                             <span class="event-status-badge event-status-{{ event.status | lowercase }}">{{ event.status }}</span>
-                            <span class="event-visibility-badge">{{ event.visibility === 'VISIBLE' ? 'Public' : 'Private' }}</span>
+                            <span class="event-visibility-badge">21st year</span>
                           </div>
                         </div>
 
@@ -202,9 +208,6 @@
                             </button>
                           </div>
                           <div class="event-card-meta">
-                            <span class="event-meta-chip event-type-chip">
-                              <mat-icon>category</mat-icon>{{ event.type === 'PUBLIC' ? 'Public' : 'Private' }}
-                            </span>
                             @if (event.startDate) {
                             <span class="event-meta-chip">
                               <mat-icon>calendar_today</mat-icon>{{ event.startDate | date:'dd MMM yyyy' }}

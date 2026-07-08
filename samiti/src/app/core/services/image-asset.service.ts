@@ -48,6 +48,9 @@ interface ImageOptimizationPlan {
   maxHeight: number;
   targetQuality: number;
   forceSquareCrop: boolean;
+  fixedOutputWidth?: number;
+  fixedOutputHeight?: number;
+  useSourceBackgroundFill?: boolean;
 }
 
 @Injectable({
@@ -164,11 +167,14 @@ export class ImageAssetService {
     if (usageContext === 'EVENT_BANNER') {
       return {
         usageContext,
-        preferredResizeMode: 'INSIDE',
-        maxWidth: 900,
-        maxHeight: 506,
-        targetQuality: 55,
-        forceSquareCrop: false
+        preferredResizeMode: 'COVER',
+        maxWidth: 1280,
+        maxHeight: 720,
+        targetQuality: 62,
+        forceSquareCrop: false,
+        fixedOutputWidth: 1280,
+        fixedOutputHeight: 720,
+        useSourceBackgroundFill: true
       };
     }
 
@@ -198,14 +204,20 @@ export class ImageAssetService {
       cropSourceY = Math.floor((imageBitmap.height - minEdge) / 2);
     }
 
+    const hasFixedOutputSize = Boolean(plan.fixedOutputWidth && plan.fixedOutputHeight);
+
     const resizeRatio = Math.min(
       plan.maxWidth / cropSourceWidth,
       plan.maxHeight / cropSourceHeight,
       1
     );
 
-    const outputWidth = Math.max(1, Math.round(cropSourceWidth * resizeRatio));
-    const outputHeight = Math.max(1, Math.round(cropSourceHeight * resizeRatio));
+    const outputWidth = hasFixedOutputSize
+      ? Number(plan.fixedOutputWidth)
+      : Math.max(1, Math.round(cropSourceWidth * resizeRatio));
+    const outputHeight = hasFixedOutputSize
+      ? Number(plan.fixedOutputHeight)
+      : Math.max(1, Math.round(cropSourceHeight * resizeRatio));
 
     const canvas = document.createElement('canvas');
     canvas.width = outputWidth;
@@ -216,17 +228,63 @@ export class ImageAssetService {
       throw new Error('Unable to initialize image processing canvas context.');
     }
 
-    drawingContext.drawImage(
-      imageBitmap,
-      cropSourceX,
-      cropSourceY,
-      cropSourceWidth,
-      cropSourceHeight,
-      0,
-      0,
-      outputWidth,
-      outputHeight
-    );
+    if (hasFixedOutputSize) {
+      drawingContext.fillStyle = '#0f172a';
+      drawingContext.fillRect(0, 0, outputWidth, outputHeight);
+
+      if (plan.useSourceBackgroundFill) {
+        const backgroundScale = Math.max(outputWidth / cropSourceWidth, outputHeight / cropSourceHeight);
+        const backgroundWidth = cropSourceWidth * backgroundScale;
+        const backgroundHeight = cropSourceHeight * backgroundScale;
+        const backgroundX = (outputWidth - backgroundWidth) / 2;
+        const backgroundY = (outputHeight - backgroundHeight) / 2;
+
+        drawingContext.save();
+        drawingContext.filter = 'blur(14px) brightness(0.62)';
+        drawingContext.drawImage(
+          imageBitmap,
+          cropSourceX,
+          cropSourceY,
+          cropSourceWidth,
+          cropSourceHeight,
+          backgroundX,
+          backgroundY,
+          backgroundWidth,
+          backgroundHeight
+        );
+        drawingContext.restore();
+      }
+
+      const foregroundScale = Math.min(outputWidth / cropSourceWidth, outputHeight / cropSourceHeight);
+      const foregroundWidth = cropSourceWidth * foregroundScale;
+      const foregroundHeight = cropSourceHeight * foregroundScale;
+      const foregroundX = (outputWidth - foregroundWidth) / 2;
+      const foregroundY = (outputHeight - foregroundHeight) / 2;
+
+      drawingContext.drawImage(
+        imageBitmap,
+        cropSourceX,
+        cropSourceY,
+        cropSourceWidth,
+        cropSourceHeight,
+        foregroundX,
+        foregroundY,
+        foregroundWidth,
+        foregroundHeight
+      );
+    } else {
+      drawingContext.drawImage(
+        imageBitmap,
+        cropSourceX,
+        cropSourceY,
+        cropSourceWidth,
+        cropSourceHeight,
+        0,
+        0,
+        outputWidth,
+        outputHeight
+      );
+    }
 
     return canvas.toDataURL('image/webp', plan.targetQuality / 100);
   }
