@@ -74,40 +74,4 @@ export class AccountService {
     );
   }
 
-  getAccount(): Observable<AccountUpdateResponse> {
-    const query = `query MyAccount {
-      myAccount {
-        data {
-          userId
-          name
-          email
-          mobile
-          photo
-        }
-      }
-    }`;
-
-    const token = this.authService.getToken();
-    const headers: Record<string, string> = {};
-    if (token) {
-      headers['Authorization'] = `Bearer ${token}`;
-    }
-
-    return this.http.post<GraphQLResponseEnvelope<{ myAccount: any }>>(
-      this.graphqlUrl,
-      { query },
-      {
-        withCredentials: true,
-        headers
-      }
-    ).pipe(
-      map((res) => {
-        if (res.errors?.length) {
-          throw new Error(res.errors[0].message || 'Failed to load account');
-        }
-
-        return res.data?.myAccount?.data;
-      })
-    );
-  }
 }

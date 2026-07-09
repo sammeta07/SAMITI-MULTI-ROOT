@@ -21,6 +21,27 @@ type LoginUserRow = RowDataPacket & {
   deleted_at: string | null;
 };
 
+type LoginCommitteeRoleRow = RowDataPacket & {
+  committee_id: number;
+  committee_name: string;
+  committee_logo: string | null;
+  committee_role: string | null;
+  is_committee_admin: number;
+  is_committee_member: number;
+};
+
+type LoginEventRoleRow = RowDataPacket & {
+  event_id: number;
+  event_name: string;
+  committee_id: number;
+  committee_name: string;
+  committee_logo: string | null;
+  designation: string | null;
+  membership_status: string | null;
+  event_status: string | null;
+  event_visibility: string | null;
+};
+
 type CountRow = RowDataPacket & {
   total_count: number;
 };
@@ -42,6 +63,34 @@ export const loginTypes = `
     isVerified: Boolean
     emailVerifiedAt: String
     deletedAt: String
+    accountRoles: AccountRolesSnapshot
+  }
+
+  type LoginCommitteeRoleSnapshot {
+    committeeId: Int!
+    committeeName: String!
+    committeeLogo: String
+    committeeRole: String!
+    roleLabel: String!
+    isCommitteeAdmin: Int!
+    isCommitteeMember: Int!
+  }
+
+  type LoginEventRoleSnapshot {
+    eventId: Int!
+    eventName: String!
+    committeeId: Int!
+    committeeName: String!
+    committeeLogo: String
+    designation: String!
+    membershipStatus: String!
+    eventStatus: String
+    eventVisibility: String
+  }
+
+  type AccountRolesSnapshot {
+    committees: [LoginCommitteeRoleSnapshot!]!
+    events: [LoginEventRoleSnapshot!]!
   }
 
   type LoginPayload {
@@ -146,6 +195,68 @@ export const loginResolvers = {
         baseRoleSet.add('DASHBOARD_USER');
       }
 
+      const committeeRoleRows = await query<LoginCommitteeRoleRow[]>(
+        `SELECT
+          c.id AS committee_id,
+          c.committee_name,
+          c.logo AS committee_logo,
+          cm.committee_role,
+          CASE WHEN cm.committee_role IN ('COMMITTEE_ADMIN', 'COMMITTEE_MASTER_ADMIN') THEN 1 ELSE 0 END AS is_committee_admin,
+          CASE WHEN cm.committee_role IN ('COMMITTEE_MEMBER', 'COMMITTEE_ADMIN', 'COMMITTEE_MASTER_ADMIN') THEN 1 ELSE 0 END AS is_committee_member
+         FROM users_committees cm
+         INNER JOIN committees c ON c.id = cm.committee_id
+         WHERE cm.user_id = ?
+           AND cm.committee_role IN ('COMMITTEE_MEMBER', 'COMMITTEE_ADMIN', 'COMMITTEE_MASTER_ADMIN')
+         ORDER BY c.committee_name ASC`,
+        [user.id]
+      ).catch(() => []);
+
+      const eventRoleRows = await query<LoginEventRoleRow[]>(
+        `SELECT
+          e.id AS event_id,
+          e.name AS event_name,
+          c.id AS committee_id,
+          c.committee_name,
+          c.logo AS committee_logo,
+          UPPER(COALESCE(NULLIF(TRIM(ue.designation), ''), 'MEMBER')) AS designation,
+          UPPER(COALESCE(NULLIF(TRIM(ue.status), ''), 'ACTIVE')) AS membership_status,
+          e.status AS event_status,
+          e.visibility AS event_visibility
+         FROM users_events ue
+         INNER JOIN events e ON e.id = ue.event_id
+         INNER JOIN committees c ON c.id = e.committee_id
+         WHERE ue.user_id = ?
+         ORDER BY c.committee_name ASC, e.name ASC`,
+        [user.id]
+      ).catch(() => []);
+
+      const accountRoles = {
+        committees: committeeRoleRows.map((row) => ({
+          committeeId: Number(row.committee_id),
+          committeeName: row.committee_name,
+          committeeLogo: row.committee_logo || null,
+          committeeRole: row.committee_role || 'COMMITTEE_MEMBER',
+          roleLabel: String(row.committee_role || 'COMMITTEE_MEMBER')
+            .replace(/^COMMITTEE_/, '')
+            .replace(/_/g, ' ')
+            .toLowerCase()
+            .replace(/\b\w/g, (ch) => ch.toUpperCase()),
+          isCommitteeAdmin: Number(row.is_committee_admin),
+          isCommitteeMember: Number(row.is_committee_member)
+        })),
+        events: eventRoleRows.map((row) => ({
+          eventId: Number(row.event_id),
+          eventName: row.event_name,
+          committeeId: Number(row.committee_id),
+          committeeName: row.committee_name,
+          committeeLogo: row.committee_logo || null,
+          designation: row.designation || 'MEMBER',
+          membershipStatus: row.membership_status || 'ACTIVE',
+          eventStatus: row.event_status || null,
+          eventVisibility: row.event_visibility || null
+        }))
+      };
+
       const sessionToken = context.jwt.sign({
         id: user.id,
         name: user.name,
@@ -178,7 +289,8 @@ export const loginResolvers = {
           status: user.status,
           isVerified: Boolean(user.is_verified),
           emailVerifiedAt: user.email_verified_at,
-          deletedAt: user.deleted_at
+          deletedAt: user.deleted_at,
+          accountRoles
         }
       };
     }

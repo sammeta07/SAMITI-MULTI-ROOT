@@ -5,7 +5,7 @@
       <mat-icon class="mode-indicator-icon">
         {{ isEditMode ? 'edit_note' : 'account_circle' }}
       </mat-icon>
-      <h2>{{ isEditMode ? 'Edit Profile Details' : 'My Account' }}</h2>
+      <h2>{{ isEditMode ? 'Edit Profile Details' : 'User Details' }}</h2>
     </div>
     
     <button mat-icon-button type="button" class="drawer-close-btn" (click)="onCancel()" aria-label="Close dialog">
@@ -13,136 +13,238 @@
     </button>
   </mat-toolbar>
 
-  <div class="dialog-body">
-    
-    <div class="photo-section user-avatar-axis-center">
-      <input
-        #avatarPhotoInput
-        type="file"
-        hidden
-        accept="image/*"
-        (change)="onAvatarPhotoSelected($event)"
-      >
+  <mat-tab-group class="account-tabs-shell" [selectedIndex]="selectedTabIndex()" (selectedIndexChange)="onTabChanged($event)">
+    <mat-tab>
+      <ng-template mat-tab-label>
+        <mat-icon>account_circle</mat-icon>
+        <span>My Account</span>
+      </ng-template>
 
-      <button
-        type="button"
-        class="user-photo dynamic-profile-circle photo-edit-trigger"
-        (click)="avatarPhotoInput.click()"
-        [disabled]="isLoading()"
-        [attr.aria-label]="isEditMode ? 'Change and crop profile photo' : 'Change profile photo'"
-      >
-        @if (photoUrl()) {
-          @if (isPhotoImage()) {
-            <img [src]="photoUrl()" alt="User Photo" class="photo-image img-avatar-fluid">
-          } @else {
-            <span class="initials alpha-char-bold">{{ photoUrl() }}</span>
-          }
-        } @else {
-          <mat-icon class="fallback-user-vector">person</mat-icon>
+      <div class="dialog-body">
+        
+        <div class="photo-section user-avatar-axis-center">
+          <input
+            #avatarPhotoInput
+            type="file"
+            hidden
+            accept="image/*"
+            (change)="onAvatarPhotoSelected($event)"
+          >
+
+          <button
+            type="button"
+            class="user-photo dynamic-profile-circle photo-edit-trigger"
+            (click)="avatarPhotoInput.click()"
+            [disabled]="isLoading()"
+            [attr.aria-label]="isEditMode ? 'Change and crop profile photo' : 'Change profile photo'"
+          >
+            @if (photoUrl()) {
+              @if (isPhotoImage()) {
+                <img [src]="photoUrl()" alt="User Photo" class="photo-image img-avatar-fluid">
+              } @else {
+                <span class="initials alpha-char-bold">{{ photoUrl() }}</span>
+              }
+            } @else {
+              <mat-icon class="fallback-user-vector">person</mat-icon>
+            }
+
+            <span class="photo-edit-overlay" aria-hidden="true">
+              <mat-icon>edit</mat-icon>
+            </span>
+          </button>
+        </div>
+
+        @if (!isEditMode) {
+          <div class="info-section samiti-clean-info-grid">
+            
+            <div class="grid-data-row">
+              <div class="info-icon-wrapper color-name"><mat-icon>person</mat-icon></div>
+              <div class="info-content text-frame-block">
+                <span class="info-label">Name</span>
+                <span class="info-value text-emphasis-bold">{{ (name | textFormatPipe:'title') || 'Not set' }}</span>
+              </div>
+            </div>
+
+            <div class="grid-data-row">
+              <div class="info-icon-wrapper color-email"><mat-icon>email</mat-icon></div>
+              <div class="info-content text-frame-block">
+                <span class="info-label">Email Address</span>
+                <span class="info-value text-emphasis-bold">{{ email || 'Not set' }}</span>
+              </div>
+            </div>
+
+            <div class="grid-data-row">
+              <div class="info-icon-wrapper color-mobile"><mat-icon>phone</mat-icon></div>
+              <div class="info-content text-frame-block">
+                <span class="info-label">Mobile Reference</span>
+                <span class="info-value text-emphasis-bold">{{ mobile || 'Not set' }}</span>
+              </div>
+            </div>
+
+            <div class="grid-data-row">
+              <div class="info-icon-wrapper color-birth"><mat-icon>cake</mat-icon></div>
+              <div class="info-content text-frame-block">
+                <span class="info-label">Date of Birth (DD-MMM-YYYY)</span>
+                <span class="info-value text-emphasis-bold">{{ dateOfBirth || 'Not set' }}</span>
+              </div>
+            </div>
+
+            <div class="grid-data-row">
+              <div class="info-icon-wrapper color-gender"><mat-icon>wc</mat-icon></div>
+              <div class="info-content text-frame-block">
+                <span class="info-label">Gender Demographics</span>
+                <span class="info-value text-emphasis-bold">{{ (gender | textFormatPipe:'title') || 'Not set' }}</span>
+              </div>
+            </div>
+            
+          </div>
         }
 
-        <span class="photo-edit-overlay" aria-hidden="true">
-          <mat-icon>edit</mat-icon>
-        </span>
-      </button>
-    </div>
+        @if (isEditMode) {
+          <form class="account-form register-form" autocomplete="off">
+            <div class="form-row-full">
+              <mat-form-field appearance="outline" class="samiti-custom-field">
+                <mat-label>Full Name</mat-label>
+                <input matInput [(ngModel)]="name" name="name" placeholder="Enter your profile identifier" required>
+                <mat-icon matPrefix>person</mat-icon>
+              </mat-form-field>
+            </div>
 
-    @if (!isEditMode) {
-      <div class="info-section samiti-clean-info-grid">
-        
-        <div class="grid-data-row">
-          <div class="info-icon-wrapper color-name"><mat-icon>person</mat-icon></div>
-          <div class="info-content text-frame-block">
-            <span class="info-label">Name</span>
-            <span class="info-value text-emphasis-bold">{{ (name | textFormatPipe:'title') || 'Not set' }}</span>
-          </div>
-        </div>
+            <div class="form-row-full">
+              <mat-form-field appearance="outline" class="samiti-custom-field">
+                <mat-label>Mobile Number</mat-label>
+                <input matInput [(ngModel)]="mobile" name="mobile" placeholder="Enter primary contact reference link" required type="tel" inputmode="tel" maxlength="20">
+                <mat-icon matPrefix>phone</mat-icon>
+              </mat-form-field>
+            </div>
 
-        <div class="grid-data-row">
-          <div class="info-icon-wrapper color-email"><mat-icon>email</mat-icon></div>
-          <div class="info-content text-frame-block">
-            <span class="info-label">Email Address</span>
-            <span class="info-value text-emphasis-bold">{{ email || 'Not set' }}</span>
-          </div>
-        </div>
-
-        <div class="grid-data-row">
-          <div class="info-icon-wrapper color-mobile"><mat-icon>phone</mat-icon></div>
-          <div class="info-content text-frame-block">
-            <span class="info-label">Mobile Reference</span>
-            <span class="info-value text-emphasis-bold">{{ mobile || 'Not set' }}</span>
-          </div>
-        </div>
-
-        <div class="grid-data-row">
-          <div class="info-icon-wrapper color-birth"><mat-icon>cake</mat-icon></div>
-          <div class="info-content text-frame-block">
-            <span class="info-label">Date of Birth (DD-MMM-YYYY)</span>
-            <span class="info-value text-emphasis-bold">{{ dateOfBirth || 'Not set' }}</span>
-          </div>
-        </div>
-
-        <div class="grid-data-row">
-          <div class="info-icon-wrapper color-gender"><mat-icon>wc</mat-icon></div>
-          <div class="info-content text-frame-block">
-            <span class="info-label">Gender Demographics</span>
-            <span class="info-value text-emphasis-bold">{{ (gender | textFormatPipe:'title') || 'Not set' }}</span>
-          </div>
-        </div>
-        
+            <div class="form-row-full">
+              <mat-form-field appearance="outline" class="samiti-custom-field readonly-input-spec">
+                <mat-label>Locked Email Address</mat-label>
+                <input matInput [(ngModel)]="email" name="email" readonly tabindex="-1">
+                <mat-icon matPrefix>email</mat-icon>
+              </mat-form-field>
+            </div>
+            
+          </form>
+        }
       </div>
-    }
+    </mat-tab>
 
-    @if (isEditMode) {
-      <form class="account-form register-form" autocomplete="off">
-        <div class="form-row-full">
-          <mat-form-field appearance="outline" class="samiti-custom-field">
-            <mat-label>Full Name</mat-label>
-            <input matInput [(ngModel)]="name" name="name" placeholder="Enter your profile identifier" required>
-            <mat-icon matPrefix>person</mat-icon>
-          </mat-form-field>
-        </div>
+    <mat-tab>
+      <ng-template mat-tab-label>
+        <mat-icon>badge</mat-icon>
+        <span>My Roles</span>
+      </ng-template>
 
-        <div class="form-row-full">
-          <mat-form-field appearance="outline" class="samiti-custom-field">
-            <mat-label>Mobile Number</mat-label>
-            <input matInput [(ngModel)]="mobile" name="mobile" placeholder="Enter primary contact reference link" required type="tel" inputmode="tel" maxlength="20">
-            <mat-icon matPrefix>phone</mat-icon>
-          </mat-form-field>
-        </div>
+      <div class="dialog-body roles-dialog-body">
+        @if (isRolesLoading()) {
+          <div class="roles-loading-state">
+            <mat-progress-spinner mode="indeterminate" diameter="30"></mat-progress-spinner>
+            <p>Loading your committee and event roles...</p>
+          </div>
+        } @else if (!hasRoles) {
+          <div class="roles-empty-state">
+            <mat-icon>workspace_premium</mat-icon>
+            <h3>No roles found</h3>
+            <p>Your committee memberships and event roles will appear here after they are assigned.</p>
+          </div>
+        } @else {
+          <section class="roles-panel-section">
+            <div class="roles-section-header">
+              <h3>Committee Roles</h3>
+              <span class="roles-count-pill">{{ committeeRoleCount }}</span>
+            </div>
 
-        <div class="form-row-full">
-          <mat-form-field appearance="outline" class="samiti-custom-field readonly-input-spec">
-            <mat-label>Locked Email Address</mat-label>
-            <input matInput [(ngModel)]="email" name="email" readonly tabindex="-1">
-            <mat-icon matPrefix>email</mat-icon>
-          </mat-form-field>
-        </div>
-        
-      </form>
-    }
-  </div>
+            @if (committeeRoleCount > 0) {
+              <div class="roles-card-list">
+                @for (committeeRole of committeeRoles(); track committeeRole.committeeId) {
+                  <article class="role-card">
+                    <div class="role-card-media">
+                      @if (committeeRole.committeeLogo) {
+                        <img [src]="committeeRole.committeeLogo" [alt]="committeeRole.committeeName" class="role-avatar-image">
+                      } @else {
+                        <div class="role-avatar-fallback">{{ committeeRole.committeeName.charAt(0) }}</div>
+                      }
+                    </div>
+                    <div class="role-card-content">
+                      <div class="role-card-title-row">
+                        <h4>{{ committeeRole.committeeName }}</h4>
+                        <span [class]="getRoleBadgeClass(committeeRole.committeeRole)">{{ committeeRole.roleLabel }}</span>
+                      </div>
+                      <p>Committee role: {{ committeeRole.committeeRole }}</p>
+                    </div>
+                  </article>
+                }
+              </div>
+            }
+          </section>
+
+          <section class="roles-panel-section">
+            <div class="roles-section-header">
+              <h3>Event Roles</h3>
+              <span class="roles-count-pill">{{ eventRoleCount }}</span>
+            </div>
+
+            @if (eventRoleCount > 0) {
+              <div class="roles-card-list">
+                @for (eventRole of eventRoles(); track eventRole.eventId) {
+                  <article class="role-card role-card-event">
+                    <div class="role-card-media">
+                      @if (eventRole.committeeLogo) {
+                        <img [src]="eventRole.committeeLogo" [alt]="eventRole.committeeName" class="role-avatar-image">
+                      } @else {
+                        <div class="role-avatar-fallback role-avatar-fallback-event">{{ eventRole.eventName.charAt(0) }}</div>
+                      }
+                    </div>
+                    <div class="role-card-content">
+                      <div class="role-card-title-row">
+                        <h4>{{ eventRole.eventName }}</h4>
+                        <span [class]="getRoleBadgeClass(eventRole.designation)">{{ getRoleLabel(eventRole.designation) }}</span>
+                      </div>
+                      <p>{{ eventRole.committeeName }}</p>
+                      <div class="role-meta-line">
+                        <span>Status: {{ eventRole.membershipStatus }}</span>
+                        @if (eventRole.eventStatus) {
+                          <span>Event: {{ eventRole.eventStatus }}</span>
+                        }
+                        @if (eventRole.eventVisibility) {
+                          <span>Visibility: {{ eventRole.eventVisibility }}</span>
+                        }
+                      </div>
+                    </div>
+                  </article>
+                }
+              </div>
+            }
+          </section>
+        }
+      </div>
+    </mat-tab>
+  </mat-tab-group>
 
   <footer class="drawer-action-footer">
     <button mat-button type="button" class="btn-cancel-flat" (click)="onCancel()">Cancel</button>
     
-    @if (!isEditMode) {
-      <button mat-flat-button type="button" class="submit-action-btn edit-trigger-theme" (click)="toggleEditMode()">
-        <mat-icon>edit_note</mat-icon>
-        <span>Edit Profile</span>
-      </button>
-    } @else {
-      <button mat-flat-button type="button" class="submit-action-btn" (click)="onSave()" [disabled]="!name || !mobile || isLoading()">
-        @if (isLoading()) {
-          <mat-progress-spinner mode="indeterminate" diameter="16" class="inline-spinner-btn"></mat-progress-spinner>
-          <span>{{ isUploadingProfilePhoto() ? 'Uploading Image...' : 'Saving...' }}</span>
-        } @else {
-          <ng-container>
-            <mat-icon>check_circle</mat-icon>
-            <span>Save Changes</span>
-          </ng-container>
-        }
-      </button>
+    @if (selectedTabIndex() === 0) {
+      @if (!isEditMode) {
+        <button mat-flat-button type="button" class="submit-action-btn edit-trigger-theme" (click)="toggleEditMode()">
+          <mat-icon>edit_note</mat-icon>
+          <span>Edit Profile</span>
+        </button>
+      } @else {
+        <button mat-flat-button type="button" class="submit-action-btn" (click)="onSave()" [disabled]="!name || !mobile || isLoading()">
+          @if (isLoading()) {
+            <mat-progress-spinner mode="indeterminate" diameter="16" class="inline-spinner-btn"></mat-progress-spinner>
+            <span>{{ isUploadingProfilePhoto() ? 'Uploading Image...' : 'Saving...' }}</span>
+          } @else {
+            <ng-container>
+              <mat-icon>check_circle</mat-icon>
+              <span>Save Changes</span>
+            </ng-container>
+          }
+        </button>
+      }
     }
   </footer>
 

@@ -1,4 +1,5 @@
 import { query } from '../../config/db';
+import { hasEventsDisplayNameColumn } from '../events/event-display-name-support';
 
 const normalizeContactNumbers = (rawContactNumbers: unknown): string[] => {
   if (Array.isArray(rawContactNumbers)) {
@@ -23,6 +24,14 @@ const normalizeContactNumbers = (rawContactNumbers: unknown): string[] => {
   return [];
 };
 
+const normalizeEventDisplayName = (eventName: string, displayName: string | null, supportsDisplayName: boolean): string => {
+  if (supportsDisplayName && typeof displayName === 'string' && displayName.trim().length > 0) {
+    return displayName.trim();
+  }
+
+  return eventName.slice(0, 20);
+};
+
 export const committeeDetailsTypes = `
   type CommitteeMember {
     id: Int!
@@ -31,6 +40,24 @@ export const committeeDetailsTypes = `
     photo: String
     committeeRole: String
     isCommitteeAdmin: Int!
+  }
+
+  type CommitteeEvent {
+    id: Int!
+    eventId: Int!
+    committeeId: Int!
+    eventName: String!
+    eventDisplayName: String!
+    eventBanner: String
+    status: String!
+    category: String
+    type: String!
+    visibility: String!
+    startDate: String
+    endDate: String
+    createdBy: Int!
+    updatedBy: Int
+    createdAt: String
   }
 
   type CommitteeDetailsData {
@@ -48,6 +75,7 @@ export const committeeDetailsTypes = `
     loggedInUserAdminStatusActionBy: Int
     loggedInUserAdminStatusActionAt: String
     members: [CommitteeMember!]!
+    events: [CommitteeEvent!]!
   }
 `;
 
@@ -130,6 +158,50 @@ export const committeeDetailsResolvers = {
         : null;
       const loggedInUserAdminStatusActionAt = adminRequestRow.length > 0 ? adminRequestRow[0].action_at || null : null;
 
+      const supportsEventDisplayName = await hasEventsDisplayNameColumn();
+
+      const eventRows = await query<any[]>(`
+        SELECT
+          e.id,
+          e.id AS eventId,
+          e.committee_id AS committeeId,
+          e.name AS eventName,
+          ${supportsEventDisplayName ? "COALESCE(NULLIF(TRIM(e.display_name), ''), LEFT(e.name, 20))" : 'LEFT(e.name, 20)'} AS eventDisplayName,
+          e.address,
+          e.status,
+          e.category,
+          e.\`type\` AS type,
+          e.visibility,
+          DATE_FORMAT(e.start_date, '%Y-%m-%d') AS startDate,
+          DATE_FORMAT(e.end_date, '%Y-%m-%d') AS endDate,
+          e.created_by AS createdBy,
+          e.updated_by AS updatedBy,
+          e.created_at AS createdAt,
+          (
+            SELECT media_url
+            FROM event_media_assets ema
+            WHERE ema.event_id = e.id
+            ORDER BY ema.sort_order ASC, ema.id ASC
+            LIMIT 1
+          ) AS eventBanner
+        FROM events e
+        WHERE e.committee_id = ?
+        ORDER BY e.start_date ASC, e.name ASC
+      `, [committeeId]);
+
+      const hasCommitteeAccess = Boolean(
+        adminCheckResult.length > 0 &&
+        (
+          String(adminCheckResult[0].committee_role || '') === 'COMMITTEE_MEMBER' ||
+          String(adminCheckResult[0].committee_role || '') === 'COMMITTEE_ADMIN' ||
+          String(adminCheckResult[0].committee_role || '') === 'COMMITTEE_MASTER_ADMIN'
+        )
+      );
+
+      const visibleEvents = hasCommitteeAccess
+        ? eventRows
+        : eventRows.filter((event) => String(event.visibility || '').toUpperCase() === 'VISIBLE');
+
       // Fetch all members of the committee
       const members = await query<any[]>(`
         SELECT 
@@ -166,6 +238,23 @@ export const committeeDetailsResolvers = {
           photo: m.profile_photo || null,
           committeeRole: m.committee_role || null,
           isCommitteeAdmin: Number(m.is_committee_admin)
+        })),
+        events: visibleEvents.map((event: any) => ({
+          id: event.id,
+          eventId: event.eventId,
+          committeeId: event.committeeId,
+          eventName: event.eventName,
+          eventDisplayName: normalizeEventDisplayName(event.eventName, event.eventDisplayName, supportsEventDisplayName),
+          eventBanner: event.eventBanner || null,
+          status: event.status,
+          category: event.category || null,
+          type: event.type,
+          visibility: event.visibility,
+          startDate: event.startDate || null,
+          endDate: event.endDate || null,
+          createdBy: event.createdBy,
+          updatedBy: event.updatedBy || null,
+          createdAt: event.createdAt || null
         }))
       };
     }

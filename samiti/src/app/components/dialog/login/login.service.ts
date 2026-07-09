@@ -32,6 +32,28 @@ export class LoginService {
           baseRole
           profilePhoto
           fcmToken
+          accountRoles {
+            committees {
+              committeeId
+              committeeName
+              committeeLogo
+              committeeRole
+              roleLabel
+              isCommitteeAdmin
+              isCommitteeMember
+            }
+            events {
+              eventId
+              eventName
+              committeeId
+              committeeName
+              committeeLogo
+              designation
+              membershipStatus
+              eventStatus
+              eventVisibility
+            }
+          }
         }
       }
     }`;

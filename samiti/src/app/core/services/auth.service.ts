@@ -8,6 +8,33 @@ export interface AuthDashboardTreeNode {
   children: AuthDashboardTreeNode[];
 }
 
+export interface AuthCommitteeRoleItem {
+  committeeId: number;
+  committeeName: string;
+  committeeLogo: string | null;
+  committeeRole: string;
+  roleLabel: string;
+  isCommitteeAdmin: number;
+  isCommitteeMember: number;
+}
+
+export interface AuthEventRoleItem {
+  eventId: number;
+  eventName: string;
+  committeeId: number;
+  committeeName: string;
+  committeeLogo: string | null;
+  designation: string;
+  membershipStatus: string;
+  eventStatus: string | null;
+  eventVisibility: string | null;
+}
+
+export interface AuthAccountRoles {
+  committees: AuthCommitteeRoleItem[];
+  events: AuthEventRoleItem[];
+}
+
 export interface AuthUserData {
   id: number;
   name: string;
@@ -19,6 +46,7 @@ export interface AuthUserData {
   photo: string | null;
   fcmToken: string | null;
   dashboardTree: AuthDashboardTreeNode[];
+  accountRoles?: AuthAccountRoles | null;
 }
 
 export interface AuthSessionPayload {

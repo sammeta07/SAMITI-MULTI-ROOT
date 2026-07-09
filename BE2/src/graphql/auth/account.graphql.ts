@@ -45,7 +45,6 @@ export const accountTypes = `
 `;
 
 export const accountQueryFields = `
-  myAccount: AccountPayload!
 `;
 
 export const accountMutationFields = `
@@ -95,26 +94,6 @@ async function fetchAccountPayloadByUserId(userId: number): Promise<AccountRow> 
 
 export const accountResolvers = {
   Query: {
-    async myAccount(_: unknown, __: unknown, context: any) {
-      const loggedInUserId = await getLoggedInUserId(context);
-      const account = await fetchAccountPayloadByUserId(loggedInUserId);
-
-      return {
-        data: {
-          userId: account.id,
-          name: account.name,
-          email: account.email,
-          mobile: account.mobile || '',
-          photo: account.profile_photo,
-          provider: account.provider,
-          providerId: account.provider_id,
-          status: account.status,
-          isVerified: Boolean(account.is_verified),
-          emailVerifiedAt: account.email_verified_at,
-          deletedAt: account.deleted_at
-        }
-      };
-    }
   },
   Mutation: {
     async updateAccount(

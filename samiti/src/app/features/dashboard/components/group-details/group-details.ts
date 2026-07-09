@@ -66,7 +66,6 @@ export class GroupDetailsComponent implements OnInit {
   public readonly loggedInUserAdminStatusActionAt = signal<string | null>(null);
   public readonly groupData = signal<CommitteeProfileMeta | null>(null);
   public readonly isAdmin = signal<boolean>(false);
-  public readonly isEventsLoading = signal<boolean>(false);
   public readonly committeeEvents = signal<CommitteeEventListItem[]>([]);
   
   // Lists holding structured members segment arrays securely typed
@@ -249,7 +248,7 @@ export class GroupDetailsComponent implements OnInit {
           this.membersList.set(
             membersPool.filter((m: CommitteeRosterMember) => String(m.committeeRole || '').toUpperCase() === 'COMMITTEE_MEMBER' || Number(m.isCommitteeAdmin) !== 1)
           );
-          this.fetchCommitteeEvents(data.committeeId);
+          this.committeeEvents.set(data.events || []);
         } else {
           this.notifier.error('Failed to parse committee details.');
         }
@@ -258,26 +257,6 @@ export class GroupDetailsComponent implements OnInit {
       error: (err: HttpErrorResponse) => {
         this.notifier.error(err?.error?.message || 'Transaction error loading group rows.');
         this.isLoading.set(false);
-      }
-    });
-  }
-
-  private fetchCommitteeEvents(committeeId: number): void {
-    if (!committeeId) {
-      this.committeeEvents.set([]);
-      return;
-    }
-
-    this.isEventsLoading.set(true);
-    this.groupDetailsService.getEventsByCommittee(committeeId).subscribe({
-      next: (events: CommitteeEventListItem[]) => {
-        this.committeeEvents.set(events || []);
-        this.isEventsLoading.set(false);
-      },
-      error: (err: HttpErrorResponse) => {
-        this.committeeEvents.set([]);
-        this.isEventsLoading.set(false);
-        this.notifier.error(err?.error?.message || 'Failed to load events list.');
       }
     });
   }
@@ -569,7 +548,7 @@ export class GroupDetailsComponent implements OnInit {
       if (result) {
         if (committee.committeeId) {
           this.hierarchyTreeService.triggerHierarchyTreeRefresh();
-          this.fetchCommitteeEvents(committee.committeeId);
+          this.fetchCommitteeDetailsPayload(String(committee.committeeId));
         }
       }
     });

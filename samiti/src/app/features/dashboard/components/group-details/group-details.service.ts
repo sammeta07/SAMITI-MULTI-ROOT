@@ -39,6 +39,23 @@ export class GroupDetailsService {
           committeeRole
           isCommitteeAdmin
         }
+        events {
+          id
+          eventId
+          committeeId
+          eventName
+          eventDisplayName
+          eventBanner
+          status
+          category
+          type
+          visibility
+          startDate
+          endDate
+          createdBy
+          updatedBy
+          createdAt
+        }
       }
     }`;
 
@@ -58,43 +75,6 @@ export class GroupDetailsService {
     return this.committeeMembershipRequestService
       .submitCommitteeMembershipRequest(committeeId, requestRole, true)
       .pipe(map((payload) => payload as SubmitCommitteeMembershipRequestPayload));
-  }
-
-  public getEventsByCommittee(committeeId: number, status?: string, visibility?: string): Observable<CommitteeEventListItem[]> {
-    const query = `query EventsByCommittee($committeeId: Int!, $status: String, $visibility: String) {
-      eventsByCommittee(committeeId: $committeeId, status: $status, visibility: $visibility) {
-        id
-        eventId
-        committeeId
-        eventName
-        eventDisplayName
-        eventBanner
-        status
-        category
-        type
-        visibility
-        startDate
-        endDate
-        createdBy
-        updatedBy
-        createdAt
-      }
-    }`;
-
-    return this.http.post<{ data: { eventsByCommittee: CommitteeEventListItem[] } }>(
-      this.graphqlUrl,
-      {
-        query,
-        variables: {
-          committeeId,
-          status: status || null,
-          visibility: visibility || null
-        }
-      },
-      { withCredentials: true }
-    ).pipe(
-      map((res) => res.data?.eventsByCommittee || [])
-    );
   }
 
   public updateEventVisibility(eventId: number, visibility: 'VISIBLE' | 'HIDDEN'): Observable<UpdatedEventVisibilityPayload> {

@@ -65,6 +65,7 @@ export interface CommitteeDetailsPayload {
   loggedInUserAdminStatusActionBy: number | null;
   loggedInUserAdminStatusActionAt: string | null;
   members: CommitteeRosterMember[];
+  events: CommitteeEventListItem[];
 }
 
 export interface SubmitCommitteeMembershipRequestPayload {

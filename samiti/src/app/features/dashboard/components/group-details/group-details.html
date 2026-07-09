@@ -144,41 +144,37 @@
       </div>
 
       <div class="horizontal-list-container">
-        @if (isEventsLoading()) {
-          <div class="mini-empty-state">Loading records...</div>
-        } @else {
-          @for (event of committeeEvents(); track event.eventId) {
-          <div class="event-aligned-row">
-            <div class="event-col-info">
-              <span class="main-title event-main-title">{{ event.eventName | titlecase }}</span>
-              <div class="event-meta-row">
-                <span class="event-pill event-category-pill">{{ (event.category || 'Standard') | titlecase }}</span>
-                <span class="event-pill status-tag tag-{{event.status.toLowerCase() || 'upcoming'}}">{{ event.status }}</span>
-                <span class="event-pill event-type-pill" [ngClass]="event.type === 'PUBLIC' ? 'type-public' : 'type-private'">
-                  {{ event.type === 'PUBLIC' ? 'Public' : 'Private' }}
-                </span>
-                <span class="event-pill event-date-pill">
-                  <span class="label">Start:</span> {{ event.startDate ? (event.startDate | date:'dd MMM yyyy') : 'N/A' }}
-                </span>
-                <span class="event-pill event-date-pill">
-                  <span class="label">End:</span> {{ event.endDate ? (event.endDate | date:'dd MMM yyyy') : 'N/A' }}
-                </span>
-              </div>
-            </div>
-
-            <div class="event-col-controls">
-                <mat-slide-toggle
-                  class="density-toggle"
-                  [checked]="event.visibility === 'VISIBLE'"
-                  [disabled]="!isCurrentUserAdmin()"
-                  (change)="onEventVisibilityChange(event, $event.checked)">
-                  {{ event.visibility }}
-                </mat-slide-toggle>
+        @for (event of committeeEvents(); track event.eventId) {
+        <div class="event-aligned-row">
+          <div class="event-col-info">
+            <span class="main-title event-main-title">{{ event.eventName | titlecase }}</span>
+            <div class="event-meta-row">
+              <span class="event-pill event-category-pill">{{ (event.category || 'Standard') | titlecase }}</span>
+              <span class="event-pill status-tag tag-{{event.status.toLowerCase() || 'upcoming'}}">{{ event.status }}</span>
+              <span class="event-pill event-type-pill" [ngClass]="event.type === 'PUBLIC' ? 'type-public' : 'type-private'">
+                {{ event.type === 'PUBLIC' ? 'Public' : 'Private' }}
+              </span>
+              <span class="event-pill event-date-pill">
+                <span class="label">Start:</span> {{ event.startDate ? (event.startDate | date:'dd MMM yyyy') : 'N/A' }}
+              </span>
+              <span class="event-pill event-date-pill">
+                <span class="label">End:</span> {{ event.endDate ? (event.endDate | date:'dd MMM yyyy') : 'N/A' }}
+              </span>
             </div>
           </div>
-          } @empty {
+
+          <div class="event-col-controls">
+              <mat-slide-toggle
+                class="density-toggle"
+                [checked]="event.visibility === 'VISIBLE'"
+                [disabled]="!isCurrentUserAdmin()"
+                (change)="onEventVisibilityChange(event, $event.checked)">
+                {{ event.visibility }}
+              </mat-slide-toggle>
+          </div>
+        </div>
+        } @empty {
           <div class="mini-empty-state">No events available</div>
-          }
         }
       </div>
     </section>

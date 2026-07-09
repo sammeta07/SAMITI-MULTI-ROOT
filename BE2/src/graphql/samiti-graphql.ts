@@ -12,7 +12,6 @@ import { committeeDetailsTypes, committeeDetailsQueryFields, committeeDetailsRes
 import { createEventTypes, createEventMutationFields, createEventResolvers } from './events/create-event.graphql';
 import { updateEventTypes, updateEventMutationFields, updateEventResolvers } from './events/update-event.graphql';
 import { eventDetailsTypes, eventDetailsQueryFields, eventDetailsMutationFields, eventDetailsResolvers } from './events/event-details-by-id.graphql';
-import { eventsListTypes, eventsListQueryFields, eventsListResolvers } from './events/events-list-by-committee.graphql';
 import { updateEventVisibilityTypes, updateEventVisibilityMutationFields, updateEventVisibilityResolvers } from './events/update-event-visibility.graphql';
 import { uploadEventBannerImagesTypes, uploadEventBannerImagesMutationFields, uploadEventBannerImagesResolvers } from './events/upload-event-banner-images.graphql';
 import { deleteEventTypes, deleteEventMutationFields, deleteEventResolvers } from './events/delete-event.graphql';
@@ -49,7 +48,6 @@ export const typeDefs = `
   ${uploadProgramBannerImagesTypes}
   ${programDetailsTypes}
   ${eventDetailsTypes}
-  ${eventsListTypes}
   ${updateEventVisibilityTypes}
   ${uploadEventBannerImagesTypes}
   ${deleteEventTypes}
@@ -64,7 +62,6 @@ export const typeDefs = `
     ${committeeDetailsQueryFields}
     ${programDetailsQueryFields}
     ${eventDetailsQueryFields}
-    ${eventsListQueryFields}
   }
 
   type Mutation {
@@ -101,7 +98,7 @@ export const resolvers = {
     ...committeeDetailsResolvers.Query,
     ...programDetailsResolvers.Query,
     ...eventDetailsResolvers.Query,
-    ...eventsListResolvers.Query
+    
   },
   Mutation: {
     ...loginResolvers.Mutation,
