@@ -34,7 +34,7 @@ export interface CommitteeGuestItem {
 
 // Matches GraphQL type CommitteeAuth (logged-in — full fields)
 export interface CommitteeAuthItem extends CommitteeGuestItem {
-  committeeRole: 'COMMITTEE_MEMBER' | 'COMMITTEE_ADMIN' | null;
+  committeeRole: 'COMMITTEE_MEMBER' | 'COMMITTEE_ADMIN' | 'COMMITTEE_MASTER_ADMIN' | null;
   isCommitteeAdmin: number;
   isCommitteeMember: number;
   // null = no pending request; 'COMMITTEE_MEMBER' | 'COMMITTEE_ADMIN' = pending

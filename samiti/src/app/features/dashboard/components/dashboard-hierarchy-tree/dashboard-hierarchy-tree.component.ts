@@ -11,6 +11,7 @@ import { filter } from 'rxjs/operators';
 import { DashboardHierarchyTreeService } from './dashboard-hierarchy-tree.service';
 import { NotifierService } from '../../../../shared/notifier/notifier.service';
 import { AdminHierarchyTreeNode, RoleNode, TreeNode } from './dashboard-hierarchy-tree.models';
+import { sanitizeCloudinaryLogoUrl } from '../../../../shared/services/cloudinary-logo.util';
 
 @Component({
   selector: 'app-dashboard-hierarchy-tree',
@@ -138,7 +139,7 @@ export class DashboardHierarchyTreeComponent implements OnInit {
       name: node.name,
       type: mappedType,
       id: this.extractNumericId(node.id),
-      logo: mappedType === 'group' ? (node.logo || null) : null,
+      logo: mappedType === 'group' ? sanitizeCloudinaryLogoUrl(node.logo || null) : null,
       roleScope: roleScope ?? undefined,
       children: mappedChildren.length > 0 ? mappedChildren : undefined
     };

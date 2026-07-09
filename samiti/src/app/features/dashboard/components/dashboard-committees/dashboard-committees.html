@@ -38,7 +38,7 @@
                     
                     <div class="board-top-block-row">
                       <div class="board-brand-avatar-box">
-                        @if (com.logo) { <img [src]="com.logo" alt="logo" class="b-avatar-img" /> }
+                        @if (com.logo) { <img [src]="com.logo" alt="logo" class="b-avatar-img" (error)="com.logo = null" /> }
                         @else { <div class="b-avatar-fallback bg-red-grad">{{ com.committeeName.charAt(0).toUpperCase() }}</div> }
                       </div>
                       
@@ -143,7 +143,7 @@
                     
                     <div class="board-top-block-row">
                       <div class="board-brand-avatar-box">
-                        @if (com.logo) { <img [src]="com.logo" alt="logo" class="b-avatar-img" /> }
+                        @if (com.logo) { <img [src]="com.logo" alt="logo" class="b-avatar-img" (error)="com.logo = null" /> }
                         @else { <div class="b-avatar-fallback bg-blue-grad">{{ com.committeeName.charAt(0).toUpperCase() }}</div> }
                       </div>
                       

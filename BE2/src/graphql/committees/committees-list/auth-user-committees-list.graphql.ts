@@ -58,8 +58,8 @@ export const authCommitteesResolvers = {
           c.logo,
           c.contact_numbers,
           cm.committee_role AS committee_role,
-          CASE WHEN cm.committee_role = 'COMMITTEE_ADMIN' THEN 1 ELSE 0 END AS is_committee_admin,
-          CASE WHEN cm.committee_role IN ('COMMITTEE_MEMBER', 'COMMITTEE_ADMIN') THEN 1 ELSE 0 END AS is_committee_member,
+          CASE WHEN cm.committee_role IN ('COMMITTEE_ADMIN', 'COMMITTEE_MASTER_ADMIN') THEN 1 ELSE 0 END AS is_committee_admin,
+          CASE WHEN cm.committee_role IN ('COMMITTEE_MEMBER', 'COMMITTEE_ADMIN', 'COMMITTEE_MASTER_ADMIN') THEN 1 ELSE 0 END AS is_committee_member,
           COALESCE(cm.is_favourite, 0)        AS is_favourite,
           crr.request_role                    AS pending_request_role,
           (6371 * acos(

@@ -61,7 +61,7 @@ export class ViewUserDialogComponent implements OnInit {
     this.isLoading.set(true);
     
     this.viewUserService.getMemberDetails(this.data.userId, this.data.committeeId).subscribe({
-      next: (response: MemberDetailsResponse) => {
+      next: (response: MemberDetailsResponse | null) => {
         if (response) {
           // Injects the multi-relational data object cleanly matching model attributes
           this.userData.set(response);

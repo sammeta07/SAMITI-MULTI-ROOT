@@ -64,7 +64,7 @@
 
                 <div class="card-logo-area">
                   @if (committee.committeeLogo) {
-                  <img [src]="committee.committeeLogo" alt="{{ committee.committeeName }} logo" class="committee-avatar" />
+                  <img [src]="committee.committeeLogo" alt="{{ committee.committeeName }} logo" class="committee-avatar" (error)="committee.committeeLogo = null" />
                   } @else {
                   <div class="committee-avatar-fallback">{{ committee.committeeName.charAt(0).toUpperCase() }}</div>
                   }

@@ -170,11 +170,11 @@ export const userRelationalAnalyticsResolvers = {
           c.committee_name,
           c.logo,
           cm.committee_role,
-          CASE WHEN cm.committee_role = 'COMMITTEE_ADMIN' THEN 1 ELSE 0 END AS is_committee_admin
+          CASE WHEN cm.committee_role IN ('COMMITTEE_ADMIN', 'COMMITTEE_MASTER_ADMIN') THEN 1 ELSE 0 END AS is_committee_admin
          FROM users_committees cm
          INNER JOIN committees c ON cm.committee_id = c.id
          WHERE cm.user_id = ?
-           AND cm.committee_role IN ('COMMITTEE_MEMBER', 'COMMITTEE_ADMIN')`,
+           AND cm.committee_role IN ('COMMITTEE_MEMBER', 'COMMITTEE_ADMIN', 'COMMITTEE_MASTER_ADMIN')`,
         [userId]
       );
 
@@ -189,7 +189,7 @@ export const userRelationalAnalyticsResolvers = {
          WHERE e.committee_id IN (
            SELECT committee_id
            FROM users_committees
-           WHERE user_id = ? AND committee_role = 'COMMITTEE_ADMIN'
+           WHERE user_id = ? AND committee_role IN ('COMMITTEE_ADMIN', 'COMMITTEE_MASTER_ADMIN')
          )`,
         [userId]
       ).catch(() => []);

@@ -72,7 +72,7 @@ export const hierarchyTreeResolvers = {
          FROM users_committees cm
          INNER JOIN committees c ON c.id = cm.committee_id
          WHERE cm.user_id = ?
-           AND cm.committee_role IN ('COMMITTEE_MEMBER', 'COMMITTEE_ADMIN')
+           AND cm.committee_role IN ('COMMITTEE_MEMBER', 'COMMITTEE_ADMIN', 'COMMITTEE_MASTER_ADMIN')
          ORDER BY c.committee_name ASC`,
         [loggedInUserId]
       );
@@ -107,14 +107,21 @@ export const hierarchyTreeResolvers = {
           childIds: new Set<string>()
         };
 
-        if (String(row.committee_role || '') === 'COMMITTEE_ADMIN') {
+        if (
+          String(row.committee_role || '') === 'COMMITTEE_ADMIN' ||
+          String(row.committee_role || '') === 'COMMITTEE_MASTER_ADMIN'
+        ) {
           committeeNode.roles.add('ADMIN');
           adminCommitteeIds.add(committeeId);
         }
         if (String(row.committee_role || '') === 'COMMITTEE_MEMBER') {
           memberOnlyCommitteeIds.add(committeeId);
         }
-        if (String(row.committee_role || '') === 'COMMITTEE_MEMBER' || String(row.committee_role || '') === 'COMMITTEE_ADMIN') {
+        if (
+          String(row.committee_role || '') === 'COMMITTEE_MEMBER' ||
+          String(row.committee_role || '') === 'COMMITTEE_ADMIN' ||
+          String(row.committee_role || '') === 'COMMITTEE_MASTER_ADMIN'
+        ) {
           committeeNode.roles.add('MEMBER');
         }
 

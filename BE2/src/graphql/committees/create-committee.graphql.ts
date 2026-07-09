@@ -154,22 +154,12 @@ export const createCommitteeResolvers = {
 
       const newCommitteeId = creationResult.insertId;
 
-      // Creator becomes immediate admin+member — no request workflow needed
+      // Creator becomes immediate master admin; no synthetic request rows needed
       await execute(
         `INSERT INTO users_committees (committee_id, user_id, committee_role, is_favourite)
-         VALUES (?, ?, 'COMMITTEE_ADMIN', 0)
-         ON DUPLICATE KEY UPDATE committee_role = 'COMMITTEE_ADMIN'`,
+         VALUES (?, ?, 'COMMITTEE_MASTER_ADMIN', 0)
+         ON DUPLICATE KEY UPDATE committee_role = 'COMMITTEE_MASTER_ADMIN'`,
         [newCommitteeId, loggedInUserId]
-      );
-
-      // Record accepted requests for audit trail
-      await execute(
-        `INSERT IGNORE INTO committee_role_requests
-           (committee_id, requester_user_id, request_role, status, requested_at, action_by_user_id, action_at)
-         VALUES
-           (?, ?, 'COMMITTEE_MEMBER', 'ACCEPTED', NOW(), ?, NOW()),
-           (?, ?, 'COMMITTEE_ADMIN',  'ACCEPTED', NOW(), ?, NOW())`,
-        [newCommitteeId, loggedInUserId, loggedInUserId, newCommitteeId, loggedInUserId, loggedInUserId]
       );
 
       const rows = await query<CommitteeRow[]>(

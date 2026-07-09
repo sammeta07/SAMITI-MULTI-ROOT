@@ -69,7 +69,7 @@
 
         <div class="card-logo-area">
           @if (groupData()?.logo) {
-          <img [src]="groupData()?.logo" [alt]="groupData()?.committeeName" class="committee-avatar" />
+          <img [src]="groupData()?.logo" [alt]="groupData()?.committeeName" class="committee-avatar" (error)="clearGroupLogo()" />
           } @else {
           <div class="committee-avatar-fallback">{{ groupData()?.committeeName?.charAt(0) || 'C' }}</div>
           }

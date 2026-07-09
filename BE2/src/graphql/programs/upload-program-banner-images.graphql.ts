@@ -78,7 +78,7 @@ export const uploadProgramBannerImagesResolvers = {
       const committeeId = Number(programRows[0].committeeId);
       const adminRows = await query<any[]>(
         `SELECT user_id FROM users_committees
-         WHERE committee_id = ? AND user_id = ? AND committee_role = 'COMMITTEE_ADMIN' LIMIT 1`,
+         WHERE committee_id = ? AND user_id = ? AND committee_role IN ('COMMITTEE_ADMIN', 'COMMITTEE_MASTER_ADMIN') LIMIT 1`,
         [committeeId, loggedInUserId]
       );
 
@@ -148,7 +148,7 @@ export const uploadProgramBannerImagesResolvers = {
       const committeeId = Number(programRows[0].committeeId);
       const adminRows = await query<any[]>(
         `SELECT user_id FROM users_committees
-         WHERE committee_id = ? AND user_id = ? AND committee_role = 'COMMITTEE_ADMIN' LIMIT 1`,
+         WHERE committee_id = ? AND user_id = ? AND committee_role IN ('COMMITTEE_ADMIN', 'COMMITTEE_MASTER_ADMIN') LIMIT 1`,
         [committeeId, loggedInUserId]
       );
 

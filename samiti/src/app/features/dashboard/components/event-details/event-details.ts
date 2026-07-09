@@ -237,7 +237,7 @@ export class EventDetailsComponent implements OnInit {
 
   public get currentCommitteeRoleLabel(): string {
     const role = String(this.eventData()?.currentCommitteeRole || 'NONE').toUpperCase();
-    if (role === 'COMMITTEE_ADMIN') {
+    if (role === 'COMMITTEE_ADMIN' || role === 'COMMITTEE_MASTER_ADMIN') {
       return 'Group Admin';
     }
 

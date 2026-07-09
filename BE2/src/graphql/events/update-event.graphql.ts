@@ -212,7 +212,7 @@ export const updateEventResolvers = {
       const adminCheck = await query<any[]>(
         `SELECT user_id
          FROM users_committees
-         WHERE committee_id = ? AND user_id = ? AND committee_role = 'COMMITTEE_ADMIN'
+         WHERE committee_id = ? AND user_id = ? AND committee_role IN ('COMMITTEE_ADMIN', 'COMMITTEE_MASTER_ADMIN')
          LIMIT 1`,
         [committeeId, loggedInUserId]
       );

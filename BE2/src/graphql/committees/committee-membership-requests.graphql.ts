@@ -140,7 +140,7 @@ export const committeeMembershipRequestsResolvers = {
          INNER JOIN users_committees admin_uc
             ON admin_uc.committee_id = crr.committee_id
             AND admin_uc.user_id = ?
-          AND admin_uc.committee_role = 'COMMITTEE_ADMIN'
+          AND admin_uc.committee_role IN ('COMMITTEE_ADMIN', 'COMMITTEE_MASTER_ADMIN')
          WHERE crr.status IN ('PENDING', 'ACCEPTED', 'REJECTED')
            AND crr.requester_user_id <> ?
          ORDER BY crr.requested_at DESC`,
@@ -251,7 +251,7 @@ export const committeeMembershipRequestsResolvers = {
         `SELECT user_id FROM users_committees
          WHERE committee_id = ?
            AND user_id = ?
-           AND committee_role = 'COMMITTEE_ADMIN'
+           AND committee_role IN ('COMMITTEE_ADMIN', 'COMMITTEE_MASTER_ADMIN')
          LIMIT 1`,
         [committeeId, loggedInUserId]
       );
@@ -287,7 +287,11 @@ export const committeeMembershipRequestsResolvers = {
           await execute(
             `INSERT INTO users_committees (committee_id, user_id, committee_role, is_favourite)
              VALUES (?, ?, 'COMMITTEE_ADMIN', 0)
-             ON DUPLICATE KEY UPDATE committee_role = 'COMMITTEE_ADMIN'`,
+             ON DUPLICATE KEY UPDATE
+               committee_role = CASE
+                 WHEN committee_role = 'COMMITTEE_MASTER_ADMIN' THEN 'COMMITTEE_MASTER_ADMIN'
+                 ELSE 'COMMITTEE_ADMIN'
+               END`,
             [committeeId, targetUserId]
           );
         } else {
@@ -295,7 +299,11 @@ export const committeeMembershipRequestsResolvers = {
             `INSERT INTO users_committees (committee_id, user_id, committee_role, is_favourite)
              VALUES (?, ?, 'COMMITTEE_MEMBER', 0)
              ON DUPLICATE KEY UPDATE
-               committee_role = CASE WHEN committee_role = 'COMMITTEE_ADMIN' THEN 'COMMITTEE_ADMIN' ELSE 'COMMITTEE_MEMBER' END`,
+               committee_role = CASE
+                 WHEN committee_role = 'COMMITTEE_MASTER_ADMIN' THEN 'COMMITTEE_MASTER_ADMIN'
+                 WHEN committee_role = 'COMMITTEE_ADMIN' THEN 'COMMITTEE_ADMIN'
+                 ELSE 'COMMITTEE_MEMBER'
+               END`,
             [committeeId, targetUserId]
           );
         }

@@ -108,7 +108,10 @@ export const committeeDetailsResolvers = {
         LIMIT 1
       `, [committeeId, loggedInUserId]);
 
-      const isLoggedUserAdmin = adminCheckResult.length > 0 && String(adminCheckResult[0].committee_role || '') === 'COMMITTEE_ADMIN';
+      const isLoggedUserAdmin =
+        adminCheckResult.length > 0 &&
+        (String(adminCheckResult[0].committee_role || '') === 'COMMITTEE_ADMIN' ||
+          String(adminCheckResult[0].committee_role || '') === 'COMMITTEE_MASTER_ADMIN');
 
       // Latest admin role request for this user
       const adminRequestRow = await query<any[]>(`
@@ -135,10 +138,10 @@ export const committeeDetailsResolvers = {
           u.email,
           u.profile_photo,
           cm.committee_role,
-          CASE WHEN cm.committee_role = 'COMMITTEE_ADMIN' THEN 1 ELSE 0 END AS is_committee_admin
+          CASE WHEN cm.committee_role IN ('COMMITTEE_ADMIN', 'COMMITTEE_MASTER_ADMIN') THEN 1 ELSE 0 END AS is_committee_admin
         FROM users u
         INNER JOIN users_committees cm ON u.id = cm.user_id
-        WHERE cm.committee_id = ? AND cm.committee_role IN ('COMMITTEE_MEMBER', 'COMMITTEE_ADMIN')
+        WHERE cm.committee_id = ? AND cm.committee_role IN ('COMMITTEE_MEMBER', 'COMMITTEE_ADMIN', 'COMMITTEE_MASTER_ADMIN')
         ORDER BY u.name ASC
       `, [committeeId]);
 

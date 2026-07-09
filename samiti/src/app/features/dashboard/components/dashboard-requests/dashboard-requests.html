@@ -36,7 +36,7 @@
                     <td mat-cell *matCellDef="let element">
                       <div class="table-person-cell">
                         @if (element.committeeLogo) {
-                          <span class="table-avatar table-avatar--photo"><img [src]="element.committeeLogo" [alt]="element.committeeName"></span>
+                          <span class="table-avatar table-avatar--photo"><img [src]="element.committeeLogo" [alt]="element.committeeName" (error)="element.committeeLogo = null"></span>
                         } @else {
                           <span class="table-avatar table-avatar--committee">{{ (element.committeeName || '?').charAt(0).toUpperCase() }}</span>
                         }
@@ -145,7 +145,7 @@
                     <td mat-cell *matCellDef="let element">
                       <div class="table-person-cell">
                         @if (element.committeeLogo) {
-                          <span class="table-avatar table-avatar--photo"><img [src]="element.committeeLogo" [alt]="element.committeeName"></span>
+                          <span class="table-avatar table-avatar--photo"><img [src]="element.committeeLogo" [alt]="element.committeeName" (error)="element.committeeLogo = null"></span>
                         } @else {
                           <span class="table-avatar table-avatar--committee">{{ (element.committeeName || '?').charAt(0).toUpperCase() }}</span>
                         }
@@ -264,7 +264,7 @@
                     <td mat-cell *matCellDef="let element">
                       <div class="table-person-cell">
                         @if (element.committeeLogo) {
-                          <span class="table-avatar table-avatar--photo"><img [src]="element.committeeLogo" [alt]="element.committeeName"></span>
+                          <span class="table-avatar table-avatar--photo"><img [src]="element.committeeLogo" [alt]="element.committeeName" (error)="element.committeeLogo = null"></span>
                         } @else {
                           <span class="table-avatar table-avatar--committee">{{ getInitials(element.committeeName) }}</span>
                         }
@@ -350,7 +350,7 @@
                     <td mat-cell *matCellDef="let element">
                       <div class="table-person-cell">
                         @if (element.committeeLogo) {
-                          <span class="table-avatar table-avatar--photo"><img [src]="element.committeeLogo" [alt]="element.committeeName"></span>
+                          <span class="table-avatar table-avatar--photo"><img [src]="element.committeeLogo" [alt]="element.committeeName" (error)="element.committeeLogo = null"></span>
                         } @else {
                           <span class="table-avatar table-avatar--committee">{{ getInitials(element.committeeName) }}</span>
                         }

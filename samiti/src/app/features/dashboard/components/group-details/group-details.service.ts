@@ -5,6 +5,7 @@ import { map } from 'rxjs/operators';
 import { environment } from '../../../../../environments/environment';
 import { CancelCommitteeMembershipRequestPayload, CommitteeDetailsPayload, CommitteeEventListItem, CommitteeMembershipRequestRole, DeletedEventPayload, SubmitCommitteeMembershipRequestPayload, UpdatedEventVisibilityPayload } from './group-details.models';
 import { CommitteeMembershipRequestService } from '../../../../core/services/committee-membership-request.service';
+import { sanitizeCloudinaryLogoUrl } from '../../../../shared/services/cloudinary-logo.util';
 
 @Injectable({
   providedIn: 'root'
@@ -46,7 +47,10 @@ export class GroupDetailsService {
       { query },
       { withCredentials: true }
     ).pipe(
-      map(res => res.data.committeeDetails)
+      map(res => ({
+        ...res.data.committeeDetails,
+        logo: sanitizeCloudinaryLogoUrl(res.data.committeeDetails?.logo)
+      }))
     );
   }
 

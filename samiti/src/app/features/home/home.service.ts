@@ -6,6 +6,7 @@ import { CommitteeListResponseGuestUser, CommitteeListRequestBackend, JoinCommit
 import { environment } from '../../../environments/environment';
 import { JoinCommitteeRequestBody } from './home.models';
 import { CommitteeMembershipRequestService } from '../../core/services/committee-membership-request.service';
+import { sanitizeCloudinaryLogoUrl } from '../../shared/services/cloudinary-logo.util';
 
 interface GraphQLErrorPayload {
   message: string;
@@ -68,7 +69,10 @@ export class HomeService {
             if (res.errors?.length) {
               throw new Error(res.errors[0].message || 'Failed to fetch committees');
             }
-            return res.data?.committeesListGuestUser ?? [];
+            return (res.data?.committeesListGuestUser ?? []).map((item) => ({
+              ...item,
+              committeeLogo: sanitizeCloudinaryLogoUrl(item.committeeLogo)
+            }));
           })
         );
     }
@@ -115,7 +119,10 @@ export class HomeService {
             if (res.errors?.length) {
               throw new Error(res.errors[0].message || 'Failed to fetch committees');
             }
-            return res.data?.committeesListAuthUser ?? [];
+            return (res.data?.committeesListAuthUser ?? []).map((item) => ({
+              ...item,
+              committeeLogo: sanitizeCloudinaryLogoUrl(item.committeeLogo)
+            }));
           })
         );
     }

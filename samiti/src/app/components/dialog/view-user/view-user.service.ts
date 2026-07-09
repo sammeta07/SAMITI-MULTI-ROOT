@@ -5,7 +5,8 @@ import { map } from 'rxjs/operators';
 import { HttpClient } from '@angular/common/http';
 import { environment } from '../../../../environments/environment';
 import { ViewUserDialogComponent } from './view-user.component';
-import { ViewUserDialogData, ViewUserDialogResponse, MemberDetailsResponse } from './view-user.models';
+import { ViewUserDialogData, ViewUserDialogResponse, MemberDetailsResponse, UserCommitteeAffiliationSpec } from './view-user.models';
+import { sanitizeCloudinaryLogoUrl } from '../../../shared/services/cloudinary-logo.util';
 
 interface GraphQLErrorPayload {
   message: string;
@@ -14,6 +15,10 @@ interface GraphQLErrorPayload {
 interface GraphQLResponseEnvelope<TData> {
   data?: TData;
   errors?: GraphQLErrorPayload[];
+}
+
+interface UserRelationalAnalyticsPayload {
+  data: MemberDetailsResponse | null;
 }
 
 @Injectable({
@@ -32,7 +37,7 @@ export class ViewUserDialogService {
     });
   }
 
-  getMemberDetails(userId: string, committeeId: string): Observable<any> {
+  getMemberDetails(userId: string, committeeId: string): Observable<MemberDetailsResponse | null> {
     const userRelationalAnalyticsByUserIdQueryDocument = `query UserRelationalAnalyticsByUserId($userId: Int!, $committeeId: Int) {
       userRelationalAnalyticsByUserId(userId: $userId, committeeId: $committeeId) {
         data {
@@ -80,7 +85,7 @@ export class ViewUserDialogService {
       }
     }`;
 
-    return this.http.post<GraphQLResponseEnvelope<{ userRelationalAnalyticsByUserId: MemberDetailsResponse }>>(
+    return this.http.post<GraphQLResponseEnvelope<{ userRelationalAnalyticsByUserId: UserRelationalAnalyticsPayload }>>(
       this.graphqlEndpointUrl,
       {
         query: userRelationalAnalyticsByUserIdQueryDocument,
@@ -95,7 +100,23 @@ export class ViewUserDialogService {
           throw new Error(graphQlResponseEnvelope.errors[0].message || 'Failed to load user analytics');
         }
 
-        return graphQlResponseEnvelope.data?.userRelationalAnalyticsByUserId!;
+        const payload = graphQlResponseEnvelope.data?.userRelationalAnalyticsByUserId;
+        const analyticsData = payload?.data;
+
+        if (!analyticsData) {
+          return null;
+        }
+
+        return {
+          ...analyticsData,
+          associations: {
+            ...analyticsData.associations,
+            committees: (analyticsData.associations?.committees || []).map((committee: UserCommitteeAffiliationSpec) => ({
+              ...committee,
+              logo: sanitizeCloudinaryLogoUrl(committee.logo)
+            }))
+          }
+        };
       })
     );
   }

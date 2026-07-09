@@ -10,6 +10,7 @@ import {
   SentCommitteeMembershipRequestItem,
   TakeActionOnCommitteeMembershipRequestBody
 } from './dashboard-requests.models';
+import { sanitizeCloudinaryLogoUrl } from '../../../../shared/services/cloudinary-logo.util';
 
 interface GraphQLErrorPayload {
   message: string;
@@ -72,7 +73,10 @@ export class DashboardRequestsService {
             errors: response.errors
           },
           'Failed to fetch received membership requests'
-        );
+        ).map((item) => ({
+          ...item,
+          committeeLogo: sanitizeCloudinaryLogoUrl(item.committeeLogo)
+        }));
       })
     );
   }
@@ -110,7 +114,10 @@ export class DashboardRequestsService {
             errors: response.errors
           },
           'Failed to fetch sent membership requests'
-        );
+        ).map((item) => ({
+          ...item,
+          committeeLogo: sanitizeCloudinaryLogoUrl(item.committeeLogo)
+        }));
       })
     );
   }

@@ -106,6 +106,19 @@ export class GroupDetailsComponent implements OnInit {
     this.searchQuery.set('');
   }
 
+  public clearGroupLogo(): void {
+    this.groupData.update((currentValue) => {
+      if (!currentValue) {
+        return currentValue;
+      }
+
+      return {
+        ...currentValue,
+        logo: null
+      };
+    });
+  }
+
   // Computed filtered members list based on search query
   public readonly filteredMembersList = computed(() => {
     const query = this.searchQuery().toLowerCase().trim();
@@ -228,7 +241,10 @@ export class GroupDetailsComponent implements OnInit {
           // Split members into explicit buckets rows natively matching schema types
           const membersPool = data.members || [];
           this.adminsList.set(
-            membersPool.filter((m: CommitteeRosterMember) => String(m.committeeRole || '').toUpperCase() === 'COMMITTEE_ADMIN' || Number(m.isCommitteeAdmin) === 1)
+            membersPool.filter((m: CommitteeRosterMember) => {
+              const role = String(m.committeeRole || '').toUpperCase();
+              return role === 'COMMITTEE_ADMIN' || role === 'COMMITTEE_MASTER_ADMIN' || Number(m.isCommitteeAdmin) === 1;
+            })
           );
           this.membersList.set(
             membersPool.filter((m: CommitteeRosterMember) => String(m.committeeRole || '').toUpperCase() === 'COMMITTEE_MEMBER' || Number(m.isCommitteeAdmin) !== 1)

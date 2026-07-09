@@ -70,8 +70,16 @@ export const submitCommitteeMembershipRequestResolvers = {
 
       const membership = membershipRows[0] || null;
       const committeeRole = String(membership?.committee_role || '');
-      const isCommitteeAdmin = Boolean(membership && committeeRole === 'COMMITTEE_ADMIN');
-      const isCommitteeMember = Boolean(membership && (committeeRole === 'COMMITTEE_MEMBER' || committeeRole === 'COMMITTEE_ADMIN'));
+      const isCommitteeAdmin = Boolean(
+        membership && (committeeRole === 'COMMITTEE_ADMIN' || committeeRole === 'COMMITTEE_MASTER_ADMIN')
+      );
+      const isCommitteeMember = Boolean(
+        membership && (
+          committeeRole === 'COMMITTEE_MEMBER' ||
+          committeeRole === 'COMMITTEE_ADMIN' ||
+          committeeRole === 'COMMITTEE_MASTER_ADMIN'
+        )
+      );
 
       // Check existing pending request for this role
       const existingPendingRows = await query<any[]>(

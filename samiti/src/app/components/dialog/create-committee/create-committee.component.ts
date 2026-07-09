@@ -148,7 +148,7 @@ export class CreateCommitteeDialogComponent implements OnInit {
             id: String(response?.id || ''),
             name: response?.committeeName || payload?.name || this.committeeName,
             type: 'committee',
-            roles: ['COMMITTEE_ADMIN', 'COMMITTEE_MEMBER'],
+            roles: ['COMMITTEE_MASTER_ADMIN', 'COMMITTEE_ADMIN', 'COMMITTEE_MEMBER'],
             children: []
           };
 

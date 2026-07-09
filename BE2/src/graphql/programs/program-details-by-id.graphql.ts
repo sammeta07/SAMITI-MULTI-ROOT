@@ -114,7 +114,11 @@ export const programDetailsResolvers = {
         const membership = committeeMembership[0];
         const hasCommitteeAccess = Boolean(
           membership &&
-          (String(membership.committee_role || '') === 'COMMITTEE_MEMBER' || String(membership.committee_role || '') === 'COMMITTEE_ADMIN')
+          (
+            String(membership.committee_role || '') === 'COMMITTEE_MEMBER' ||
+            String(membership.committee_role || '') === 'COMMITTEE_ADMIN' ||
+            String(membership.committee_role || '') === 'COMMITTEE_MASTER_ADMIN'
+          )
         );
 
         if (!hasCommitteeAccess) {

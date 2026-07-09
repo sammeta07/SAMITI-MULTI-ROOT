@@ -104,7 +104,7 @@ export const loginResolvers = {
           `SELECT COUNT(*) AS total_count
            FROM users_committees
            WHERE user_id = ?
-             AND committee_role IN ('COMMITTEE_MEMBER', 'COMMITTEE_ADMIN')`,
+             AND committee_role IN ('COMMITTEE_MEMBER', 'COMMITTEE_ADMIN', 'COMMITTEE_MASTER_ADMIN')`,
           [user.id]
         ).catch(() => [{ total_count: 0 } as CountRow]),
         query<CountRow[]>(
