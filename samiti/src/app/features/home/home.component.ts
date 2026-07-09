@@ -79,11 +79,7 @@ private readonly headerService = inject(HeaderService);
 
   private hasCommitteeMembership(committee: CommitteeAuthItem): boolean {
     const role = String(committee.committeeRole || '').toUpperCase();
-    if (role === 'COMMITTEE_MEMBER' || role === 'COMMITTEE_ADMIN' || role === 'COMMITTEE_MASTER_ADMIN') {
-      return true;
-    }
-
-    return committee.isCommitteeMember === 1 || committee.isCommitteeAdmin === 1;
+    return role === 'COMMITTEE_MEMBER' || role === 'COMMITTEE_ADMIN' || role === 'COMMITTEE_MASTER_ADMIN';
   }
 
   get favouriteGroups(): CommitteesList[] {

@@ -11,8 +11,6 @@ export const authCommitteeTypes = `
     committeeLogo: String
     establishYear: Int!
     committeeRole: String
-    isCommitteeAdmin: Int!
-    isCommitteeMember: Int!
     pendingRequestRole: String
     isFavourite: Int!
     events: [EventSummary!]!
@@ -58,8 +56,6 @@ export const authCommitteesResolvers = {
           c.logo,
           c.contact_numbers,
           cm.committee_role AS committee_role,
-          CASE WHEN cm.committee_role IN ('COMMITTEE_ADMIN', 'COMMITTEE_MASTER_ADMIN') THEN 1 ELSE 0 END AS is_committee_admin,
-          CASE WHEN cm.committee_role IN ('COMMITTEE_MEMBER', 'COMMITTEE_ADMIN', 'COMMITTEE_MASTER_ADMIN') THEN 1 ELSE 0 END AS is_committee_member,
           COALESCE(cm.is_favourite, 0)        AS is_favourite,
           crr.request_role                    AS pending_request_role,
           (6371 * acos(
@@ -127,8 +123,11 @@ export const authCommitteesResolvers = {
       }
 
       return rawList.map((item: any) => {
-        const isAdmin = Number(item.is_committee_admin) === 1;
-        const isMember = Number(item.is_committee_member) === 1;
+        const role = String(item.committee_role || '').toUpperCase();
+        const hasMembership =
+          role === 'COMMITTEE_MASTER_ADMIN' ||
+          role === 'COMMITTEE_ADMIN' ||
+          role === 'COMMITTEE_MEMBER';
         const allEvents = eventsMap[item.id] || [];
         const visibleEvents = allEvents.filter((event) => event.visibility === 'VISIBLE');
 
@@ -141,11 +140,9 @@ export const authCommitteesResolvers = {
           committeeLogo: item.logo || null,
           establishYear: item.establish_year ?? 0,
           committeeRole: item.committee_role || null,
-          isCommitteeAdmin: Number(item.is_committee_admin),
-          isCommitteeMember: Number(item.is_committee_member),
           pendingRequestRole: item.pending_request_role || null,
           isFavourite: Number(item.is_favourite),
-          events: (isAdmin || isMember) ? allEvents : visibleEvents
+          events: hasMembership ? allEvents : visibleEvents
         };
       });
     }

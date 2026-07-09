@@ -96,8 +96,6 @@ export class HomeService {
             committeeLogo
             establishYear
             committeeRole
-            isCommitteeAdmin
-            isCommitteeMember
             pendingRequestRole
             isFavourite
             events {
