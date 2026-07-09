@@ -31,6 +31,12 @@ type InternalTreeNode = {
   childIds: Set<string>;
 };
 
+const committeeRolePriority: Record<string, number> = {
+  COMMITTEE_MEMBER: 1,
+  COMMITTEE_ADMIN: 2,
+  COMMITTEE_MASTER_ADMIN: 3
+};
+
 export type SerializedHierarchyTreeNode = {
   id: string;
   name: string;
@@ -82,8 +88,9 @@ export const hierarchyTreeResolvers = {
       }
 
       const committeeNodeById = new Map<number, InternalTreeNode>();
+      const masterAdminCommitteeIds = new Set<number>();
       const adminCommitteeIds = new Set<number>();
-      const memberOnlyCommitteeIds = new Set<number>();
+      const memberCommitteeIds = new Set<number>();
       const eventNodeById = new Map<number, InternalTreeNode>();
       const eventRoleSetById = new Map<number, Set<string>>();
 
@@ -96,6 +103,7 @@ export const hierarchyTreeResolvers = {
 
       for (const row of committeeRows) {
         const committeeId = Number(row.committee_id);
+        const committeeRole = String(row.committee_role || '').trim().toUpperCase();
         const existingNode = committeeNodeById.get(committeeId);
         const committeeNode = existingNode || {
           id: `committee_${committeeId}`,
@@ -107,22 +115,30 @@ export const hierarchyTreeResolvers = {
           childIds: new Set<string>()
         };
 
-        if (
-          String(row.committee_role || '') === 'COMMITTEE_ADMIN' ||
-          String(row.committee_role || '') === 'COMMITTEE_MASTER_ADMIN'
-        ) {
-          committeeNode.roles.add('ADMIN');
+        const existingRole = Array.from(committeeNode.roles)[0] || '';
+        const shouldUpdateRole =
+          committeeRolePriority[committeeRole] !== undefined &&
+          committeeRolePriority[committeeRole] >= (committeeRolePriority[existingRole] || 0);
+
+        if (shouldUpdateRole) {
+          committeeNode.roles.clear();
+          committeeNode.roles.add(committeeRole);
+        }
+
+        const effectiveRole = Array.from(committeeNode.roles)[0] || '';
+
+        if (effectiveRole === 'COMMITTEE_MASTER_ADMIN') {
+          masterAdminCommitteeIds.add(committeeId);
+          adminCommitteeIds.delete(committeeId);
+          memberCommitteeIds.delete(committeeId);
+        } else if (effectiveRole === 'COMMITTEE_ADMIN') {
           adminCommitteeIds.add(committeeId);
-        }
-        if (String(row.committee_role || '') === 'COMMITTEE_MEMBER') {
-          memberOnlyCommitteeIds.add(committeeId);
-        }
-        if (
-          String(row.committee_role || '') === 'COMMITTEE_MEMBER' ||
-          String(row.committee_role || '') === 'COMMITTEE_ADMIN' ||
-          String(row.committee_role || '') === 'COMMITTEE_MASTER_ADMIN'
-        ) {
-          committeeNode.roles.add('MEMBER');
+          masterAdminCommitteeIds.delete(committeeId);
+          memberCommitteeIds.delete(committeeId);
+        } else if (effectiveRole === 'COMMITTEE_MEMBER') {
+          memberCommitteeIds.add(committeeId);
+          masterAdminCommitteeIds.delete(committeeId);
+          adminCommitteeIds.delete(committeeId);
         }
 
         committeeNodeById.set(committeeId, committeeNode);
@@ -313,15 +329,20 @@ export const hierarchyTreeResolvers = {
         serializedCommitteeById.set(numericCommitteeId, serializeNode(committeeNode));
       }
 
+      const masterAdminCommittees = Array.from(masterAdminCommitteeIds)
+        .map((committeeId) => serializedCommitteeById.get(committeeId))
+        .filter((committeeNode): committeeNode is SerializedHierarchyTreeNode => Boolean(committeeNode));
+
       const adminCommittees = Array.from(adminCommitteeIds)
         .map((committeeId) => serializedCommitteeById.get(committeeId))
         .filter((committeeNode): committeeNode is SerializedHierarchyTreeNode => Boolean(committeeNode));
 
-      const memberCommittees = Array.from(memberOnlyCommitteeIds)
+      const memberCommittees = Array.from(memberCommitteeIds)
         .map((committeeId) => serializedCommitteeById.get(committeeId))
         .filter((committeeNode): committeeNode is SerializedHierarchyTreeNode => Boolean(committeeNode));
 
       return [
+        { roleName: 'Master Admin Roles', committees: masterAdminCommittees },
         { roleName: 'Admin Roles', committees: adminCommittees },
         { roleName: 'Member Roles', committees: memberCommittees }
       ];

@@ -39,8 +39,6 @@ export class LoginService {
               committeeLogo
               committeeRole
               roleLabel
-              isCommitteeAdmin
-              isCommitteeMember
             }
             events {
               eventId

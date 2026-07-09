@@ -26,8 +26,6 @@ type LoginCommitteeRoleRow = RowDataPacket & {
   committee_name: string;
   committee_logo: string | null;
   committee_role: string | null;
-  is_committee_admin: number;
-  is_committee_member: number;
 };
 
 type LoginEventRoleRow = RowDataPacket & {
@@ -72,8 +70,6 @@ export const loginTypes = `
     committeeLogo: String
     committeeRole: String!
     roleLabel: String!
-    isCommitteeAdmin: Int!
-    isCommitteeMember: Int!
   }
 
   type LoginEventRoleSnapshot {
@@ -200,9 +196,7 @@ export const loginResolvers = {
           c.id AS committee_id,
           c.committee_name,
           c.logo AS committee_logo,
-          cm.committee_role,
-          CASE WHEN cm.committee_role IN ('COMMITTEE_ADMIN', 'COMMITTEE_MASTER_ADMIN') THEN 1 ELSE 0 END AS is_committee_admin,
-          CASE WHEN cm.committee_role IN ('COMMITTEE_MEMBER', 'COMMITTEE_ADMIN', 'COMMITTEE_MASTER_ADMIN') THEN 1 ELSE 0 END AS is_committee_member
+          cm.committee_role
          FROM users_committees cm
          INNER JOIN committees c ON c.id = cm.committee_id
          WHERE cm.user_id = ?
@@ -240,9 +234,7 @@ export const loginResolvers = {
             .replace(/^COMMITTEE_/, '')
             .replace(/_/g, ' ')
             .toLowerCase()
-            .replace(/\b\w/g, (ch) => ch.toUpperCase()),
-          isCommitteeAdmin: Number(row.is_committee_admin),
-          isCommitteeMember: Number(row.is_committee_member)
+            .replace(/\b\w/g, (ch) => ch.toUpperCase())
         })),
         events: eventRoleRows.map((row) => ({
           eventId: Number(row.event_id),

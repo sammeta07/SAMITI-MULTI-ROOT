@@ -14,8 +14,6 @@ export interface AuthCommitteeRoleItem {
   committeeLogo: string | null;
   committeeRole: string;
   roleLabel: string;
-  isCommitteeAdmin: number;
-  isCommitteeMember: number;
 }
 
 export interface AuthEventRoleItem {

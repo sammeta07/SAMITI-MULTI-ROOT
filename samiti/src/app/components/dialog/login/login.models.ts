@@ -24,8 +24,6 @@ export interface LoginUserData {
       committeeLogo: string | null;
       committeeRole: string;
       roleLabel: string;
-      isCommitteeAdmin: number;
-      isCommitteeMember: number;
     }>;
     events: Array<{
       eventId: number;
