@@ -10,6 +10,8 @@ export class NotifierService {
   private timers = new Map<string, number>();
   private remainingTimes = new Map<string, number>();
   private startTimes = new Map<string, number>();
+  private readonly lastShownByKey = new Map<string, number>();
+  private readonly dedupeWindowMs = 1200;
   
   private overlay = inject(Overlay);
   private overlayRef: OverlayRef | null = null;
@@ -106,6 +108,17 @@ export class NotifierService {
     title?: string,
     timeoutMs?: number
   ): string {
+    const dedupeKey = this.getDedupeKey(type, message, title);
+    const now = Date.now();
+    const lastShownAt = this.lastShownByKey.get(dedupeKey);
+
+    // Guard against duplicate toasts from interceptor + component error handlers.
+    if (lastShownAt && now - lastShownAt < this.dedupeWindowMs) {
+      return '';
+    }
+
+    this.lastShownByKey.set(dedupeKey, now);
+
     const id = this.generateId();
     const actualTimeout = timeoutMs ?? 3500;
     
@@ -143,5 +156,11 @@ export class NotifierService {
 
   private generateId(): string {
     return `ntf_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
+  }
+
+  private getDedupeKey(type: NotifierType, message: string, title?: string): string {
+    const normalizedMessage = (message || '').trim().toLowerCase();
+    const normalizedTitle = (title || '').trim().toLowerCase();
+    return `${type}|${normalizedTitle}|${normalizedMessage}`;
   }
 }

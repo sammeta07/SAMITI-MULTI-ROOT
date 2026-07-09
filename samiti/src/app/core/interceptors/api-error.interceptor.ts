@@ -1,5 +1,6 @@
 import { inject } from '@angular/core';
 import {
+  HttpContextToken,
   HttpErrorResponse,
   HttpEvent,
   HttpHandlerFn,
@@ -16,6 +17,8 @@ type NotifiedError = Error & { __alreadyNotifiedByApiInterceptor?: boolean };
 type GraphQLErrorResponse = {
   errors?: Array<{ message?: string }>;
 };
+
+export const SKIP_API_ERROR_NOTIFIER = new HttpContextToken<boolean>(() => false);
 
 function extractGraphQLErrorMessage(body: unknown): string | null {
   if (!body || typeof body !== 'object') {
@@ -60,15 +63,20 @@ export const apiErrorInterceptor: HttpInterceptorFn = (
   next: HttpHandlerFn
 ): Observable<HttpEvent<unknown>> => {
   const notifier = inject(NotifierService);
+  const shouldNotify = !req.context.get(SKIP_API_ERROR_NOTIFIER);
 
   return next(req).pipe(
     mergeMap((event) => {
       if (event instanceof HttpResponse) {
         const graphqlMessage = extractGraphQLErrorMessage(event.body);
         if (graphqlMessage) {
-          notifier.error(graphqlMessage);
+          if (shouldNotify) {
+            notifier.error(graphqlMessage);
+          }
           const handledError = new Error(graphqlMessage) as NotifiedError;
-          handledError.__alreadyNotifiedByApiInterceptor = true;
+          if (shouldNotify) {
+            handledError.__alreadyNotifiedByApiInterceptor = true;
+          }
           return throwError(() => handledError);
         }
       }
@@ -76,6 +84,10 @@ export const apiErrorInterceptor: HttpInterceptorFn = (
       return [event];
     }),
     catchError((error) => {
+      if (!shouldNotify) {
+        return throwError(() => error);
+      }
+
       if ((error as NotifiedError)?.__alreadyNotifiedByApiInterceptor) {
         return throwError(() => error);
       }

@@ -14,6 +14,7 @@ import { AccountDialogComponent } from '../dialog/account/account.component';
 import { CreateCommitteeDialogComponent } from '../dialog/create-committee/create-committee.component';
 import { Router } from '@angular/router';
 import { AuthService } from '../../core/services/auth.service';
+import { StartupLoaderService } from '../../core/services/startup-loader.service';
 
 
 @Component({
@@ -37,6 +38,7 @@ export class HeaderComponent implements OnInit {
   private dialog = inject(MatDialog);
   private router = inject(Router);
   private authService = inject(AuthService);
+  private readonly startupLoaderService = inject(StartupLoaderService);
 
   locationName = signal<string>('Locating...');
   isLoading = signal<boolean>(true);
@@ -87,10 +89,12 @@ export class HeaderComponent implements OnInit {
               const place = data.address?.state_district || 'Location';
               this.locationName.set(place);
               this.isLoading.set(false);
+              this.startupLoaderService.markReverseGeocodeSettled();
             },
             error: () => {
               this.locationName.set('Location unavailable');
               this.isLoading.set(false);
+              this.startupLoaderService.markReverseGeocodeSettled();
               this.notifier.error('Could not fetch location details.');
             }
           });
@@ -101,6 +105,7 @@ export class HeaderComponent implements OnInit {
           this.isLoading.set(false);
           this.headerService.isGeolocationDenied.set(true);
           this.headerService.isGeolocationChecking.set(false);
+          this.startupLoaderService.markAllSettled();
         }
       );
     } else {
@@ -109,6 +114,7 @@ export class HeaderComponent implements OnInit {
       this.isLoading.set(false);
       this.headerService.isGeolocationDenied.set(true);
       this.headerService.isGeolocationChecking.set(false);
+      this.startupLoaderService.markAllSettled();
       this.notifier.info('Geolocation is not supported by this browser.');
     }
   }

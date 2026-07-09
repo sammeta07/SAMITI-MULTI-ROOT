@@ -1,4 +1,4 @@
-import { HttpClient } from '@angular/common/http';
+import { HttpClient, HttpContext } from '@angular/common/http';
 import { inject, Injectable, signal } from '@angular/core';
 import { Observable } from 'rxjs';
 import { map } from 'rxjs/operators';
@@ -7,6 +7,7 @@ import { environment } from '../../../environments/environment';
 import { JoinCommitteeRequestBody } from './home.models';
 import { CommitteeMembershipRequestService } from '../../core/services/committee-membership-request.service';
 import { sanitizeCloudinaryLogoUrl } from '../../shared/services/cloudinary-logo.util';
+import { SKIP_API_ERROR_NOTIFIER } from '../../core/interceptors/api-error.interceptor';
 
 interface GraphQLErrorPayload {
   message: string;
@@ -57,14 +58,20 @@ export class HomeService {
           }
         }`;
 
-        return this.http.post<GraphQLResponseEnvelope<CommitteeListGraphQLPayload>>(url, {
-          query,
-          variables: {
-            latitude: body.latitude,
-            longitude: body.longitude,
-            distanceKm: body.distanceKm
+        return this.http.post<GraphQLResponseEnvelope<CommitteeListGraphQLPayload>>(
+          url,
+          {
+            query,
+            variables: {
+              latitude: body.latitude,
+              longitude: body.longitude,
+              distanceKm: body.distanceKm
+            }
+          },
+          {
+            context: new HttpContext().set(SKIP_API_ERROR_NOTIFIER, true)
           }
-        }).pipe(
+        ).pipe(
           map((res) => {
             if (res.errors?.length) {
               throw new Error(res.errors[0].message || 'Failed to fetch committees');

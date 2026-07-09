@@ -17,6 +17,7 @@ import { ConfirmDialogService } from '../../components/dialog/confirm/confirm-di
 import { ConfirmDialogData } from '../../components/dialog/confirm/confirm-dialog.models';
 import { CommitteeListResponseGuestUser, CommitteeListRequestBackend, CommitteeAuthItem, CommitteesList, CommitteeEvent, JoinCommitteeRequestBody, JoinCommitteeApiResponse, ToggleCommitteeFavouriteResponse, CancelRequestApiResponse } from './home.models';
 import { TextFormatPipe } from '../../shared/pipe/text-format-pipe.pipe';
+import { StartupLoaderService } from '../../core/services/startup-loader.service';
 
 @Component({
   selector: 'app-home',
@@ -44,6 +45,7 @@ private readonly headerService = inject(HeaderService);
   private readonly authService = inject(AuthService); // Injecting core centralized state signal
   private readonly dialog = inject(MatDialog); // Injecting MatDialog to open dialogs
   private readonly confirmDialog = inject(ConfirmDialogService); // Injecting ConfirmDialogService
+  private readonly startupLoaderService = inject(StartupLoaderService);
 
   private nearbyExpandedCommitteeIds = new Set<number>();
   private favouriteExpandedCommitteeIds = new Set<number>();
@@ -204,6 +206,13 @@ constructor() {
         this.getCommitteeListByRange();
       }
     });
+
+    effect(() => {
+      const retryTrigger = this.startupLoaderService.committeesRetryTrigger();
+      if (retryTrigger > 0) {
+        this.getCommitteeListByRange();
+      }
+    });
   }
 
   onRadiusChange(event: Event) {
@@ -213,8 +222,11 @@ constructor() {
   }
 
   getCommitteeListByRange() {
+
     const locationCoords = this.userLocationCords();
     if (!locationCoords) return;
+
+    this.isCommitteeListLoading = true;
 
     const body: CommitteeListRequestBackend = {
       latitude: locationCoords.lat,
@@ -230,13 +242,16 @@ constructor() {
       next: (res) => {
         this.committeeList = Array.isArray(res) ? res : [res];
         this.isCommitteeListLoading = false;
+        this.startupLoaderService.markCommitteesSettled();
         this.syncExpandedPanelState();
         this.startCarouselAutoPlay();
         this.cdr.detectChanges();
       },
       error: (error) => {
         this.isCommitteeListLoading = false;
-        this.notifier.error(error?.message || error?.error || 'Failed to fetch committees');
+        this.committeeList = [];
+        this.stopCarouselAutoPlay();
+        this.startupLoaderService.markCommitteesFailed();
         this.cdr.detectChanges();
       }
     });
