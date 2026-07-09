@@ -299,7 +299,7 @@
                           } @else {
                             <span class="table-avatar table-avatar--photo table-avatar--fallback">{{ getInitials(element.resolvedByName) }}</span>
                           }
-                          <span class="text-dark">{{ element.resolvedByName }}</span>
+                                                    <span class="text-dark">{{ element.resolvedByName | titlecase }}</span>
                         </div>
                       } @else {
                         <span class="text-muted">—</span>
@@ -385,7 +385,7 @@
                           } @else {
                             <span class="table-avatar table-avatar--photo table-avatar--fallback">{{ getInitials(element.resolvedByName) }}</span>
                           }
-                          <span class="text-dark">{{ element.resolvedByName }}</span>
+                          <span class="text-dark">{{ element.resolvedByName | titlecase }}</span>
                         </div>
                       } @else {
                         <span class="text-muted">—</span>

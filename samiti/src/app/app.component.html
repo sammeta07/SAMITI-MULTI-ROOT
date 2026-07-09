@@ -10,7 +10,8 @@
 
 <app-notifier></app-notifier>
 
-@if (isStartupLoading()) {
+<!-- @if (isStartupLoading()) { -->
+@if (0) {
 <div class="startup-loader-overlay" aria-live="polite" aria-busy="true">
   <div class="startup-loader-card" [class.error-mode]="!!startupErrorMessage()">
     @if (!startupErrorMessage()) {
