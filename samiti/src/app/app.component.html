@@ -14,9 +14,13 @@
 <div class="startup-loader-overlay" aria-live="polite" aria-busy="true">
   <div class="startup-loader-card" [class.error-mode]="!!startupErrorMessage()">
     @if (!startupErrorMessage()) {
-    <div class="startup-loader-inline">
-      <div class="startup-loader-spinner" aria-hidden="true"></div>
-      <p>App loading... please wait</p>
+    <div class="startup-loader-inline startup-error-content">
+      <div class="startup-error-icon-wrap startup-loading-icon-wrap" aria-hidden="true">
+        <div class="startup-loader-spinner"></div>
+      </div>
+      <h3 class="startup-placeholder-title" aria-hidden="true">Server Error</h3>
+      <p class="startup-placeholder-message" aria-hidden="true">Server error. Please try again in some time.</p>
+      <p class="startup-loading-text">App loading... please wait</p>
     </div>
     } @else {
     <div class="startup-error-content">
