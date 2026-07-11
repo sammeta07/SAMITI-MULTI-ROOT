@@ -57,7 +57,7 @@
             [class.panel-role-admin]="isAuth && (committee.committeeRole === 'COMMITTEE_ADMIN' || committee.committeeRole === 'COMMITTEE_MASTER_ADMIN')"
             [class.panel-role-member]="isAuth && committee.committeeRole === 'COMMITTEE_MEMBER'"
             [class.panel-role-pending]="isAuth && committee.pendingRequestRole"
-            [class.panel-role-none]="isAuth && !committee.committeeRole && !committee.pendingRequestRole">
+            [class.panel-role-none]="isAuth && !committee.isCommitteeMember && !committee.isCommitteeAdmin && !committee.pendingRequestRole">
 
             <mat-expansion-panel-header>
               <div class="committee-card-grid">
@@ -114,7 +114,7 @@
 
                   <div class="directions-status-row">
                     @if (isAuth) {
-                      @if (committee.committeeRole === 'COMMITTEE_ADMIN' || committee.committeeRole === 'COMMITTEE_MASTER_ADMIN') {
+                      @if (committee.isCommitteeAdmin === 1) {
                         <span class="badge-pill admin-pill">ADMIN</span>
                       } @else if (committee.committeeRole === 'COMMITTEE_MEMBER') {
                         <span class="badge-pill member-pill">MEMBER</span>

@@ -37,7 +37,7 @@ import { StartupLoaderService } from '../../core/services/startup-loader.service
   styleUrl: './home.component.scss',
 })
 export class HomeComponent implements OnDestroy {
-private readonly headerService = inject(HeaderService);
+  private readonly headerService = inject(HeaderService);
   private readonly homeService = inject(HomeService);
   private readonly notifier = inject(NotifierService);
   private readonly cdr = inject(ChangeDetectorRef);
@@ -75,6 +75,11 @@ private readonly headerService = inject(HeaderService);
       !this.hasCommitteeMembership(c) &&
       !c.isFavourite
     );
+  }
+
+  // Type guard: only CommitteeAuthItem has auth-specific fields
+  private isAuthItem(c: CommitteesList): c is CommitteeAuthItem {
+    return 'pendingRequestRole' in c;
   }
 
   private hasCommitteeMembership(committee: CommitteeAuthItem): boolean {
@@ -186,7 +191,7 @@ private readonly headerService = inject(HeaderService);
     this.stopCarouselAutoPlay();
   }
 
-constructor() {
+  constructor() {
     // Effect to watch location coordinates
     effect(() => {
       const coords = this.userLocationCords();
@@ -253,12 +258,7 @@ constructor() {
     });
   }
 
-  // Type guard: only CommitteeAuthItem has auth-specific fields
-  private isAuthItem(c: CommitteesList): c is CommitteeAuthItem {
-    return 'pendingRequestRole' in c;
-  }
-
-// 🛡️ Action: Send Request to join Selected operational matrix unit
+  // 🛡️ Action: Send Request to join Selected operational matrix unit
   onRequestMemberRole(id: number, event: Event): void {
     event.stopPropagation(); // Avoid panel toggle conflict during interaction
 
@@ -302,7 +302,7 @@ constructor() {
     });
   }
 
-cancelRequest(id: number, event: Event): void {
+  cancelRequest(id: number, event: Event): void {
     event.stopPropagation(); // Avoid panel toggle conflict during interaction
 
     // Find the committee details for confirmation message
