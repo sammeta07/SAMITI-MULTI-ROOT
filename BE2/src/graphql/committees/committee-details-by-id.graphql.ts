@@ -39,7 +39,6 @@ export const committeeDetailsTypes = `
     email: String!
     photo: String
     committeeRole: String
-    isCommitteeAdmin: Int!
   }
 
   type CommitteeEvent {
@@ -70,10 +69,7 @@ export const committeeDetailsTypes = `
     contactNumbers: [String!]!
     createdBy: Int!
     createdAt: String!
-    isLoggedUserAdmin: Boolean!
-    loggedInUserAdminStatus: String
-    loggedInUserAdminStatusActionBy: Int
-    loggedInUserAdminStatusActionAt: String
+    committeeRole: String
     members: [CommitteeMember!]!
     events: [CommitteeEvent!]!
   }
@@ -141,23 +137,6 @@ export const committeeDetailsResolvers = {
         (String(adminCheckResult[0].committee_role || '') === 'COMMITTEE_ADMIN' ||
           String(adminCheckResult[0].committee_role || '') === 'COMMITTEE_MASTER_ADMIN');
 
-      // Latest admin role request for this user
-      const adminRequestRow = await query<any[]>(`
-        SELECT status, action_by_user_id, action_at
-        FROM committee_role_requests
-        WHERE committee_id = ? AND requester_user_id = ? AND request_role = 'COMMITTEE_ADMIN'
-        ORDER BY requested_at DESC
-        LIMIT 1
-      `, [committeeId, loggedInUserId]);
-
-      const loggedInUserAdminStatus = isLoggedUserAdmin
-        ? 'ACCEPTED'
-        : (adminRequestRow.length > 0 ? String(adminRequestRow[0].status).toUpperCase() : null);
-      const loggedInUserAdminStatusActionBy = adminRequestRow.length > 0 && adminRequestRow[0].action_by_user_id
-        ? Number(adminRequestRow[0].action_by_user_id)
-        : null;
-      const loggedInUserAdminStatusActionAt = adminRequestRow.length > 0 ? adminRequestRow[0].action_at || null : null;
-
       const supportsEventDisplayName = await hasEventsDisplayNameColumn();
 
       const eventRows = await query<any[]>(`
@@ -209,8 +188,7 @@ export const committeeDetailsResolvers = {
           u.name,
           u.email,
           u.profile_photo,
-          cm.committee_role,
-          CASE WHEN cm.committee_role IN ('COMMITTEE_ADMIN', 'COMMITTEE_MASTER_ADMIN') THEN 1 ELSE 0 END AS is_committee_admin
+          cm.committee_role
         FROM users u
         INNER JOIN users_committees cm ON u.id = cm.user_id
         WHERE cm.committee_id = ? AND cm.committee_role IN ('COMMITTEE_MEMBER', 'COMMITTEE_ADMIN', 'COMMITTEE_MASTER_ADMIN')
@@ -227,17 +205,13 @@ export const committeeDetailsResolvers = {
         contactNumbers: normalizeContactNumbers(committee.contact_numbers),
         createdBy: committee.created_by,
         createdAt: committee.created_at,
-        isLoggedUserAdmin,
-        loggedInUserAdminStatus,
-        loggedInUserAdminStatusActionBy,
-        loggedInUserAdminStatusActionAt,
+        committeeRole: adminCheckResult.length > 0 ? adminCheckResult[0].committee_role || null : null,
         members: members.map((m: any) => ({
           id: m.id,
           name: m.name,
           email: m.email,
           photo: m.profile_photo || null,
-          committeeRole: m.committee_role || null,
-          isCommitteeAdmin: Number(m.is_committee_admin)
+          committeeRole: m.committee_role || null
         })),
         events: visibleEvents.map((event: any) => ({
           id: event.id,

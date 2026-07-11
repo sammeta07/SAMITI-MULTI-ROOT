@@ -54,14 +54,14 @@
             [expanded]="isPanelExpanded(panelPrefix, committee.id)"
             (opened)="updatePanelExpandedState(panelPrefix, committee.id, true)"
             (closed)="updatePanelExpandedState(panelPrefix, committee.id, false)"
-            [class.panel-role-admin]="isAuth && committee.isCommitteeAdmin === 1"
-            [class.panel-role-member]="isAuth && committee.isCommitteeMember === 1 && committee.isCommitteeAdmin !== 1"
+            [class.panel-role-admin]="isAuth && (committee.committeeRole === 'COMMITTEE_ADMIN' || committee.committeeRole === 'COMMITTEE_MASTER_ADMIN')"
+            [class.panel-role-member]="isAuth && committee.committeeRole === 'COMMITTEE_MEMBER'"
             [class.panel-role-pending]="isAuth && committee.pendingRequestRole"
-            [class.panel-role-none]="isAuth && !committee.isCommitteeMember && !committee.isCommitteeAdmin && !committee.pendingRequestRole">
+            [class.panel-role-none]="isAuth && !committee.committeeRole && !committee.pendingRequestRole">
 
             <mat-expansion-panel-header>
               <div class="committee-card-grid">
-
+<pre> {{committee | json}}</pre>
                 <div class="card-logo-area">
                   @if (committee.committeeLogo) {
                   <img [src]="committee.committeeLogo" alt="{{ committee.committeeName }} logo" class="committee-avatar" (error)="committee.committeeLogo = null" />
@@ -114,12 +114,12 @@
 
                   <div class="directions-status-row">
                     @if (isAuth) {
-                      @if (committee.isCommitteeAdmin === 1) {
+                      @if (committee.committeeRole === 'COMMITTEE_ADMIN' || committee.committeeRole === 'COMMITTEE_MASTER_ADMIN') {
                         <span class="badge-pill admin-pill">ADMIN</span>
-                      } @else if (committee.isCommitteeMember === 1) {
+                      } @else if (committee.committeeRole === 'COMMITTEE_MEMBER') {
                         <span class="badge-pill member-pill">MEMBER</span>
                       } @else if (committee.pendingRequestRole) {
-                        <span class="badge-pill pending-pill">{{ committee.pendingRequestRole === 'COMMITTEE_ADMIN' ? 'ADMIN PENDING' : 'PENDING' }}</span>
+                        <span class="badge-pill pending-pill">{{ committee.pendingRequestRole + '-' + committee.status }}</span>
                         <button mat-button type="button" class="cancel-request-btn"
                           (click)="cancelRequest(committee.id, $event)">
                           <mat-icon>close</mat-icon>

@@ -19,7 +19,6 @@ export interface CommitteeMember {
   name: string;
   email: string;
   committeeRole?: 'COMMITTEE_MEMBER' | 'COMMITTEE_ADMIN' | 'COMMITTEE_MASTER_ADMIN' | null;
-  isCommitteeAdmin: number;
 }
 
 export interface CommitteeDetailsPayload {
@@ -32,7 +31,7 @@ export interface CommitteeDetailsPayload {
   contactNumbers: string[];
   createdBy: number;
   createdAt: string;
-  isLoggedUserAdmin: boolean;
+  committeeRole: 'COMMITTEE_MEMBER' | 'COMMITTEE_ADMIN' | 'COMMITTEE_MASTER_ADMIN' | null;
   members: CommitteeMember[];
 }
 

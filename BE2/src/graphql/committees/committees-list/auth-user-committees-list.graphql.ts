@@ -12,6 +12,7 @@ export const authCommitteeTypes = `
     establishYear: Int!
     committeeRole: String
     pendingRequestRole: String
+    status: String
     isFavourite: Int!
     events: [EventSummary!]!
   }
@@ -58,6 +59,7 @@ export const authCommitteesResolvers = {
           cm.committee_role AS committee_role,
           COALESCE(cm.is_favourite, 0)        AS is_favourite,
           crr.request_role                    AS pending_request_role,
+          crr.status                          AS request_status,
           (6371 * acos(
             cos(radians(?)) * cos(radians(c.latitude)) * cos(radians(c.longitude) - radians(?)) +
             sin(radians(?)) * sin(radians(c.latitude))
@@ -65,7 +67,13 @@ export const authCommitteesResolvers = {
         FROM committees c
         LEFT JOIN users_committees cm ON c.id = cm.committee_id AND cm.user_id = ?
         LEFT JOIN committee_role_requests crr
-          ON crr.committee_id = c.id AND crr.requester_user_id = ? AND crr.status = 'PENDING'
+          ON crr.id = (
+            SELECT id
+            FROM committee_role_requests crr2
+            WHERE crr2.committee_id = c.id AND crr2.requester_user_id = ?
+            ORDER BY crr2.requested_at DESC
+            LIMIT 1
+          )
         HAVING distanceKm <= ?
         ORDER BY distanceKm ASC
       `, [latitude, longitude, latitude, loggedInUserId, loggedInUserId, distanceKm]);
@@ -141,6 +149,7 @@ export const authCommitteesResolvers = {
           establishYear: item.establish_year ?? 0,
           committeeRole: item.committee_role || null,
           pendingRequestRole: item.pending_request_role || null,
+          status: item.request_status || null,
           isFavourite: Number(item.is_favourite),
           events: hasMembership ? allEvents : visibleEvents
         };

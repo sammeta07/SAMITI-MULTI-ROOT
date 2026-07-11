@@ -62,8 +62,6 @@ export class GroupDetailsComponent implements OnInit {
   public readonly isSubmittingAdminRoleRequest = signal<boolean>(false);
   public readonly isCancellingAdminRoleRequest = signal<boolean>(false);
   public readonly loggedInUserAdminRequestStatus = signal<'ACCEPTED' | 'PENDING' | 'REJECTED' | null>(null);
-  public readonly loggedInUserAdminStatusActionBy = signal<number | null>(null);
-  public readonly loggedInUserAdminStatusActionAt = signal<string | null>(null);
   public readonly groupData = signal<CommitteeProfileMeta | null>(null);
   public readonly isAdmin = signal<boolean>(false);
   public readonly committeeEvents = signal<CommitteeEventListItem[]>([]);
@@ -232,21 +230,21 @@ export class GroupDetailsComponent implements OnInit {
           };
 
           this.groupData.set(committeeInfo);
-          this.isAdmin.set(data.isLoggedUserAdmin || false);
-          this.loggedInUserAdminRequestStatus.set(data.loggedInUserAdminStatus || null);
-          this.loggedInUserAdminStatusActionBy.set(data.loggedInUserAdminStatusActionBy || null);
-          this.loggedInUserAdminStatusActionAt.set(data.loggedInUserAdminStatusActionAt || null);
+          this.isAdmin.set(data.committeeRole === 'COMMITTEE_ADMIN' || data.committeeRole === 'COMMITTEE_MASTER_ADMIN');
+          this.loggedInUserAdminRequestStatus.set(
+            data.committeeRole === 'COMMITTEE_ADMIN' || data.committeeRole === 'COMMITTEE_MASTER_ADMIN' ? 'ACCEPTED' : null
+          );
           
           // Split members into explicit buckets rows natively matching schema types
           const membersPool = data.members || [];
           this.adminsList.set(
             membersPool.filter((m: CommitteeRosterMember) => {
               const role = String(m.committeeRole || '').toUpperCase();
-              return role === 'COMMITTEE_ADMIN' || role === 'COMMITTEE_MASTER_ADMIN' || Number(m.isCommitteeAdmin) === 1;
+              return role === 'COMMITTEE_ADMIN' || role === 'COMMITTEE_MASTER_ADMIN';
             })
           );
           this.membersList.set(
-            membersPool.filter((m: CommitteeRosterMember) => String(m.committeeRole || '').toUpperCase() === 'COMMITTEE_MEMBER' || Number(m.isCommitteeAdmin) !== 1)
+            membersPool.filter((m: CommitteeRosterMember) => String(m.committeeRole || '').toUpperCase() === 'COMMITTEE_MEMBER')
           );
           this.committeeEvents.set(data.events || []);
         } else {
@@ -299,8 +297,6 @@ export class GroupDetailsComponent implements OnInit {
         this.groupDetailsService.requestCommitteeAdminRole(committeeId, 'COMMITTEE_ADMIN').subscribe({
         next: (response: SubmitCommitteeMembershipRequestPayload) => {
           this.loggedInUserAdminRequestStatus.set('PENDING');
-          this.loggedInUserAdminStatusActionBy.set(null);
-          this.loggedInUserAdminStatusActionAt.set(null);
           this.notifier.success('Admin role request submitted successfully');
           this.fetchCommitteeDetailsPayload(String(committeeId));
         },
@@ -348,8 +344,6 @@ export class GroupDetailsComponent implements OnInit {
         this.groupDetailsService.cancelCommitteeMembershipRequest(committeeId).subscribe({
         next: (response: CancelCommitteeMembershipRequestPayload) => {
           this.loggedInUserAdminRequestStatus.set(null);
-          this.loggedInUserAdminStatusActionBy.set(null);
-          this.loggedInUserAdminStatusActionAt.set(null);
           this.notifier.success('Admin role request cancelled successfully');
           this.fetchCommitteeDetailsPayload(String(committeeId));
         },

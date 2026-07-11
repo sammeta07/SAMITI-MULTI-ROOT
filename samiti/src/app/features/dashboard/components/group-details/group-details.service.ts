@@ -27,17 +27,13 @@ export class GroupDetailsService {
         contactNumbers
         createdBy
         createdAt
-        isLoggedUserAdmin
-        loggedInUserAdminStatus
-        loggedInUserAdminStatusActionBy
-        loggedInUserAdminStatusActionAt
+        committeeRole
         members {
           id
           name
           email
           photo
           committeeRole
-          isCommitteeAdmin
         }
         events {
           id

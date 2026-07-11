@@ -76,13 +76,12 @@ export class DashboardHierarchyTreeService {
         contactNumbers
         createdBy
         createdAt
-        isLoggedUserAdmin
+        committeeRole
         members {
           id
           name
           email
           committeeRole
-          isCommitteeAdmin
         }
       }
     }`;

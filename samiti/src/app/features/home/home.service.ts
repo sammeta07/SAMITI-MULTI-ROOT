@@ -97,6 +97,7 @@ export class HomeService {
             establishYear
             committeeRole
             pendingRequestRole
+            status
             isFavourite
             events {
               eventId

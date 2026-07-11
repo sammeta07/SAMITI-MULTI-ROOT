@@ -74,11 +74,11 @@ export const hierarchyTreeResolvers = {
            c.id AS committee_id,
            c.committee_name,
            c.logo,
-           cm.committee_role
-         FROM users_committees cm
-         INNER JOIN committees c ON c.id = cm.committee_id
-         WHERE cm.user_id = ?
-           AND cm.committee_role IN ('COMMITTEE_MEMBER', 'COMMITTEE_ADMIN', 'COMMITTEE_MASTER_ADMIN')
+           uc.committee_role
+         FROM users_committees uc
+         INNER JOIN committees c ON c.id = uc.committee_id
+         WHERE uc.user_id = ?
+           AND uc.committee_role IN ('COMMITTEE_MEMBER', 'COMMITTEE_ADMIN', 'COMMITTEE_MASTER_ADMIN')
          ORDER BY c.committee_name ASC`,
         [loggedInUserId]
       );

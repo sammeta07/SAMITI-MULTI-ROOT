@@ -16,7 +16,6 @@ export interface CommitteeRosterMember {
   email: string;
   photo?: string | null;
   committeeRole?: 'COMMITTEE_MEMBER' | 'COMMITTEE_ADMIN' | 'COMMITTEE_MASTER_ADMIN' | null;
-  isCommitteeAdmin: number; // 1 for true, 0 for false
 }
 
 export interface CommitteeEventListItem {
@@ -60,10 +59,7 @@ export interface CommitteeDetailsPayload {
   contactNumbers: string[];
   createdBy: number;
   createdAt: string;
-  isLoggedUserAdmin: boolean;
-  loggedInUserAdminStatus: 'ACCEPTED' | 'PENDING' | 'REJECTED' | null;
-  loggedInUserAdminStatusActionBy: number | null;
-  loggedInUserAdminStatusActionAt: string | null;
+  committeeRole: 'COMMITTEE_MEMBER' | 'COMMITTEE_ADMIN' | 'COMMITTEE_MASTER_ADMIN' | null;
   members: CommitteeRosterMember[];
   events: CommitteeEventListItem[];
 }
