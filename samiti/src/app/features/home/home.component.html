@@ -54,14 +54,14 @@
             [expanded]="isPanelExpanded(panelPrefix, committee.id)"
             (opened)="updatePanelExpandedState(panelPrefix, committee.id, true)"
             (closed)="updatePanelExpandedState(panelPrefix, committee.id, false)"
-            [class.panel-role-admin]="isAuth && (committee.committeeRole === 'COMMITTEE_ADMIN' || committee.committeeRole === 'COMMITTEE_MASTER_ADMIN')"
+            [class.panel-role-master-admin]="isAuth && (committee.committeeRole === 'COMMITTEE_MASTER_ADMIN')"
+            [class.panel-role-admin]="isAuth && (committee.committeeRole === 'COMMITTEE_ADMIN')"
             [class.panel-role-member]="isAuth && committee.committeeRole === 'COMMITTEE_MEMBER'"
-            [class.panel-role-pending]="isAuth && committee.pendingRequestRole"
-            [class.panel-role-none]="isAuth && !committee.isCommitteeMember && !committee.isCommitteeAdmin && !committee.pendingRequestRole">
+            [class.panel-role-pending]="isAuth && committee.status === 'PENDING'"
+            [class.panel-role-none]="isAuth && !committee.committeeRole">
 
             <mat-expansion-panel-header>
               <div class="committee-card-grid">
-<pre> {{committee | json}}</pre>
                 <div class="card-logo-area">
                   @if (committee.committeeLogo) {
                   <img [src]="committee.committeeLogo" alt="{{ committee.committeeName }} logo" class="committee-avatar" (error)="committee.committeeLogo = null" />
@@ -114,11 +114,13 @@
 
                   <div class="directions-status-row">
                     @if (isAuth) {
-                      @if (committee.isCommitteeAdmin === 1) {
-                        <span class="badge-pill admin-pill">ADMIN</span>
+                      @if (committee.committeeRole === 'COMMITTEE_MASTER_ADMIN') {
+                        <span class="badge-pill admin-pill">MASTER ADMIN</span>
+                      } @else if (committee.committeeRole === 'COMMITTEE_ADMIN') {
+                        <span class="badge-pill member-pill">ADMIN</span>
                       } @else if (committee.committeeRole === 'COMMITTEE_MEMBER') {
                         <span class="badge-pill member-pill">MEMBER</span>
-                      } @else if (committee.pendingRequestRole) {
+                      } @else if (committee.status === 'PENDING') {
                         <span class="badge-pill pending-pill">{{ committee.pendingRequestRole + '-' + committee.status }}</span>
                         <button mat-button type="button" class="cancel-request-btn"
                           (click)="cancelRequest(committee.id, $event)">
@@ -281,6 +283,9 @@
           } @else if (selectedTabIndex === 1) {
           <button mat-button type="button" class="expand-collapse-btn" (click)="expandFavourites()">Expand All</button>
           <button mat-button type="button" class="expand-collapse-btn" (click)="collapseFavourites()">Collapse All</button>
+          } @else if (selectedTabIndex === 2) {
+          <button mat-button type="button" class="expand-collapse-btn" (click)="expandPreview()">Expand All</button>
+          <button mat-button type="button" class="expand-collapse-btn" (click)="collapsePreview()">Collapse All</button>
           }
         </div>
 
@@ -337,6 +342,35 @@
               <div class="col-empty">
                 <mat-icon>favorite_border</mat-icon>
                 <p>Mark committees as favourite to track them here.</p>
+              </div>
+              }
+              }
+            </div>
+          </mat-tab>
+
+          <mat-tab>
+            <ng-template mat-tab-label>
+              <mat-icon>preview</mat-icon>
+              <span>Preview</span>
+              <span class="tab-badge">{{ previewGroups.length }}</span>
+            </ng-template>
+
+            <div class="committees-scroll">
+              @if (isCommitteeListLoading) {
+                <ng-container [ngTemplateOutlet]="committeeSkeletonTpl"></ng-container>
+              } @else {
+              <mat-accordion #previewAccordion="matAccordion" [multi]="true" class="custom-clean-accordion">
+                @for (committee of previewGroups; track committee.id) {
+                <ng-container [ngTemplateOutlet]="committeeCardTemplate"
+                  [ngTemplateOutletContext]="{ $implicit: committee, isAuth: true, panelPrefix: 'preview' }">
+                </ng-container>
+                }
+              </mat-accordion>
+
+              @if (previewGroups.length === 0) {
+              <div class="col-empty">
+                <mat-icon>preview</mat-icon>
+                <p>No preview committees available.</p>
               </div>
               }
               }

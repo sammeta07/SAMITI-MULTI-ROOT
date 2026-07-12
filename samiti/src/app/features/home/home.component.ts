@@ -49,6 +49,7 @@ export class HomeComponent implements OnDestroy {
 
   private nearbyExpandedCommitteeIds = new Set<number>();
   private favouriteExpandedCommitteeIds = new Set<number>();
+  private previewExpandedCommitteeIds = new Set<number>();
   private readonly carouselIndices = new Map<number, number>();
   private carouselTimer: ReturnType<typeof setInterval> | null = null;
   private readonly CAROUSEL_INTERVAL_MS = 3500;
@@ -85,6 +86,20 @@ export class HomeComponent implements OnDestroy {
   private hasCommitteeMembership(committee: CommitteeAuthItem): boolean {
     const role = String(committee.committeeRole || '').toUpperCase();
     return role === 'COMMITTEE_MEMBER' || role === 'COMMITTEE_ADMIN' || role === 'COMMITTEE_MASTER_ADMIN';
+  }
+
+  // Show committees where logged in user is an accepted member/admin (after favourites)
+  // i.e., committeeRole is one of: COMMITTEE_MASTER_ADMIN / COMMITTEE_ADMIN / COMMITTEE_MEMBER
+  // and the committee is NOT marked as favourite.
+  get previewGroups(): CommitteesList[] {
+    if (!this.isLoggedIn) return [];
+    return this.committeeList.filter((c) => {
+      if (!this.isAuthItem(c)) return false;
+      if (c.isFavourite === 1) return false;
+
+      const role = String(c.committeeRole || '').toUpperCase();
+      return role === 'COMMITTEE_MEMBER' || role === 'COMMITTEE_ADMIN' || role === 'COMMITTEE_MASTER_ADMIN';
+    });
   }
 
   get favouriteGroups(): CommitteesList[] {
@@ -386,16 +401,28 @@ export class HomeComponent implements OnDestroy {
     this.favouriteExpandedCommitteeIds.clear();
   }
 
-  isPanelExpanded(panelPrefix: 'nearby' | 'favourite', committeeId: number): boolean {
-    return panelPrefix === 'nearby'
-      ? this.nearbyExpandedCommitteeIds.has(committeeId)
-      : this.favouriteExpandedCommitteeIds.has(committeeId);
+  expandPreview() {
+    this.previewExpandedCommitteeIds = new Set(this.previewGroups.map(group => group.id));
   }
 
-  updatePanelExpandedState(panelPrefix: 'nearby' | 'favourite', committeeId: number, expanded: boolean): void {
+  collapsePreview() {
+    this.previewExpandedCommitteeIds.clear();
+  }
+
+  isPanelExpanded(panelPrefix: 'nearby' | 'favourite' | 'preview', committeeId: number): boolean {
+    return panelPrefix === 'nearby'
+      ? this.nearbyExpandedCommitteeIds.has(committeeId)
+      : panelPrefix === 'favourite'
+        ? this.favouriteExpandedCommitteeIds.has(committeeId)
+        : this.previewExpandedCommitteeIds.has(committeeId);
+  }
+
+  updatePanelExpandedState(panelPrefix: 'nearby' | 'favourite' | 'preview', committeeId: number, expanded: boolean): void {
     const expandedSet = panelPrefix === 'nearby'
       ? this.nearbyExpandedCommitteeIds
-      : this.favouriteExpandedCommitteeIds;
+      : panelPrefix === 'favourite'
+        ? this.favouriteExpandedCommitteeIds
+        : this.previewExpandedCommitteeIds;
 
     if (expanded) {
       expandedSet.add(committeeId);
@@ -408,6 +435,7 @@ export class HomeComponent implements OnDestroy {
   private syncExpandedPanelState(): void {
     const nearbyIds = new Set(this.nearbyGroups.map(group => group.id));
     const favouriteIds = new Set(this.favouriteGroups.map(group => group.id));
+    const previewIds = new Set(this.previewGroups.map(group => group.id));
 
     this.nearbyExpandedCommitteeIds = new Set(
       [...this.nearbyExpandedCommitteeIds].filter(id => nearbyIds.has(id))
@@ -416,7 +444,13 @@ export class HomeComponent implements OnDestroy {
     this.favouriteExpandedCommitteeIds = new Set(
       [...this.favouriteExpandedCommitteeIds].filter(id => favouriteIds.has(id))
     );
+
+    this.previewExpandedCommitteeIds = new Set(
+      [...this.previewExpandedCommitteeIds].filter(id => previewIds.has(id))
+    );
   }
+
+  // (legacy/duplicate methods removed)
 
   getDistanceFromUser(committee: any): string {
     if (committee?.distance == null) return '';
@@ -426,7 +460,12 @@ export class HomeComponent implements OnDestroy {
   }
 
   private scrollToCommittee(committeeId: number, tabIndex: number): void {
-    const panelId = tabIndex === 1 ? `favourite-committee-${committeeId}` : `nearby-committee-${committeeId}`;
+    const panelId = tabIndex === 1
+      ? `favourite-committee-${committeeId}`
+      : tabIndex === 2
+        ? `preview-committee-${committeeId}`
+        : `nearby-committee-${committeeId}`;
+
 
     window.setTimeout(() => {
       const element = document.getElementById(panelId);
