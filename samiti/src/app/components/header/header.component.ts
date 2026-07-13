@@ -15,6 +15,7 @@ import { CreateCommitteeDialogComponent } from '../dialog/create-committee/creat
 import { Router } from '@angular/router';
 import { AuthService } from '../../core/services/auth.service';
 import { StartupLoaderService } from '../../core/services/startup-loader.service';
+import { UiToggleService } from '../../shared/services/ui-toggle.service';
 
 
 @Component({
@@ -40,6 +41,8 @@ export class HeaderComponent implements OnInit {
   private authService = inject(AuthService);
   private readonly startupLoaderService = inject(StartupLoaderService);
 
+  
+
   locationName = signal<string>('Locating...');
   isLoading = signal<boolean>(true);
   isSearchFocused = signal<boolean>(false);
@@ -48,7 +51,15 @@ export class HeaderComponent implements OnInit {
   userPhoto = signal<string>('');
   userInitials = signal<string>('');
   userName = signal<string>('');
-  constructor(private headerService: HeaderService) { }
+
+  constructor(
+    private headerService: HeaderService,
+    public uiService: UiToggleService
+  ) { }
+
+  toggleGroupsPanel(): void {
+    this.uiService.toggleGroupsPanel();
+  }
 
   private isOnDashboardRoute(): boolean {
     return this.router.url.startsWith('/dashboard');

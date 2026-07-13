@@ -18,6 +18,7 @@ import { ConfirmDialogData } from '../../components/dialog/confirm/confirm-dialo
 import { CommitteeListResponseGuestUser, CommitteeListRequestBackend, CommitteeAuthItem, CommitteesList, CommitteeEvent, JoinCommitteeRequestBody, JoinCommitteeApiResponse, ToggleCommitteeFavouriteResponse, CancelRequestApiResponse } from './home.models';
 import { TextFormatPipe } from '../../shared/pipe/text-format-pipe.pipe';
 import { StartupLoaderService } from '../../core/services/startup-loader.service';
+import { UiToggleService } from '../../shared/services/ui-toggle.service';
 
 @Component({
   selector: 'app-home',
@@ -53,7 +54,8 @@ export class HomeComponent implements OnDestroy {
   private readonly carouselIndices = new Map<number, number>();
   private carouselTimer: ReturnType<typeof setInterval> | null = null;
   private readonly CAROUSEL_INTERVAL_MS = 3500;
-
+  // public isCommitteesSectionVisible = false;
+  
   userLocationCords = this.headerService.userLocationCords;
   radiusOptions: number[] = [1, 5, 10, 25, 100, 1000];
   selectedCommitteeRadius: number = 5;
@@ -206,7 +208,9 @@ export class HomeComponent implements OnDestroy {
     this.stopCarouselAutoPlay();
   }
 
-  constructor() {
+  constructor(
+    public uiService: UiToggleService
+  ) {
     // Effect to watch location coordinates
     effect(() => {
       const coords = this.userLocationCords();

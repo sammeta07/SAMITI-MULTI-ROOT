@@ -1,11 +1,19 @@
 <mat-toolbar class="samiti-header" role="banner">
+  
   <div class="brand">
+    <button mat-icon-button type="button" class="global-panel-toggle-btn" 
+          [class.panel-active]="uiService.isCommitteesSectionVisible$ | async"
+          (click)="toggleGroupsPanel()" 
+          matTooltip="Toggle Groups Panel" 
+          matTooltipPosition="below">
+      <mat-icon>{{ (uiService.isCommitteesSectionVisible$ | async) ? 'menu_open' : 'menu' }}</mat-icon>
+    </button>
+    
     <span class="logo">S<span class="accent">AM</span>ITI</span>
   </div>
 
   <span class="spacer"></span>
 
-<!-- Global Search Pill - Hidden after login -->
   @if (!isLoggedIn()) {
   <div class="search-pill" [class.pill-active]="isSearchFocused()" role="search" aria-label="Search">
     <div class="pill-left">
@@ -37,38 +45,38 @@
 
   <span class="spacer"></span>
 
-  <!-- Location chip -->
   <button
     class="location-btn"
     type="button"
     matTooltip="Your current location"
     matTooltipPosition="below"
   >
-    <mat-icon>{{ isLoading() ? 'sync' : 'my_location' }}</mat-icon>
+    <mat-icon class="location-icon" [class.syncing]="isLoading()">
+      {{ isLoading() ? 'sync' : 'my_location' }}
+    </mat-icon>
     <span class="location-text">{{ locationName() }}</span>
   </button>
 
-<!-- Auth actions -->
   <div class="actions">
     @if (!isLoggedIn()) {
-      <button class="btn-outline" type="button" (click)="openRegisterDialog()">
+      <button class="btn-outline auth-action-btn" type="button" matTooltip="Register" matTooltipPosition="below" (click)="openRegisterDialog()">
         <mat-icon aria-hidden="true">person_add</mat-icon>
-        Register
+        <span class="auth-btn-text">Register</span>
       </button>
-      <button class="btn-accent" type="button" (click)="openLoginDialog()">
+      <button class="btn-accent auth-action-btn" type="button" matTooltip="Login" matTooltipPosition="below" (click)="openLoginDialog()">
         <mat-icon aria-hidden="true">login</mat-icon>
-        Login
+        <span class="auth-btn-text">Login</span>
       </button>
     } @else {
-      <button class="create-samiti-action-btn" type="button" (click)="openCreateCommitteeFromHeader()">
+      <button class="create-samiti-action-btn auth-action-btn" type="button" matTooltip="Create Group" matTooltipPosition="below" (click)="openCreateCommitteeFromHeader()">
         <mat-icon aria-hidden="true">group_add</mat-icon>
-        <span>Create Group</span>
+        <span class="auth-btn-text">Create Group</span>
       </button>
-      <button class="btn-accent" type="button" (click)="logout()">
+      <button class="btn-accent auth-action-btn" type="button" matTooltip="Logout" matTooltipPosition="below" (click)="logout()">
         <mat-icon aria-hidden="true">logout</mat-icon>
-        Logout
+        <span class="auth-btn-text">Logout</span>
       </button>
-<button class="user-avatar-btn" type="button" matTooltip="{{userName()}}" aria-label="My Account" (click)="openAccountDialog()">
+      <button class="user-avatar-btn" type="button" matTooltip="{{userName()}}" aria-label="My Account" matTooltipPosition="below" (click)="openAccountDialog()">
         @if (userPhoto()) {
           <img [src]="userPhoto()" alt="User photo" class="avatar-img" />
         } @else {

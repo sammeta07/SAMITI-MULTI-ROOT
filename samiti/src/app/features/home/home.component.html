@@ -1,7 +1,9 @@
 <div class="home-page" [class.dashboard-mode]="isLoggedIn">
   <div class="home-body">
 
-    <section class="committees-col" aria-label="Committees Management Panel">
+    <section class="committees-col" 
+             [class.panel-collapsed]="!(uiService.isCommitteesSectionVisible$ | async)" 
+             aria-label="Committees Management Panel">
       <div class="col-search-bar">
         <div class="col-header-row">
           <div class="col-title-container">
@@ -28,7 +30,6 @@
 
       <div class="committees-tabs-shell">
 
-        <!-- Reusable skeleton template for the committee list -->
         <ng-template #committeeSkeletonTpl>
           <div class="home-skeleton-list">
             @for (row of [1,2,3,4]; track row) {
@@ -248,7 +249,7 @@
         <mat-tab-group class="committees-tabs" animationDuration="200ms">
           <mat-tab>
             <ng-template mat-tab-label>
-              <mat-icon>adjust</mat-icon>
+              <mat-icon class="tab-leading-icon">adjust</mat-icon>
               <span>Near By</span>
               <span class="tab-badge">{{ nearbyGroups.length }}</span>
             </ng-template>
@@ -292,7 +293,7 @@
         <mat-tab-group class="committees-tabs" animationDuration="200ms" [(selectedIndex)]="selectedTabIndex">
           <mat-tab>
             <ng-template mat-tab-label>
-              <mat-icon>adjust</mat-icon>
+              <mat-icon class="tab-leading-icon">adjust</mat-icon>
               <span>Near By</span>
               <span class="tab-badge">{{ nearbyGroups.length }}</span>
             </ng-template>
@@ -321,7 +322,7 @@
 
           <mat-tab>
             <ng-template mat-tab-label>
-              <mat-icon>favorite_border</mat-icon>
+              <mat-icon class="tab-leading-icon">favorite_border</mat-icon>
               <span>Favourites</span>
               <span class="tab-badge">{{ favouriteGroups.length }}</span>
             </ng-template>
@@ -350,7 +351,7 @@
 
           <mat-tab>
             <ng-template mat-tab-label>
-              <mat-icon>preview</mat-icon>
+              <mat-icon class="tab-leading-icon">preview</mat-icon>
               <span>Preview</span>
               <span class="tab-badge">{{ previewGroups.length }}</span>
             </ng-template>
@@ -381,7 +382,9 @@
       </div>
     </section>
 
-    <aside class="sidebar-col" aria-label="Programs and Events Sidebar">
+    <aside class="sidebar-col" 
+           [class.panel-expanded-full]="!(uiService.isCommitteesSectionVisible$ | async)" 
+           aria-label="Programs and Events Sidebar">
       <div class="col-search-bar">
         <div class="col-header-row">
           <div class="col-title-container">
@@ -407,7 +410,7 @@
       <mat-tab-group class="sidebar-tabs" animationDuration="200ms">
         <mat-tab>
           <ng-template mat-tab-label>
-            <mat-icon>apps</mat-icon>
+            <mat-icon class="tab-leading-icon">apps</mat-icon>
             <span>All</span>
             <span class="tab-badge">0</span>
           </ng-template>
@@ -422,7 +425,7 @@
         @if (isLoggedIn) {
         <mat-tab>
           <ng-template mat-tab-label>
-            <mat-icon>favorite</mat-icon>
+            <mat-icon class="tab-leading-icon">favorite</mat-icon>
             <span>Favourites</span>
             <span class="tab-badge">0</span>
           </ng-template>
@@ -437,7 +440,7 @@
 
         <mat-tab>
           <ng-template mat-tab-label>
-            <mat-icon>sports_cricket</mat-icon>
+            <mat-icon class="tab-leading-icon">sports_cricket</mat-icon>
             <span>Cricket</span>
           </ng-template>
           <div class="sidebar-scroll">
@@ -450,7 +453,7 @@
 
         <mat-tab>
           <ng-template mat-tab-label>
-            <mat-icon>sports_soccer</mat-icon>
+            <mat-icon class="tab-leading-icon">sports_soccer</mat-icon>
             <span>Football</span>
           </ng-template>
           <div class="sidebar-scroll">
