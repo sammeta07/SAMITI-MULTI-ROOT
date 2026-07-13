@@ -212,7 +212,7 @@
     min-height: 34px !important;
     background: #ffffff !important;
     border-radius: 8px 8px 0 0 !important;
-    border: 1px solid #e2e8f0 !important;
+    // border: 1px solid #e2e8f0 !important;
     flex-shrink: 0 !important;
   }
 
@@ -221,8 +221,8 @@
   }
 
   ::ng-deep .mat-mdc-tab {
-    min-width: 120px !important;
-    max-width: 160px !important;
+    min-width: 100px !important;
+    max-width: 120px !important;
     min-height: 34px !important;
     height: 34px !important;
     padding: 0 12px !important;
@@ -290,6 +290,7 @@
     border-top: none !important;
     border-radius: 0 0 8px 8px;
     background: #f8fafc;
+    border: 1px solid #c2c6c7;
   }
 
   ::ng-deep .mat-mdc-tab-body-content {
@@ -478,6 +479,36 @@
     font-size: 1.15rem; width: 1.15rem; height: 1.15rem;
     display: flex !important; align-items: center !important; justify-content: center !important;
     &.is-fav-active { color: #ef4444 !important; animation: heartBeat 0.3s ease-in-out; }
+  }
+}
+/* ==========================================================================
+   ⚠️ EMPTY EVENTS ACCORDION PANEL ENGINE
+   ========================================================================== */
+.committee-events-empty {
+  display: flex !important;
+  flex-direction: column !important;
+  align-items: center !important;
+  justify-content: center !important;
+  text-align: center !important;
+  width: 100% !important;
+  min-height: 140px !important; /* Forces layout to open up vertical axis space */
+  padding: 24px 16px !important;
+  box-sizing: border-box !important;
+  clear: both;
+
+  mat-icon {
+    font-size: 2.2rem !important;
+    width: 2.2rem !important;
+    height: 2.2rem !important;
+    color: #cbd5e1 !important;
+    margin-bottom: 4px !important;
+  }
+
+  p {
+    margin: 0 !important;
+    font-size: 0.8rem !important;
+    font-weight: 600 !important;
+    color: #64748b !important;
   }
 }
 
