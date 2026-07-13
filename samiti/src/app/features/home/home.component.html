@@ -54,11 +54,11 @@
             [expanded]="isPanelExpanded(panelPrefix, committee.id)"
             (opened)="updatePanelExpandedState(panelPrefix, committee.id, true)"
             (closed)="updatePanelExpandedState(panelPrefix, committee.id, false)"
-            [class.panel-role-master-admin]="isAuth && (committee.committeeRole === 'COMMITTEE_MASTER_ADMIN')"
-            [class.panel-role-admin]="isAuth && (committee.committeeRole === 'COMMITTEE_ADMIN')"
-            [class.panel-role-member]="isAuth && committee.committeeRole === 'COMMITTEE_MEMBER'"
-            [class.panel-role-pending]="isAuth && committee.status === 'PENDING'"
-            [class.panel-role-none]="isAuth && !committee.committeeRole">
+            [class.panel-role-master-admin]="isAuth && committee.committeeRole === 'COMMITTEE_MASTER_ADMIN'"
+            [class.panel-role-admin]="committee.committeeRole === 'COMMITTEE_ADMIN'"
+            [class.panel-role-member]="committee.committeeRole === 'COMMITTEE_MEMBER'"
+            [class.panel-role-pending]="committee.status === 'PENDING'"
+            [class.panel-role-none]="!isAuth">
 
             <mat-expansion-panel-header>
               <div class="committee-card-grid">
@@ -73,7 +73,7 @@
                 <div class="card-main-info-area">
                   <div class="card-title-row">
                     <h3 class="committee-display-name">{{ committee.committeeName | titlecase }}</h3>
-                    @if (isAuth) {
+                    @if (isAuth && committee.committeeRole !== 'COMMITTEE_MASTER_ADMIN' && committee.committeeRole !== 'COMMITTEE_ADMIN' && committee.committeeRole !== 'COMMITTEE_MEMBER') {
                     <button mat-icon-button type="button" class="fav-heart-toggle-btn"
                       (click)="toggleFavouriteCommittee(committee.id, $event)">
                       <mat-icon [class.is-fav-active]="committee.isFavourite">
