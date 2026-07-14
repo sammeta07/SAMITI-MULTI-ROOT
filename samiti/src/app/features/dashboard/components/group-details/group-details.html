@@ -64,20 +64,35 @@
   <div class="workspace-body scrollable-container">
 
     <!-- ── Committee card — same layout as home expansion panel header ── -->
-    <div class="gd-committee-card">
+    <div class="gd-committee-card"
+      [class.role-master-admin]="userCommitteeRole() === 'COMMITTEE_MASTER_ADMIN'"
+      [class.role-admin]="userCommitteeRole() === 'COMMITTEE_ADMIN'"
+      [class.role-member]="userCommitteeRole() === 'COMMITTEE_MEMBER'"
+      [class.role-pending]="isCurrentUserPending()"
+      [class.role-none]="!userCommitteeRole() && !isCurrentUserPending()">
       <div class="committee-card-grid">
 
         <div class="card-logo-area">
           @if (groupData()?.logo) {
           <img [src]="groupData()?.logo" [alt]="groupData()?.committeeName" class="committee-avatar" (error)="clearGroupLogo()" />
           } @else {
-          <div class="committee-avatar-fallback">{{ groupData()?.committeeName?.charAt(0) || 'C' }}</div>
+          <div class="committee-avatar-fallback"
+            [class.fb-master-admin]="userCommitteeRole() === 'COMMITTEE_MASTER_ADMIN'"
+            [class.fb-admin]="userCommitteeRole() === 'COMMITTEE_ADMIN'"
+            [class.fb-member]="userCommitteeRole() === 'COMMITTEE_MEMBER'"
+            [class.fb-pending]="isCurrentUserPending()"
+            [class.fb-none]="!userCommitteeRole() && !isCurrentUserPending()">{{ groupData()?.committeeName?.charAt(0) || 'C' }}</div>
           }
         </div>
 
         <div class="card-main-info-area">
           <div class="card-title-row">
             <h3 class="committee-display-name">{{ groupData()?.committeeName | titlecase }}</h3>
+            @if (currentUserRoleBadgeClass()) {
+            <span class="user-role-badge {{ currentUserRoleBadgeClass() }}">
+              <mat-icon class="role-badge-icon">verified</mat-icon>{{ currentUserRoleLabel() }}
+            </span>
+            }
           </div>
           <div class="card-location-row">
             <span class="location-text-trim">{{ groupData()?.address | textFormatPipe:'sentence' }}</span>
@@ -192,8 +207,12 @@
 
         <div class="mesh-list-scroll-box">
           @for (admin of adminsList(); track admin.id) {
-          <div class="item-density-row">
-            <div class="row-avatar circle-shape admin-bg">
+          <div class="item-density-row"
+            [class.row-master-admin]="admin.committeeRole === 'COMMITTEE_MASTER_ADMIN'"
+            [class.row-admin]="admin.committeeRole === 'COMMITTEE_ADMIN'">
+            <div class="row-avatar circle-shape"
+              [class.avatar-master-admin]="admin.committeeRole === 'COMMITTEE_MASTER_ADMIN'"
+              [class.avatar-admin]="admin.committeeRole === 'COMMITTEE_ADMIN'">
               @if (admin.photo) {
               <img [src]="admin.photo" [alt]="admin.name" class="avatar-img" (error)="admin.photo = null" />
               } @else {
@@ -201,7 +220,14 @@
               }
             </div>
             <div class="row-info-core">
-              <div class="main-title">{{ admin.name | textFormatPipe:'title' }}</div>
+              <div class="main-title">
+                {{ admin.name | textFormatPipe:'title' }}
+                @if (admin.committeeRole === 'COMMITTEE_MASTER_ADMIN') {
+                <span class="roster-role-tag tag-master-admin">MASTER</span>
+                } @else if (admin.committeeRole === 'COMMITTEE_ADMIN') {
+                <span class="roster-role-tag tag-admin">ADMIN</span>
+                }
+              </div>
               <div class="secondary-sub-lbl">{{ admin.email }}</div>
             </div>
             <div class="row-action-deck">
@@ -239,8 +265,10 @@
 
         <div class="mesh-list-scroll-box">
           @for (member of filteredMembersList(); track member.id) {
-          <div class="item-density-row">
-            <div class="row-avatar circle-shape member-bg">
+          <div class="item-density-row"
+            [class.row-member]="member.committeeRole === 'COMMITTEE_MEMBER'">
+            <div class="row-avatar circle-shape"
+              [class.avatar-member]="member.committeeRole === 'COMMITTEE_MEMBER'">
               @if (member.photo) {
               <img [src]="member.photo" [alt]="member.name" class="avatar-img" (error)="member.photo = null" />
               } @else {
@@ -248,7 +276,12 @@
               }
             </div>
             <div class="row-info-core">
-              <div class="main-title">{{ member.name | textFormatPipe:'title' }}</div>
+              <div class="main-title">
+                {{ member.name | textFormatPipe:'title' }}
+                @if (member.committeeRole === 'COMMITTEE_MEMBER') {
+                <span class="roster-role-tag tag-member">MEMBER</span>
+                }
+              </div>
               <div class="secondary-sub-lbl">{{ member.email }}</div>
             </div>
             <div class="row-action-deck">

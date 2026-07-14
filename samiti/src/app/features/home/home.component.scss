@@ -363,11 +363,11 @@
     border-left-width: 4px !important;
 
     &.panel-role-admin {
-      border-left-color: #f16511 !important;
-      &:hover { border-color: #cbd5e1 #cbd5e1 #cbd5e1 #f16511 !important; }
+      border-left-color: #22c55e !important;
+      &:hover { border-color: #cbd5e1 #cbd5e1 #cbd5e1 #22c55e !important; }
       &.mat-expanded {
-        border-color: #f16511 !important;
-        box-shadow: 0 4px 16px rgba(241, 101, 17, 0.08) !important;
+        border-color: #22c55e !important;
+        box-shadow: 0 4px 16px rgba(34, 197, 94, 0.08) !important;
       }
     }
 
@@ -584,6 +584,7 @@
 }
 
 .admin-pill { background-color: rgba(239, 68, 68, 0.08) !important; color: #ef4444 !important; border: 1px solid rgba(239, 68, 68, 0.18); }
+.admin-role-pill { background-color: rgba(34, 197, 94, 0.08) !important; color: #16a34a !important; border: 1px solid rgba(34, 197, 94, 0.18); }
 .member-pill { background-color: rgba(59, 130, 246, 0.08) !important; color: #3b82f6 !important; border: 1px solid rgba(59, 130, 246, 0.18); }
 .pending-pill { background-color: rgba(245, 158, 11, 0.08) !important; color: #f59e0b !important; border: 1px solid rgba(245, 158, 11, 0.18); }
 

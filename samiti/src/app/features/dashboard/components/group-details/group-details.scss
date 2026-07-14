@@ -84,6 +84,70 @@
   border-radius: 12px;
   padding: 10px 16px;
   box-shadow: 0 1px 4px rgba(0,0,0,0.03);
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+
+  /* Role based accent borders:
+     master-admin = red, admin = green, member = blue, pending = yellow, none = grey */
+  &.role-master-admin {
+    border-color: #ef4444;
+    border-left-color: #ef4444;
+    box-shadow: 0 2px 12px rgba(239, 68, 68, 0.1);
+  }
+  &.role-admin {
+    border-left-color: #22c55e;
+  }
+  &.role-member {
+    border-left-color: #3b82f6;
+  }
+  &.role-pending {
+    border-left-color: #eab308;
+  }
+  &.role-none {
+    border-left-color: #cbd5e1;
+  }
+}
+
+.user-role-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  height: 20px;
+  padding: 0 8px;
+  margin-left: 4px;
+  border-radius: 999px;
+  font-size: 0.58rem;
+  font-weight: 700;
+  letter-spacing: 0.3px;
+  text-transform: uppercase;
+  white-space: nowrap;
+  border: 1px solid transparent;
+
+  .role-badge-icon { font-size: 0.8rem; width: 0.8rem; height: 0.8rem; }
+
+  &.role-committee_master_admin {
+    background: #fef2f2;
+    color: #dc2626;
+    border-color: rgba(220, 38, 38, 0.25);
+    .role-badge-icon { color: #dc2626; }
+  }
+  &.role-committee_admin {
+    background: #f0fdf4;
+    color: #16a34a;
+    border-color: rgba(22, 163, 74, 0.25);
+    .role-badge-icon { color: #16a34a; }
+  }
+  &.role-committee_member {
+    background: #eff6ff;
+    color: #1d4ed8;
+    border-color: rgba(29, 78, 216, 0.22);
+    .role-badge-icon { color: #1d4ed8; }
+  }
+  &.role-pending {
+    background: #fefce8;
+    color: #ca8a04;
+    border-color: rgba(202, 138, 4, 0.25);
+    .role-badge-icon { color: #ca8a04; }
+  }
 }
 
 .committee-card-grid { display: grid; width: 100%; grid-template-columns: 58px 1fr 190px; grid-template-rows: auto auto; row-gap: 6px; column-gap: 14px; align-items: start; }
@@ -91,6 +155,15 @@
 
 .committee-avatar { width: 54px; height: 54px; border-radius: 11px; object-fit: cover; border: 1px solid #e2e8f0; }
 .committee-avatar-fallback { width: 54px; height: 54px; border-radius: 11px; background: linear-gradient(135deg, #f97316, #ea580c); color: #ffffff; display: flex; align-items: center; justify-content: center; font-size: 1.4rem; font-weight: 700; }
+
+/* Light role-based background for the fallback avatar (no logo) */
+.committee-avatar-fallback {
+  &.fb-master-admin { background: linear-gradient(135deg, #fecaca, #fca5a5); color: #b91c1c; }
+  &.fb-admin { background: linear-gradient(135deg, #bbf7d0, #86efac); color: #15803d; }
+  &.fb-member { background: linear-gradient(135deg, #bfdbfe, #93c5fd); color: #1e40af; }
+  &.fb-pending { background: linear-gradient(135deg, #fef08a, #fde047); color: #a16207; }
+  &.fb-none { background: linear-gradient(135deg, #e2e8f0, #cbd5e1); color: #475569; }
+}
 
 .card-main-info-area { display: flex; flex-direction: column; gap: 3px; }
 .card-title-row { display: flex; align-items: center; gap: 6px; }
@@ -386,6 +459,43 @@
     mat-icon { font-size: 0.75rem; }
     &:hover { color: #ef4444; }
   }
+}
+
+/* Role accent for the Group Admins roster (red master admin / green admin) */
+.item-density-row {
+  &.row-master-admin {
+    border-left: 3px solid #ef4444;
+    background: #fef2f2;
+    .avatar-master-admin { background: linear-gradient(135deg, #ef4444, #dc2626); }
+  }
+  &.row-admin {
+    border-left: 3px solid #22c55e;
+    background: #f0fdf4;
+    .avatar-admin { background: linear-gradient(135deg, #22c55e, #16a34a); }
+  }
+  &.row-member {
+    border-left: 3px solid #3b82f6;
+    background: #eff6ff;
+    .avatar-member { background: linear-gradient(135deg, #3b82f6, #1d4ed8); }
+  }
+}
+
+.roster-role-tag {
+  display: inline-flex;
+  align-items: center;
+  height: 16px;
+  padding: 0 6px;
+  margin-left: 6px;
+  border-radius: 999px;
+  font-size: 0.55rem;
+  font-weight: 700;
+  letter-spacing: 0.3px;
+  text-transform: uppercase;
+  vertical-align: middle;
+
+  &.tag-master-admin { background: #fee2e2; color: #dc2626; border: 1px solid rgba(220, 38, 38, 0.25); }
+  &.tag-admin { background: #dcfce7; color: #16a34a; border: 1px solid rgba(22, 163, 74, 0.25); }
+  &.tag-member { background: #dbeafe; color: #1d4ed8; border: 1px solid rgba(29, 78, 216, 0.25); }
 }
 
 .mesh-list-scroll-box {

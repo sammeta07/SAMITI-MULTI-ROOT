@@ -65,6 +65,7 @@ export class GroupDetailsComponent implements OnInit {
   public readonly groupData = signal<CommitteeProfileMeta | null>(null);
   public readonly isAdmin = signal<boolean>(false);
   public readonly committeeEvents = signal<CommitteeEventListItem[]>([]);
+  public readonly userCommitteeRole = signal<'COMMITTEE_MEMBER' | 'COMMITTEE_ADMIN' | 'COMMITTEE_MASTER_ADMIN' | null>(null);
   
   // Lists holding structured members segment arrays securely typed
   public readonly adminsList = signal<CommitteeRosterMember[]>([]);
@@ -76,6 +77,26 @@ export class GroupDetailsComponent implements OnInit {
 // 🔐 Computed signals for role-based button visibility
   public readonly isCurrentUserAdmin = computed(() => this.isAdmin());
   public readonly isCurrentUserMember = computed(() => !this.isAdmin());
+  public readonly isCurrentUserMasterAdmin = computed(() => this.userCommitteeRole() === 'COMMITTEE_MASTER_ADMIN');
+  public readonly isCurrentUserPending = computed(() => this.loggedInUserAdminRequestStatus() === 'PENDING');
+  public readonly currentUserRoleLabel = computed(() => {
+    if (this.loggedInUserAdminRequestStatus() === 'PENDING') return 'PENDING';
+    switch (this.userCommitteeRole()) {
+      case 'COMMITTEE_MASTER_ADMIN': return 'MASTER ADMIN';
+      case 'COMMITTEE_ADMIN': return 'ADMIN';
+      case 'COMMITTEE_MEMBER': return 'MEMBER';
+      default: return null;
+    }
+  });
+  public readonly currentUserRoleBadgeClass = computed(() => {
+    if (this.loggedInUserAdminRequestStatus() === 'PENDING') return 'role-pending';
+    switch (this.userCommitteeRole()) {
+      case 'COMMITTEE_MASTER_ADMIN': return 'role-committee_master_admin';
+      case 'COMMITTEE_ADMIN': return 'role-committee_admin';
+      case 'COMMITTEE_MEMBER': return 'role-committee_member';
+      default: return '';
+    }
+  });
   public readonly canShowRequestAdminRoleButton = computed(
     () => this.isCurrentUserMember() && this.loggedInUserAdminRequestStatus() !== 'PENDING' && this.loggedInUserAdminRequestStatus() !== 'ACCEPTED'
   );
@@ -230,6 +251,7 @@ export class GroupDetailsComponent implements OnInit {
           };
 
           this.groupData.set(committeeInfo);
+          this.userCommitteeRole.set(data.committeeRole ?? null);
           this.isAdmin.set(data.committeeRole === 'COMMITTEE_ADMIN' || data.committeeRole === 'COMMITTEE_MASTER_ADMIN');
           this.loggedInUserAdminRequestStatus.set(
             data.committeeRole === 'COMMITTEE_ADMIN' || data.committeeRole === 'COMMITTEE_MASTER_ADMIN' ? 'ACCEPTED' : null
