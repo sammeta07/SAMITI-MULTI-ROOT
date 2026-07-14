@@ -7,7 +7,13 @@
       <div class="col-search-bar">
         <div class="col-header-row">
           <div class="col-title-container">
-            <mat-icon class="col-icon">gavel</mat-icon>
+              <button mat-icon-button type="button" class="global-panel-toggle-btn" 
+                [class.panel-active]="uiService.isCommitteesSectionVisible$ | async"
+                (click)="toggleGroupsPanel()" 
+                matTooltip="Toggle Groups Panel" 
+                matTooltipPosition="below">
+                <mat-icon>{{ (uiService.isCommitteesSectionVisible$ | async) ? 'chevron_left' : 'chevron_right' }}</mat-icon>
+              </button>
             <div class="col-title-wrapper">
               <h2 class="col-title">Groups</h2>
             </div>
@@ -388,7 +394,13 @@
       <div class="col-search-bar">
         <div class="col-header-row">
           <div class="col-title-container">
-            <mat-icon class="col-icon">apps</mat-icon>
+              <button mat-icon-button type="button" class="global-panel-toggle-btn" 
+                [class.panel-active]="uiService.isCommitteesSectionVisible$ | async"
+                (click)="toggleGroupsPanel()" 
+                matTooltip="Toggle Groups Panel" 
+                matTooltipPosition="below">
+                <mat-icon>{{ (uiService.isCommitteesSectionVisible$ | async) ? 'chevron_left' : 'chevron_right' }}</mat-icon>
+              </button>
             <h2 class="col-title">Programs</h2>
           </div>
 

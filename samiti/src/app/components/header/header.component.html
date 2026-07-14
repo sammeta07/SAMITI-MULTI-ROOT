@@ -1,21 +1,15 @@
 <mat-toolbar class="samiti-header" role="banner">
   
   <div class="brand">
-    <button mat-icon-button type="button" class="global-panel-toggle-btn" 
-          [class.panel-active]="uiService.isCommitteesSectionVisible$ | async"
-          (click)="toggleGroupsPanel()" 
-          matTooltip="Toggle Groups Panel" 
-          matTooltipPosition="below">
-      <mat-icon>{{ (uiService.isCommitteesSectionVisible$ | async) ? 'menu_open' : 'menu' }}</mat-icon>
-    </button>
-
-    <button mat-icon-button type="button" class="global-panel-toggle-btn" 
-          [class.panel-active]="uiService.isHeirarchyMenu$ | async"
-          (click)="toggleSideMenuPanel()" 
-          matTooltip="Toggle Sidemenu Panel" 
-          matTooltipPosition="below">
-      <mat-icon>{{ (uiService.isHeirarchyMenu$ | async) ? 'menu_open' : 'menu' }}</mat-icon>
-    </button>
+     @if (isLoggedIn()) {
+       <button mat-icon-button type="button" class="global-panel-toggle-btn" 
+             [class.panel-active]="uiService.isHeirarchyMenu$ | async"
+             (click)="toggleSideMenuPanel()" 
+             matTooltip="Toggle Sidemenu Panel" 
+             matTooltipPosition="below">
+         <mat-icon>{{ (uiService.isHeirarchyMenu$ | async) ? 'menu_open' : 'menu' }}</mat-icon>
+       </button>
+     }
     
     <span class="logo">S<span class="accent">AM</span>ITI</span>
   </div>

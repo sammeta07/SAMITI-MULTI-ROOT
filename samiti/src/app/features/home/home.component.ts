@@ -235,6 +235,10 @@ export class HomeComponent implements OnDestroy {
     });
   }
 
+  toggleGroupsPanel(): void {
+    this.uiService.toggleGroupsPanel();
+  }
+
   onRadiusChange(event: Event) {
     const target = event.target as HTMLSelectElement;
     this.selectedCommitteeRadius = Number(target.value);

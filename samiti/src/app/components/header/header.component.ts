@@ -57,9 +57,6 @@ export class HeaderComponent implements OnInit {
     public uiService: UiToggleService
   ) { }
 
-  toggleGroupsPanel(): void {
-    this.uiService.toggleGroupsPanel();
-  }
   toggleSideMenuPanel(){
     this.uiService.toggleHierarchyMenu(); 
   }
