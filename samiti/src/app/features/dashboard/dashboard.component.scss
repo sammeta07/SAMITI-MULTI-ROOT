@@ -18,9 +18,7 @@
 
 /* 📌 LEFT PANEL: DYNAMIC INITIAL WIDTH RESIZABLE SIDEBAR */
 .workspace-sidebar {
-  width: 320px;
-  min-width: 320px;
-  max-width: 560px;
+  /* Remove hardcoded min/max-width from here so inline bindings work perfectly */
   height: 100%;
   background: #ffffff;
   display: flex;
@@ -28,6 +26,20 @@
   flex-shrink: 0;
   box-sizing: border-box;
   overflow: hidden;
+
+  /* ⚡ IMPORTANT: Zero transition by default for butter-smooth dragging */
+  transition: none; 
+  will-change: width;
+
+  /* 🚫 COLLAPSE OVERRIDE: Transition handles only when closing/opening via toggle */
+  &.panel-collapsed {
+    width: 0px !important;
+    min-width: 0px !important;
+    max-width: 0px !important;
+    transition: width 0.2s cubic-bezier(0.4, 0, 0.2, 1), 
+                min-width 0.2s cubic-bezier(0.4, 0, 0.2, 1), 
+                max-width 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  }
 }
 
 .sidebar-tree-wrapper {
@@ -35,8 +47,14 @@
   overflow-y: auto;
   background: #ffffff;
   box-sizing: border-box;
-  &::-webkit-scrollbar { width: 4px; }
-  &::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 99px; }
+  
+  &::-webkit-scrollbar { 
+    width: 4px; 
+  }
+  &::-webkit-scrollbar-thumb { 
+    background: #cbd5e1; 
+    border-radius: 99px; 
+  }
 }
 
 /* 🎚️ RESIZER DRAG BAR ELEMENT GRAPHICS */
@@ -49,10 +67,10 @@
   position: relative;
   transition: background 0.15s ease;
   box-sizing: border-box;
+  z-index: 10;
 
   &:hover, &:active {
     background: #f97316; 
-    width: 3px;
   }
 }
 
@@ -64,9 +82,11 @@
   height: 100%;
   min-width: 0;
   box-sizing: border-box;
-}
 
-/* 🧼 REMOVED .workspace-top-bar AND @KEYFRAMES TO ELIMINATE HEADER LAYOUT COMPLETELY */
+  &.panel-expanded-full {
+    width: 100%;
+  }
+}
 
 .workspace-dynamic-content-area { 
   flex-grow: 1; 
@@ -79,6 +99,12 @@
   width: 100%; 
   overflow: hidden; 
   box-sizing: border-box;
-  &::-webkit-scrollbar { width: 5px; }
-  &::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 99px; }
+  
+  &::-webkit-scrollbar { 
+    width: 5px; 
+  }
+  &::-webkit-scrollbar-thumb { 
+    background: #cbd5e1; 
+    border-radius: 99px; 
+  }
 }

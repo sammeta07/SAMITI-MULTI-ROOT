@@ -60,6 +60,9 @@ export class HeaderComponent implements OnInit {
   toggleGroupsPanel(): void {
     this.uiService.toggleGroupsPanel();
   }
+  toggleSideMenuPanel(){
+    this.uiService.toggleHierarchyMenu(); 
+  }
 
   private isOnDashboardRoute(): boolean {
     return this.router.url.startsWith('/dashboard');

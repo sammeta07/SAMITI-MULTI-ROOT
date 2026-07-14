@@ -8,6 +8,14 @@
           matTooltipPosition="below">
       <mat-icon>{{ (uiService.isCommitteesSectionVisible$ | async) ? 'menu_open' : 'menu' }}</mat-icon>
     </button>
+
+    <button mat-icon-button type="button" class="global-panel-toggle-btn" 
+          [class.panel-active]="uiService.isHeirarchyMenu$ | async"
+          (click)="toggleSideMenuPanel()" 
+          matTooltip="Toggle Sidemenu Panel" 
+          matTooltipPosition="below">
+      <mat-icon>{{ (uiService.isHeirarchyMenu$ | async) ? 'menu_open' : 'menu' }}</mat-icon>
+    </button>
     
     <span class="logo">S<span class="accent">AM</span>ITI</span>
   </div>

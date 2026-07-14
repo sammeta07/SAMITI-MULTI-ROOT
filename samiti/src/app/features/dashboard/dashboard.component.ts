@@ -2,7 +2,7 @@ import { Component, inject, ViewChild, ElementRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { RouterOutlet } from '@angular/router';
 import { DashboardHierarchyTreeComponent } from './components/dashboard-hierarchy-tree/dashboard-hierarchy-tree.component';
-
+import { UiToggleService } from '../../shared/services/ui-toggle.service'
 @Component({
   selector: 'app-dashboard',
   standalone: true,
@@ -16,8 +16,10 @@ import { DashboardHierarchyTreeComponent } from './components/dashboard-hierarch
 })
 export class DashboardComponent {
   @ViewChild('sidebarEl', { static: false }) sidebarElement!: ElementRef<HTMLElement>;
-  private static readonly SIDEBAR_MIN_WIDTH = 320;
+  private static readonly SIDEBAR_MIN_WIDTH = 200;
   private static readonly SIDEBAR_MAX_WIDTH = 560;
+
+  constructor(public uiService: UiToggleService) {}
 
   // 🎚️ RESIZER MOUSE DRAG DRIVER: Real-time calculation mechanics for sidebar width changes
   public initSidebarResize(mouseDownEvent: MouseEvent): void {
@@ -28,8 +30,7 @@ export class DashboardComponent {
 
     const doDrag = (moveEvent: MouseEvent) => {
       const currentWidth = startWidth + (moveEvent.clientX - startX);
-      
-      // Enforce rigid standard boundary locks (Min: 320px, Max: 560px)
+
       if (
         currentWidth >= DashboardComponent.SIDEBAR_MIN_WIDTH &&
         currentWidth <= DashboardComponent.SIDEBAR_MAX_WIDTH

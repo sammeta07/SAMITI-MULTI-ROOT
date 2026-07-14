@@ -5,24 +5,25 @@ import { BehaviorSubject } from 'rxjs';
   providedIn: 'root'
 })
 export class UiToggleService {
-  // Mobile par Groups Panel by default false (hidden) rahega
-  private groupsPanelVisible = new BehaviorSubject<boolean>(false);
-  
-  // Components is observable ko subscribe karenge
-  isCommitteesSectionVisible$ = this.groupsPanelVisible.asObservable();
-
-  // Current value getter (if needed anywhere)
-  get currentVisibility(): boolean {
-    return this.groupsPanelVisible.value;
-  }
-
-  // Toggle function
-  toggleGroupsPanel(): void {
-    this.groupsPanelVisible.next(!this.groupsPanelVisible.value);
-  }
-
-  // Direct set karne ke liye method (optional)
-  setGroupsPanelVisibility(visible: boolean): void {
-    this.groupsPanelVisible.next(visible);
-  }
+  // =====================Groups/Programs=================
+    private groupsPanelVisible = new BehaviorSubject<boolean>(false);
+    isCommitteesSectionVisible$ = this.groupsPanelVisible.asObservable();
+    get currentVisibilitygroupsPanel(): boolean {
+      return this.groupsPanelVisible.value;
+    }
+    setGroupsPanelVisibility(visible: boolean): void {
+      this.groupsPanelVisible.next(visible);
+    }
+    toggleGroupsPanel(): void {
+      this.groupsPanelVisible.next(!this.groupsPanelVisible.value);
+    }
+  // =====================Sidemenu=================
+    private isHeirarchyMenuSubject = new BehaviorSubject<boolean>(true);
+    isHeirarchyMenu$ = this.isHeirarchyMenuSubject.asObservable();
+    toggleHierarchyMenu(): void {
+      this.isHeirarchyMenuSubject.next(!this.isHeirarchyMenuSubject.value);
+    }
+    setHierarchyMenuState(isOpen: boolean): void {
+      this.isHeirarchyMenuSubject.next(isOpen);
+    }
 }
