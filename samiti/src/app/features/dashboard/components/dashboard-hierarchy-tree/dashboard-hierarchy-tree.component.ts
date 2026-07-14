@@ -39,6 +39,7 @@ export class DashboardHierarchyTreeComponent implements OnInit {
   
   // 🚀 FIXED: Dynamic signal tracking static navigation items from old dashboard
   public readonly activeStaticMenu = signal<string | null>('home');
+  public readonly isRequestsMenuOpen = signal<boolean>(true);
   public readonly hasCommitteesHierarchy = signal<boolean>(false);
   @Output() staticMenuSelected = new EventEmitter<void>();
   @Output() treeNodeSelected = new EventEmitter<TreeNode>();
@@ -214,7 +215,18 @@ export class DashboardHierarchyTreeComponent implements OnInit {
       this.isLoading.set(false);
       return;
     } else if (urlSegments.includes('requests')) {
-      this.activeStaticMenu.set('requests');
+      const requestsIndex = urlSegments.indexOf('requests');
+      const subRoute = requestsIndex >= 0 && urlSegments.length > requestsIndex + 1 ? urlSegments[requestsIndex + 1] : null;
+
+      if (subRoute === 'sent') {
+        this.activeStaticMenu.set('requests-sent');
+      } else if (subRoute === 'received') {
+        this.activeStaticMenu.set('requests-received');
+      } else {
+        this.activeStaticMenu.set('requests');
+      }
+
+      this.isRequestsMenuOpen.set(true);
       this.selectedNode.set(null);
       this.isLoading.set(false);
       return;
@@ -376,13 +388,23 @@ export class DashboardHierarchyTreeComponent implements OnInit {
   }
 
   // 🚀 FIXED: Static Menu selection handling logic to switch route viewports cleanly
-  public onSelectStaticMenu(menuType: 'home' | 'requests'): void {
+  public onSelectStaticMenu(menuType: 'home' | 'requests' | 'requests-sent' | 'requests-received'): void {
+    if (menuType === 'requests') return;
+
     this.selectedNode.set(null);
     this.activeStaticMenu.set(menuType);
     this.staticMenuSelected.emit();
-    this.router.navigate(['/dashboard', menuType]).then(() => {
-      console.log(`Successfully shifted application context viewport to static hub: [${menuType.toUpperCase()}]`);
+    this.isRequestsMenuOpen.set(true);
+
+    const segments = menuType === 'home' ? ['home'] : ['requests', menuType.replace('requests-', '')];
+
+    this.router.navigate(['/dashboard', ...segments]).then(() => {
+      console.log(`Successfully shifted application context viewport to static hub: [${menuType.replace('requests-', '').toUpperCase()}]`);
     });
+  }
+
+  public toggleRequestsMenu(): void {
+    this.isRequestsMenuOpen.update(open => !open);
   }
 
   public isNodeSelected(node: TreeNode): boolean {

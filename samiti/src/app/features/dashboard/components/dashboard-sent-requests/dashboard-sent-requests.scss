@@ -1,4 +1,4 @@
-﻿:host {
+:host {
   display: block;
   height: 100%;
   width: 100%;
@@ -31,9 +31,6 @@
   gap: 10px;
 }
 
-/* ────────────────────────────────────────────────────────────────────────── */
-/* LOADING STATE */
-/* ────────────────────────────────────────────────────────────────────────── */
 .loading-container {
   display: flex;
   flex-direction: column;
@@ -51,31 +48,148 @@
   letter-spacing: 0.2px;
 }
 
-/* ────────────────────────────────────────────────────────────────────────── */
-/* MODERN TABS */
-/* ────────────────────────────────────────────────────────────────────────── */
-.modern-tabs {
-  flex: 1;
+.inner-tabs {
   display: flex;
   flex-direction: column;
-  width: 100%;
-  min-height: 0;
-}
-
-.modern-tabs .mat-mdc-tab-header {
-  background: #ffffff;
-  border-radius: 12px;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
-  padding: 0 6px;
-  margin-bottom: 10px;
-  border-bottom: none !important;
-}
-
-.modern-tabs .mat-mdc-tab {
-  height: 42px;
-  padding: 0 10px;
   flex: 1;
-  min-width: auto;
+  overflow: hidden;
+
+  ::ng-deep .mat-mdc-tab-header {
+    border-bottom: none !important;
+    margin-bottom: 0 !important;
+    min-height: 34px !important;
+    background: #ffffff !important;
+    border-radius: 8px 8px 0 0 !important;
+    flex-shrink: 0 !important;
+  }
+
+  ::ng-deep .mat-mdc-tab-labels {
+    justify-content: flex-start !important;
+  }
+
+  ::ng-deep .mat-mdc-tab {
+    min-width: 150px !important;
+    max-width: 200px !important;
+    min-height: 34px !important;
+    height: 34px !important;
+    padding: 0 12px !important;
+    border-right: 1px solid #e2e8f0 !important;
+    transition: background 0.12s ease-in-out;
+
+    .mdc-tab__content {
+      display: inline-flex !important;
+      align-items: center !important;
+      justify-content: flex-start !important;
+      gap: 6px !important;
+      overflow: hidden;
+    }
+
+    .mdc-tab__text-label {
+      font-size: 0.75rem !important;
+      font-weight: 700 !important;
+      color: #64748b !important;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .tab-leading-icon,
+    .tab-icon {
+      font-size: 0.85rem !important;
+      width: 0.85rem !important;
+      height: 0.85rem !important;
+      color: #94a3b8;
+      flex-shrink: 0;
+    }
+
+    .tab-badge {
+      background: #e2e8f0;
+      color: #475569;
+    }
+
+    &.mdc-tab--active {
+      background: #f8fafc !important;
+      border-top: 4px solid #767e80 !important;
+      border-radius: 6px 6px 0 0 !important;
+      border-right-color: #767e80 !important;
+      border-left: 1px solid #767e80 !important;
+
+      .mdc-tab__text-label {
+        color: #767e80 !important;
+        font-weight: 800 !important;
+      }
+
+      .tab-leading-icon,
+      .tab-icon {
+        color: #767e80 !important;
+      }
+    }
+
+    &:not(.mdc-tab--active):hover {
+      background: #f1f5f9 !important;
+    }
+  }
+
+  ::ng-deep .mat-mdc-tab-indicator,
+  ::ng-deep .mdc-tab-indicator,
+  ::ng-deep .mat-mdc-tab-indicator .mat-mdc-tab-indicator__content,
+  ::ng-deep .mdc-tab-indicator__content--underline,
+  ::ng-deep .mdc-tab-indicator__content--underline::after {
+    display: none !important;
+    border: none !important;
+    height: 0 !important;
+  }
+
+  ::ng-deep .mat-mdc-tab-body-wrapper {
+    flex: 1;
+    overflow: hidden;
+    border-top: none !important;
+    border-radius: 0 0 8px 8px;
+    background: #f8fafc;
+    border: 1px solid #c2c6c7;
+  }
+
+  ::ng-deep .mat-mdc-tab-body-content {
+    height: 100%;
+    overflow: hidden;
+  }
+}
+
+.tab-leading-icon {
+  font-size: 0.85rem !important;
+  width: 0.85rem !important;
+  height: 0.85rem !important;
+  color: #94a3b8;
+}
+
+.tab-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 18px;
+  height: 18px;
+  padding: 0 5px;
+  border-radius: 999px;
+  background: #f1f5f9;
+  color: #64748b;
+  font-size: 0.65rem;
+  font-weight: 700;
+}
+
+.inner-tab-content {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-height: 0;
+  padding: 0;
+  overflow: hidden;
+}
+
+.tab-icon {
+  font-size: 18px;
+  width: 18px;
+  height: 18px;
+  margin-right: 2px;
 }
 
 .tab-count {
@@ -100,73 +214,6 @@
   letter-spacing: 0.2px;
 }
 
-.tab-icon {
-  font-size: 18px;
-  width: 18px;
-  height: 18px;
-  margin-right: 2px;
-}
-
-.modern-tabs .mat-mdc-tab-body-wrapper {
-  flex: 1;
-  overflow: hidden;
-  min-height: 0;
-}
-
-:host ::ng-deep .modern-tabs > .mat-mdc-tab-body-wrapper > .mat-mdc-tab-body > .mat-mdc-tab-body-content {
-  display: flex;
-  flex-direction: column;
-  overflow: hidden;
-  height: 100%;
-}
-
-/* Inner nested tabs (Admin / Membership sub-tabs) */
-.inner-tabs {
-  width: 100%;
-  display: flex;
-  flex-direction: column;
-  flex: 1;
-  min-height: 0;
-}
-
-:host ::ng-deep .inner-tabs .mat-mdc-tab-body-wrapper {
-  flex: 1;
-  overflow: hidden;
-  min-height: 0;
-}
-
-:host ::ng-deep .inner-tabs .mat-mdc-tab-body-content {
-  display: flex;
-  flex-direction: column;
-  overflow: hidden;
-  height: 100%;
-}
-
-.inner-tabs .mat-mdc-tab-header {
-  border-bottom: 1px solid #e2e8f0;
-  margin-bottom: 0;
-}
-
-.inner-tabs .mat-mdc-tab .mdc-tab__text-label {
-  font-size: 13px;
-  gap: 4px;
-}
-
-.inner-tabs .mat-mdc-tab .tab-icon {
-  font-size: 16px;
-  width: 16px;
-  height: 16px;
-}
-
-.inner-tab-content {
-  display: flex;
-  flex-direction: column;
-  flex: 1;
-  min-height: 0;
-  padding: 0;
-  overflow: hidden;
-}
-
 .tab-content-pane {
   display: flex;
   flex-direction: column;
@@ -175,44 +222,6 @@
   overflow-y: auto;
   padding-right: 4px;
   min-height: 0;
-}
-
-/* ────────────────────────────────────────────────────────────────────────── */
-/* PANELS */
-/* ────────────────────────────────────────────────────────────────────────── */
-.modern-panel {
-  background: linear-gradient(180deg, #ffffff 0%, #fbfdff 100%) !important;
-  border-radius: 12px !important;
-  border: 1px solid var(--panel-border) !important;
-  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.02) !important;
-  overflow: hidden;
-  transition: box-shadow 0.25s cubic-bezier(0.4, 0, 0.2, 1) !important;
-  margin: 0 0 8px !important;
-  padding-bottom: 6px !important;
-}
-
-.modern-panel.mat-expanded {
-  box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.04), 0 4px 6px -4px rgba(0, 0, 0, 0.02) !important;
-}
-
-.panel-header {
-  height: 44px !important;
-  padding: 0 10px !important;
-  background: #ffffff !important;
-  border-bottom: 1px solid transparent;
-  transition: border-color 0.2s ease;
-}
-
-.modern-panel.mat-expanded .panel-header {
-  border-color: var(--panel-border);
-  background: #fafafa !important;
-}
-
-.title-wrapper {
-  display: flex;
-  align-items: center;
-  width: 100%;
-  gap: 6px;
 }
 
 .table-person-cell {
@@ -259,89 +268,6 @@
   }
 }
 
-.panel-context-icon {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 22px;
-  height: 22px;
-  border-radius: 999px;
-  flex-shrink: 0;
-
-  mat-icon {
-    font-size: 14px;
-    width: 14px;
-    height: 14px;
-  }
-
-  &--received {
-    background: rgba(14, 165, 233, 0.1);
-    color: #0284c7;
-  }
-
-  &--sent {
-    background: rgba(249, 115, 22, 0.1);
-    color: #ea580c;
-  }
-
-  &--history {
-    background: rgba(100, 116, 139, 0.1);
-    color: #475569;
-  }
-}
-
-.icon-avatar {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 28px;
-  height: 28px;
-  border-radius: 7px;
-  flex-shrink: 0;
-}
-
-.icon-avatar mat-icon {
-  font-size: 16px;
-  width: 16px;
-  height: 16px;
-}
-
-.admin-type {
-  background: #fff7ed;
-  color: var(--admin-accent);
-}
-
-.member-type {
-  background: #f0f9ff;
-  color: var(--member-accent);
-}
-
-.title-text {
-  font-size: 13px;
-  font-weight: 600;
-  color: #1e293b;
-  letter-spacing: 0.1px;
-}
-
-.counter-badge {
-  background: #f1f5f9;
-  padding: 2px 7px;
-  border-radius: 999px;
-  font-size: 10px;
-  font-weight: 700;
-  color: #475569;
-  margin-left: auto;
-  border: 1px solid #e2e8f0;
-  flex-shrink: 0;
-}
-
-.modern-panel .mat-expansion-panel-content .mat-expansion-panel-body {
-  padding: 8px 0 0 0 !important;
-}
-
-/* ────────────────────────────────────────────────────────────────────────── */
-/* TABLES */
-/* ────────────────────────────────────────────────────────────────────────── */
 .table-responsive {
   width: 100%;
   flex: 1;
@@ -432,7 +358,6 @@
   border-bottom: none;
 }
 
-/* Custom Column Widths Mapping */
 .col-index {
   width: 36px;
   text-align: center;
@@ -443,7 +368,6 @@
   text-align: right;
 }
 
-/* Committee column wider */
 .mat-column-committee {
   min-width: 220px;
   width: 220px;
@@ -481,7 +405,6 @@
   text-overflow: ellipsis;
 }
 
-/* Utility Helpers within Tables */
 .font-medium { font-weight: 500; }
 .font-semibold { font-weight: 600; }
 .font-mono { font-family: monospace; font-size: 12.5px; }
@@ -490,9 +413,6 @@
 .text-sm { font-size: 12.5px; }
 .pending-text { color: #b45309; font-weight: 500; }
 
-/* ────────────────────────────────────────────────────────────────────────── */
-/* ACTION CONTROLS & UTILITIES */
-/* ────────────────────────────────────────────────────────────────────────── */
 .action-btn-group {
   display: inline-flex;
   gap: 5px;
@@ -538,7 +458,6 @@
   background-color: #fef2f2 !important;
 }
 
-/* Status Chips styling */
 .status-chip {
   display: inline-flex;
   align-items: center;
@@ -565,9 +484,6 @@
   color: var(--danger-text);
 }
 
-/* ────────────────────────────────────────────────────────────────────────── */
-/* EMPTY STATES */
-/* ────────────────────────────────────────────────────────────────────────── */
 .empty-state-container {
   display: flex;
   flex-direction: column;
@@ -613,25 +529,17 @@
   letter-spacing: -0.1px;
 }
 
-
-/* ────────────────────────────────────────────────────────────────────────── */
-/* RESPONSIVE TWEAKS */
-/* ────────────────────────────────────────────────────────────────────────── */
 @media (max-width: 768px) {
   .dashboard-requests-wrapper {
     padding: 8px;
   }
 
-  .modern-tabs .mat-mdc-tab {
+  .inner-tabs .mat-mdc-tab {
     padding: 0 8px;
   }
 
   .tab-label-text {
     display: none;
-  }
-
-  .tab-content-pane {
-    gap: 6px;
   }
 
   .modern-table th,

@@ -24,7 +24,35 @@
             <mat-icon class="type-indicator-icon">ballot</mat-icon>
           </div>
           <span class="node-label-txt bold-text">Requests</span>
+          <div class="node-actions-right-aligned requests-menu-actions">
+            <button mat-icon-button class="toggle-expansion-flat-btn" (click)="toggleRequestsMenu(); $event.stopPropagation()">
+              <mat-icon class="mat-icon-rtl-mirror">
+                {{ isRequestsMenuOpen() ? 'expand_more' : 'chevron_right' }}
+              </mat-icon>
+            </button>
+          </div>
         </div>
+
+        @if (isRequestsMenuOpen()) {
+          <div class="requests-submenu">
+            <div class="node-interactive-strip static-menu-item submenu-item" 
+                 [class.is-selected]="activeStaticMenu() === 'requests-sent'"
+                 (click)="onSelectStaticMenu('requests-sent')">
+              <div class="node-logo-avatar-wrapper static-avatar color-sent">
+                <mat-icon class="type-indicator-icon">send</mat-icon>
+              </div>
+              <span class="node-label-txt">Sent</span>
+            </div>
+            <div class="node-interactive-strip static-menu-item submenu-item" 
+                 [class.is-selected]="activeStaticMenu() === 'requests-received'"
+                 (click)="onSelectStaticMenu('requests-received')">
+              <div class="node-logo-avatar-wrapper static-avatar color-received">
+                <mat-icon class="type-indicator-icon">inbox</mat-icon>
+              </div>
+              <span class="node-label-txt">Received</span>
+            </div>
+          </div>
+        }
       </div>
 
       @if (hasCommitteesHierarchy()) {

@@ -18,7 +18,21 @@ export const routes: Routes = [
       },
       {
         path: 'requests',
-        loadComponent: () => import('./features/dashboard/components/dashboard-requests/dashboard-requests').then(m => m.DashboardRequestsComponent)
+        children: [
+          {
+            path: 'sent',
+            loadComponent: () => import('./features/dashboard/components/dashboard-sent-requests/dashboard-sent-requests').then(m => m.DashboardSentRequestsComponent)
+          },
+          {
+            path: 'received',
+            loadComponent: () => import('./features/dashboard/components/dashboard-received-requests/dashboard-received-requests').then(m => m.DashboardReceivedRequestsComponent)
+          },
+          {
+            path: '',
+            redirectTo: 'received',
+            pathMatch: 'full'
+          }
+        ]
       },
       {
         path: 'group/:id',
