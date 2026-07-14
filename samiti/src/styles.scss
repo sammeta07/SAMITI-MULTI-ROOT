@@ -67,21 +67,8 @@ body {
 
 /* You can add global styles to this file, and also import other style files */
 
-/* ─── Dialog Panel Classes ─────────────────────────────────────── */
-.slide-in-dialog {
-  position: fixed !important;
-  right: 0 !important;
-  top: 0 !important;
-  height: 100% !important;
-  margin: 0 !important;
-  border-radius: 0 !important;
-  max-width: 100% !important;
-  width: 50% !important;
-  min-width: 320px !important;
-  max-width: 500px !important;
-  animation: slideInFromRight 0.3s ease-out;
-}
 
+/* ─── Keyframes for Panel Slide Actions ───────────────────────── */
 @keyframes slideInFromRight {
   from {
     transform: translateX(100%);
@@ -93,11 +80,60 @@ body {
   }
 }
 
+/* 🚀 NEW: Left to Right Entry Animation Bracket */
+@keyframes slideInFromLeft {
+  from {
+    transform: translateX(-100%);
+    opacity: 0;
+  }
+  to {
+    transform: translateX(0);
+    opacity: 1;
+  }
+}
+
+/* ─── Dialog Overlay Fixes ─────────────────────────────────────── */
 .cdk-overlay-pane.slide-in-dialog {
   position: fixed !important;
   right: 0 !important;
   top: 0 !important;
   border-radius: 0 !important;
+}
+
+/* 🚀 NEW: Overlay binding positioning fix for Left Side Drawer */
+.cdk-overlay-pane.slide-in-dialog-left {
+  position: fixed !important;
+  left: 0 !important;
+  top: 0 !important;
+  border-radius: 0 !important;
+}
+
+/* ─── Right to Left Sidebar Panel (Existing) ───────────────────── */
+.slide-in-dialog {
+  position: fixed !important;
+  right: 0 !important;
+  top: 0 !important;
+  height: 100% !important;
+  margin: 0 !important;
+  border-radius: 0 !important;
+  width: 50% !important;
+  min-width: 320px !important;
+  max-width: 500px !important;
+  animation: slideInFromRight 0.3s ease-out;
+}
+
+/* 🚀 NEW: Left to Right Sidebar Panel Component Class */
+.slide-in-dialog-left {
+  position: fixed !important;
+  left: 0 !important;
+  top: 0 !important;
+  height: 100% !important;
+  margin: 0 !important;
+  border-radius: 0 !important;
+  width: 50% !important;
+  min-width: 320px !important;
+  max-width: 500px !important;
+  animation: slideInFromLeft 0.3s ease-out;
 }
 
 .cdk-overlay-pane .mat-mdc-dialog-surface,
@@ -138,7 +174,7 @@ body {
   object-fit: cover;
   object-position: center;
 }
-/* Yeh code aapke global styles.scss ya styles.css me jayega */
+
 .notifier-container {
   position: fixed;
   top: 1rem;
@@ -147,9 +183,6 @@ body {
   display: flex;
   flex-direction: column;
   gap: 0.65rem;
-  
-  /* Angular Material Overlay ka z-index 1000 hota hai, 
-     ise global space me 2500 dene se yeh dialog ke upar aa jayega */
   z-index: 2500 !important; 
   pointer-events: none;
 }

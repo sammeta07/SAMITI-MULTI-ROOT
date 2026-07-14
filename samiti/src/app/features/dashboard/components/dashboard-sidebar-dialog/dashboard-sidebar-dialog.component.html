@@ -1,0 +1,18 @@
+<div class="drawer-layout-shell">
+
+  <mat-toolbar class="drawer-synchronized-header">
+    <div class="drawer-title-group">
+      <mat-icon class="mode-indicator-icon">account_tree</mat-icon>
+      <h2>Hierarchy</h2>
+    </div>
+
+    <button mat-icon-button type="button" class="drawer-close-btn" (click)="onClose()" aria-label="Close menu">
+      <mat-icon>close</mat-icon>
+    </button>
+  </mat-toolbar>
+
+  <div class="dialog-body">
+    <app-dashboard-hierarchy-tree (staticMenuSelected)="onClose()" (treeNodeSelected)="onClose()"></app-dashboard-hierarchy-tree>
+  </div>
+
+</div>

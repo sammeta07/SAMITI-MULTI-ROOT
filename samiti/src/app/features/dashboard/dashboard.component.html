@@ -1,12 +1,15 @@
 <div class="samiti-workspace-shell">
-  
-  <aside class="workspace-sidebar" #sidebarEl [class.panel-collapsed]="!(uiService.isHeirarchyMenu$ | async)">
-    <div class="sidebar-tree-wrapper">
-      <app-dashboard-hierarchy-tree></app-dashboard-hierarchy-tree>
-    </div>
-  </aside>
+   
+  @if (!isSmallScreen()) {
+    <aside class="workspace-sidebar" #sidebarEl [class.panel-collapsed]="!(uiService.isHeirarchyMenu$ | async)">
+      <div class="sidebar-tree-wrapper">
+        <app-dashboard-hierarchy-tree></app-dashboard-hierarchy-tree>
+      </div>
+    </aside>
 
-  <div class="workspace-layout-resizer" (mousedown)="initSidebarResize($event)"></div>
+    <div class="workspace-layout-resizer" (mousedown)="initSidebarResize($event)"></div>
+  }
+
 
   <div class="workspace-main-container">
     <section class="workspace-dynamic-content-area" [class.panel-expanded-full]="!(uiService.isHeirarchyMenu$ | async)">

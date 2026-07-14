@@ -1,0 +1,93 @@
+:host {
+  display: flex;
+  flex-direction: column;
+  background: #ffffff;
+  height: 100%;
+  width: 100%;
+  overflow: hidden;
+  box-sizing: border-box;
+}
+
+/* 🧼 Angular Material Panel Shadow/Border Overrides */
+::ng-deep {
+  .mat-mdc-dialog-surface,
+  .mat-mdc-dialogContainer {
+    border-radius: 0 !important;
+    box-shadow: -4px 0 24px rgba(15, 23, 42, 0.08) !important;
+  }
+}
+
+.drawer-layout-shell {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  width: 100%;
+  background: #ffffff;
+}
+
+/* 🧭 TOOLBAR HEIGHT LINE AXIS SYSTEM MATCHING 59.99PX EXACT */
+.drawer-synchronized-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0 20px !important;
+  height: 60px !important;
+  min-height: 60px !important;
+  background: #ffffff !important;
+  border-bottom: 1px solid #e2e8f0;
+  flex-shrink: 0;
+  box-sizing: border-box;
+
+  .drawer-title-group {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+
+    .mode-indicator-icon {
+      color: #f97316; // Core theme signature orange
+      font-size: 1.35rem;
+      width: 1.35rem;
+      height: 1.35rem;
+      display: inline-flex;
+      align-items: center;
+    }
+
+    h2 {
+      margin: 0;
+      font-size: 1.05rem;
+      font-weight: 700;
+      color: #0f172a;
+      letter-spacing: -0.2px;
+      line-height: 1;
+    }
+  }
+
+  .drawer-close-btn {
+    color: #64748b !important;
+    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+
+    &:hover {
+      background: rgba(239, 68, 68, 0.08) !important;
+      color: #ef4444 !important;
+      transform: rotate(90deg);
+    }
+  }
+}
+
+/* 🥞 SCROLL DECK BODY */
+.dialog-body {
+  flex-grow: 1;
+  padding: 0;
+  overflow-y: auto;
+  background: #ffffff;
+  box-sizing: border-box;
+
+  &::-webkit-scrollbar {
+    width: 5px;
+  }
+
+  &::-webkit-scrollbar-thumb {
+    background: #cbd5e1;
+    border-radius: 99px;
+  }
+}

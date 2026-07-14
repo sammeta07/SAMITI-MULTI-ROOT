@@ -1,4 +1,4 @@
-import { Component, effect, inject, OnInit, signal } from '@angular/core';
+import { Component, effect, EventEmitter, inject, OnInit, Output, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { Router, NavigationEnd } from '@angular/router';
 import { MatTreeModule, MatTreeNestedDataSource } from '@angular/material/tree';
@@ -40,6 +40,8 @@ export class DashboardHierarchyTreeComponent implements OnInit {
   // 🚀 FIXED: Dynamic signal tracking static navigation items from old dashboard
   public readonly activeStaticMenu = signal<string | null>('home');
   public readonly hasCommitteesHierarchy = signal<boolean>(false);
+  @Output() staticMenuSelected = new EventEmitter<void>();
+  @Output() treeNodeSelected = new EventEmitter<TreeNode>();
 
   public readonly expandedNodeKeys = signal<Set<string>>(new Set());
   public readonly childrenAccessor = (node: TreeNode) => node.children ?? [];
@@ -377,6 +379,7 @@ export class DashboardHierarchyTreeComponent implements OnInit {
   public onSelectStaticMenu(menuType: 'home' | 'requests'): void {
     this.selectedNode.set(null);
     this.activeStaticMenu.set(menuType);
+    this.staticMenuSelected.emit();
     this.router.navigate(['/dashboard', menuType]).then(() => {
       console.log(`Successfully shifted application context viewport to static hub: [${menuType.toUpperCase()}]`);
     });
@@ -396,7 +399,10 @@ export class DashboardHierarchyTreeComponent implements OnInit {
 
   public onNodeClick(node: TreeNode): void {
     console.log('node',node);
-    if (node.type === 'role') return;
+    if (node.type === 'role') {
+      // this.treeNodeSelected.emit(node);
+      return;
+    }
 
     this.activeStaticMenu.set(null); // Clear static highlights when tree node gets selected
     this.selectedNode.set(node);
@@ -405,6 +411,7 @@ export class DashboardHierarchyTreeComponent implements OnInit {
     if (node.type === 'group' || node.type === 'event' || node.type === 'program') {
       if (!node.id) {
         this.notifier.warn(`Unable to open ${node.type} details.`);
+        this.treeNodeSelected.emit(node);
         return;
       }
 
@@ -413,10 +420,12 @@ export class DashboardHierarchyTreeComponent implements OnInit {
           this.notifier.error(`Unable to open ${node.type} details.`);
         }
       });
+      this.treeNodeSelected.emit(node);
       return;
     }
 
     this.notifier.info(`Detailed page is not available yet for ${node.type}.`);
+    this.treeNodeSelected.emit(node);
   }
 
   private expandAllTreeNodes(): void {
