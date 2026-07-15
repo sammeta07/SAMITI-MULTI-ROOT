@@ -363,8 +363,8 @@
     border-left-width: 4px !important;
 
     &.panel-role-admin {
-      border-left-color: #22c55e !important;
-      &:hover { border-color: #cbd5e1 #cbd5e1 #cbd5e1 #22c55e !important; }
+      border-color: #22c55e !important;
+      &:hover { border-color: #22c55e !important; }
       &.mat-expanded {
         border-color: #22c55e !important;
         box-shadow: 0 4px 16px rgba(34, 197, 94, 0.08) !important;
@@ -372,8 +372,8 @@
     }
 
     &.panel-role-master-admin {
-      border-left-color: #ef4444 !important;
-      &:hover { border-color: #cbd5e1 #cbd5e1 #cbd5e1 #ef4444 !important; }
+      border-color: #ef4444 !important;
+      &:hover { border-color: #ef4444 !important; }
       &.mat-expanded {
         border-color: #ef4444 !important;
         box-shadow: 0 4px 16px rgba(239, 68, 68, 0.06) !important;
@@ -381,8 +381,8 @@
     }
 
     &.panel-role-member {
-      border-left-color: #3b82f6 !important;
-      &:hover { border-color: #cbd5e1 #cbd5e1 #cbd5e1 #3b82f6 !important; }
+      border-color: #3b82f6 !important;
+      &:hover { border-color: #3b82f6 !important; }
       &.mat-expanded {
         border-color: #3b82f6 !important;
         box-shadow: 0 4px 16px rgba(59, 130, 246, 0.06) !important;
@@ -390,8 +390,8 @@
     }
 
     &.panel-role-pending {
-      border-left-color: #f59e0b !important;
-      &:hover { border-color: #cbd5e1 #cbd5e1 #cbd5e1 #f59e0b !important; }
+      border-color: #f59e0b !important;
+      &:hover { border-color: #f59e0b !important; }
       &.mat-expanded {
         border-color: #f59e0b !important;
         box-shadow: 0 4px 16px rgba(245, 158, 11, 0.06) !important;
@@ -399,7 +399,7 @@
     }
 
     &.panel-role-none {
-      border-left-color: #cbd5e1 !important;
+      border-color: #cbd5e1 !important;
       &:hover { border-color: #94a3b8 !important; }
       &.mat-expanded {
         border-color: #cbd5e1 !important;
@@ -458,6 +458,12 @@
   justify-content: center;
   font-size: 1.4rem;
   font-weight: 700;
+
+  &.fb-master-admin { background: linear-gradient(135deg, #fecaca, #fca5a5); color: #b91c1c; }
+  &.fb-admin { background: linear-gradient(135deg, #bbf7d0, #86efac); color: #15803d; }
+  &.fb-member { background: linear-gradient(135deg, #bfdbfe, #93c5fd); color: #1e40af; }
+  &.fb-pending { background: linear-gradient(135deg, #fef08a, #fde047); color: #a16207; }
+  &.fb-none { background: linear-gradient(135deg, #e2e8f0, #cbd5e1); color: #475569; }
 }
 
 .committee-logo-edit-trigger {
@@ -471,8 +477,8 @@
   overflow: hidden;
   transition: transform 0.2s ease;
 
-  .committee-avatar,
-  .committee-avatar-fallback { display: block; }
+  .committee-avatar { display: block; }
+  .committee-avatar-fallback { display: flex; }
 
   &:hover:not(:disabled) { transform: scale(1.03); }
 

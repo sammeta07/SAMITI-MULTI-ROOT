@@ -163,8 +163,8 @@
   overflow: hidden;
   transition: transform 0.2s ease;
 
-  .committee-avatar,
-  .committee-avatar-fallback { display: block; }
+  .committee-avatar { display: block; }
+  .committee-avatar-fallback { display: flex; }
 
   &:hover:not(:disabled) { transform: scale(1.03); }
 

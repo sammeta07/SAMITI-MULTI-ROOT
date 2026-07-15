@@ -74,12 +74,19 @@
                     @if (committee.committeeLogo) {
                     <img [src]="committee.committeeLogo" alt="{{ committee.committeeName }} logo" class="committee-avatar" (error)="committee.committeeLogo = null" />
                     } @else {
-                    <div class="committee-avatar-fallback">{{ committee.committeeName.charAt(0).toUpperCase() }}</div>
+                    <div class="committee-avatar-fallback"
+                      [class.fb-master-admin]="isAuth && committee.committeeRole === 'COMMITTEE_MASTER_ADMIN'"
+                      [class.fb-admin]="isAuth && committee.committeeRole === 'COMMITTEE_ADMIN'"
+                      [class.fb-member]="isAuth && committee.committeeRole === 'COMMITTEE_MEMBER'"
+                      [class.fb-pending]="isAuth && committee.status === 'PENDING' && !committee.committeeRole"
+                      [class.fb-none]="!isAuth || (!committee.committeeRole && committee.status !== 'PENDING')">
+                      {{ committee.committeeName.charAt(0).toUpperCase() }}
+                    </div>
                     }
                   </ng-template>
 
                   @if (isAuth && isCommitteeAdmin(committee)) {
-                    <input #homeCommitteeLogoInput type="file" hidden accept="image/*" (change)="onCommitteeLogoSelected($event, committee)">
+                    <input #homeCommitteeLogoInput type="file" hidden accept="image/*" (click)="$event.stopPropagation()" (change)="onCommitteeLogoSelected($event, committee)">
                     <button type="button" class="committee-logo-edit-trigger"
                       (click)="$event.stopPropagation(); homeCommitteeLogoInput.click()"
                       [disabled]="isUploadingCommitteeLogo(committee.id)"

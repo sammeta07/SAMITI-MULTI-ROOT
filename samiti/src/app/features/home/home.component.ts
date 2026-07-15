@@ -67,10 +67,11 @@ export class HomeComponent implements OnDestroy {
   radiusOptions: number[] = [1, 5, 10, 25, 100, 1000];
   selectedCommitteeRadius: number = 5;
   selectedProgramRadius: number = 5;
-  selectedTabIndex: number = 0;
+  selectedTabIndex: number = 2;
   committeeList: CommitteesList[] = [];
   copiedCommitteeId: string | null = null;
   isCommitteeListLoading: boolean = true;
+  private hasAppliedDefaultPreviewExpansion = false;
 
   // 🛠️ Reactive Computed Getter: Sync changes natively across header operations
   get isLoggedIn(): boolean {
@@ -275,6 +276,7 @@ export class HomeComponent implements OnDestroy {
         this.isCommitteeListLoading = false;
         this.startupLoaderService.markCommitteesSettled();
         this.syncExpandedPanelState();
+        this.applyDefaultPreviewExpansion();
         this.startCarouselAutoPlay();
         this.cdr.detectChanges();
       },
@@ -418,6 +420,19 @@ export class HomeComponent implements OnDestroy {
 
   expandPreview() {
     this.previewExpandedCommitteeIds = new Set(this.previewGroups.map(group => group.id));
+  }
+
+  private applyDefaultPreviewExpansion(): void {
+    if (this.hasAppliedDefaultPreviewExpansion) {
+      return;
+    }
+
+    if (this.previewGroups.length === 0) {
+      return;
+    }
+
+    this.expandPreview();
+    this.hasAppliedDefaultPreviewExpansion = true;
   }
 
   collapsePreview() {
