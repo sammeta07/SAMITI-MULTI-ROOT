@@ -54,11 +54,11 @@
   .pending-pill-badge { color: #c2410c; background: #ffedd5; border: 1px solid #fed7aa; }
 
   .action-btn {
-    height: 26px !important;
-    padding: 0 8px !important;
-    font-size: 0.72rem !important;
+    height: 28px !important;
+    padding: 0 12px !important;
+    font-size: 0.7rem !important;
     font-weight: 600 !important;
-    border-radius: 4px !important;
+    border-radius: 6px !important;
     display: inline-flex !important;
     align-items: center !important;
     gap: 4px !important;
@@ -66,7 +66,7 @@
     border: 1px solid #cbd5e1 !important;
     color: #334155 !important;
 
-    mat-icon { font-size: 0.95rem !important; width: 0.95rem !important; height: 0.95rem !important; }
+    mat-icon { font-size: 0.8rem !important; width: 0.8rem !important; height: 0.8rem !important; }
     &:hover:not(:disabled) { background: #f8fafc !important; border-color: #94a3b8 !important; }
     &:disabled { opacity: 0.5; cursor: not-allowed; }
   }
@@ -86,63 +86,51 @@
   box-shadow: 0 1px 4px rgba(0,0,0,0.03);
   transition: border-color 0.2s ease, box-shadow 0.2s ease;
 
-  /* Role based accent borders:
-     master-admin = red, admin = green, member = blue, pending = yellow, none = grey */
   &.role-master-admin {
     border-color: #ef4444;
     border-left-color: #ef4444;
     box-shadow: 0 2px 12px rgba(239, 68, 68, 0.1);
   }
-  &.role-admin {
-    border-left-color: #22c55e;
-  }
-  &.role-member {
-    border-left-color: #3b82f6;
-  }
-  &.role-pending {
-    border-left-color: #eab308;
-  }
-  &.role-none {
-    border-left-color: #cbd5e1;
-  }
+  &.role-admin { border-left-color: #22c55e; }
+  &.role-member { border-left-color: #3b82f6; }
+  &.role-pending { border-left-color: #eab308; }
+  &.role-none { border-left-color: #cbd5e1; }
 }
 
 .user-role-badge {
   display: inline-flex;
   align-items: center;
   gap: 3px;
-  height: 20px;
-  padding: 0 8px;
-  margin-left: 4px;
+  height: 24px;
+  box-sizing: border-box;
+  padding: 0 9px;
   border-radius: 999px;
-  font-size: 0.58rem;
-  font-weight: 700;
-  letter-spacing: 0.3px;
-  text-transform: uppercase;
+  font-size: 0.7rem;
+  font-weight: 600;
   white-space: nowrap;
   border: 1px solid transparent;
 
-  .role-badge-icon { font-size: 0.8rem; width: 0.8rem; height: 0.8rem; }
+  .role-badge-icon { font-size: 0.72rem; width: 0.72rem; height: 0.72rem; }
 
-  &.role-committee_master_admin {
+  &.badge-master-admin {
     background: #fef2f2;
     color: #dc2626;
     border-color: rgba(220, 38, 38, 0.25);
     .role-badge-icon { color: #dc2626; }
   }
-  &.role-committee_admin {
+  &.badge-admin {
     background: #f0fdf4;
     color: #16a34a;
     border-color: rgba(22, 163, 74, 0.25);
     .role-badge-icon { color: #16a34a; }
   }
-  &.role-committee_member {
+  &.badge-member {
     background: #eff6ff;
     color: #1d4ed8;
     border-color: rgba(29, 78, 216, 0.22);
     .role-badge-icon { color: #1d4ed8; }
   }
-  &.role-pending {
+  &.badge-pending {
     background: #fefce8;
     color: #ca8a04;
     border-color: rgba(202, 138, 4, 0.25);
@@ -150,13 +138,12 @@
   }
 }
 
-.committee-card-grid { display: grid; width: 100%; grid-template-columns: 58px 1fr 190px; grid-template-rows: auto auto; row-gap: 6px; column-gap: 14px; align-items: start; }
+.committee-card-grid { display: grid; width: 100%; grid-template-columns: 58px 1fr 190px; grid-template-rows: auto auto; column-gap: 14px; align-items: start; }
 .card-logo-area { display: flex; flex-direction: column; align-items: center; gap: 5px; }
 
 .committee-avatar { width: 54px; height: 54px; border-radius: 11px; object-fit: cover; border: 1px solid #e2e8f0; }
 .committee-avatar-fallback { width: 54px; height: 54px; border-radius: 11px; background: linear-gradient(135deg, #f97316, #ea580c); color: #ffffff; display: flex; align-items: center; justify-content: center; font-size: 1.4rem; font-weight: 700; }
 
-/* Light role-based background for the fallback avatar (no logo) */
 .committee-avatar-fallback {
   &.fb-master-admin { background: linear-gradient(135deg, #fecaca, #fca5a5); color: #b91c1c; }
   &.fb-admin { background: linear-gradient(135deg, #bbf7d0, #86efac); color: #15803d; }
@@ -165,11 +152,34 @@
   &.fb-none { background: linear-gradient(135deg, #e2e8f0, #cbd5e1); color: #475569; }
 }
 
-.card-main-info-area { display: flex; flex-direction: column; gap: 3px; }
+.card-main-info-area { display: flex; flex-direction: column; gap: 3px; margin-top: 7px;}
 .card-title-row { display: flex; align-items: center; gap: 6px; }
-.committee-display-name { font-size: 0.98rem; font-weight: 700; color: #0f172a; margin: 0; }
+.committee-display-name { font-size: 1.5rem; font-weight: 700; color: #0f172a; margin: 0; }
 .card-location-row { display: flex; align-items: center; gap: 4px; color: #475569; font-size: 0.82rem; }
 .location-text-trim { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+.card-contact-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.card-actions-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-top: 4px;
+}
+
+.action-buttons-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+  margin-top: 6px;
+}
 
 .card-actions-identity-area { grid-column: 3 / 4; grid-row: 1 / 2; display: flex; flex-direction: column; align-items: flex-end; gap: 6px; box-sizing: border-box; }
 .identity-top-row { display: flex; align-items: center; gap: 6px; flex-wrap: nowrap; }
@@ -190,16 +200,30 @@
   background: #fff7ed; color: #ea580c; border: 1px solid #fed7aa;
 }
 
+.committee-id-pill {
+  display: inline-flex; align-items: center; gap: 4px;
+  height: 24px; box-sizing: border-box; padding: 0 4px 0 10px;
+  background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 999px;
+  font-size: 0.72rem; font-weight: 700; color: #64748b; white-space: nowrap; flex-shrink: 0;
+
+  .copy-id-btn {
+    width: 20px !important; height: 20px !important; line-height: 20px !important; padding: 0 !important; color: #94a3b8 !important;
+    &:hover { color: #f97316 !important; }
+    mat-icon { font-size: 0.95rem; width: 0.95rem; height: 0.95rem; }
+  }
+}
+.copy-icon-success { color: #22c55e !important; }
+
 .directions-status-row {
   display: flex; align-items: center; justify-content: flex-end; gap: 6px; flex-wrap: nowrap;
 
   .action-btn {
-    height: 24px !important; padding: 0 8px !important; font-size: 0.7rem !important;
-    font-weight: 600 !important; border-radius: 999px !important;
+    height: 28px !important; padding: 0 12px !important; font-size: 0.7rem !important;
+    font-weight: 600 !important; border-radius: 6px !important;
     display: inline-flex !important; align-items: center !important; gap: 4px !important;
     background: #ffffff; border: 1px solid #cbd5e1 !important; color: #334155 !important;
     white-space: nowrap; flex-shrink: 0;
-    mat-icon { font-size: 0.85rem !important; width: 0.85rem !important; height: 0.85rem !important; }
+    mat-icon { font-size: 0.8rem !important; width: 0.8rem !important; height: 0.8rem !important; }
     &:hover:not(:disabled) { background: #f8fafc !important; border-color: #94a3b8 !important; }
     &:disabled { opacity: 0.5; cursor: not-allowed; }
   }
@@ -244,6 +268,7 @@
 
     mat-icon { font-size: 1rem; width: 1rem; height: 1rem; }
     .icon-accent-event { color: #10b981; }
+    .icon-accent-master { color: #ef4444; } // 🚀 NEW
     .icon-accent-admin { color: #f97316; }
     .icon-accent-member { color: #0284c7; }
   }
@@ -257,6 +282,11 @@
     border-radius: 10px;
     margin-left: 4px;
   }
+}
+
+.panel-card-header.master-header-bg {
+  background: rgba(239, 68, 68, 0.08);
+  border-bottom: 2px solid rgba(239, 68, 68, 0.2);
 }
 
 .panel-card-header.admins-header-bg {
@@ -281,7 +311,6 @@
   &::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 2px; }
 }
 
-/* THE RIGID HORIZONTAL EVENT ROW GRID CONTEXT */
 .event-aligned-row {
   display: flex;
   align-items: center;
@@ -291,17 +320,14 @@
   border-radius: 4px;
   gap: 12px;
   transition: background 0.15s ease;
+  cursor: pointer;
 
   &:hover { background: #f1f5f9; border-color: #e2e8f0; }
 }
 
-/* ROW INTERNALS PROPORTIONS DECK */
-.event-col-avatar     { flex: 0 0 auto; display: flex; align-items: center; }
 .event-col-info       { flex: 3 1 420px; display: flex; flex-direction: column; gap: 5px; min-width: 0; }
 .event-col-controls   { flex: 0 0 104px; display: flex; flex-direction: column; align-items: flex-end; justify-content: center; gap: 6px; }
-.event-col-actions    { flex: 0 0 auto; display: flex; align-items: center; justify-content: flex-end; }
 
-/* RE-TYPED SUB COMPONENT BASICS */
 .row-avatar {
   width: 34px;
   height: 34px;
@@ -314,9 +340,6 @@
   flex-shrink: 0;
 
   &.circle-shape { border-radius: 50%; overflow: hidden; }
-  &.square-shape { border-radius: 4px; overflow: hidden; background: #e2e8f0; color: #475569; }
-  &.admin-bg { background: linear-gradient(135deg, #f59e0b, #d97706); }
-  &.member-bg { background: linear-gradient(135deg, #3b82f6, #1d4ed8); }
   
   .avatar-img { width: 100%; height: 100%; object-fit: cover; }
 }
@@ -418,25 +441,20 @@
   height: auto;
 }
 
-/* ================== GRID PANEL FOR ADMINS & MEMBERS ================== */
-.dashboard-split-grid {
+/* ================== 🚀 RECONFIGURED: TRIPLE GRID SYSTEM PANEL ================== */
+.dashboard-triple-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+  grid-template-columns: repeat(3, 1fr); // 🚀 Pure 3 Column split alignment for Desktop
   gap: 8px;
   width: 100%;
-}
 
-.mesh-card {
-  background: #ffffff;
-  border: 1px solid #e2e8f0;
-  border-radius: 6px;
-  display: flex;
-  flex-direction: column;
-  overflow: hidden;
-  height: 260px;
+  @media (max-width: 1200px) {
+    grid-template-columns: repeat(2, 1fr); // Mid viewports shift to 2 columns container
+  }
 
-  &.admins-card-style .panel-card-header { background: linear-gradient(90deg, rgba(245,158,11,0.06), transparent); border-bottom: 2px solid rgba(245,158,11,0.15); }
-  &.members-card-style .panel-card-header { background: linear-gradient(90deg, rgba(59,130,246,0.06), transparent); border-bottom: 2px solid rgba(59,130,246,0.15); }
+  @media (max-width: 768px) {
+    grid-template-columns: 1fr; // Mobile view stack layout collapse
+  }
 }
 
 .compact-search-pill {
@@ -447,7 +465,7 @@
   border-radius: 4px;
   padding: 0 4px;
   height: 22px;
-  width: 130px;
+  width: 120px;
 
   mat-icon { font-size: 0.8rem; width: 0.8rem; height: 0.8rem; color: #94a3b8; }
   input {
@@ -461,7 +479,7 @@
   }
 }
 
-/* Role accent for the Group Admins roster (red master admin / green admin) */
+/* User identity rows custom styling tags borders mapping */
 .item-density-row {
   &.row-master-admin {
     border-left: 3px solid #ef4444;
@@ -496,18 +514,6 @@
   &.tag-master-admin { background: #fee2e2; color: #dc2626; border: 1px solid rgba(220, 38, 38, 0.25); }
   &.tag-admin { background: #dcfce7; color: #16a34a; border: 1px solid rgba(22, 163, 74, 0.25); }
   &.tag-member { background: #dbeafe; color: #1d4ed8; border: 1px solid rgba(29, 78, 216, 0.25); }
-}
-
-.mesh-list-scroll-box {
-  flex: 1;
-  overflow-y: auto;
-  padding: 4px;
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-
-  &::-webkit-scrollbar { width: 3px; }
-  &::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 2px; }
 }
 
 .item-density-row {
@@ -555,14 +561,12 @@
   }
 
   .view-btn { color: #2563eb; }
-  .edit-btn { color: #f59e0b; }
   .promote-btn { color: #10b981; }
   .demote-btn { color: #ea580c; }
   .delete-btn { color: #ef4444; }
 }
 
 .mini-empty-state { padding: 16px; text-align: center; color: #94a3b8; font-size: 0.68rem; }
-.spinner-loading-overlay { display: flex; flex-direction: column; justify-content: center; align-items: center; gap: 6px; height: 100%; font-size: 0.75rem; color: #64748b; }
 
 /* ============ SKELETON LOADER ============ */
 .skeleton-wrapper { gap: 8px; }
@@ -587,17 +591,6 @@
   padding: 12px;
 }
 
-.skeleton-section-head { padding: 2px 2px 10px; }
-
-.skeleton-event-row,
-.skeleton-member-row {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  padding: 8px 4px;
-  border-top: 1px solid #f1f5f9;
-}
-
 .skeleton-box {
   position: relative;
   overflow: hidden;
@@ -615,17 +608,13 @@
 }
 
 .skeleton-avatar { width: 42px; height: 42px; border-radius: 10px; flex-shrink: 0;
-  &.sq { border-radius: 8px; }
   &.circle { border-radius: 50%; width: 34px; height: 34px; }
 }
 .skeleton-line { height: 12px;
   &.lg { height: 18px; }
   &.sm { height: 11px; }
-  &.xs { height: 9px; }
 }
-.skeleton-chip { width: 90px; height: 24px; border-radius: 999px; flex-shrink: 0;
-  &.sm { width: 60px; height: 20px; }
-}
+.skeleton-chip { width: 90px; height: 24px; border-radius: 999px; flex-shrink: 0; }
 
 @keyframes skeleton-shimmer {
   100% { transform: translateX(100%); }
@@ -635,4 +624,62 @@
   mat-icon { font-size: 2.2rem; width: 2.2rem; height: 2.2rem; color: #94a3b8; margin-bottom: 6px; }
   h3 { margin: 0; font-size: 0.9rem; color: #334155; }
   p { margin: 0; font-size: 0.72rem; color: #64748b; }
+}
+
+/* ================== FIXED 2-COLUMN GRID SYSTEM PANEL ================== */
+.dashboard-split-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr); // 🚀 Back to beautiful 50-50 Split layout
+  gap: 10px;
+  width: 100%;
+  align-items: start;
+
+  @media (max-width: 850px) {
+    grid-template-columns: 1fr; // Mobile break setup collapse linear
+  }
+}
+
+/* Vertical container stack for left side admins panels */
+.grid-column-stack {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.mesh-card {
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 6px;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  height: 100%; // Reduced height for stacked items on the left side
+
+  &.master-admin-card-style .panel-card-header { background: linear-gradient(90deg, rgba(239,68,68,0.05), transparent); border-bottom: 2px solid rgba(239,68,68,0.12); }
+  &.admins-card-style .panel-card-header { background: linear-gradient(90deg, rgba(245,158,11,0.06), transparent); border-bottom: 2px solid rgba(245,158,11,0.15); }
+  &.members-card-style .panel-card-header { background: linear-gradient(90deg, rgba(59,130,246,0.06), transparent); border-bottom: 2px solid rgba(59,130,246,0.15); }
+  
+  /* Right side card takes full height matching the stack */
+  &.full-height-card {
+    height: 360px; 
+  }
+}
+
+.mesh-list-scroll-box {
+  flex: 1;
+  overflow-y: auto;
+  padding: 4px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+
+  &::-webkit-scrollbar { width: 3px; }
+  &::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 2px; }
+  
+  &.compact-scroll {
+    max-height: 130px;
+  }
+  &.full-scroll {
+    max-height: 315px;
+  }
 }

@@ -60,6 +60,8 @@ export interface CommitteeDetailsPayload {
   createdBy: number;
   createdAt: string;
   committeeRole: 'COMMITTEE_MEMBER' | 'COMMITTEE_ADMIN' | 'COMMITTEE_MASTER_ADMIN' | null;
+  userRequestStatus: 'PENDING' | 'ACCEPTED' | 'REJECTED' | null;
+  userRequestRole: 'COMMITTEE_MEMBER' | 'COMMITTEE_ADMIN' | null;
   members: CommitteeRosterMember[];
   events: CommitteeEventListItem[];
 }

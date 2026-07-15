@@ -10,7 +10,8 @@ import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
 import { MatExpansionModule } from '@angular/material/expansion';
 import { MatSlideToggleModule } from '@angular/material/slide-toggle';
-import { MatTooltipModule } from '@angular/material/tooltip';
+import { MatTooltipModule, MatTooltip } from '@angular/material/tooltip';
+import { ChangeDetectorRef } from '@angular/core';
 import { HttpErrorResponse } from '@angular/common/http';
 import { GroupDetailsService } from './group-details.service';
 import { NotifierService } from '../../../../shared/notifier/notifier.service';
@@ -57,92 +58,77 @@ export class GroupDetailsComponent implements OnInit {
   private readonly demoteMemberDialog = inject(DemoteMemberDialogService);
   private readonly removeMemberDialog = inject(RemoveMemberDialogService);
   private readonly hierarchyTreeService = inject(DashboardHierarchyTreeService);
+  private readonly cdr = inject(ChangeDetectorRef);
 
   public readonly isLoading = signal<boolean>(false);
-  public readonly isSubmittingAdminRoleRequest = signal<boolean>(false);
-  public readonly isCancellingAdminRoleRequest = signal<boolean>(false);
-  public readonly loggedInUserAdminRequestStatus = signal<'ACCEPTED' | 'PENDING' | 'REJECTED' | null>(null);
-  public readonly groupData = signal<CommitteeProfileMeta | null>(null);
-  public readonly isAdmin = signal<boolean>(false);
-  public readonly committeeEvents = signal<CommitteeEventListItem[]>([]);
-  public readonly userCommitteeRole = signal<'COMMITTEE_MEMBER' | 'COMMITTEE_ADMIN' | 'COMMITTEE_MASTER_ADMIN' | null>(null);
+  public readonly copiedCommitteeId = signal<string | null>(null);
   
-  // Lists holding structured members segment arrays securely typed
+  // 🚀 ERROR 1 FIX: Expanded type allowance bracket including 'REJECTED' literals matches securely
+  public readonly userRequestStatus = signal<'ACCEPTED' | 'PENDING' | 'REJECTED' | null>(null);
+  public readonly userRequestRole = signal<'COMMITTEE_MEMBER' | 'COMMITTEE_ADMIN' | 'COMMITTEE_MASTER_ADMIN' | null>(null);
+  public readonly userCommitteeRole = signal<'COMMITTEE_MEMBER' | 'COMMITTEE_ADMIN' | 'COMMITTEE_MASTER_ADMIN' | null>(null);
+  public readonly groupData = signal<CommitteeProfileMeta | null>(null);
+  public readonly committeeEvents = signal<CommitteeEventListItem[]>([]);
+  
+  public readonly masterAdminsList = signal<CommitteeRosterMember[]>([]);
   public readonly adminsList = signal<CommitteeRosterMember[]>([]);
   public readonly membersList = signal<CommitteeRosterMember[]>([]);
 
-  // Placeholder rows used to render skeleton loaders while data loads
   public readonly skeletonRows = [1, 2, 3];
 
-// 🔐 Computed signals for role-based button visibility
-  public readonly isCurrentUserAdmin = computed(() => this.isAdmin());
-  public readonly isCurrentUserMember = computed(() => !this.isAdmin());
-  public readonly isCurrentUserMasterAdmin = computed(() => this.userCommitteeRole() === 'COMMITTEE_MASTER_ADMIN');
-  public readonly isCurrentUserPending = computed(() => this.loggedInUserAdminRequestStatus() === 'PENDING');
-  public readonly currentUserRoleLabel = computed(() => {
-    if (this.loggedInUserAdminRequestStatus() === 'PENDING') return 'PENDING';
-    switch (this.userCommitteeRole()) {
-      case 'COMMITTEE_MASTER_ADMIN': return 'MASTER ADMIN';
-      case 'COMMITTEE_ADMIN': return 'ADMIN';
-      case 'COMMITTEE_MEMBER': return 'MEMBER';
-      default: return null;
-    }
-  });
-  public readonly currentUserRoleBadgeClass = computed(() => {
-    if (this.loggedInUserAdminRequestStatus() === 'PENDING') return 'role-pending';
-    switch (this.userCommitteeRole()) {
-      case 'COMMITTEE_MASTER_ADMIN': return 'role-committee_master_admin';
-      case 'COMMITTEE_ADMIN': return 'role-committee_admin';
-      case 'COMMITTEE_MEMBER': return 'role-committee_member';
-      default: return '';
-    }
-  });
-  public readonly canShowRequestAdminRoleButton = computed(
-    () => this.isCurrentUserMember() && this.loggedInUserAdminRequestStatus() !== 'PENDING' && this.loggedInUserAdminRequestStatus() !== 'ACCEPTED'
-  );
-  public readonly canShowCancelAdminRoleRequestButton = computed(
-    () => this.isCurrentUserMember() && this.loggedInUserAdminRequestStatus() === 'PENDING'
-  );
-  public readonly shouldShowAdminRequestStatusBadge = computed(() => {
-    const status = this.loggedInUserAdminRequestStatus();
-    return status === 'PENDING';
+  // 🔐 Computed role checks tracking operations variables
+  public readonly isCurrentUserMasterAdmin = computed(() => {
+    return this.userCommitteeRole() === 'COMMITTEE_MASTER_ADMIN';
   });
 
-  // Search filter functionality for members list
+  public readonly isCurrentUserAdmin = computed(() => {
+    const role = this.userCommitteeRole();
+    return role === 'COMMITTEE_ADMIN' || role === 'COMMITTEE_MASTER_ADMIN';
+  });
+
+  public readonly isCurrentUserMember = computed(() => {
+    return this.userCommitteeRole() === 'COMMITTEE_MEMBER';
+  });
+
+  public readonly isCurrentUserPending = computed(() => {
+    return this.userRequestStatus() === 'PENDING';
+  });
+
+  public readonly currentUserRoleLabel = computed(() => {
+    if (this.isCurrentUserMasterAdmin()) return 'Master Admin';
+    if (this.userCommitteeRole() === 'COMMITTEE_ADMIN') return 'Admin';
+    if (this.isCurrentUserMember()) return 'Member';
+    if (this.isCurrentUserPending()) return 'Pending Verification';
+    return 'Guest User';
+  });
+
+  public readonly currentUserRoleBadgeClass = computed(() => {
+    if (this.isCurrentUserMasterAdmin()) return 'badge-master-admin';
+    if (this.userCommitteeRole() === 'COMMITTEE_ADMIN') return 'badge-admin';
+    if (this.isCurrentUserMember()) return 'badge-member';
+    if (this.isCurrentUserPending()) return 'badge-pending';
+    return 'badge-guest';
+  });
+
   public readonly searchQuery = signal<string>('');
   public readonly isSearchFocused = signal<boolean>(false);
 
-  public onSearchFocus(): void {
-    this.isSearchFocused.set(true);
-  }
+  public readonly committeeIdString = computed(() => this.groupData()?.committeeId?.toString() ?? '');
 
-  public onSearchBlur(): void {
-    this.isSearchFocused.set(false);
-  }
-
-  public clearSearch(): void {
-    this.searchQuery.set('');
-  }
+  public onSearchFocus(): void { this.isSearchFocused.set(true); }
+  public onSearchBlur(): void { this.isSearchFocused.set(false); }
+  public clearSearch(): void { this.searchQuery.set(''); }
 
   public clearGroupLogo(): void {
     this.groupData.update((currentValue) => {
-      if (!currentValue) {
-        return currentValue;
-      }
-
-      return {
-        ...currentValue,
-        logo: null
-      };
+      if (!currentValue) return currentValue;
+      return { ...currentValue, logo: null };
     });
   }
 
-  // Computed filtered members list based on search query
   public readonly filteredMembersList = computed(() => {
     const query = this.searchQuery().toLowerCase().trim();
-    if (!query) {
-      return this.membersList();
-    }
+    if (!query) return this.membersList();
     return this.membersList().filter(
       (member: CommitteeRosterMember) =>
         member.name.toLowerCase().includes(query) ||
@@ -150,7 +136,6 @@ export class GroupDetailsComponent implements OnInit {
     );
   });
 
-  // Track logged-in user's ID for conditional button rendering
   public getLoggedInUserId(): number {
     const userDataStr = localStorage.getItem('userData');
     if (userDataStr) {
@@ -165,7 +150,6 @@ export class GroupDetailsComponent implements OnInit {
   }
 
   ngOnInit(): void {
-    // 🚀 ROUTE PARAM LISTENER: Watches matrix tree route id parameter changes seamlessly!
     this.route.params.subscribe(params => {
       const committeeId = params['id'];
       if (committeeId) {
@@ -175,10 +159,7 @@ export class GroupDetailsComponent implements OnInit {
   }
 
   public openEventDetails(eventId: number): void {
-    if (!eventId) {
-      return;
-    }
-
+    if (!eventId) return;
     this.router.navigate(['/dashboard/event', eventId]);
   }
 
@@ -189,10 +170,7 @@ export class GroupDetailsComponent implements OnInit {
     }
 
     const visibility: 'VISIBLE' | 'HIDDEN' = isVisible ? 'VISIBLE' : 'HIDDEN';
-
-    if (!eventItem?.eventId || eventItem.visibility === visibility) {
-      return;
-    }
+    if (!eventItem?.eventId || eventItem.visibility === visibility) return;
 
     const previousVisibility = eventItem.visibility;
     this.committeeEvents.update((currentEvents) =>
@@ -252,23 +230,34 @@ export class GroupDetailsComponent implements OnInit {
 
           this.groupData.set(committeeInfo);
           this.userCommitteeRole.set(data.committeeRole ?? null);
-          this.isAdmin.set(data.committeeRole === 'COMMITTEE_ADMIN' || data.committeeRole === 'COMMITTEE_MASTER_ADMIN');
-          this.loggedInUserAdminRequestStatus.set(
-            data.committeeRole === 'COMMITTEE_ADMIN' || data.committeeRole === 'COMMITTEE_MASTER_ADMIN' ? 'ACCEPTED' : null
+          this.userRequestStatus.set(data.userRequestStatus ?? null);
+          this.userRequestRole.set(data.userRequestRole ?? null);
+          
+          const membersPool = data.members || [];
+          
+          this.masterAdminsList.set(
+            membersPool.filter((m: CommitteeRosterMember) => String(m.committeeRole || '').toUpperCase() === 'COMMITTEE_MASTER_ADMIN')
           );
           
-          // Split members into explicit buckets rows natively matching schema types
-          const membersPool = data.members || [];
           this.adminsList.set(
-            membersPool.filter((m: CommitteeRosterMember) => {
-              const role = String(m.committeeRole || '').toUpperCase();
-              return role === 'COMMITTEE_ADMIN' || role === 'COMMITTEE_MASTER_ADMIN';
-            })
+            membersPool.filter((m: CommitteeRosterMember) => String(m.committeeRole || '').toUpperCase() === 'COMMITTEE_ADMIN')
           );
+          
           this.membersList.set(
             membersPool.filter((m: CommitteeRosterMember) => String(m.committeeRole || '').toUpperCase() === 'COMMITTEE_MEMBER')
           );
-          this.committeeEvents.set(data.events || []);
+          
+          // 🚀 ERROR 2 & 3 FIX: Forces mapping layout with strict type validation defaults inside tracking loop variables setup
+          if (data.events) {
+            const safeEvents = data.events.map((event: CommitteeEventListItem) => ({
+              ...event,
+              id: event.id || Number(event.eventId || 0)
+            }));
+            this.committeeEvents.set(safeEvents);
+          } else {
+            this.committeeEvents.set([]);
+          }
+
         } else {
           this.notifier.error('Failed to parse committee details.');
         }
@@ -283,23 +272,8 @@ export class GroupDetailsComponent implements OnInit {
 
   public onRequestAdminRole(): void {
     const committee = this.groupData();
-    if (!committee?.committeeId) {
-      this.notifier.error('Committee not available for admin role request');
-      return;
-    }
-
-    if (this.isCurrentUserAdmin()) {
-      this.notifier.warn('You are already an admin in this committee');
-      return;
-    }
-
-    if (!this.canShowRequestAdminRoleButton()) {
-      this.notifier.warn('Admin role request cannot be submitted in current state');
-      return;
-    }
-
-    const committeeId = committee.committeeId;
-
+    if (!committee?.committeeId) return;
+    
     const dialogData: ConfirmDialogData = {
       title: 'Request Admin Role',
       message: `Are you sure you want to request admin role for "${committee.committeeName}"?`,
@@ -308,26 +282,16 @@ export class GroupDetailsComponent implements OnInit {
     };
 
     const dialogRef = this.confirmDialog.open(dialogData);
-
     dialogRef.afterClosed().subscribe((result) => {
-      if (!result?.confirmed) {
-        return;
-      }
+      if (!result?.confirmed) return;
 
-      this.isSubmittingAdminRoleRequest.set(true);
-
-        this.groupDetailsService.requestCommitteeAdminRole(committeeId, 'COMMITTEE_ADMIN').subscribe({
-        next: (response: SubmitCommitteeMembershipRequestPayload) => {
-          this.loggedInUserAdminRequestStatus.set('PENDING');
+      this.groupDetailsService.requestCommitteeAdminRole(Number(committee.committeeId), 'COMMITTEE_ADMIN').subscribe({
+        next: () => {
           this.notifier.success('Admin role request submitted successfully');
-          this.fetchCommitteeDetailsPayload(String(committeeId));
+          this.fetchCommitteeDetailsPayload(String(committee.committeeId));
         },
-        error: (error: unknown) => {
-          const err = error as { message?: string; error?: { message?: string } };
-          this.notifier.error(err?.error?.message || err?.message || 'Failed to submit admin role request');
-        },
-        complete: () => {
-          this.isSubmittingAdminRoleRequest.set(false);
+        error: (error: any) => {
+          this.notifier.error(error?.error?.message || 'Failed to submit admin role request');
         }
       });
     });
@@ -335,17 +299,7 @@ export class GroupDetailsComponent implements OnInit {
 
   public onCancelAdminRoleRequest(): void {
     const committee = this.groupData();
-    if (!committee?.committeeId) {
-      this.notifier.error('Committee not available for request cancellation');
-      return;
-    }
-
-    if (!this.canShowCancelAdminRoleRequestButton()) {
-      this.notifier.warn('Only pending admin role requests can be cancelled');
-      return;
-    }
-
-      const committeeId = committee.committeeId;
+    if (!committee?.committeeId) return;
 
     const dialogData: ConfirmDialogData = {
       title: 'Cancel Admin Role Request',
@@ -355,47 +309,32 @@ export class GroupDetailsComponent implements OnInit {
     };
 
     const dialogRef = this.confirmDialog.open(dialogData);
-
     dialogRef.afterClosed().subscribe((result) => {
-      if (!result?.confirmed) {
-        return;
-      }
+      if (!result?.confirmed) return;
 
-      this.isCancellingAdminRoleRequest.set(true);
-
-        this.groupDetailsService.cancelCommitteeMembershipRequest(committeeId).subscribe({
-        next: (response: CancelCommitteeMembershipRequestPayload) => {
-          this.loggedInUserAdminRequestStatus.set(null);
+      this.groupDetailsService.cancelCommitteeMembershipRequest(Number(committee.committeeId)).subscribe({
+        next: () => {
           this.notifier.success('Admin role request cancelled successfully');
-          this.fetchCommitteeDetailsPayload(String(committeeId));
+          this.fetchCommitteeDetailsPayload(String(committee.committeeId));
         },
-        error: (error: unknown) => {
-          const err = error as { message?: string; error?: { message?: string } };
-          this.notifier.error(err?.error?.message || err?.message || 'Failed to cancel admin role request');
-        },
-        complete: () => {
-          this.isCancellingAdminRoleRequest.set(false);
+        error: (error: any) => {
+          this.notifier.error(error?.error?.message || 'Failed to cancel admin role request');
         }
       });
     });
   }
 
-  public getAdminRequestStatusLabel(): string {
-    const status = this.loggedInUserAdminRequestStatus();
-    return status || '';
-  }
-
-  // 👁 VIEW MEMBER DETAILS METHOD
   public onViewMember(userId: number): void {
     const committee = this.groupData();
     if (!committee) return;
 
-    // Find the member - could be in either list (admin or member)
     const member = this.membersList().find(m => m.id === userId) || 
-                  this.adminsList().find(m => m.id === userId);
+                   this.adminsList().find(m => m.id === userId) ||
+                   this.masterAdminsList().find(m => m.id === userId);
     if (!member) return;
 
-    const isAdmin = this.adminsList().some(m => m.id === userId);
+    const checkAdmin = String(member.committeeRole || '').toUpperCase();
+    const isAdmin = checkAdmin === 'COMMITTEE_ADMIN' || checkAdmin === 'COMMITTEE_MASTER_ADMIN';
 
     document.body.classList.add('dialog-open');
     const dialogRef = this.dialog.open(ViewUserDialogComponent, {
@@ -403,10 +342,7 @@ export class GroupDetailsComponent implements OnInit {
       autoFocus: true,
       disableClose: true,
       hasBackdrop: true,
-      position: {
-        right: '0',
-        top: '0'
-      },
+      position: { right: '0', top: '0' },
       height: '100%',
       panelClass: 'slide-in-dialog',
       data: {
@@ -419,31 +355,21 @@ export class GroupDetailsComponent implements OnInit {
       }
     });
 
-    dialogRef.afterClosed().subscribe((result) => {
+    dialogRef.afterClosed().subscribe(() => {
       document.body.classList.remove('dialog-open');
     });
   }
 
-  // 📑 EXPAND ROSTER FULL LIST OVERFLOW OVERLAY DIALOG (For 200+ Members)
   public onOpenFullRosterDialog(): void {
     this.notifier.success('Compiling heavy matrix buffer records into full high-density modal dialogue shell...');
-    // Dialog launch sequence hooks here cleanly
   }
 
   public onPromoteMember(member: CommitteeRosterMember): void {
     const committee = this.groupData();
-    if (!committee?.committeeId) {
-      this.notifier.error('No committee selected');
-      return;
-    }
+    if (!committee?.committeeId) return;
 
-    if (!this.isCurrentUserAdmin()) {
-      this.notifier.warn('Only committee admins can promote members');
-      return;
-    }
-
-    if (member.id === this.getLoggedInUserId()) {
-      this.notifier.warn('You cannot promote yourself from this screen');
+    if (!this.isCurrentUserMasterAdmin()) {
+      this.notifier.warn('Only Master Administrators can execute promotion workflows');
       return;
     }
 
@@ -464,18 +390,10 @@ export class GroupDetailsComponent implements OnInit {
 
   public onDemoteAdmin(admin: CommitteeRosterMember): void {
     const committee = this.groupData();
-    if (!committee?.committeeId) {
-      this.notifier.error('No committee selected');
-      return;
-    }
+    if (!committee?.committeeId) return;
 
-    if (!this.isCurrentUserAdmin()) {
-      this.notifier.warn('Only committee admins can demote admins');
-      return;
-    }
-
-    if (admin.id === this.getLoggedInUserId()) {
-      this.notifier.warn('You cannot demote yourself from this screen');
+    if (!this.isCurrentUserMasterAdmin()) {
+      this.notifier.warn('Only Master Administrators hold demotion access control tokens');
       return;
     }
 
@@ -496,18 +414,10 @@ export class GroupDetailsComponent implements OnInit {
 
   public onRemoveCommitteeMember(member: CommitteeRosterMember): void {
     const committee = this.groupData();
-    if (!committee?.committeeId) {
-      this.notifier.error('No committee selected');
-      return;
-    }
+    if (!committee?.committeeId) return;
 
-    if (!this.isCurrentUserAdmin()) {
-      this.notifier.warn('Only committee admins can remove members');
-      return;
-    }
-
-    if (member.id === this.getLoggedInUserId()) {
-      this.notifier.warn('You cannot remove yourself from this screen');
+    if (!this.isCurrentUserMasterAdmin()) {
+      this.notifier.warn('Only Master Administrators can eliminate accounts from workspaces');
       return;
     }
 
@@ -525,26 +435,13 @@ export class GroupDetailsComponent implements OnInit {
     });
   }
 
-  // 🎉 CREATE NEW EVENT DIALOG PIPELINE
   public onCreateEvent(eventType: 'PUBLIC' | 'PRIVATE'): void {
     const committee = this.groupData();
-    if (!committee) {
-      this.notifier.error('No committee selected');
-      return;
-    }
-
-    // Check if user is committee admin - only admins can create events
-    if (!this.isAdmin()) {
-      this.notifier.warn('Only committee admins can create events');
-      return;
-    }
+    if (!committee) return;
 
     document.body.classList.add('dialog-open');
     const dialogRef = this.dialog.open(CreateEventDialogComponent, {
-      position: {
-        right: '0',
-        top: '0'
-      },
+      position: { right: '0', top: '0' },
       height: '100%',
       width: '50%',
       autoFocus: true,
@@ -561,66 +458,66 @@ export class GroupDetailsComponent implements OnInit {
 
     dialogRef.afterClosed().subscribe((result) => {
       document.body.classList.remove('dialog-open');
-      if (result) {
-        if (committee.committeeId) {
-          this.hierarchyTreeService.triggerHierarchyTreeRefresh();
-          this.fetchCommitteeDetailsPayload(String(committee.committeeId));
-        }
+      if (result && committee.committeeId) {
+        this.hierarchyTreeService.triggerHierarchyTreeRefresh();
+        this.fetchCommitteeDetailsPayload(String(committee.committeeId));
       }
     });
   }
 
   public onEditCommitteeProfile(): void {
     const committee = this.groupData();
-    if (!committee?.committeeId) {
-      this.notifier.error('No committee selected');
-      return;
-    }
-
-    if (!this.isCurrentUserAdmin()) {
-      this.notifier.warn('Only committee admins can edit committee profile');
-      return;
-    }
+    if (!committee?.committeeId) return;
 
     document.body.classList.add('dialog-open');
     const dialogRef = this.dialog.open(CreateCommitteeDialogComponent, {
-      position: {
-        right: '0',
-        top: '0'
-      },
+      position: { right: '0', top: '0' },
       height: '100%',
       width: '50%',
       autoFocus: true,
       disableClose: true,
       hasBackdrop: true,
       panelClass: 'slide-in-dialog',
-      data: {
-        committee
-      }
+      data: { committee }
     });
 
     dialogRef.afterClosed().subscribe((result) => {
       document.body.classList.remove('dialog-open');
-      if (!result) {
-        return;
+      if (result) {
+        this.fetchCommitteeDetailsPayload(String(committee.committeeId));
       }
-
-      this.fetchCommitteeDetailsPayload(String(committee.committeeId));
     });
   }
 
-  public onDeleteCommitteeWorkspace(): void {
-    const committee = this.groupData();
-    if (!committee?.committeeId) {
-      this.notifier.error('No committee selected');
-      return;
-    }
-
-    if (!this.isCurrentUserAdmin()) {
-      this.notifier.warn('Only committee admins can delete committee');
-      return;
-    }
-
+public onDeleteCommitteeWorkspace(): void {
+    if (!this.isCurrentUserAdmin()) return;
     this.notifier.warn('Delete committee flow will be enabled after committee delete GraphQL API is restored.');
+  }
+
+  async copyCommitteeId(committeeId: string, event: Event, tooltip: MatTooltip): Promise<void> {
+    event.stopPropagation();
+    try {
+      this.copiedCommitteeId.set(committeeId);
+      this.cdr.detectChanges();
+      await navigator.clipboard.writeText(committeeId);
+
+      const originalMessage = tooltip.message;
+      tooltip.message = `Committee Id copied - ${committeeId}`;
+      tooltip.show();
+
+      setTimeout(() => {
+        this.copiedCommitteeId.set(null);
+        this.cdr.detectChanges();
+      }, 2000);
+
+      setTimeout(() => {
+        tooltip.hide();
+        setTimeout(() => tooltip.message = originalMessage, 500);
+      }, 2000);
+    } catch (err) {
+      this.notifier.error('Failed to copy Committee Id');
+      this.copiedCommitteeId.set(null);
+      this.cdr.detectChanges();
+    }
   }
 }

@@ -70,6 +70,8 @@ export const committeeDetailsTypes = `
     createdBy: Int!
     createdAt: String!
     committeeRole: String
+    userRequestStatus: String
+    userRequestRole: String
     members: [CommitteeMember!]!
     events: [CommitteeEvent!]!
   }
@@ -131,6 +133,21 @@ export const committeeDetailsResolvers = {
         WHERE committee_id = ? AND user_id = ?
         LIMIT 1
       `, [committeeId, loggedInUserId]);
+
+      const userRequestStatusResult = await query<any[]>(`
+        SELECT status, request_role FROM committee_role_requests
+        WHERE committee_id = ? AND requester_user_id = ?
+        ORDER BY requested_at DESC
+        LIMIT 1
+      `, [committeeId, loggedInUserId]);
+
+      const userRequestStatus = userRequestStatusResult.length > 0
+        ? userRequestStatusResult[0].status
+        : null;
+
+      const userRequestRole = userRequestStatusResult.length > 0
+        ? userRequestStatusResult[0].request_role
+        : null;
 
       const isLoggedUserAdmin =
         adminCheckResult.length > 0 &&
@@ -206,6 +223,8 @@ export const committeeDetailsResolvers = {
         createdBy: committee.created_by,
         createdAt: committee.created_at,
         committeeRole: adminCheckResult.length > 0 ? adminCheckResult[0].committee_role || null : null,
+        userRequestStatus: userRequestStatus,
+        userRequestRole: userRequestRole,
         members: members.map((m: any) => ({
           id: m.id,
           name: m.name,

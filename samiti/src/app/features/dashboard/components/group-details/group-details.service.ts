@@ -28,6 +28,8 @@ export class GroupDetailsService {
         createdBy
         createdAt
         committeeRole
+        userRequestStatus
+        userRequestRole
         members {
           id
           name
