@@ -8,6 +8,8 @@ import { MatIconModule } from '@angular/material/icon';
 import { MatButtonModule } from '@angular/material/button';
 import { MatTooltipModule, MatTooltip } from '@angular/material/tooltip';
 import { MatDialog, MatDialogModule } from '@angular/material/dialog';
+import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
+import { firstValueFrom } from 'rxjs';
 import { HomeService } from './home.service';
 import { HeaderService } from '../../components/header/header.service';
 import { NotifierService } from '../../shared/notifier/notifier.service';
@@ -19,6 +21,8 @@ import { CommitteeListResponseGuestUser, CommitteeListRequestBackend, CommitteeA
 import { TextFormatPipe } from '../../shared/pipe/text-format-pipe.pipe';
 import { StartupLoaderService } from '../../core/services/startup-loader.service';
 import { UiToggleService } from '../../shared/services/ui-toggle.service';
+import { ImageAssetService } from '../../core/services/image-asset.service';
+import { ImageCropperDialogComponent } from '../../shared/components/image-cropper-dialog/image-cropper-dialog.component';
 
 @Component({
   selector: 'app-home',
@@ -32,6 +36,7 @@ import { UiToggleService } from '../../shared/services/ui-toggle.service';
     MatButtonModule,
     MatTooltipModule,
     MatDialogModule,
+    MatProgressSpinnerModule,
     TextFormatPipe,
   ],
   templateUrl: './home.component.html',
@@ -47,10 +52,12 @@ export class HomeComponent implements OnDestroy {
   private readonly dialog = inject(MatDialog); // Injecting MatDialog to open dialogs
   private readonly confirmDialog = inject(ConfirmDialogService); // Injecting ConfirmDialogService
   private readonly startupLoaderService = inject(StartupLoaderService);
+  private readonly imageAssetService = inject(ImageAssetService);
 
   private nearbyExpandedCommitteeIds = new Set<number>();
   private favouriteExpandedCommitteeIds = new Set<number>();
   private previewExpandedCommitteeIds = new Set<number>();
+  private readonly uploadingLogoCommitteeIds = new Set<number>();
   private readonly carouselIndices = new Map<number, number>();
   private carouselTimer: ReturnType<typeof setInterval> | null = null;
   private readonly CAROUSEL_INTERVAL_MS = 3500;
@@ -510,5 +517,70 @@ export class HomeComponent implements OnDestroy {
       this.copiedCommitteeId = null;
       this.cdr.detectChanges();
     }
+  }
+
+  isCommitteeAdmin(committee: CommitteesList): boolean {
+    if (!this.isAuthItem(committee)) return false;
+    const role = String(committee.committeeRole || '').toUpperCase();
+    return role === 'COMMITTEE_ADMIN' || role === 'COMMITTEE_MASTER_ADMIN';
+  }
+
+  isUploadingCommitteeLogo(committeeId: number): boolean {
+    return this.uploadingLogoCommitteeIds.has(committeeId);
+  }
+
+  async onCommitteeLogoSelected(event: Event, committee: CommitteesList): Promise<void> {
+    const inputElement = event.target as HTMLInputElement;
+    const selectedFile = inputElement.files?.[0] || null;
+    inputElement.value = '';
+
+    if (!selectedFile) {
+      return;
+    }
+
+    if (!this.isCommitteeAdmin(committee)) {
+      this.notifier.warn('Only committee admins can update the committee logo');
+      return;
+    }
+
+    const selectedOrCroppedFile = await this.openCommitteeLogoCropDialog(selectedFile);
+    if (!selectedOrCroppedFile) {
+      return;
+    }
+
+    this.uploadingLogoCommitteeIds.add(committee.id);
+    this.cdr.detectChanges();
+
+    try {
+      const uploadedLogoMetadata = await firstValueFrom(
+        this.imageAssetService.uploadSingleImageForCommitteeLogo(selectedOrCroppedFile)
+      );
+
+      const updatedLogo = await firstValueFrom(
+        this.homeService.updateCommitteeLogo(committee.id, uploadedLogoMetadata.publicAbsoluteUrl)
+      );
+
+      committee.committeeLogo = updatedLogo.logo || uploadedLogoMetadata.publicAbsoluteUrl;
+      this.notifier.success('Committee logo has been updated successfully.');
+    } catch (error: any) {
+      this.notifier.error(error?.message || 'Failed to update committee logo.');
+    } finally {
+      this.uploadingLogoCommitteeIds.delete(committee.id);
+      this.cdr.detectChanges();
+    }
+  }
+
+  private async openCommitteeLogoCropDialog(file: File): Promise<File | null> {
+    return firstValueFrom(
+      this.dialog.open(ImageCropperDialogComponent, {
+        width: 'min(92vw, 920px)',
+        data: {
+          file,
+          title: 'Crop Committee Logo',
+          maintainAspectRatio: true,
+          aspectRatio: 1
+        }
+      }).afterClosed()
+    );
   }
 }

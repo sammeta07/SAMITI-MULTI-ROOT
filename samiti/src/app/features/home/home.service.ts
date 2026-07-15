@@ -175,4 +175,37 @@ export class HomeService {
           })
         );
     }
+
+    updateCommitteeLogo(committeeId: number, logo: string): Observable<{ committeeId: number; logo: string | null }> {
+        const url = this.graphqlUrl;
+        const query = `mutation UpdateCommitteeLogo($input: UpdateCommitteeLogoInput!) {
+          updateCommitteeLogo(input: $input) {
+            data {
+              committeeId
+              logo
+            }
+          }
+        }`;
+
+        return this.http.post<GraphQLResponseEnvelope<{ updateCommitteeLogo: { data: { committeeId: number; logo: string | null } } }>>(url, {
+          query,
+          variables: {
+            input: {
+              committeeId,
+              logo
+            }
+          }
+        }).pipe(
+          map((res) => {
+            if (res.errors?.length) {
+              throw new Error(res.errors[0].message || 'Failed to update committee logo');
+            }
+            const data = res.data?.updateCommitteeLogo?.data;
+            return {
+              committeeId: Number(data?.committeeId ?? committeeId),
+              logo: sanitizeCloudinaryLogoUrl(data?.logo ?? logo)
+            };
+          })
+        );
+    }
 }

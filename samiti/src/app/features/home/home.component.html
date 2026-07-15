@@ -70,10 +70,32 @@
             <mat-expansion-panel-header>
               <div class="committee-card-grid">
                 <div class="card-logo-area">
-                  @if (committee.committeeLogo) {
-                  <img [src]="committee.committeeLogo" alt="{{ committee.committeeName }} logo" class="committee-avatar" (error)="committee.committeeLogo = null" />
+                  <ng-template #homeCommitteeLogoContent>
+                    @if (committee.committeeLogo) {
+                    <img [src]="committee.committeeLogo" alt="{{ committee.committeeName }} logo" class="committee-avatar" (error)="committee.committeeLogo = null" />
+                    } @else {
+                    <div class="committee-avatar-fallback">{{ committee.committeeName.charAt(0).toUpperCase() }}</div>
+                    }
+                  </ng-template>
+
+                  @if (isAuth && isCommitteeAdmin(committee)) {
+                    <input #homeCommitteeLogoInput type="file" hidden accept="image/*" (change)="onCommitteeLogoSelected($event, committee)">
+                    <button type="button" class="committee-logo-edit-trigger"
+                      (click)="$event.stopPropagation(); homeCommitteeLogoInput.click()"
+                      [disabled]="isUploadingCommitteeLogo(committee.id)"
+                      matTooltip="Change committee logo" matTooltipPosition="above"
+                      aria-label="Change committee logo">
+                      <ng-container [ngTemplateOutlet]="homeCommitteeLogoContent"></ng-container>
+                      <span class="logo-edit-overlay" aria-hidden="true">
+                        @if (isUploadingCommitteeLogo(committee.id)) {
+                          <mat-progress-spinner mode="indeterminate" diameter="22" class="logo-upload-spinner"></mat-progress-spinner>
+                        } @else {
+                          <mat-icon>edit</mat-icon>
+                        }
+                      </span>
+                    </button>
                   } @else {
-                  <div class="committee-avatar-fallback">{{ committee.committeeName.charAt(0).toUpperCase() }}</div>
+                    <ng-container [ngTemplateOutlet]="homeCommitteeLogoContent"></ng-container>
                   }
                 </div>
 
