@@ -295,6 +295,8 @@ export class GroupDetailsComponent implements OnInit {
             address: data.address,
             establishYear: data.establishYear,
             logo: data.logo,
+            latitude: data.latitude,
+            longitude: data.longitude,
             contactNumbers: data.contactNumbers,
             createdBy: data.createdBy,
             createdAt: data.createdAt
@@ -556,6 +558,7 @@ export class GroupDetailsComponent implements OnInit {
     dialogRef.afterClosed().subscribe((result) => {
       document.body.classList.remove('dialog-open');
       if (result) {
+        this.hierarchyTreeService.triggerHierarchyTreeRefresh();
         this.fetchCommitteeDetailsPayload(String(committee.committeeId));
       }
     });

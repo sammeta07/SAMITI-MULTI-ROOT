@@ -66,6 +66,8 @@ export const committeeDetailsTypes = `
     address: String!
     establishYear: Int!
     logo: String
+    latitude: Float
+    longitude: Float
     contactNumbers: [String!]!
     createdBy: Int!
     createdAt: String!
@@ -114,6 +116,8 @@ export const committeeDetailsResolvers = {
           address,
           establish_year,
           logo,
+          latitude,
+          longitude,
           contact_numbers,
           created_by,
           created_at
@@ -219,6 +223,8 @@ export const committeeDetailsResolvers = {
         address: committee.address,
         establishYear: committee.establish_year,
         logo: committee.logo || null,
+        latitude: committee.latitude != null ? Number(committee.latitude) : null,
+        longitude: committee.longitude != null ? Number(committee.longitude) : null,
         contactNumbers: normalizeContactNumbers(committee.contact_numbers),
         createdBy: committee.created_by,
         createdAt: committee.created_at,

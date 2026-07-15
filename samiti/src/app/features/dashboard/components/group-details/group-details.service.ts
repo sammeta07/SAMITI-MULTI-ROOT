@@ -33,6 +33,8 @@ export class GroupDetailsService {
         address
         establishYear
         logo
+        latitude
+        longitude
         contactNumbers
         createdBy
         createdAt

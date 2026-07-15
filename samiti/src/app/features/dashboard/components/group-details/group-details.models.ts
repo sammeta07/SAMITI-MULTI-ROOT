@@ -5,6 +5,8 @@ export interface CommitteeProfileMeta {
   address: string;
   establishYear: number;
   logo: string | null;
+  latitude?: number | null;
+  longitude?: number | null;
   contactNumbers: string[];
   createdBy: number;
   createdAt: string;
@@ -56,6 +58,8 @@ export interface CommitteeDetailsPayload {
   address: string;
   establishYear: number;
   logo: string | null;
+  latitude: number | null;
+  longitude: number | null;
   contactNumbers: string[];
   createdBy: number;
   createdAt: string;
