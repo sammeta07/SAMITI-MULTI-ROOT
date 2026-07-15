@@ -13,6 +13,7 @@ import { MatSlideToggleModule } from '@angular/material/slide-toggle';
 import { MatTooltipModule, MatTooltip } from '@angular/material/tooltip';
 import { ChangeDetectorRef } from '@angular/core';
 import { HttpErrorResponse } from '@angular/common/http';
+import { firstValueFrom } from 'rxjs';
 import { GroupDetailsService } from './group-details.service';
 import { NotifierService } from '../../../../shared/notifier/notifier.service';
 import { CancelCommitteeMembershipRequestPayload, CommitteeEventListItem, CommitteeProfileMeta, CommitteeRosterMember, CommitteeDetailsPayload, SubmitCommitteeMembershipRequestPayload } from './group-details.models';
@@ -26,6 +27,8 @@ import { DemoteMemberDialogService } from '../../../../components/dialog/demote-
 import { RemoveMemberDialogService } from '../../../../components/dialog/remove-member/remove-member.service';
 import { DashboardHierarchyTreeService } from '../dashboard-hierarchy-tree/dashboard-hierarchy-tree.service';
 import { TextFormatPipe } from '../../../../shared/pipe/text-format-pipe.pipe';
+import { ImageAssetService } from '../../../../core/services/image-asset.service';
+import { ImageCropperDialogComponent } from '../../../../shared/components/image-cropper-dialog/image-cropper-dialog.component';
 
 @Component({
   selector: 'app-group-details',
@@ -59,9 +62,11 @@ export class GroupDetailsComponent implements OnInit {
   private readonly removeMemberDialog = inject(RemoveMemberDialogService);
   private readonly hierarchyTreeService = inject(DashboardHierarchyTreeService);
   private readonly cdr = inject(ChangeDetectorRef);
+  private readonly imageAssetService = inject(ImageAssetService);
 
   public readonly isLoading = signal<boolean>(false);
   public readonly copiedCommitteeId = signal<string | null>(null);
+  public readonly isUploadingCommitteeLogo = signal<boolean>(false);
   
   // 🚀 ERROR 1 FIX: Expanded type allowance bracket including 'REJECTED' literals matches securely
   public readonly userRequestStatus = signal<'ACCEPTED' | 'PENDING' | 'REJECTED' | null>(null);
@@ -83,7 +88,7 @@ export class GroupDetailsComponent implements OnInit {
 
   public readonly isCurrentUserAdmin = computed(() => {
     const role = this.userCommitteeRole();
-    return role === 'COMMITTEE_ADMIN' || role === 'COMMITTEE_MASTER_ADMIN';
+    return role === 'COMMITTEE_ADMIN';
   });
 
   public readonly isCurrentUserMember = computed(() => {
@@ -126,6 +131,73 @@ export class GroupDetailsComponent implements OnInit {
     });
   }
 
+  public async onCommitteeLogoSelected(event: Event): Promise<void> {
+    const inputElement = event.target as HTMLInputElement;
+    const selectedFile = inputElement.files?.[0] || null;
+    inputElement.value = '';
+
+    if (!selectedFile) {
+      return;
+    }
+
+    if (!this.isCurrentUserMasterAdmin()) {
+      this.notifier.warn('Only committee master admins can update the committee logo');
+      return;
+    }
+
+    const committee = this.groupData();
+    if (!committee?.committeeId) {
+      this.notifier.error('Committee reference is missing. Please reload the workspace.');
+      return;
+    }
+
+    const selectedOrCroppedFile = await this.openCommitteeLogoCropDialog(selectedFile);
+    if (!selectedOrCroppedFile) {
+      return;
+    }
+
+    this.isUploadingCommitteeLogo.set(true);
+
+    try {
+      const uploadedLogoMetadata = await firstValueFrom(
+        this.imageAssetService.uploadSingleImageForCommitteeLogo(selectedOrCroppedFile)
+      );
+
+      const updatedCommittee = await firstValueFrom(
+        this.groupDetailsService.updateCommitteeLogo(committee, uploadedLogoMetadata.publicAbsoluteUrl)
+      );
+
+      const resolvedLogo = updatedCommittee?.logo || uploadedLogoMetadata.publicAbsoluteUrl;
+      this.groupData.update((currentValue) => {
+        if (!currentValue) return currentValue;
+        return { ...currentValue, logo: resolvedLogo };
+      });
+
+      const displayGroupName = this.toTitleCase(committee.committeeName || 'Committee');
+      this.notifier.success(`Committee logo for **${displayGroupName}** has been updated successfully.`);
+      this.hierarchyTreeService.triggerHierarchyTreeRefresh();
+    } catch (error: any) {
+      this.notifier.error(error?.message || 'Failed to update committee logo.');
+    } finally {
+      this.isUploadingCommitteeLogo.set(false);
+      this.cdr.detectChanges();
+    }
+  }
+
+  private async openCommitteeLogoCropDialog(file: File): Promise<File | null> {
+    return firstValueFrom(
+      this.dialog.open(ImageCropperDialogComponent, {
+        width: 'min(92vw, 920px)',
+        data: {
+          file,
+          title: 'Crop Committee Logo',
+          maintainAspectRatio: true,
+          aspectRatio: 1
+        }
+      }).afterClosed()
+    );
+  }
+
   public readonly filteredMembersList = computed(() => {
     const query = this.searchQuery().toLowerCase().trim();
     if (!query) return this.membersList();
@@ -164,7 +236,7 @@ export class GroupDetailsComponent implements OnInit {
   }
 
   public onEventVisibilityChange(eventItem: CommitteeEventListItem, isVisible: boolean): void {
-    if (!this.isCurrentUserAdmin()) {
+    if (!this.isCurrentUserMasterAdmin()) {
       this.notifier.warn('Only committee admins can update event visibility');
       return;
     }
@@ -490,7 +562,7 @@ export class GroupDetailsComponent implements OnInit {
   }
 
 public onDeleteCommitteeWorkspace(): void {
-    if (!this.isCurrentUserAdmin()) return;
+    if (!this.isCurrentUserMasterAdmin()) return;
     this.notifier.warn('Delete committee flow will be enabled after committee delete GraphQL API is restored.');
   }
 

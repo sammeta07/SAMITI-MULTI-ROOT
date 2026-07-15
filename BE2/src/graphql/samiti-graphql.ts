@@ -5,6 +5,7 @@ import { userRelationalAnalyticsTypes, userRelationalAnalyticsQueryFields, userR
 import { imageAssetUploadTypes, imageAssetUploadMutationFields, imageAssetUploadResolvers } from './users/image-asset-upload.graphql';
 import { createCommitteeTypes, createCommitteeMutationFields, createCommitteeResolvers } from './committees/create-committee.graphql';
 import { updateCommitteeTypes, updateCommitteeMutationFields, updateCommitteeResolvers } from './committees/update-committee.graphql';
+import { updateCommitteeLogoTypes, updateCommitteeLogoMutationFields, updateCommitteeLogoResolvers } from './committees/update-committee-logo.graphql';
 import { committeeMembershipRequestsTypes, committeeMembershipRequestsQueryFields, committeeMembershipRequestsMutationFields, committeeMembershipRequestsResolvers } from './committees/committee-membership-requests.graphql';
 import { toggleCommitteeFavouriteTypes, toggleCommitteeFavouriteMutationFields, toggleCommitteeFavouriteResolvers } from './committees/toggle-committee-favourite.graphql';
 import { hierarchyTreeTypes, hierarchyTreeQueryFields, hierarchyTreeResolvers } from './committees/hierarchy-tree.graphql';
@@ -30,6 +31,7 @@ export const typeDefs = `
   ${authCommitteeTypes}
   ${createCommitteeTypes}
   ${updateCommitteeTypes}
+  ${updateCommitteeLogoTypes}
   ${committeeMembershipRequestsTypes}
   ${toggleCommitteeFavouriteTypes}
   ${cancelCommitteeMembershipRequestTypes}
@@ -71,6 +73,7 @@ export const typeDefs = `
     ${imageAssetUploadMutationFields}
     ${createCommitteeMutationFields}
     ${updateCommitteeMutationFields}
+    ${updateCommitteeLogoMutationFields}
     ${createEventMutationFields}
     ${updateEventMutationFields}
     ${createProgramMutationFields}
@@ -107,6 +110,7 @@ export const resolvers = {
     ...imageAssetUploadResolvers.Mutation,
     ...createCommitteeResolvers.Mutation,
     ...updateCommitteeResolvers.Mutation,
+    ...updateCommitteeLogoResolvers.Mutation,
     ...createEventResolvers.Mutation,
     ...updateEventResolvers.Mutation,
     ...createProgramResolvers.Mutation,

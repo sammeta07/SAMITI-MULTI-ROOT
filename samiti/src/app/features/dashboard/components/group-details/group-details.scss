@@ -152,6 +152,53 @@
   &.fb-none { background: linear-gradient(135deg, #e2e8f0, #cbd5e1); color: #475569; }
 }
 
+.committee-logo-edit-trigger {
+  position: relative;
+  display: inline-flex;
+  padding: 0;
+  border: none;
+  background: transparent;
+  border-radius: 11px;
+  cursor: pointer;
+  overflow: hidden;
+  transition: transform 0.2s ease;
+
+  .committee-avatar,
+  .committee-avatar-fallback { display: block; }
+
+  &:hover:not(:disabled) { transform: scale(1.03); }
+
+  &:focus-visible {
+    outline: 2px solid rgba(249, 115, 22, 0.45);
+    outline-offset: 3px;
+  }
+
+  &:disabled { cursor: not-allowed; }
+
+  .logo-edit-overlay {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: rgba(15, 23, 42, 0.45);
+    color: #ffffff;
+    opacity: 0;
+    transition: opacity 0.2s ease;
+
+    mat-icon {
+      font-size: 1.15rem;
+      width: 1.15rem;
+      height: 1.15rem;
+    }
+  }
+
+  &:hover:not(:disabled) .logo-edit-overlay,
+  &:focus-visible .logo-edit-overlay { opacity: 1; }
+
+  &:disabled .logo-edit-overlay { opacity: 1; }
+}
+
 .card-main-info-area { display: flex; flex-direction: column; gap: 3px; margin-top: 7px;}
 .card-title-row { display: flex; align-items: center; gap: 6px; }
 .committee-display-name { font-size: 1.5rem; font-weight: 700; color: #0f172a; margin: 0; }

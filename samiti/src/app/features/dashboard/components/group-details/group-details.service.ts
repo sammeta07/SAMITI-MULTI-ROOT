@@ -3,9 +3,18 @@ import { HttpClient } from '@angular/common/http';
 import { Observable } from 'rxjs';
 import { map } from 'rxjs/operators';
 import { environment } from '../../../../../environments/environment';
-import { CancelCommitteeMembershipRequestPayload, CommitteeDetailsPayload, CommitteeEventListItem, CommitteeMembershipRequestRole, DeletedEventPayload, SubmitCommitteeMembershipRequestPayload, UpdatedEventVisibilityPayload } from './group-details.models';
+import { CancelCommitteeMembershipRequestPayload, CommitteeDetailsPayload, CommitteeEventListItem, CommitteeMembershipRequestRole, CommitteeProfileMeta, DeletedEventPayload, SubmitCommitteeMembershipRequestPayload, UpdatedEventVisibilityPayload } from './group-details.models';
 import { CommitteeMembershipRequestService } from '../../../../core/services/committee-membership-request.service';
 import { sanitizeCloudinaryLogoUrl } from '../../../../shared/services/cloudinary-logo.util';
+
+interface GraphQLErrorPayload {
+  message: string;
+}
+
+interface GraphQLResponseEnvelope<TData> {
+  data?: TData;
+  errors?: GraphQLErrorPayload[];
+}
 
 @Injectable({
   providedIn: 'root'
@@ -120,6 +129,43 @@ export class GroupDetailsService {
       { withCredentials: true }
     ).pipe(
       map((res) => res.data.deleteEvent)
+    );
+  }
+
+  public updateCommitteeLogo(committee: CommitteeProfileMeta, logo: string): Observable<CommitteeProfileMeta> {
+    const query = `mutation UpdateCommitteeLogo($input: UpdateCommitteeLogoInput!) {
+      updateCommitteeLogo(input: $input) {
+        data {
+          committeeId
+          logo
+        }
+      }
+    }`;
+
+    return this.http.post<GraphQLResponseEnvelope<{ updateCommitteeLogo: { data: { committeeId: number; logo: string | null } } }>>(
+      this.graphqlUrl,
+      {
+        query,
+        variables: {
+          input: {
+            committeeId: committee.committeeId,
+            logo
+          }
+        }
+      },
+      { withCredentials: true }
+    ).pipe(
+      map((res) => {
+        if (res.errors?.length) {
+          throw new Error(res.errors[0].message || 'Failed to update committee logo');
+        }
+
+        const updatedLogo = res.data?.updateCommitteeLogo?.data?.logo ?? logo;
+        return {
+          ...committee,
+          logo: sanitizeCloudinaryLogoUrl(updatedLogo)
+        } as CommitteeProfileMeta;
+      })
     );
   }
 

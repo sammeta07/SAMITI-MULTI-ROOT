@@ -30,17 +30,38 @@
       <div class="committee-card-grid">
 
 <div class="card-logo-area">
-          @if (groupData()?.logo) {
-            <img [src]="groupData()?.logo" [alt]="groupData()?.committeeName" class="committee-avatar" (error)="clearGroupLogo()" />
+          <ng-template #committeeLogoContent>
+            @if (groupData()?.logo) {
+              <img [src]="groupData()?.logo" [alt]="groupData()?.committeeName" class="committee-avatar" (error)="clearGroupLogo()" />
+            } @else {
+              <div class="committee-avatar-fallback"
+                [class.fb-master-admin]="isCurrentUserMasterAdmin()"
+                [class.fb-admin]="userCommitteeRole() === 'COMMITTEE_ADMIN'"
+                [class.fb-member]="isCurrentUserMember()"
+                [class.fb-pending]="isCurrentUserPending() && !userCommitteeRole()"
+                [class.fb-none]="!userCommitteeRole() && !isCurrentUserPending()">
+                {{ groupData()?.committeeName?.charAt(0) || 'C' }}
+              </div>
+            }
+          </ng-template>
+
+          @if (isCurrentUserMasterAdmin() || isCurrentUserAdmin()) {
+            <input #committeeLogoInput type="file" hidden accept="image/*" (change)="onCommitteeLogoSelected($event)">
+            <button type="button" class="committee-logo-edit-trigger"
+              (click)="committeeLogoInput.click()" [disabled]="isUploadingCommitteeLogo()"
+              matTooltip="Change committee logo" matTooltipPosition="above"
+              aria-label="Change committee logo">
+              <ng-container [ngTemplateOutlet]="committeeLogoContent"></ng-container>
+              <span class="logo-edit-overlay" aria-hidden="true">
+                @if (isUploadingCommitteeLogo()) {
+                  <mat-progress-spinner mode="indeterminate" diameter="22" class="logo-upload-spinner"></mat-progress-spinner>
+                } @else {
+                  <mat-icon>edit</mat-icon>
+                }
+              </span>
+            </button>
           } @else {
-            <div class="committee-avatar-fallback"
-              [class.fb-master-admin]="isCurrentUserMasterAdmin()"
-              [class.fb-admin]="userCommitteeRole() === 'COMMITTEE_ADMIN'"
-              [class.fb-member]="isCurrentUserMember()"
-              [class.fb-pending]="isCurrentUserPending() && !userCommitteeRole()"
-              [class.fb-none]="!userCommitteeRole() && !isCurrentUserPending()">
-              {{ groupData()?.committeeName?.charAt(0) || 'C' }}
-            </div>
+            <ng-container [ngTemplateOutlet]="committeeLogoContent"></ng-container>
           }
         </div>
 
@@ -98,7 +119,7 @@
                 </button>
               }
             }
-            @if (isCurrentUserAdmin()) {
+            @if (isCurrentUserMasterAdmin() || isCurrentUserAdmin()) {
               <button mat-stroked-button class="action-btn edit-btn" (click)="onEditCommitteeProfile()">
                 <mat-icon>edit</mat-icon>Edit Profile
               </button>
@@ -149,7 +170,7 @@
             <mat-slide-toggle
               class="density-toggle"
               [checked]="event.visibility === 'VISIBLE'"
-              [disabled]="!isCurrentUserAdmin()"
+              [disabled]="!isCurrentUserMasterAdmin() || isCurrentUserAdmin()"
               (change)="onEventVisibilityChange(event, $event.checked)">
               {{ event.visibility }}
             </mat-slide-toggle>
