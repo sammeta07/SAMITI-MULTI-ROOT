@@ -87,7 +87,7 @@
               @if (isCurrentUserPending()) {
                 <button mat-stroked-button 
         class="action-btn delete-btn" 
-        matTooltip="Pending Approval" 
+        [matTooltip]="'Pending Approval for ' + (userRequestRole() | textFormatPipe:'title')"
         matTooltipPosition="above" 
         (click)="onCancelAdminRoleRequest()">
   <mat-icon>cancel</mat-icon>Cancel Request
