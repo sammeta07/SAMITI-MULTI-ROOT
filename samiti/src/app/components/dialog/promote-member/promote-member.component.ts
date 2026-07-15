@@ -38,10 +38,8 @@ export class PromoteMemberDialogComponent {
 
   // Available roles for promotion
   availableRoles = [
-    { value: 'secretary', label: 'Secretary' },
-    { value: 'treasurer', label: 'Treasurer' },
-    { value: 'vice_president', label: 'Vice President' },
-    { value: 'president', label: 'President' },
+    { value: 'COMMITTEE_MASTER_ADMIN', label: 'Master Admin' },
+    { value: 'COMMITTE_ADMIN', label: 'Admin' },
   ];
 
   onCancel(): void {
