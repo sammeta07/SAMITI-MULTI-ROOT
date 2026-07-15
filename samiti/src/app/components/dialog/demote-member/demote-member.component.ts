@@ -38,9 +38,7 @@ export class DemoteMemberDialogComponent {
 
   // Available roles for demotion
   availableRoles = [
-    { value: 'member', label: 'Member' },
-    { value: 'secretary', label: 'Secretary' },
-    { value: 'treasurer', label: 'Treasurer' },
+    { value: 'COMMITTEE_MEMBER', label: 'Member' },
   ];
 
   onCancel(): void {

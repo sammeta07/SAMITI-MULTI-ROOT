@@ -7,6 +7,8 @@ import { createCommitteeTypes, createCommitteeMutationFields, createCommitteeRes
 import { updateCommitteeTypes, updateCommitteeMutationFields, updateCommitteeResolvers } from './committees/update-committee.graphql';
 import { updateCommitteeLogoTypes, updateCommitteeLogoMutationFields, updateCommitteeLogoResolvers } from './committees/update-committee-logo.graphql';
 import { committeeMembershipRequestsTypes, committeeMembershipRequestsQueryFields, committeeMembershipRequestsMutationFields, committeeMembershipRequestsResolvers } from './committees/committee-membership-requests.graphql';
+import { promoteCommitteeMemberTypes, promoteCommitteeMemberMutationFields, promoteCommitteeMemberResolvers } from './committees/promote-committee-member.graphql';
+import { demoteCommitteeAdminTypes, demoteCommitteeAdminMutationFields, demoteCommitteeAdminResolvers } from './committees/demote-committee-admin.graphql';
 import { toggleCommitteeFavouriteTypes, toggleCommitteeFavouriteMutationFields, toggleCommitteeFavouriteResolvers } from './committees/toggle-committee-favourite.graphql';
 import { hierarchyTreeTypes, hierarchyTreeQueryFields, hierarchyTreeResolvers } from './committees/hierarchy-tree.graphql';
 import { committeeDetailsTypes, committeeDetailsQueryFields, committeeDetailsResolvers } from './committees/committee-details-by-id.graphql';
@@ -33,6 +35,8 @@ export const typeDefs = `
   ${updateCommitteeTypes}
   ${updateCommitteeLogoTypes}
   ${committeeMembershipRequestsTypes}
+  ${promoteCommitteeMemberTypes}
+  ${demoteCommitteeAdminTypes}
   ${toggleCommitteeFavouriteTypes}
   ${cancelCommitteeMembershipRequestTypes}
   ${submitCommitteeMembershipRequestTypes}
@@ -86,6 +90,8 @@ export const typeDefs = `
     ${cancelCommitteeMembershipRequestMutationFields}
     ${submitCommitteeMembershipRequestMutationFields}
     ${committeeMembershipRequestsMutationFields}
+    ${promoteCommitteeMemberMutationFields}
+    ${demoteCommitteeAdminMutationFields}
     ${eventDetailsMutationFields}
   }
 `;
@@ -123,6 +129,8 @@ export const resolvers = {
     ...cancelCommitteeMembershipRequestResolvers.Mutation,
     ...submitCommitteeMembershipRequestResolvers.Mutation,
     ...committeeMembershipRequestsResolvers.Mutation,
+    ...promoteCommitteeMemberResolvers.Mutation,
+    ...demoteCommitteeAdminResolvers.Mutation,
     ...eventDetailsResolvers.Mutation
   }
 };
