@@ -117,12 +117,12 @@ export const committeeMembershipRequestsResolvers = {
         `SELECT
             c.id                                            AS committee_id,
             c.committee_name,
-          c.logo                                          AS committee_logo,
+            c.logo                                          AS committee_logo,
             c.address,
             crr.action_by_user_id,
             action_user.name                                AS resolved_by_name,
             action_user.profile_photo                       AS resolved_by_photo,
-            crr.request_role                               AS request_type,
+            crr.request_role                                AS request_type,
             DATE_FORMAT(crr.requested_at, '%Y-%m-%d %H:%i:%s') AS request_sent_time,
             crr.status,
             DATE_FORMAT(crr.action_at, '%Y-%m-%d %H:%i:%s')    AS resolved_at_time,
@@ -136,11 +136,11 @@ export const committeeMembershipRequestsResolvers = {
          FROM committee_role_requests crr
          INNER JOIN committees c ON c.id = crr.committee_id
          INNER JOIN users u ON u.id = crr.requester_user_id
-        LEFT JOIN users action_user ON action_user.id = crr.action_by_user_id
+         LEFT JOIN users action_user ON action_user.id = crr.action_by_user_id
          INNER JOIN users_committees admin_uc
             ON admin_uc.committee_id = crr.committee_id
             AND admin_uc.user_id = ?
-          AND admin_uc.committee_role IN ('COMMITTEE_ADMIN', 'COMMITTEE_MASTER_ADMIN')
+            AND admin_uc.committee_role IN ('COMMITTEE_ADMIN', 'COMMITTEE_MASTER_ADMIN')
          WHERE crr.status IN ('PENDING', 'ACCEPTED', 'REJECTED')
            AND crr.requester_user_id <> ?
          ORDER BY crr.requested_at DESC`,
@@ -183,7 +183,7 @@ export const committeeMembershipRequestsResolvers = {
             c.committee_name,
             c.logo                                          AS committee_logo,
             crr.requester_user_id,
-            requester_user.name                             AS requester_name,
+            requester_user.name                              AS requester_name,
             requester_user.email                            AS requester_email,
             requester_user.profile_photo                    AS requester_photo,
             COALESCE(crr.action_by_user_id, crr.cancel_by_user_id) AS action_by_user_id,
@@ -288,6 +288,7 @@ export const committeeMembershipRequestsResolvers = {
             `INSERT INTO users_committees (committee_id, user_id, committee_role, is_favourite)
              VALUES (?, ?, 'COMMITTEE_ADMIN', 0)
              ON DUPLICATE KEY UPDATE
+               is_favourite = 0,
                committee_role = CASE
                  WHEN committee_role = 'COMMITTEE_MASTER_ADMIN' THEN 'COMMITTEE_MASTER_ADMIN'
                  ELSE 'COMMITTEE_ADMIN'
@@ -299,6 +300,7 @@ export const committeeMembershipRequestsResolvers = {
             `INSERT INTO users_committees (committee_id, user_id, committee_role, is_favourite)
              VALUES (?, ?, 'COMMITTEE_MEMBER', 0)
              ON DUPLICATE KEY UPDATE
+               is_favourite = 0,
                committee_role = CASE
                  WHEN committee_role = 'COMMITTEE_MASTER_ADMIN' THEN 'COMMITTEE_MASTER_ADMIN'
                  WHEN committee_role = 'COMMITTEE_ADMIN' THEN 'COMMITTEE_ADMIN'
