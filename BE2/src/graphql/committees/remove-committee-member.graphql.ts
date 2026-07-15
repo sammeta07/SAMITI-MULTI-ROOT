@@ -1,0 +1,106 @@
+import { execute, query } from '../../config/db';
+
+// ─── Master admin removes a COMMITTEE_MEMBER or COMMITTEE_ADMIN from committee ─
+
+export const removeCommitteeMemberTypes = `
+  type RemoveCommitteeMemberResponse {
+    committeeId: Int!
+    targetUserId: Int!
+    removedByUserId: Int!
+    removedAtTime: String!
+  }
+`;
+
+export const removeCommitteeMemberMutationFields = `
+  removeCommitteeMember(committeeId: Int!, targetUserId: Int!): RemoveCommitteeMemberResponse!
+`;
+
+async function resolveLoggedInUserIdFromGraphQLContext(context: any): Promise<number> {
+  const authHeader = context.headers?.authorization;
+  const tokenFromCookie = context.cookies?.token;
+  let accessToken: string | null = null;
+
+  if (authHeader && authHeader.startsWith('Bearer ')) {
+    accessToken = authHeader.substring(7);
+  } else if (tokenFromCookie) {
+    accessToken = tokenFromCookie;
+  }
+
+  if (!accessToken) {
+    throw new Error('Unauthorized: Missing access token');
+  }
+
+  const decoded: any = await context.jwt.verify(accessToken);
+  const loggedInUserId = Number(decoded?.id || decoded?.user_id || decoded?.uid);
+  if (!loggedInUserId) {
+    throw new Error('Unauthorized: Invalid token');
+  }
+
+  return loggedInUserId;
+}
+
+export const removeCommitteeMemberResolvers = {
+  Mutation: {
+    // ── Master admin removes a member/admin from the committee ────────────────
+    async removeCommitteeMember(
+      _: any,
+      args: { committeeId: number; targetUserId: number },
+      context: any
+    ) {
+      const { committeeId, targetUserId } = args;
+      const loggedInUserId = await resolveLoggedInUserIdFromGraphQLContext(context);
+      const removedAtTime = new Date().toISOString();
+
+      // Verify actor is the committee master admin
+      const masterAdminRows = await query<any[]>(
+        `SELECT user_id FROM users_committees
+         WHERE committee_id = ?
+           AND user_id = ?
+           AND committee_role = 'COMMITTEE_MASTER_ADMIN'
+         LIMIT 1`,
+        [committeeId, loggedInUserId]
+      );
+      if (masterAdminRows.length === 0) {
+        throw new Error('Forbidden: Only the committee master admin can remove members');
+      }
+
+      // Verify target exists in this committee and is not the master admin
+      const targetRows = await query<any[]>(
+        `SELECT committee_role FROM users_committees
+         WHERE committee_id = ? AND user_id = ?
+         LIMIT 1`,
+        [committeeId, targetUserId]
+      );
+      if (targetRows.length === 0) {
+        throw new Error('Target user is not a member of this committee');
+      }
+
+      const targetRole = String(targetRows[0].committee_role || '');
+      if (targetRole !== 'COMMITTEE_MEMBER' && targetRole !== 'COMMITTEE_ADMIN') {
+        throw new Error('Only committee members or admins can be removed');
+      }
+
+      // 1) Remove the membership row
+      await execute(
+        `DELETE FROM users_committees
+         WHERE committee_id = ? AND user_id = ?`,
+        [committeeId, targetUserId]
+      );
+
+      // 2) Resolve any lingering PENDING requests so nothing is orphaned
+      await execute(
+        `UPDATE committee_role_requests
+         SET status = 'REJECTED', action_by_user_id = ?, action_at = NOW()
+         WHERE committee_id = ? AND requester_user_id = ? AND status = 'PENDING'`,
+        [loggedInUserId, committeeId, targetUserId]
+      );
+
+      return {
+        committeeId,
+        targetUserId,
+        removedByUserId: loggedInUserId,
+        removedAtTime
+      };
+    }
+  }
+};
