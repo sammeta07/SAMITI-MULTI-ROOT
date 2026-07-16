@@ -313,11 +313,11 @@
     font-weight: 700;
     color: #1e293b;
 
-    mat-icon { font-size: 1rem; width: 1rem; height: 1rem; }
+    mat-icon { font-size: 1.35rem; width: 1.35rem; height: 1.35rem; }
     .icon-accent-event { color: #10b981; }
-    .icon-accent-master { color: #ef4444; } // 🚀 NEW
-    .icon-accent-admin { color: #f97316; }
-    .icon-accent-member { color: #0284c7; }
+    .icon-accent-master { color: #ef4444; font-size: 1.5rem; width: 1.5rem; height: 1.5rem; } // 🚀 NEW
+    .icon-accent-admin { color: #f97316; font-size: 1.5rem; width: 1.5rem; height: 1.5rem; }
+    .icon-accent-member { color: #1e40af; font-size: 1.5rem; width: 1.5rem; height: 1.5rem; }
   }
 
   .count-pill {
@@ -332,18 +332,18 @@
 }
 
 .panel-card-header.master-header-bg {
-  background: rgba(239, 68, 68, 0.08);
-  border-bottom: 2px solid rgba(239, 68, 68, 0.2);
+  background: rgba(239, 68, 68, 0.12);
+  border-bottom: 2px solid rgba(239, 68, 68, 0.3);
 }
 
 .panel-card-header.admins-header-bg {
-  background: rgba(249, 115, 22, 0.1);
-  border-bottom: 2px solid rgba(249, 115, 22, 0.24);
+  background: rgba(16, 185, 129, 0.14);
+  border-bottom: 2px solid rgba(16, 185, 129, 0.32);
 }
 
 .panel-card-header.members-header-bg {
-  background: rgba(14, 165, 233, 0.1);
-  border-bottom: 2px solid rgba(14, 165, 233, 0.24);
+  background: rgba(30, 64, 175, 0.14);
+  border-bottom: 2px solid rgba(30, 64, 175, 0.32);
 }
 
 .horizontal-list-container {
@@ -591,9 +591,9 @@
   align-self: center;
 
   .circle-btn {
-    width: 22px !important;
-    height: 22px !important;
-    line-height: 22px !important;
+    width: 30px !important;
+    height: 30px !important;
+    line-height: 30px !important;
     background: #ffffff !important;
     border: 1px solid #e2e8f0 !important;
     border-radius: 50% !important;
@@ -602,7 +602,7 @@
     align-items: center;
     justify-content: center;
 
-    mat-icon { font-size: 0.8rem !important; width: 0.8rem !important; height: 0.8rem !important; margin: 0 !important;}
+    mat-icon { font-size: 1.15rem !important; width: 1.15rem !important; height: 1.15rem !important; margin: 0 !important;}
     &:hover:not(:disabled) { background: #f1f5f9 !important; }
     &:disabled { opacity: 0.3; cursor: not-allowed; }
   }
@@ -702,9 +702,9 @@
   overflow: hidden;
   height: 100%; // Reduced height for stacked items on the left side
 
-  &.master-admin-card-style .panel-card-header { background: linear-gradient(90deg, rgba(239,68,68,0.05), transparent); border-bottom: 2px solid rgba(239,68,68,0.12); }
-  &.admins-card-style .panel-card-header { background: linear-gradient(90deg, rgba(245,158,11,0.06), transparent); border-bottom: 2px solid rgba(245,158,11,0.15); }
-  &.members-card-style .panel-card-header { background: linear-gradient(90deg, rgba(59,130,246,0.06), transparent); border-bottom: 2px solid rgba(59,130,246,0.15); }
+  &.master-admin-card-style .panel-card-header { background: linear-gradient(90deg, rgba(239,68,68,0.08), transparent); border-bottom: 2px solid rgba(239,68,68,0.18); }
+  &.admins-card-style .panel-card-header { background: linear-gradient(90deg, rgba(16,185,129,0.09), transparent); border-bottom: 2px solid rgba(16,185,129,0.2); }
+  &.members-card-style .panel-card-header { background: linear-gradient(90deg, rgba(30,64,175,0.09), transparent); border-bottom: 2px solid rgba(30,64,175,0.2); }
   
   /* Right side card takes full height matching the stack */
   &.full-height-card {

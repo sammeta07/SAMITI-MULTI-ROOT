@@ -189,7 +189,7 @@
         <section class="mesh-card roster-card master-admin-card-style">
           <div class="panel-card-header master-header-bg">
             <div class="header-title-left">
-              <mat-icon class="icon-accent-master">stars</mat-icon>
+              <mat-icon class="icon-accent-master">shield</mat-icon>
               <span class="title-text">Master Admins</span>
               <span class="count-pill">{{ masterAdminsList().length }}</span>
             </div>
@@ -242,7 +242,7 @@
                 </button>
                 @if (isCurrentUserMasterAdmin() && user.id !== getLoggedInUserId()) {
                   <button mat-icon-button class="circle-btn demote-btn" title="Demote to Member" (click)="onDemoteAdmin(user)">
-                    <mat-icon>arrow_downward</mat-icon>
+                    <mat-icon>arrow_circle_down</mat-icon>
                   </button>
                   <button mat-icon-button class="circle-btn delete-btn" title="Remove Member" (click)="onRemoveCommitteeMember(user)">
                     <mat-icon>person_remove</mat-icon>
@@ -259,7 +259,7 @@
       <section class="mesh-card roster-card members-card-style full-height-card">
         <div class="panel-card-header members-header-bg">
           <div class="header-title-left">
-            <mat-icon class="icon-accent-member">people</mat-icon>
+              <mat-icon class="icon-accent-member">groups</mat-icon>
             <span class="title-text">Group Members</span>
             <span class="count-pill">{{ membersList().length }}</span>
           </div>
@@ -291,7 +291,7 @@
               </button>
               @if (isCurrentUserMasterAdmin() && user.id !== getLoggedInUserId() || isCurrentUserAdmin() && user.id !== getLoggedInUserId()) {
                 <button mat-icon-button class="circle-btn promote-btn" title="Promote to Admin" (click)="onPromoteMember(user)">
-                  <mat-icon>arrow_upward</mat-icon>
+                  <mat-icon>arrow_circle_up</mat-icon>
                 </button>
                 <button mat-icon-button class="circle-btn delete-btn" title="Remove Member" (click)="onRemoveCommitteeMember(user)">
                   <mat-icon>person_remove</mat-icon>
