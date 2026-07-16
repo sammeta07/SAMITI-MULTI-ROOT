@@ -440,6 +440,8 @@
 }
 
 .event-head-block {
+  flex: 1 1 auto;
+  min-width: 0;
   display: flex;
   flex-direction: column;
   gap: 5px;
@@ -588,6 +590,16 @@
 }
 
 .event-col-info       { flex: 1 1 auto; display: flex; flex-direction: row; align-items: flex-start; gap: 12px; min-width: 0; margin: 0; padding: 0; }
+
+.event-title-row {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  width: 100%;
+}
+
 .event-col-controls   { flex: 0 0 auto; display: flex; flex-direction: column; align-items: flex-end; justify-content: flex-start; gap: 6px; margin: 0; padding: 0; }
 
 .row-avatar {

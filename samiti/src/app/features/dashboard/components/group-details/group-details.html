@@ -380,7 +380,20 @@
               </span>
               <div class="event-col-info">
                 <div class="event-head-block">
-                  <span class="main-title event-main-title">{{ event.eventName | titlecase }}</span>
+                  <div class="event-title-row">
+                    <span class="main-title event-main-title">{{ event.eventName | titlecase }}</span>
+                    <div class="event-col-controls" (click)="$event.stopPropagation()">
+                      <mat-slide-toggle
+                        class="density-toggle"
+                        [checked]="event.visibility === 'VISIBLE'"
+                        [disabled]="!isCurrentUserMasterAdmin() || isCurrentUserAdmin()"
+                        [matTooltip]="event.visibility === 'VISIBLE' ? 'Event will be hidden to everyone' : 'Event will be shown to everyone'"
+                        matTooltipPosition="above"
+                        (change)="onEventVisibilityChange(event, $event.checked)">
+                        {{ event.visibility === 'VISIBLE' ? 'HIDE' : 'SHOW' }}
+                      </mat-slide-toggle>
+                    </div>
+                  </div>
                   <div class="event-meta-row">
                     <span class="event-pill event-category-pill">{{ (event.category || 'Standard') | titlecase }}</span>
                     <span class="event-pill status-tag tag-{{event.status.toLowerCase() || 'upcoming'}}">{{ event.status }}</span>
@@ -394,18 +407,6 @@
                       <span class="label">End:</span> {{ event.endDate ? (event.endDate | date:'dd MMM yyyy') : 'N/A' }}
                     </span>
                   </div>
-                </div>
-
-                <div class="event-col-controls" (click)="$event.stopPropagation()">
-                  <mat-slide-toggle
-                    class="density-toggle"
-                    [checked]="event.visibility === 'VISIBLE'"
-                    [disabled]="!isCurrentUserMasterAdmin() || isCurrentUserAdmin()"
-                    [matTooltip]="event.visibility === 'VISIBLE' ? 'Event will be hidden to everyone' : 'Event will be shown to everyone'"
-                    matTooltipPosition="above"
-                    (change)="onEventVisibilityChange(event, $event.checked)">
-                    {{ event.visibility === 'VISIBLE' ? 'HIDE' : 'SHOW' }}
-                  </mat-slide-toggle>
                 </div>
               </div>
             </div>
