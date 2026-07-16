@@ -48,9 +48,9 @@ export class DashboardReceivedRequestsComponent {
 
   sortedReceivedAdminRequests  = computed(() => this.applySort(this.receivedAdminRequests(),  this.sortRA()));
   sortedReceivedMemberRequests = computed(() => this.applySort(this.receivedMemberRequests(), this.sortRM()));
+  receivedAdminColumns = ["index", "actions", "committee", "user", "mobile", "sentOn", "resolvedOn", "resolvedBy"];
 
-  receivedAdminColumns = ["index", "committee", "user", "mobile", "sentOn", "resolvedOn", "resolvedBy", "actions"];
-  receivedColumns = ["index", "committee", "user", "mobile", "sentOn", "resolvedOn", "resolvedBy", "actions"];
+  receivedColumns = ["index", "actions", "committee", "user", "mobile", "sentOn", "resolvedOn", "resolvedBy"];
 
   constructor() {
     this.loadData();

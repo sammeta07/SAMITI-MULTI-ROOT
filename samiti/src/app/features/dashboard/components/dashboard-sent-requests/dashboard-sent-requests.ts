@@ -48,7 +48,7 @@ export class DashboardSentRequestsComponent {
   sortedSentAdminRequests      = computed(() => this.applySort(this.sentAdminRequests(),      this.sortSA()));
   sortedSentMemberRequests     = computed(() => this.applySort(this.sentMemberRequests(),     this.sortSM()));
 
-  sentColumns = ["index", "committee", "year", "sentOn", "resolvedOn", "resolvedBy", "actions"];
+  sentColumns = ["index", "actions", "committee", "year", "sentOn", "resolvedOn", "resolvedBy"];
 
   constructor() {
     this.loadData();

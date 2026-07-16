@@ -75,18 +75,20 @@
                 </td>
               </ng-container>
 
-              <ng-container matColumnDef="actions">
-                <th mat-header-cell *matHeaderCellDef class="col-actions" mat-sort-header>Actions</th>
-                <td mat-cell *matCellDef="let element" class="col-actions">
-                  @if (element.status === 'PENDING') {
-                    <button mat-stroked-button class="btn-labeled btn-cancel" (click)="cancelSentRequest(element.committeeId, element.committeeName)">
-                      <mat-icon>cancel</mat-icon> Cancel
-                    </button>
-                  } @else {
-                    <span [ngClass]="'status-chip status-' + element.status.toLowerCase()">{{ element.status }}</span>
-                  }
-                </td>
-              </ng-container>
+                <ng-container matColumnDef="actions">
+                  <th mat-header-cell *matHeaderCellDef class="col-actions">Actions</th>
+                  <td mat-cell *matCellDef="let element" class="col-actions">
+                    <div class="action-cell">
+                      @if (element.status === 'PENDING') {
+                        <button mat-stroked-button class="btn-labeled btn-cancel" (click)="cancelSentRequest(element.committeeId, element.committeeName)">
+                          <mat-icon>cancel</mat-icon> Cancel
+                        </button>
+                      } @else {
+                        <span [ngClass]="'status-chip status-' + element.status.toLowerCase()">{{ element.status }}</span>
+                      }
+                    </div>
+                  </td>
+                </ng-container>
 
               <tr mat-header-row *matHeaderRowDef="sentColumns"></tr>
               <tr mat-row *matRowDef="let row; columns: sentColumns;" [ngClass]="{'row-accepted': row.status === 'ACCEPTED', 'row-rejected': row.status === 'REJECTED', 'row-cancelled': row.status === 'CANCELLED'}"></tr>
@@ -169,18 +171,20 @@
                 </td>
               </ng-container>
 
-              <ng-container matColumnDef="actions">
-                <th mat-header-cell *matHeaderCellDef class="col-actions" mat-sort-header>Actions</th>
-                <td mat-cell *matCellDef="let element" class="col-actions">
-                  @if (element.status === 'PENDING') {
-                    <button mat-stroked-button class="btn-labeled btn-cancel" (click)="cancelSentRequest(element.committeeId, element.committeeName)">
-                      <mat-icon>cancel</mat-icon> Cancel
-                    </button>
-                  } @else {
-                    <span [ngClass]="'status-chip status-' + element.status.toLowerCase()">{{ element.status }}</span>
-                  }
-                </td>
-              </ng-container>
+                <ng-container matColumnDef="actions">
+                  <th mat-header-cell *matHeaderCellDef class="col-actions">Actions</th>
+                  <td mat-cell *matCellDef="let element" class="col-actions">
+                    <div class="action-cell">
+                      @if (element.status === 'PENDING') {
+                        <button mat-stroked-button class="btn-labeled btn-cancel" (click)="cancelSentRequest(element.committeeId, element.committeeName)">
+                          <mat-icon>cancel</mat-icon> Cancel
+                        </button>
+                      } @else {
+                        <span [ngClass]="'status-chip status-' + element.status.toLowerCase()">{{ element.status }}</span>
+                      }
+                    </div>
+                  </td>
+                </ng-container>
 
               <tr mat-header-row *matHeaderRowDef="sentColumns"></tr>
               <tr mat-row *matRowDef="let row; columns: sentColumns;" [ngClass]="{'row-accepted': row.status === 'ACCEPTED', 'row-rejected': row.status === 'REJECTED', 'row-cancelled': row.status === 'CANCELLED'}"></tr>
