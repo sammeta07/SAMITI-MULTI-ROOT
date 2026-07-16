@@ -7,6 +7,8 @@ import { MatProgressSpinnerModule } from "@angular/material/progress-spinner";
 import { MatSortModule, Sort } from "@angular/material/sort";
 import { DashboardRequestsService } from "../dashboard-requests/dashboard-requests.service";
 import { MatTabsModule } from "@angular/material/tabs";
+import { ConfirmDialogService } from "../../../../components/dialog/confirm/confirm-dialog.service";
+import { ConfirmDialogData } from "../../../../components/dialog/confirm/confirm-dialog.models";
 
 @Component({
   selector: "app-dashboard-sent-requests",
@@ -25,6 +27,7 @@ import { MatTabsModule } from "@angular/material/tabs";
 })
 export class DashboardSentRequestsComponent {
   private service = inject(DashboardRequestsService);
+  private confirmDialog = inject(ConfirmDialogService);
 
   isLoading = signal(false);
 
@@ -65,17 +68,26 @@ export class DashboardSentRequestsComponent {
   }
 
   cancelSentRequest(committeeId: string, committeeName: string): void {
-    const confirm = window.confirm(`Cancel request to join "${committeeName}"?`);
-    if (!confirm) return;
-    this.isLoading.set(true);
-    this.service
-      .cancelSubmittedCommitteeMembershipRequest(Number(committeeId))
-      .toPromise()
-      .then(() => this.loadData())
-      .catch((err: any) => {
-        console.error("Failed to cancel request:", err);
-        this.isLoading.set(false);
-      });
+    const dialogData: ConfirmDialogData = {
+      title: "Cancel Request",
+      message: `Are you sure you want to cancel your request to join "${committeeName}"?`,
+      confirmText: "Cancel Request",
+      cancelText: "Keep Request",
+    };
+
+    this.confirmDialog.open(dialogData).afterClosed().subscribe((result) => {
+      if (!result?.confirmed) return;
+
+      this.isLoading.set(true);
+      this.service
+        .cancelSubmittedCommitteeMembershipRequest(Number(committeeId))
+        .toPromise()
+        .then(() => this.loadData())
+        .catch((err: any) => {
+          console.error("Failed to cancel request:", err);
+          this.isLoading.set(false);
+        });
+    });
   }
 
   getInitials(name: string): string {
