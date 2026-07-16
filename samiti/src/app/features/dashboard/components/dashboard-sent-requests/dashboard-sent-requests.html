@@ -22,7 +22,7 @@
                 <td mat-cell *matCellDef="let element; let i = index" class="col-index font-medium">{{ i + 1 }}</td>
               </ng-container>
               <ng-container matColumnDef="committee">
-                <th mat-header-cell *matHeaderCellDef mat-sort-header>GROUP NAME</th>
+                <th mat-header-cell *matHeaderCellDef mat-sort-header>Group Name</th>
                 <td mat-cell *matCellDef="let element">
                   <div class="table-person-cell">
                     @if (element.committeeLogo) {
@@ -67,7 +67,7 @@
                       } @else {
                         <span class="table-avatar table-avatar--photo table-avatar--fallback">{{ getInitials(element.resolvedByName) }}</span>
                       }
-                      <span class="text-dark">{{ element.resolvedByName | titlecase }}</span>
+                      <span class="text-dark resolved-by-name">{{ element.resolvedByName | titlecase }}</span>
                     </div>
                   } @else {
                     <span class="text-muted">—</span>
@@ -118,7 +118,7 @@
                 <td mat-cell *matCellDef="let element; let i = index" class="col-index font-medium">{{ i + 1 }}</td>
               </ng-container>
               <ng-container matColumnDef="committee">
-                <th mat-header-cell *matHeaderCellDef mat-sort-header>GROUP NAME</th>
+                <th mat-header-cell *matHeaderCellDef mat-sort-header>Group Name</th>
                 <td mat-cell *matCellDef="let element">
                   <div class="table-person-cell">
                     @if (element.committeeLogo) {
@@ -163,7 +163,7 @@
                       } @else {
                         <span class="table-avatar table-avatar--photo table-avatar--fallback">{{ getInitials(element.resolvedByName) }}</span>
                       }
-                      <span class="text-dark">{{ element.resolvedByName | titlecase }}</span>
+                      <span class="text-dark resolved-by-name">{{ element.resolvedByName | titlecase }}</span>
                     </div>
                   } @else {
                     <span class="text-muted">—</span>

@@ -266,7 +266,7 @@
   }
 
   &--fallback {
-    text-transform: uppercase;
+  text-transform: none;
   }
 }
 
@@ -419,6 +419,7 @@
 .font-semibold { font-weight: 600; }
 .font-mono { font-family: monospace; font-size: 12.5px; }
 .text-dark { color: #0f172a; }
+.resolved-by-name { font-weight: 700; }
 .text-muted { color: var(--text-muted); }
 .text-sm { font-size: 12.5px; }
 .pending-text { color: #b45309; font-weight: 500; }
