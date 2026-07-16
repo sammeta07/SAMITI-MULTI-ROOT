@@ -2,11 +2,6 @@
 
   @if (isLoading()) {
   <div class="workspace-body scrollable-container skeleton-wrapper" aria-busy="true" aria-live="polite">
-    <div class="skeleton-status-banner">
-      <mat-progress-spinner mode="indeterminate" diameter="20"></mat-progress-spinner>
-      <span>Loading group workspace…</span>
-    </div>
-
     <section class="gd-committee-card skeleton-card">
       <div class="committee-card-grid">
         <div class="card-logo-area">
@@ -23,73 +18,93 @@
       </div>
     </section>
 
-    <section class="horizontal-full-card events-section-style skeleton-card">
-      <div class="panel-card-header">
-        <div class="header-title-left">
-          <div class="skeleton-box skeleton-avatar circle" style="width:18px;height:18px;"></div>
-          <div class="skeleton-box skeleton-line sm" style="width:140px;"></div>
-        </div>
-      </div>
-      <div class="horizontal-list-container">
-        @for (n of skeletonRows3; track n) {
-          <div class="event-aligned-row skeleton-event-row">
-            <div class="event-col-info">
-              <div class="skeleton-box skeleton-line lg" style="width:50%;"></div>
-              <div class="skeleton-box skeleton-line sm" style="width:80%; margin-top:6px;"></div>
-            </div>
-            <div class="event-col-controls">
-              <div class="skeleton-box" style="width:80px;height:18px;border-radius:999px;"></div>
+    <div class="workspace-roster-events-split">
+
+      <div class="roster-stack-column">
+        <section class="mesh-card roster-card master-admin-card-style roster-fixed skeleton-card">
+          <div class="panel-card-header">
+            <div class="header-title-left">
+              <div class="skeleton-box skeleton-avatar circle" style="width:18px;height:18px;"></div>
+              <div class="skeleton-box skeleton-line sm" style="width:110px;"></div>
             </div>
           </div>
-        }
-      </div>
-    </section>
-
-    <main class="dashboard-split-grid">
-      <div class="grid-column-stack">
-        @for (c of skeletonRows2; track c) {
-          <section class="mesh-card roster-card skeleton-card">
-            <div class="panel-card-header">
-              <div class="header-title-left">
-                <div class="skeleton-box skeleton-avatar circle" style="width:18px;height:18px;"></div>
-                <div class="skeleton-box skeleton-line sm" style="width:110px;"></div>
-              </div>
-            </div>
-            <div class="mesh-list-scroll-box compact-scroll">
-              @for (r of skeletonRows3; track r) {
-                <div class="item-density-row skeleton-row">
-                  <div class="skeleton-box skeleton-avatar circle"></div>
-                  <div class="row-info-core" style="flex:1;">
-                    <div class="skeleton-box skeleton-line sm" style="width:55%;"></div>
-                    <div class="skeleton-box skeleton-line sm" style="width:75%; margin-top:6px;"></div>
-                  </div>
+          <div class="mesh-list-scroll-box compact-scroll">
+            @for (r of skeletonRows3; track r) {
+              <div class="item-density-row skeleton-row">
+                <div class="skeleton-box skeleton-avatar circle"></div>
+                <div class="row-info-core" style="flex:1;">
+                  <div class="skeleton-box skeleton-line sm" style="width:55%;"></div>
+                  <div class="skeleton-box skeleton-line sm" style="width:75%; margin-top:6px;"></div>
                 </div>
-              }
+              </div>
+            }
+          </div>
+        </section>
+
+        <section class="mesh-card roster-card admin-card-style roster-fixed-admins skeleton-card">
+          <div class="panel-card-header">
+            <div class="header-title-left">
+              <div class="skeleton-box skeleton-avatar circle" style="width:18px;height:18px;"></div>
+              <div class="skeleton-box skeleton-line sm" style="width:110px;"></div>
             </div>
-          </section>
-        }
+          </div>
+          <div class="mesh-list-scroll-box full-scroll">
+            @for (r of skeletonRows3; track r) {
+              <div class="item-density-row skeleton-row">
+                <div class="skeleton-box skeleton-avatar circle"></div>
+                <div class="row-info-core" style="flex:1;">
+                  <div class="skeleton-box skeleton-line sm" style="width:55%;"></div>
+                  <div class="skeleton-box skeleton-line sm" style="width:75%; margin-top:6px;"></div>
+                </div>
+              </div>
+            }
+          </div>
+        </section>
+
+        <section class="mesh-card roster-card members-card-style roster-grow skeleton-card">
+          <div class="panel-card-header">
+            <div class="header-title-left">
+              <div class="skeleton-box skeleton-avatar circle" style="width:18px;height:18px;"></div>
+              <div class="skeleton-box skeleton-line sm" style="width:120px;"></div>
+            </div>
+          </div>
+          <div class="mesh-list-scroll-box full-scroll">
+            @for (r of skeletonRows6; track r) {
+              <div class="item-density-row skeleton-row">
+                <div class="skeleton-box skeleton-avatar circle"></div>
+                <div class="row-info-core" style="flex:1;">
+                  <div class="skeleton-box skeleton-line sm" style="width:50%;"></div>
+                  <div class="skeleton-box skeleton-line sm" style="width:72%; margin-top:6px;"></div>
+                </div>
+              </div>
+            }
+          </div>
+        </section>
       </div>
 
-      <section class="mesh-card roster-card members-card-style full-height-card skeleton-card">
+      <section class="horizontal-full-card events-section-style events-full-height skeleton-card">
         <div class="panel-card-header">
           <div class="header-title-left">
             <div class="skeleton-box skeleton-avatar circle" style="width:18px;height:18px;"></div>
-            <div class="skeleton-box skeleton-line sm" style="width:120px;"></div>
+            <div class="skeleton-box skeleton-line sm" style="width:140px;"></div>
           </div>
         </div>
-        <div class="mesh-list-scroll-box full-scroll">
-          @for (r of skeletonRows6; track r) {
-            <div class="item-density-row skeleton-row">
-              <div class="skeleton-box skeleton-avatar circle"></div>
-              <div class="row-info-core" style="flex:1;">
-                <div class="skeleton-box skeleton-line sm" style="width:50%;"></div>
-                <div class="skeleton-box skeleton-line sm" style="width:72%; margin-top:6px;"></div>
+        <div class="horizontal-list-container">
+          @for (n of skeletonRows3; track n) {
+            <div class="event-aligned-row skeleton-event-row">
+              <div class="event-col-info">
+                <div class="skeleton-box skeleton-line lg" style="width:50%;"></div>
+                <div class="skeleton-box skeleton-line sm" style="width:80%; margin-top:6px;"></div>
+              </div>
+              <div class="event-col-controls">
+                <div class="skeleton-box" style="width:80px;height:18px;border-radius:999px;"></div>
               </div>
             </div>
           }
         </div>
       </section>
-    </main>
+
+    </div>
   </div>
   } @else if (groupData()) {
 
@@ -204,63 +219,18 @@
                 matTooltip="Launch a visible public event entry container">
                 <mat-icon>add</mat-icon>Public Event
               </button>
-            }
+              }
+            </div>
           </div>
-        </div>
 
       </div>
     </div>
 
-    <section class="horizontal-full-card events-section-style">
-      <div class="panel-card-header">
-        <div class="header-title-left">
-          <mat-icon class="icon-accent-event">event</mat-icon>
-          <span class="title-text">Events Matrix Ledger</span>
-          <span class="count-pill">{{ committeeEvents().length }}</span>
-        </div>
-      </div>
+    <div class="workspace-roster-events-split">
 
-      <div class="horizontal-list-container">
-        @for (event of committeeEvents(); track event.id) {
-        <div class="event-aligned-row" (click)="openEventDetails(event.id || 0)">
-          <div class="event-col-info">
-            <span class="main-title event-main-title">{{ event.eventName | titlecase }}</span>
-            <div class="event-meta-row">
-              <span class="event-pill event-category-pill">{{ (event.category || 'Standard') | titlecase }}</span>
-              <span class="event-pill status-tag tag-{{event.status.toLowerCase() || 'upcoming'}}">{{ event.status }}</span>
-              <span class="event-pill event-type-pill" [ngClass]="event.type === 'PUBLIC' ? 'type-public' : 'type-private'">
-                {{ event.type }}
-              </span>
-              <span class="event-pill event-date-pill">
-                <span class="label">Start:</span> {{ event.startDate ? (event.startDate | date:'dd MMM yyyy') : 'N/A' }}
-              </span>
-              <span class="event-pill event-date-pill">
-                <span class="label">End:</span> {{ event.endDate ? (event.endDate | date:'dd MMM yyyy') : 'N/A' }}
-              </span>
-            </div>
-          </div>
+      <div class="roster-stack-column">
 
-          <div class="event-col-controls" (click)="$event.stopPropagation()">
-            <mat-slide-toggle
-              class="density-toggle"
-              [checked]="event.visibility === 'VISIBLE'"
-              [disabled]="!isCurrentUserMasterAdmin() || isCurrentUserAdmin()"
-              (change)="onEventVisibilityChange(event, $event.checked)">
-              {{ event.visibility }}
-            </mat-slide-toggle>
-          </div>
-        </div>
-        } @empty {
-          <div class="mini-empty-state">No active dynamic events configured yet.</div>
-        }
-      </div>
-    </section>
-
-    <main class="dashboard-split-grid">
-      
-      <div class="grid-column-stack">
-        
-        <section class="mesh-card roster-card master-admin-card-style">
+        <section class="mesh-card roster-card master-admin-card-style roster-fixed">
           <div class="panel-card-header master-header-bg">
             <div class="header-title-left">
               <mat-icon class="icon-accent-master">shield</mat-icon>
@@ -290,7 +260,7 @@
           </div>
         </section>
 
-        <section class="mesh-card roster-card admin-card-style">
+        <section class="mesh-card roster-card admin-card-style roster-fixed-admins">
           <div class="panel-card-header admins-header-bg">
             <div class="header-title-left">
               <mat-icon class="icon-accent-admin">admin_panel_settings</mat-icon>
@@ -299,7 +269,7 @@
             </div>
           </div>
 
-          <div class="mesh-list-scroll-box compact-scroll">
+          <div class="mesh-list-scroll-box full-scroll">
             @for (user of adminsList(); track user.id) {
             <div class="item-density-row row-admin">
               <div class="row-avatar circle-shape avatar-admin">
@@ -328,60 +298,158 @@
           </div>
         </section>
 
-      </div>
-
-      <section class="mesh-card roster-card members-card-style full-height-card">
-        <div class="panel-card-header members-header-bg">
-          <div class="header-title-left">
-              <mat-icon class="icon-accent-member">groups</mat-icon>
-            <span class="title-text">Group Members</span>
-            <span class="count-pill">{{ membersList().length }}</span>
-          </div>
-          @if (membersList().length > 5) {
-          <div class="compact-search-pill">
-            <mat-icon>search</mat-icon>
-            <input type="text" placeholder="Filter roster..." [ngModel]="searchQuery()" (ngModelChange)="searchQuery.set($event)" />
-            @if (searchQuery()) {
-              <button type="button" class="clear-search-trigger" (mousedown)="clearSearch()"><mat-icon>close</mat-icon></button>
-            }
-          </div>
-          }
-        </div>
-
-        <div class="mesh-list-scroll-box full-scroll">
-          @for (user of filteredMembersList(); track user.id) {
-          <div class="item-density-row row-member">
-            <div class="row-avatar circle-shape avatar-member">
-              @if (user.photo) { <img [src]="user.photo" [alt]="user.name" class="avatar-img" (error)="user.photo = null" /> } 
-              @else { {{ user.name.charAt(0).toUpperCase() }} }
+        <section class="mesh-card roster-card members-card-style roster-grow">
+          <div class="panel-card-header members-header-bg">
+            <div class="header-title-left">
+                <mat-icon class="icon-accent-member">groups</mat-icon>
+              <span class="title-text">Group Members</span>
+              <span class="count-pill">{{ membersList().length }}</span>
             </div>
-            <div class="row-info-core">
-              <div class="main-title">{{ user.name | textFormatPipe:'title' }}</div>
-              <div class="secondary-sub-lbl">{{ user.email }}</div>
-            </div>
-            <div class="row-action-deck">
-              <button mat-icon-button class="circle-btn view-btn" title="View Profile" (click)="onViewMember(user.id)">
-                <mat-icon>visibility</mat-icon>
-              </button>
-              @if (isCurrentUserMasterAdmin() && user.id !== getLoggedInUserId() || isCurrentUserAdmin() && user.id !== getLoggedInUserId()) {
-                <button mat-icon-button class="circle-btn promote-btn" title="Promote to Admin" (click)="onPromoteMember(user)">
-                  <mat-icon>arrow_circle_up</mat-icon>
-                </button>
-                <button mat-icon-button class="circle-btn delete-btn" title="Remove Member" (click)="onRemoveCommitteeMember(user)">
-                  <mat-icon>person_remove</mat-icon>
-                </button>
+            @if (membersList().length > 5) {
+            <div class="compact-search-pill">
+              <mat-icon>search</mat-icon>
+              <input type="text" placeholder="Filter roster..." [ngModel]="searchQuery()" (ngModelChange)="searchQuery.set($event)" />
+              @if (searchQuery()) {
+                <button type="button" class="clear-search-trigger" (mousedown)="clearSearch()"><mat-icon>close</mat-icon></button>
               }
             </div>
+            }
           </div>
-          } @empty {
-            <div class="mini-empty-state">
-              {{ searchQuery() ? 'No database matches found.' : 'No active group members roster logged.' }}
+
+          <div class="mesh-list-scroll-box full-scroll">
+            @for (user of filteredMembersList(); track user.id) {
+            <div class="item-density-row row-member">
+              <div class="row-avatar circle-shape avatar-member">
+                @if (user.photo) { <img [src]="user.photo" [alt]="user.name" class="avatar-img" (error)="user.photo = null" /> } 
+                @else { {{ user.name.charAt(0).toUpperCase() }} }
+              </div>
+              <div class="row-info-core">
+                <div class="main-title">{{ user.name | textFormatPipe:'title' }}</div>
+                <div class="secondary-sub-lbl">{{ user.email }}</div>
+              </div>
+              <div class="row-action-deck">
+                <button mat-icon-button class="circle-btn view-btn" title="View Profile" (click)="onViewMember(user.id)">
+                  <mat-icon>visibility</mat-icon>
+                </button>
+                @if (isCurrentUserMasterAdmin() && user.id !== getLoggedInUserId() || isCurrentUserAdmin() && user.id !== getLoggedInUserId()) {
+                  <button mat-icon-button class="circle-btn promote-btn" title="Promote to Admin" (click)="onPromoteMember(user)">
+                    <mat-icon>arrow_circle_up</mat-icon>
+                  </button>
+                  <button mat-icon-button class="circle-btn delete-btn" title="Remove Member" (click)="onRemoveCommitteeMember(user)">
+                    <mat-icon>person_remove</mat-icon>
+                  </button>
+                }
+              </div>
             </div>
+            } @empty {
+              <div class="mini-empty-state">
+                {{ searchQuery() ? 'No database matches found.' : 'No active group members roster logged.' }}
+              </div>
+            }
+          </div>
+        </section>
+
+      </div>
+
+      <section class="horizontal-full-card events-section-style events-full-height">
+        <div class="panel-card-header">
+          <div class="header-title-left">
+            <mat-icon class="icon-accent-event">event</mat-icon>
+            <span class="title-text">Events Matrix Ledger</span>
+            <span class="count-pill">{{ committeeEvents().length }}</span>
+          </div>
+        </div>
+
+        <div class="horizontal-list-container">
+          @for (event of committeeEvents(); track event.id) {
+          <div class="event-aligned-row" (click)="openEventDetails(event.id || 0)">
+            <div class="event-meta-card">
+              <span class="event-logo-circle circle-shape event-logo-upload"
+                [class.can-upload]="isCurrentUserMasterAdmin() || isCurrentUserAdmin()"
+                (click)="onEventLogoCircleClicked(event, $event)">
+                @if (event.eventLogo) { <img [src]="event.eventLogo" [alt]="event.eventName" (error)="event.eventLogo = null" /> }
+                @else { {{ (event.eventName || '?').charAt(0).toUpperCase() }} }
+
+                @if (isCurrentUserMasterAdmin() || isCurrentUserAdmin()) {
+                  <span class="photo-edit-overlay" aria-hidden="true">
+                    <mat-icon>edit</mat-icon>
+                  </span>
+                }
+                <input #eventLogoInput type="file" hidden accept="image/*"
+                  (change)="onEventLogoSelected(event, $event)" />
+              </span>
+              <div class="event-col-info">
+                <div class="event-head-block">
+                  <span class="main-title event-main-title">{{ event.eventName | titlecase }}</span>
+                  <div class="event-meta-row">
+                    <span class="event-pill event-category-pill">{{ (event.category || 'Standard') | titlecase }}</span>
+                    <span class="event-pill status-tag tag-{{event.status.toLowerCase() || 'upcoming'}}">{{ event.status }}</span>
+                    <span class="event-pill event-type-pill" [ngClass]="event.type === 'PUBLIC' ? 'type-public' : 'type-private'">
+                      {{ event.type }}
+                    </span>
+                    <span class="event-pill event-date-pill">
+                      <span class="label">Start:</span> {{ event.startDate ? (event.startDate | date:'dd MMM yyyy') : 'N/A' }}
+                    </span>
+                    <span class="event-pill event-date-pill">
+                      <span class="label">End:</span> {{ event.endDate ? (event.endDate | date:'dd MMM yyyy') : 'N/A' }}
+                    </span>
+                  </div>
+                </div>
+
+                <div class="event-col-controls" (click)="$event.stopPropagation()">
+                  <mat-slide-toggle
+                    class="density-toggle"
+                    [checked]="event.visibility === 'VISIBLE'"
+                    [disabled]="!isCurrentUserMasterAdmin() || isCurrentUserAdmin()"
+                    [matTooltip]="event.visibility === 'VISIBLE' ? 'Event will be hidden to everyone' : 'Event will be shown to everyone'"
+                    matTooltipPosition="above"
+                    (change)="onEventVisibilityChange(event, $event.checked)">
+                    {{ event.visibility === 'VISIBLE' ? 'HIDE' : 'SHOW' }}
+                  </mat-slide-toggle>
+                </div>
+              </div>
+            </div>
+
+              @if (event.designationPhotos && event.designationPhotos.length) {
+                <div class="event-designation-strip" (click)="$event.stopPropagation()">
+                  @for (dp of event.designationPhotos; track dp.userId) {
+                    <div class="designation-chip">
+                      <span class="designation-avatar circle-shape">
+                        @if (dp.photo) { <img [src]="dp.photo" [alt]="dp.name" (error)="dp.photo = null" /> }
+                        @else { {{ (dp.name || '?').charAt(0).toUpperCase() }} }
+                      </span>
+                      <span class="designation-name">{{ dp.designation | titlecase }}</span>
+                    </div>
+                  }
+                </div>
+              } @else {
+                <div class="event-designation-placeholder">
+                  @for (slot of defaultDesignationSlots; track slot.role) {
+                    <span class="designation-avatar circle-shape empty designation-upload-slot"
+                      (click)="onDesignationPhotoSlotClicked(event.id, slot.role, $event)">
+                      @if (getDesignationPhoto(event.id, slot.role); as photoUrl) {
+                        <img [src]="photoUrl" [alt]="slot.role" />
+                      } @else {
+                        <mat-icon class="photo-slot-icon">add_a_photo</mat-icon>
+                        <span class="photo-slot-label">{{ slot.label }}</span>
+                      }
+                      <span class="photo-edit-overlay" aria-hidden="true">
+                        <mat-icon>edit</mat-icon>
+                      </span>
+                      <input #designationPhotoInput type="file" hidden accept="image/*"
+                        (change)="onDesignationPhotoSelected(event.id, slot.role, $event)" />
+                    </span>
+                  }
+                </div>
+              }
+            </div>
+          } @empty {
+            <div class="mini-empty-state">No active dynamic events configured yet.</div>
           }
         </div>
       </section>
 
-    </main>
+    </div>
   </div>
   } @else {
   <div class="empty-layout-shell">

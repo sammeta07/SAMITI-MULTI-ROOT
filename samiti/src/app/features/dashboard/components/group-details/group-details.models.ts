@@ -20,13 +20,20 @@ export interface CommitteeRosterMember {
   committeeRole?: 'COMMITTEE_MEMBER' | 'COMMITTEE_ADMIN' | 'COMMITTEE_MASTER_ADMIN' | null;
 }
 
+export interface EventDesignationPhoto {
+  userId?: number;
+  name?: string | null;
+  photo?: string | null;
+  designation?: string | null;
+}
+
 export interface CommitteeEventListItem {
   id: number;
   eventId: number;
   committeeId: number;
   eventName: string;
   eventDisplayName: string;
-  eventBanner?: string | null;
+  eventLogo?: string | null;
   status: string;
   category?: string | null;
   type: 'PUBLIC' | 'PRIVATE';
@@ -36,6 +43,7 @@ export interface CommitteeEventListItem {
   createdBy: number;
   updatedBy?: number | null;
   createdAt?: string | null;
+  designationPhotos?: EventDesignationPhoto[];
 }
 
 export interface UpdatedEventVisibilityPayload {

@@ -47,7 +47,7 @@ export const committeeDetailsTypes = `
     committeeId: Int!
     eventName: String!
     eventDisplayName: String!
-    eventBanner: String
+    eventLogo: String
     status: String!
     category: String
     type: String!
@@ -177,13 +177,7 @@ export const committeeDetailsResolvers = {
           e.created_by AS createdBy,
           e.updated_by AS updatedBy,
           e.created_at AS createdAt,
-          (
-            SELECT media_url
-            FROM event_media_assets ema
-            WHERE ema.event_id = e.id
-            ORDER BY ema.sort_order ASC, ema.id ASC
-            LIMIT 1
-          ) AS eventBanner
+          e.event_logo AS eventLogo
         FROM events e
         WHERE e.committee_id = ?
         ORDER BY e.start_date ASC, e.name ASC
@@ -244,7 +238,7 @@ export const committeeDetailsResolvers = {
           committeeId: event.committeeId,
           eventName: event.eventName,
           eventDisplayName: normalizeEventDisplayName(event.eventName, event.eventDisplayName, supportsEventDisplayName),
-          eventBanner: event.eventBanner || null,
+          eventLogo: event.eventLogo || null,
           status: event.status,
           category: event.category || null,
           type: event.type,

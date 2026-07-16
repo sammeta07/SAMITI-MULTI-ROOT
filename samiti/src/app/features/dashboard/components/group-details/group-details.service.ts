@@ -53,9 +53,9 @@ export class GroupDetailsService {
           eventId
           committeeId
           eventName
-          eventDisplayName
-          eventBanner
-          status
+           eventDisplayName
+           eventLogo
+           status
           category
           type
           visibility
@@ -107,6 +107,37 @@ export class GroupDetailsService {
       { withCredentials: true }
     ).pipe(
       map((res) => res.data.updateEventVisibility)
+    );
+  }
+
+  public updateEventLogo(eventId: number, committeeId: number, logo: string): Observable<{ eventId: number; eventLogo: string | null }> {
+    const query = `mutation UpdateEventLogo($input: UpdateEventLogoInput!) {
+      updateEventLogo(input: $input) {
+        eventId
+        eventLogo
+      }
+    }`;
+
+    return this.http.post<{ errors?: Array<{ message: string }>; data: { updateEventLogo: { eventId: number; eventLogo: string | null } } }>(
+      this.graphqlUrl,
+      {
+        query,
+        variables: {
+          input: {
+            eventId,
+            committeeId,
+            eventLogo: logo
+          }
+        }
+      },
+      { withCredentials: true }
+    ).pipe(
+      map((res) => {
+        if (res.errors?.length) {
+          throw new Error(res.errors[0].message || 'Failed to update event logo');
+        }
+        return res.data.updateEventLogo;
+      })
     );
   }
 

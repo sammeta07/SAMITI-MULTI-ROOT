@@ -117,6 +117,17 @@ export const updateEventTypes = `
     createdAt: String!
   }
 
+  type UpdatedEventLogo {
+    eventId: Int!
+    eventLogo: String
+  }
+
+  input UpdateEventLogoInput {
+    eventId: Int!
+    committeeId: Int!
+    eventLogo: String
+  }
+
   input UpdateEventInput {
     eventId: Int!
     committeeId: Int!
@@ -131,11 +142,13 @@ export const updateEventTypes = `
     endDate: String
     latitude: Float!
     longitude: Float!
+    eventLogo: String
   }
 `;
 
 export const updateEventMutationFields = `
   updateEvent(input: UpdateEventInput!): UpdatedEvent
+  updateEventLogo(input: UpdateEventLogoInput!): UpdatedEventLogo
 `;
 
 export const updateEventResolvers = {
@@ -157,6 +170,7 @@ export const updateEventResolvers = {
       const normalizedEndDate = normalizeDateInput(input.endDate, 'endDate');
       const latitude = Number(input.latitude);
       const longitude = Number(input.longitude);
+      const eventLogo = normalizeOptionalText(input.eventLogo);
 
       if (!Number.isInteger(eventId) || eventId <= 0) {
         throwEventError('BAD_REQUEST', 'eventId must be a positive integer');
@@ -252,13 +266,14 @@ export const updateEventResolvers = {
                category = ?,
                visibility = ?,
                type = ?,
-               start_date = ?,
-               end_date = ?,
-               latitude = ?,
-               longitude = ?,
-               updated_by = ?
-           WHERE id = ?`,
-          [
+                start_date = ?,
+                end_date = ?,
+                latitude = ?,
+                longitude = ?,
+                event_logo = ?,
+                updated_by = ?
+            WHERE id = ?`,
+           [
             eventName,
             eventDisplayName,
             address,
@@ -270,6 +285,7 @@ export const updateEventResolvers = {
             normalizedEndDate,
             latitude,
             longitude,
+            eventLogo,
             loggedInUserId,
             eventId
           ]
@@ -283,13 +299,14 @@ export const updateEventResolvers = {
                category = ?,
                visibility = ?,
                type = ?,
-               start_date = ?,
-               end_date = ?,
-               latitude = ?,
-               longitude = ?,
-               updated_by = ?
-           WHERE id = ?`,
-          [
+                start_date = ?,
+                end_date = ?,
+                latitude = ?,
+                longitude = ?,
+                event_logo = ?,
+                updated_by = ?
+            WHERE id = ?`,
+           [
             eventName,
             address,
             normalizedStatus,
@@ -300,6 +317,7 @@ export const updateEventResolvers = {
             normalizedEndDate,
             latitude,
             longitude,
+            eventLogo,
             loggedInUserId,
             eventId
           ]
@@ -312,14 +330,16 @@ export const updateEventResolvers = {
                     COALESCE(NULLIF(TRIM(display_name), ''), LEFT(name, 20)) as eventDisplayName,
                     committee_id as committeeId,
                     address, status, category, visibility, \`type\`, latitude, longitude,
+                    event_logo as eventLogo,
                     start_date as startDate, end_date as endDate, created_by as createdBy, updated_by as updatedBy, created_at as createdAt
-             FROM events WHERE id = ?`
+              FROM events WHERE id = ?`
           : `SELECT id, id as eventId, name as eventName,
                     LEFT(name, 20) as eventDisplayName,
                     committee_id as committeeId,
                     address, status, category, visibility, \`type\`, latitude, longitude,
+                    event_logo as eventLogo,
                     start_date as startDate, end_date as endDate, created_by as createdBy, updated_by as updatedBy, created_at as createdAt
-             FROM events WHERE id = ?`,
+              FROM events WHERE id = ?`,
         [eventId]
       );
 
@@ -338,8 +358,67 @@ export const updateEventResolvers = {
 
       return {
         ...updatedEventRecord,
+        eventLogo: updatedEventRecord?.eventLogo || null,
         eventBanner: eventBannerImages[0] ? String(eventBannerImages[0].mediaUrl) : null,
         bannerImages: eventBannerImages.map((imageRow) => String(imageRow.mediaUrl))
+      };
+    },
+
+    async updateEventLogo(_: any, args: any, context: any) {
+      const loggedInUserId = await getLoggedInUserId(context);
+
+      const input = args?.input || {};
+      const eventId = Number(input.eventId);
+      const committeeId = Number(input.committeeId);
+      const eventLogo = normalizeOptionalText(input.eventLogo);
+
+      if (!Number.isInteger(eventId) || eventId <= 0) {
+        throwEventError('BAD_REQUEST', 'eventId must be a positive integer');
+      }
+
+      if (!Number.isInteger(committeeId) || committeeId <= 0) {
+        throwEventError('BAD_REQUEST', 'committeeId must be a positive integer');
+      }
+
+      const existingEventRows = await query<any[]>(
+        `SELECT id, committee_id AS committeeId
+         FROM events
+         WHERE id = ?
+         LIMIT 1`,
+        [eventId]
+      );
+
+      const existingEvent = existingEventRows[0];
+      if (!existingEvent) {
+        throwEventError('NOT_FOUND', 'Event not found');
+      }
+
+      if (Number(existingEvent.committeeId) !== committeeId) {
+        throwEventError('BAD_REQUEST', 'committeeId does not match the selected event');
+      }
+
+      const adminCheck = await query<any[]>(
+        `SELECT user_id
+         FROM users_committees
+         WHERE committee_id = ? AND user_id = ? AND committee_role IN ('COMMITTEE_ADMIN', 'COMMITTEE_MASTER_ADMIN')
+         LIMIT 1`,
+        [committeeId, loggedInUserId]
+      );
+
+      if (adminCheck.length === 0) {
+        throwEventError('FORBIDDEN', 'Only committee admins can update event logo');
+      }
+
+      await execute(
+        `UPDATE events
+         SET event_logo = ?, updated_by = ?
+         WHERE id = ?`,
+        [eventLogo, loggedInUserId, eventId]
+      );
+
+      return {
+        eventId,
+        eventLogo: eventLogo || null
       };
     }
   }

@@ -67,6 +67,7 @@ export class GroupDetailsComponent implements OnInit {
   public readonly isLoading = signal<boolean>(false);
   public readonly copiedCommitteeId = signal<string | null>(null);
   public readonly isUploadingCommitteeLogo = signal<boolean>(false);
+  public readonly isUploadingEventLogo = signal<boolean>(false);
   
   // 🚀 ERROR 1 FIX: Expanded type allowance bracket including 'REJECTED' literals matches securely
   public readonly userRequestStatus = signal<'ACCEPTED' | 'PENDING' | 'REJECTED' | null>(null);
@@ -195,6 +196,142 @@ export class GroupDetailsComponent implements OnInit {
         data: {
           file,
           title: 'Crop Committee Logo',
+          maintainAspectRatio: true,
+          aspectRatio: 1
+        }
+      }).afterClosed()
+    );
+  }
+
+  /* ======= EVENT DESIGNATION PHOTO UPLOAD (client-side preview only) ======= */
+  public readonly defaultDesignationSlots = [
+    { role: 'ADHYAKSHA', label: 'Adhyaksha' },
+    { role: 'UPADHYAKSHA', label: 'Upadhyaksh' },
+    { role: 'CASHIER', label: 'Cashier' }
+  ];
+
+  private readonly designationPhotos = signal<Record<string, string>>({});
+
+  public getDesignationPhoto(eventId: number, role: string): string | undefined {
+    return this.designationPhotos()[`${eventId}:${role}`];
+  }
+
+  public onDesignationPhotoSlotClicked(eventId: number, role: string, event: Event): void {
+    event.stopPropagation();
+    const host = (event.currentTarget as HTMLElement).querySelector('input[type="file"]') as HTMLInputElement | null;
+    host?.click();
+  }
+
+  public async onDesignationPhotoSelected(eventId: number, role: string, event: Event): Promise<void> {
+    event.stopPropagation();
+    const inputElement = event.target as HTMLInputElement;
+    const selectedFile = inputElement.files?.[0] || null;
+    inputElement.value = '';
+
+    if (!selectedFile) {
+      return;
+    }
+
+    const selectedOrCroppedFile = await this.openDesignationPhotoCropDialog(selectedFile);
+    if (!selectedOrCroppedFile) {
+      return;
+    }
+
+    try {
+      const uploadedMetadata = await firstValueFrom(
+        this.imageAssetService.uploadSingleImageForCommitteeLogo(selectedOrCroppedFile)
+      );
+
+      const key = `${eventId}:${role}`;
+      this.designationPhotos.update((current) => ({ ...current, [key]: uploadedMetadata.publicAbsoluteUrl }));
+      this.notifier.success(`**${role}** photo updated for this event.`);
+    } catch (error: any) {
+      this.notifier.error(error?.message || 'Failed to upload designation photo.');
+    }
+  }
+
+  private async openDesignationPhotoCropDialog(file: File): Promise<File | null> {
+    return firstValueFrom(
+      this.dialog.open(ImageCropperDialogComponent, {
+        width: 'min(92vw, 920px)',
+        data: {
+          file,
+          title: 'Crop Designation Photo',
+          maintainAspectRatio: true,
+          aspectRatio: 1
+        }
+      }).afterClosed()
+    );
+  }
+
+  /* ======= EVENT LOGO UPLOAD (persisted via updateEventLogo) ======= */
+  public onEventLogoCircleClicked(eventItem: CommitteeEventListItem, event: Event): void {
+    if (!(this.isCurrentUserMasterAdmin() || this.isCurrentUserAdmin())) {
+      return;
+    }
+    event.stopPropagation();
+    const host = (event.currentTarget as HTMLElement).querySelector('input[type="file"]') as HTMLInputElement | null;
+    host?.click();
+  }
+
+  public async onEventLogoSelected(eventItem: CommitteeEventListItem, event: Event): Promise<void> {
+    if (!(this.isCurrentUserMasterAdmin() || this.isCurrentUserAdmin())) {
+      return;
+    }
+    event.stopPropagation();
+    const inputElement = event.target as HTMLInputElement;
+    const selectedFile = inputElement.files?.[0] || null;
+    inputElement.value = '';
+
+    if (!selectedFile) {
+      return;
+    }
+
+    const committeeId = this.groupData()?.committeeId;
+    if (!committeeId || !eventItem?.eventId) {
+      this.notifier.error('Event reference is missing. Please reload the workspace.');
+      return;
+    }
+
+    const selectedOrCroppedFile = await this.openEventLogoCropDialog(selectedFile);
+    if (!selectedOrCroppedFile) {
+      return;
+    }
+
+    this.isUploadingEventLogo.set(true);
+
+    try {
+      const uploadedMetadata = await firstValueFrom(
+        this.imageAssetService.uploadSingleImageForCommitteeLogo(selectedOrCroppedFile)
+      );
+
+      const updated = await firstValueFrom(
+        this.groupDetailsService.updateEventLogo(eventItem.eventId, committeeId, uploadedMetadata.publicAbsoluteUrl)
+      );
+
+      const resolvedLogo = updated?.eventLogo || uploadedMetadata.publicAbsoluteUrl;
+      this.committeeEvents.update((currentEvents) =>
+        currentEvents.map((currentEvent) =>
+          currentEvent.eventId === eventItem.eventId ? { ...currentEvent, eventLogo: resolvedLogo } : currentEvent
+        )
+      );
+
+      const formattedEventName = this.toTitleCase(eventItem.eventName || 'Event');
+      this.notifier.success(`Logo for **${formattedEventName}** has been updated successfully.`);
+    } catch (error: any) {
+      this.notifier.error(error?.message || 'Failed to update event logo.');
+    } finally {
+      this.isUploadingEventLogo.set(false);
+    }
+  }
+
+  private async openEventLogoCropDialog(file: File): Promise<File | null> {
+    return firstValueFrom(
+      this.dialog.open(ImageCropperDialogComponent, {
+        width: 'min(92vw, 920px)',
+        data: {
+          file,
+          title: 'Crop Event Logo',
           maintainAspectRatio: true,
           aspectRatio: 1
         }

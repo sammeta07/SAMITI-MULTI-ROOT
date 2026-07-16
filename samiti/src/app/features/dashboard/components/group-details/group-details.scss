@@ -3,7 +3,7 @@
   width: 100%;
   height: 100%;
   box-sizing: border-box;
-  background: #ffedd5; /* orange-100 — committee warm tint */
+  background: transparent;
 }
 
 /* BASE DRAWER SHELL CONTEXT */
@@ -80,7 +80,7 @@
 .gd-committee-card {
   background: #ffffff;
   border: 1px solid #e2e8f0;
-  border-left: 4px solid #f97316;
+  border-left: 4px solid transparent;
   border-radius: 12px;
   padding: 10px 16px;
   box-shadow: 0 1px 4px rgba(0,0,0,0.03);
@@ -316,7 +316,7 @@
     mat-icon { font-size: 1.35rem; width: 1.35rem; height: 1.35rem; }
     .icon-accent-event { color: #10b981; }
     .icon-accent-master { color: #ef4444; font-size: 1.5rem; width: 1.5rem; height: 1.5rem; } // 🚀 NEW
-    .icon-accent-admin { color: #f97316; font-size: 1.5rem; width: 1.5rem; height: 1.5rem; }
+    .icon-accent-admin { color: #10b981; font-size: 1.5rem; width: 1.5rem; height: 1.5rem; }
     .icon-accent-member { color: #1e40af; font-size: 1.5rem; width: 1.5rem; height: 1.5rem; }
   }
 
@@ -351,12 +351,20 @@
   display: flex;
   flex-direction: column;
   gap: 4px;
-  min-height: 122px;
-  max-height: 122px;
+  min-height: 0;
   overflow-y: auto;
 
   &::-webkit-scrollbar { width: 3px; }
   &::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 2px; }
+}
+
+/* Within the events section, distribute available height so 3 events fill it equally */
+.events-full-height .horizontal-list-container {
+  flex: 1;
+  min-height: 0;
+  max-height: none;
+
+  .event-aligned-row { flex: 1 1 0; min-height: 0; }
 }
 
 .horizontal-list-container .mini-empty-state {
@@ -369,20 +377,218 @@
 
 .event-aligned-row {
   display: flex;
-  align-items: center;
-  padding: 6px 10px;
+  flex-direction: column;
+  align-items: stretch;
+  padding: 8px 10px;
   background: #f8fafc;
   border: 1px solid #f1f5f9;
   border-radius: 4px;
-  gap: 12px;
+  gap: 8px;
   transition: background 0.15s ease;
   cursor: pointer;
 
   &:hover { background: #f1f5f9; border-color: #e2e8f0; }
 }
 
-.event-col-info       { flex: 3 1 420px; display: flex; flex-direction: column; gap: 5px; min-width: 0; }
-.event-col-controls   { flex: 0 0 104px; display: flex; flex-direction: column; align-items: flex-end; justify-content: center; gap: 6px; }
+/* Event logo circle — left side, fixed square so it stays perfectly circular */
+.event-logo-circle {
+  flex: 0 0 auto;
+  width: 40px;
+  height: 40px;
+  align-self: flex-start;
+  border-radius: 50%;
+  overflow: hidden;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: #cbd5e1;
+  color: #1e293b;
+  font-size: 1rem;
+  font-weight: 700;
+  flex-shrink: 0;
+  position: relative;
+
+  img { width: 100%; height: 100%; object-fit: cover; }
+
+  &.event-logo-upload.can-upload {
+    cursor: pointer;
+  }
+
+  .photo-edit-overlay {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: rgba(15, 23, 42, 0.45);
+    color: #ffffff;
+    opacity: 0;
+    transition: opacity 0.2s ease;
+    border-radius: 50%;
+    pointer-events: none;
+
+    mat-icon {
+      font-size: 1.1rem;
+      width: 1.1rem;
+      height: 1.1rem;
+    }
+  }
+
+  &:hover .photo-edit-overlay {
+    opacity: 1;
+  }
+}
+
+.event-head-block {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
+/* Designation photo strip — side-by-side, horizontal scroll when overflowing */
+.event-designation-strip {
+  display: flex;
+  align-items: stretch;
+  gap: 8px;
+  margin-top: 4px;
+  overflow-x: auto;
+  overflow-y: hidden;
+  padding-bottom: 2px;
+  max-width: 100%;
+  flex: 1 1 auto;
+  min-height: 0;
+
+  &::-webkit-scrollbar { height: 3px; }
+  &::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 2px; }
+}
+
+.designation-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  flex: 0 0 auto;
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 999px;
+  padding: 2px 8px 2px 2px;
+  height: 100%;
+}
+
+.designation-avatar {
+  height: 100%;
+  aspect-ratio: 1 / 1;
+  width: auto;
+  border-radius: 50%;
+  overflow: hidden;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: #cbd5e1;
+  color: #1e293b;
+  font-size: 1.2rem;
+  font-weight: 700;
+  flex-shrink: 0;
+
+  img { width: 100%; height: 100%; object-fit: cover; display: block; }
+}
+
+.designation-name {
+  font-size: 0.66rem;
+  font-weight: 600;
+  color: #475569;
+  white-space: nowrap;
+}
+
+/* Placeholder shown when no designation photos are available yet */
+.event-designation-placeholder {
+  display: flex;
+  align-items: stretch;
+  gap: 8px;
+  margin-top: 4px;
+  flex: 1 1 auto;
+  min-height: 0;
+}
+
+.designation-avatar.empty {
+  background: #f1f5f9;
+  border: 2px dashed #94a3b8;
+  color: transparent;
+  height: 100%;
+  aspect-ratio: 1 / 1;
+  width: auto;
+  flex-direction: column;
+  gap: 2px;
+  cursor: pointer;
+  position: relative;
+
+  .photo-slot-icon {
+    color: #94a3b8;
+    font-size: 1.4rem;
+    width: 1.4rem;
+    height: 1.4rem;
+    line-height: 1.4rem;
+  }
+
+  .photo-slot-label {
+    color: #64748b;
+    font-size: 0.6rem;
+    font-weight: 600;
+    line-height: 1;
+    text-align: center;
+    white-space: nowrap;
+  }
+
+  img {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    border-radius: 50%;
+  }
+
+  .photo-edit-overlay {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: rgba(15, 23, 42, 0.45);
+    color: #ffffff;
+    opacity: 0;
+    transition: opacity 0.2s ease;
+    border-radius: 50%;
+    pointer-events: none;
+
+    mat-icon {
+      font-size: 1.25rem;
+      width: 1.25rem;
+      height: 1.25rem;
+    }
+  }
+
+  &:hover .photo-edit-overlay,
+  &:focus-visible .photo-edit-overlay {
+    opacity: 1;
+  }
+}
+
+/* Event metadata card — logo + name/pills + toggle grouped as one distinct block */
+.event-meta-card {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  flex: 0 0 auto;
+  min-width: 0;
+  padding: 6px 10px;
+  margin: 0;
+  background: #eef2ff;
+  border: 1px solid #c7d2fe;
+  border-radius: 6px;
+}
+
+.event-col-info       { flex: 1 1 auto; display: flex; flex-direction: row; align-items: flex-start; gap: 12px; min-width: 0; margin: 0; padding: 0; }
+.event-col-controls   { flex: 0 0 auto; display: flex; flex-direction: column; align-items: flex-end; justify-content: flex-start; gap: 6px; margin: 0; padding: 0; }
 
 .row-avatar {
   width: 34px;
@@ -414,7 +620,9 @@
   white-space: nowrap;
   overflow: visible;
   text-overflow: clip;
-  font-size: 0.78rem;
+  font-size: 1rem;
+  font-weight: 700;
+  line-height: 1.2;
 }
 
 .event-meta-row {
@@ -627,21 +835,6 @@
 /* ============ SKELETON LOADER ============ */
 .skeleton-wrapper { gap: 8px; }
 
-.skeleton-status-banner {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  padding: 8px 12px;
-  background: #ffffff;
-  border: 1px solid #e2e8f0;
-  border-radius: 8px;
-  font-size: 0.78rem;
-  font-weight: 600;
-  color: #475569;
-
-  ::ng-deep .mat-mdc-progress-spinner circle { stroke: #f97316 !important; }
-}
-
 .skeleton-card {
   pointer-events: none;
   padding: 12px;
@@ -698,24 +891,60 @@
   p { margin: 0; font-size: 0.72rem; color: #64748b; }
 }
 
-/* ================== FIXED 2-COLUMN GRID SYSTEM PANEL ================== */
-.dashboard-split-grid {
-  display: grid;
-  grid-template-columns: repeat(2, 1fr); // 🚀 Back to beautiful 50-50 Split layout
+/* ================== 40% / 60% ROSTER + EVENTS SPLIT ================== */
+.workspace-roster-events-split {
+  display: flex;
   gap: 10px;
+  flex: 1;
+  min-height: 0;
   width: 100%;
-  align-items: start;
-
-  @media (max-width: 850px) {
-    grid-template-columns: 1fr; // Mobile break setup collapse linear
-  }
 }
 
-/* Vertical container stack for left side admins panels */
-.grid-column-stack {
+/* SECTION 1 — 40%: stacked rosters */
+.roster-stack-column {
+  flex: 0 0 40%;
+  max-width: 40%;
   display: flex;
   flex-direction: column;
   gap: 10px;
+  min-height: 0;
+}
+
+/* SECTION 2 — 60%: events full height */
+.events-full-height {
+  flex: 1 1 60%;
+  min-height: 372px;
+  display: flex;
+  flex-direction: column;
+
+  .horizontal-list-container {
+    flex: 1;
+    min-height: 0;
+    max-height: none;
+  }
+}
+
+/* Card height behaviour */
+.roster-fixed {
+  flex: 0 0 auto;
+  max-height: 96px; // ~1 master admin row
+}
+
+.roster-fixed-admins {
+  flex: 0 0 auto;
+  max-height: 200px; // ~3 admin rows, then scroll
+}
+
+.roster-grow {
+  flex: 1 1 auto;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+
+  .mesh-list-scroll-box {
+    flex: 1;
+    min-height: 0;
+  }
 }
 
 .mesh-card {
@@ -725,16 +954,11 @@
   display: flex;
   flex-direction: column;
   overflow: hidden;
-  height: 100%; // Reduced height for stacked items on the left side
+  width: 100%;
 
   &.master-admin-card-style .panel-card-header { background: linear-gradient(90deg, rgba(239,68,68,0.08), transparent); border-bottom: 2px solid rgba(239,68,68,0.18); }
   &.admins-card-style .panel-card-header { background: linear-gradient(90deg, rgba(16,185,129,0.09), transparent); border-bottom: 2px solid rgba(16,185,129,0.2); }
   &.members-card-style .panel-card-header { background: linear-gradient(90deg, rgba(30,64,175,0.09), transparent); border-bottom: 2px solid rgba(30,64,175,0.2); }
-  
-  /* Right side card takes full height matching the stack */
-  &.full-height-card {
-    height: 360px; 
-  }
 }
 
 .mesh-list-scroll-box {
@@ -749,9 +973,9 @@
   &::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 2px; }
   
   &.compact-scroll {
-    max-height: 130px;
+    max-height: 64px;
   }
   &.full-scroll {
-    max-height: 315px;
+    min-height: 0;
   }
 }
