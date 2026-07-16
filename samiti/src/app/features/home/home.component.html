@@ -89,7 +89,7 @@
                     <input #homeCommitteeLogoInput type="file" hidden accept="image/*" (click)="$event.stopPropagation()" (change)="onCommitteeLogoSelected($event, committee)">
                     <button type="button" class="committee-logo-edit-trigger"
                       (click)="$event.stopPropagation(); homeCommitteeLogoInput.click()"
-                      [disabled]="isUploadingCommitteeLogo(committee.id)"
+                     [disabled]="committee.committeeRole !== 'COMMITTEE_MASTER_ADMIN' || isUploadingCommitteeLogo(committee.id)"
                       matTooltip="Change committee logo" matTooltipPosition="above"
                       aria-label="Change committee logo">
                       <ng-container [ngTemplateOutlet]="homeCommitteeLogoContent"></ng-container>

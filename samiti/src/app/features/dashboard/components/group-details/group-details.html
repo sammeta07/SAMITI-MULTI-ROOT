@@ -48,7 +48,7 @@
           @if (isCurrentUserMasterAdmin() || isCurrentUserAdmin()) {
             <input #committeeLogoInput type="file" hidden accept="image/*" (change)="onCommitteeLogoSelected($event)">
             <button type="button" class="committee-logo-edit-trigger"
-              (click)="committeeLogoInput.click()" [disabled]="isUploadingCommitteeLogo()"
+              (click)="committeeLogoInput.click()" [disabled]="isUploadingCommitteeLogo() || !isCurrentUserMasterAdmin()"
               matTooltip="Change committee logo" matTooltipPosition="above"
               aria-label="Change committee logo">
               <ng-container [ngTemplateOutlet]="committeeLogoContent"></ng-container>
@@ -120,13 +120,13 @@
               }
             }
             @if (isCurrentUserMasterAdmin() || isCurrentUserAdmin()) {
-              <button mat-stroked-button class="action-btn edit-btn" (click)="onEditCommitteeProfile()">
+              <button mat-stroked-button class="action-btn edit-btn" (click)="onEditCommitteeProfile()" [disabled] = "!isCurrentUserMasterAdmin()">
                 <mat-icon>edit</mat-icon>Edit Profile
               </button>
-              <button mat-stroked-button class="action-btn delete-btn" (click)="onDeleteCommitteeWorkspace()">
+              <button mat-stroked-button class="action-btn delete-btn" (click)="onDeleteCommitteeWorkspace()"  [disabled] = "!isCurrentUserMasterAdmin()">
                 <mat-icon>delete</mat-icon>Delete
               </button>
-              <button mat-stroked-button class="action-btn create-event-btn" (click)="onCreateEvent('PUBLIC')"
+              <button mat-stroked-button class="action-btn create-event-btn" (click)="onCreateEvent('PUBLIC')"  [disabled] = "!isCurrentUserMasterAdmin()"
                 matTooltip="Launch a visible public event entry container">
                 <mat-icon>add</mat-icon>Public Event
               </button>

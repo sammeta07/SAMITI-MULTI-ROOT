@@ -51,20 +51,22 @@ export const removeCommitteeMemberResolvers = {
       const loggedInUserId = await resolveLoggedInUserIdFromGraphQLContext(context);
       const removedAtTime = new Date().toISOString();
 
-      // Verify actor is the committee master admin
-      const masterAdminRows = await query<any[]>(
-        `SELECT user_id FROM users_committees
+      // Verify actor is the committee master admin or admin
+      const actorRows = await query<any[]>(
+        `SELECT committee_role FROM users_committees
          WHERE committee_id = ?
            AND user_id = ?
-           AND committee_role = 'COMMITTEE_MASTER_ADMIN'
+           AND committee_role IN ('COMMITTEE_MASTER_ADMIN', 'COMMITTEE_ADMIN')
          LIMIT 1`,
         [committeeId, loggedInUserId]
       );
-      if (masterAdminRows.length === 0) {
-        throw new Error('Forbidden: Only the committee master admin can remove members');
+      if (actorRows.length === 0) {
+        throw new Error('Forbidden: Only committee admins can remove members');
       }
 
-      // Verify target exists in this committee and is not the master admin
+      const actorRole = String(actorRows[0].committee_role || '');
+
+      // Verify target exists in this committee
       const targetRows = await query<any[]>(
         `SELECT committee_role FROM users_committees
          WHERE committee_id = ? AND user_id = ?
@@ -76,8 +78,16 @@ export const removeCommitteeMemberResolvers = {
       }
 
       const targetRole = String(targetRows[0].committee_role || '');
-      if (targetRole !== 'COMMITTEE_MEMBER' && targetRole !== 'COMMITTEE_ADMIN') {
-        throw new Error('Only committee members or admins can be removed');
+      if (actorRole === 'COMMITTEE_ADMIN') {
+        // Admins can only remove COMMITTEE_MEMBER
+        if (targetRole !== 'COMMITTEE_MEMBER') {
+          throw new Error('Admins can only remove committee members');
+        }
+      } else {
+        // Master admin can remove members or admins
+        if (targetRole !== 'COMMITTEE_MEMBER' && targetRole !== 'COMMITTEE_ADMIN') {
+          throw new Error('Only committee members or admins can be removed');
+        }
       }
 
       // 1) Remove the membership row

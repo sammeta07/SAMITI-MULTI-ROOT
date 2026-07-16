@@ -34,11 +34,11 @@ export class DemoteMemberDialogComponent {
   private readonly notifier = inject(NotifierService);
 
   isLoading = signal<boolean>(false);
-  selectedRole = signal<string>('');
+  selectedRole = signal<string>('COMMITTEE_MEMBER');
 
   // Available roles for demotion
   availableRoles = [
-    { value: 'COMMITTEE_MEMBER', label: 'Member' },
+    { value: 'COMMITTEE_MEMBER', label: 'Group Member' },
   ];
 
   onCancel(): void {

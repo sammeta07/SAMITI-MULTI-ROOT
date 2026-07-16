@@ -34,11 +34,11 @@ export class PromoteMemberDialogComponent {
   private readonly notifier = inject(NotifierService);
 
   isLoading = signal<boolean>(false);
-  selectedRole = signal<string>('');
+  selectedRole = signal<string>('COMMITTEE_ADMIN');
 
   // Available roles for promotion
   availableRoles = [
-    { value: 'COMMITTEE_ADMIN', label: 'Admin' },
+    { value: 'COMMITTEE_ADMIN', label: 'Group Admin' },
   ];
 
   onCancel(): void {

@@ -442,8 +442,13 @@ export class GroupDetailsComponent implements OnInit {
     const committee = this.groupData();
     if (!committee?.committeeId) return;
 
-    if (!this.isCurrentUserMasterAdmin()) {
-      this.notifier.warn('Only Master Administrators can execute promotion workflows');
+    if (!this.isCurrentUserMasterAdmin() && !this.isCurrentUserAdmin()) {
+      this.notifier.warn('Only Administrators can execute promotion workflows');
+      return;
+    }
+
+    if (this.isCurrentUserAdmin() && String(member.committeeRole || '').toUpperCase() !== 'COMMITTEE_MEMBER') {
+      this.notifier.warn('Admins can only promote members');
       return;
     }
 
@@ -490,8 +495,13 @@ export class GroupDetailsComponent implements OnInit {
     const committee = this.groupData();
     if (!committee?.committeeId) return;
 
-    if (!this.isCurrentUserMasterAdmin()) {
-      this.notifier.warn('Only Master Administrators can eliminate accounts from workspaces');
+    if (!this.isCurrentUserMasterAdmin() && !this.isCurrentUserAdmin()) {
+      this.notifier.warn('Only Administrators can eliminate accounts from workspaces');
+      return;
+    }
+
+    if (this.isCurrentUserAdmin() && String(member.committeeRole || '').toUpperCase() !== 'COMMITTEE_MEMBER') {
+      this.notifier.warn('Admins can only remove members');
       return;
     }
 

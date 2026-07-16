@@ -60,18 +60,20 @@ export const promoteCommitteeMemberResolvers = {
         throw new Error('Unsupported promotion role');
       }
 
-      // Verify actor is the committee master admin
-      const masterAdminRows = await query<any[]>(
-        `SELECT user_id FROM users_committees
+      // Verify actor is the committee master admin or admin
+      const actorRows = await query<any[]>(
+        `SELECT committee_role FROM users_committees
          WHERE committee_id = ?
            AND user_id = ?
-           AND committee_role = 'COMMITTEE_MASTER_ADMIN'
+           AND committee_role IN ('COMMITTEE_MASTER_ADMIN', 'COMMITTEE_ADMIN')
          LIMIT 1`,
         [committeeId, loggedInUserId]
       );
-      if (masterAdminRows.length === 0) {
-        throw new Error('Forbidden: Only the committee master admin can promote members');
+      if (actorRows.length === 0) {
+        throw new Error('Forbidden: Only committee admins can promote members');
       }
+
+      const actorRole = String(actorRows[0].committee_role || '');
 
       // Verify target is currently an accepted COMMITTEE_MEMBER
       const targetRows = await query<any[]>(
