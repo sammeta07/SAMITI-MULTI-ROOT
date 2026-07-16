@@ -351,11 +351,20 @@
   display: flex;
   flex-direction: column;
   gap: 4px;
-  max-height: 240px;
+  min-height: 122px;
+  max-height: 122px;
   overflow-y: auto;
 
   &::-webkit-scrollbar { width: 3px; }
   &::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 2px; }
+}
+
+.horizontal-list-container .mini-empty-state {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 110px;
 }
 
 .event-aligned-row {
@@ -662,6 +671,22 @@
   &.sm { height: 11px; }
 }
 .skeleton-chip { width: 90px; height: 24px; border-radius: 999px; flex-shrink: 0; }
+
+.skeleton-event-row { pointer-events: none; }
+
+.skeleton-row {
+  pointer-events: none;
+
+  .row-info-core { display: flex; flex-direction: column; }
+}
+
+/* Keep skeleton roster lists at a sensible height matching loaded view */
+.skeleton-card .mesh-list-scroll-box {
+  min-height: 116px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
 
 @keyframes skeleton-shimmer {
   100% { transform: translateX(100%); }

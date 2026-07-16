@@ -6,16 +6,90 @@
       <mat-progress-spinner mode="indeterminate" diameter="20"></mat-progress-spinner>
       <span>Loading group workspace…</span>
     </div>
-    <section class="compact-hero-card skeleton-card">
-      <div class="hero-left-cluster">
-        <div class="skeleton-box skeleton-avatar"></div>
-        <div class="hero-meta-stack" style="flex:1;">
-          <div class="skeleton-box skeleton-line lg" style="width:55%;"></div>
-          <div class="skeleton-box skeleton-line sm" style="width:80%; margin-top:8px;"></div>
+
+    <section class="gd-committee-card skeleton-card">
+      <div class="committee-card-grid">
+        <div class="card-logo-area">
+          <div class="skeleton-box skeleton-avatar circle"></div>
+        </div>
+        <div class="card-main-info-area">
+          <div class="skeleton-box skeleton-line lg" style="width:45%;"></div>
+          <div class="skeleton-box skeleton-line sm" style="width:70%; margin-top:8px;"></div>
+        </div>
+        <div class="card-actions-identity-area">
+          <div class="skeleton-box skeleton-chip"></div>
+          <div class="skeleton-box skeleton-chip" style="width:70px;"></div>
         </div>
       </div>
-      <div class="skeleton-box skeleton-chip"></div>
     </section>
+
+    <section class="horizontal-full-card events-section-style skeleton-card">
+      <div class="panel-card-header">
+        <div class="header-title-left">
+          <div class="skeleton-box skeleton-avatar circle" style="width:18px;height:18px;"></div>
+          <div class="skeleton-box skeleton-line sm" style="width:140px;"></div>
+        </div>
+      </div>
+      <div class="horizontal-list-container">
+        @for (n of skeletonRows3; track n) {
+          <div class="event-aligned-row skeleton-event-row">
+            <div class="event-col-info">
+              <div class="skeleton-box skeleton-line lg" style="width:50%;"></div>
+              <div class="skeleton-box skeleton-line sm" style="width:80%; margin-top:6px;"></div>
+            </div>
+            <div class="event-col-controls">
+              <div class="skeleton-box" style="width:80px;height:18px;border-radius:999px;"></div>
+            </div>
+          </div>
+        }
+      </div>
+    </section>
+
+    <main class="dashboard-split-grid">
+      <div class="grid-column-stack">
+        @for (c of skeletonRows2; track c) {
+          <section class="mesh-card roster-card skeleton-card">
+            <div class="panel-card-header">
+              <div class="header-title-left">
+                <div class="skeleton-box skeleton-avatar circle" style="width:18px;height:18px;"></div>
+                <div class="skeleton-box skeleton-line sm" style="width:110px;"></div>
+              </div>
+            </div>
+            <div class="mesh-list-scroll-box compact-scroll">
+              @for (r of skeletonRows3; track r) {
+                <div class="item-density-row skeleton-row">
+                  <div class="skeleton-box skeleton-avatar circle"></div>
+                  <div class="row-info-core" style="flex:1;">
+                    <div class="skeleton-box skeleton-line sm" style="width:55%;"></div>
+                    <div class="skeleton-box skeleton-line sm" style="width:75%; margin-top:6px;"></div>
+                  </div>
+                </div>
+              }
+            </div>
+          </section>
+        }
+      </div>
+
+      <section class="mesh-card roster-card members-card-style full-height-card skeleton-card">
+        <div class="panel-card-header">
+          <div class="header-title-left">
+            <div class="skeleton-box skeleton-avatar circle" style="width:18px;height:18px;"></div>
+            <div class="skeleton-box skeleton-line sm" style="width:120px;"></div>
+          </div>
+        </div>
+        <div class="mesh-list-scroll-box full-scroll">
+          @for (r of skeletonRows6; track r) {
+            <div class="item-density-row skeleton-row">
+              <div class="skeleton-box skeleton-avatar circle"></div>
+              <div class="row-info-core" style="flex:1;">
+                <div class="skeleton-box skeleton-line sm" style="width:50%;"></div>
+                <div class="skeleton-box skeleton-line sm" style="width:72%; margin-top:6px;"></div>
+              </div>
+            </div>
+          }
+        </div>
+      </section>
+    </main>
   </div>
   } @else if (groupData()) {
 

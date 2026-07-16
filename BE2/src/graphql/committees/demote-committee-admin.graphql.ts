@@ -97,12 +97,16 @@ export const demoteCommitteeAdminResolvers = {
         [committeeId, targetUserId]
       );
 
-      // 2) Record the workflow entry (auto-accepted by the master admin)
+      // 2) Resolve the original PENDING request row with the performed action
+      //    (updates the same record to DEMOTED so it leaves the received list)
       await execute(
-        `INSERT INTO committee_role_requests
-           (committee_id, requester_user_id, request_role, status, requested_at, action_by_user_id, action_at)
-         VALUES (?, ?, 'COMMITTEE_MEMBER', 'ACCEPTED', NOW(), ?, NOW())`,
-        [committeeId, targetUserId, loggedInUserId]
+        `UPDATE committee_role_requests
+         SET status = 'DEMOTED',
+             request_role = 'COMMITTEE_MEMBER',
+             action_by_user_id = ?,
+             action_at = NOW()
+         WHERE committee_id = ? AND requester_user_id = ? AND status = 'PENDING'`,
+        [loggedInUserId, committeeId, targetUserId]
       );
 
       return {

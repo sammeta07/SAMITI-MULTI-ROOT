@@ -489,6 +489,26 @@
   color: var(--danger-text);
 }
 
+.status-cancelled {
+  background-color: #e2e8f0;
+  color: #475569;
+}
+
+.status-promoted {
+  background-color: #dcfce7;
+  color: #15803d;
+}
+
+.status-demoted {
+  background-color: #fef3c7;
+  color: #b45309;
+}
+
+.status-removed {
+  background-color: #fee2e2;
+  color: #b91c1c;
+}
+
 .empty-state-container {
   display: flex;
   flex-direction: column;

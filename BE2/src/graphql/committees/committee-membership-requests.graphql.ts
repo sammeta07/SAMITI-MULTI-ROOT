@@ -273,12 +273,20 @@ export const committeeMembershipRequestsResolvers = {
 
       const { id: requestId, request_role: requestRole } = pendingRows[0];
 
-      // Update request status
+      // Resolve the original PENDING request row (so list queries stay correct)
       await execute(
         `UPDATE committee_role_requests
          SET status = ?, action_by_user_id = ?, action_at = NOW()
          WHERE id = ?`,
         [resolvedDecisionStatus, loggedInUserId, requestId]
+      );
+
+      // Insert a NEW audit record for this action (every action = new record)
+      await execute(
+        `INSERT INTO committee_role_requests
+           (committee_id, requester_user_id, request_role, status, requested_at, action_by_user_id, action_at)
+         VALUES (?, ?, ?, ?, NOW(), ?, NOW())`,
+        [committeeId, targetUserId, requestRole, resolvedDecisionStatus, loggedInUserId]
       );
 
       // Update or insert final state in users_committees

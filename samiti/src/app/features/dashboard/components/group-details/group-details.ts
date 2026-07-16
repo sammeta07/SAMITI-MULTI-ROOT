@@ -80,6 +80,10 @@ export class GroupDetailsComponent implements OnInit {
   public readonly membersList = signal<CommitteeRosterMember[]>([]);
 
   public readonly skeletonRows = [1, 2, 3];
+  public readonly skeletonRows2 = [1, 2];
+  public readonly skeletonRows3 = [1, 2, 3];
+  public readonly skeletonRows6 = [1, 2, 3, 4, 5, 6];
+  public readonly skeletonRosterRows = [1, 2, 3, 4, 5, 6];
 
   // 🔐 Computed role checks tracking operations variables
   public readonly isCurrentUserMasterAdmin = computed(() => {
