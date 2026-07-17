@@ -306,9 +306,9 @@
               <span class="count-pill">{{ membersList().length }}</span>
             </div>
             @if (membersList().length > 5) {
-            <div class="compact-search-pill">
-              <mat-icon>search</mat-icon>
-              <input type="text" placeholder="Filter roster..." [ngModel]="searchQuery()" (ngModelChange)="searchQuery.set($event)" />
+            <div class="section-search-pill">
+              <mat-icon class="ssp-icon">search</mat-icon>
+              <input class="ssp-input" type="text" placeholder="Search Members..." [ngModel]="searchQuery()" (ngModelChange)="searchQuery.set($event)" />
               @if (searchQuery()) {
                 <button type="button" class="clear-search-trigger" (mousedown)="clearSearch()"><mat-icon>close</mat-icon></button>
               }

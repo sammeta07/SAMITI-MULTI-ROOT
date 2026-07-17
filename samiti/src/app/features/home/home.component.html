@@ -21,7 +21,9 @@
 
           <div class="section-search-pill">
             <mat-icon class="ssp-icon">search</mat-icon>
-            <input class="ssp-input" type="text" placeholder="Search Committees via GraphQL…" />
+            <input class="ssp-input" type="text" placeholder="Search Committees…"
+              [ngModel]="committeeSearchQuery()" (ngModelChange)="committeeSearchQuery.set($event)"
+              (focus)="onSearchFocus()" (blur)="onSearchBlur()" />
             <span class="ssp-divider"></span>
             <mat-icon class="ssp-km-icon">radar</mat-icon>
             <select class="ssp-select" name="committeeRadius" [(ngModel)]="selectedCommitteeRadius"
@@ -30,6 +32,11 @@
               <option [value]="radius">{{ radius }} km</option>
               }
             </select>
+            @if (committeeSearchQuery()) {
+              <button type="button" class="clear-search-trigger" (mousedown)="clearSearch()">
+                <mat-icon>close</mat-icon>
+              </button>
+            }
           </div>
         </div>
       </div>
@@ -64,7 +71,7 @@
             [class.panel-role-master-admin]="isAuth && committee.committeeRole === 'COMMITTEE_MASTER_ADMIN'"
             [class.panel-role-admin]="committee.committeeRole === 'COMMITTEE_ADMIN'"
             [class.panel-role-member]="committee.committeeRole === 'COMMITTEE_MEMBER'"
-            [class.panel-role-pending]="committee.status === 'PENDING'"
+            [class.panel-role-pending]="committee.status === 'PENDING' && !committee.committeeRole"
             [class.panel-role-none]="!isAuth">
 
             <mat-expansion-panel-header>
@@ -148,37 +155,44 @@
                     </div>
                   </div>
 
-                  <div class="directions-status-row">
-                    @if (isAuth) {
-                      @if (committee.committeeRole === 'COMMITTEE_MASTER_ADMIN') {
-                        <span class="user-role-badge badge-master-admin">
-                          <mat-icon class="role-badge-icon">verified</mat-icon>MASTER ADMIN
+                   <div class="directions-status-row">
+                     @if (isAuth) {
+                       @if (committee.status === 'PENDING' && committee.pendingRequestRole) {
+                        <span class="user-role-badge badge-pending"
+                          [matTooltip]="getPendingRoleLabel(committee.pendingRequestRole) + ' Pending'"
+                          matTooltipPosition="above">
+                          {{committee.status}}
                         </span>
-                      } @else if (committee.committeeRole === 'COMMITTEE_ADMIN') {
-                        <span class="user-role-badge badge-admin">
-                          <mat-icon class="role-badge-icon">verified</mat-icon>ADMIN
-                        </span>
-                      } @else if (committee.committeeRole === 'COMMITTEE_MEMBER') {
-                        <span class="user-role-badge badge-member">
-                          <mat-icon class="role-badge-icon">verified</mat-icon>MEMBER
-                        </span>
-                      } @else if (committee.status === 'PENDING') {
-                        <span class="user-role-badge badge-pending">
-                          <mat-icon class="role-badge-icon">verified</mat-icon>{{ committee.pendingRequestRole + '-' + committee.status }}
-                        </span>
-                        <button mat-button type="button" class="cancel-request-btn"
+                        <button mat-stroked-button type="button" class="action-btn delete-btn"
                           (click)="cancelRequest(committee.id, $event)">
-                          <mat-icon>close</mat-icon>
+                          <mat-icon>cancel</mat-icon>
                           <span>Cancel</span>
                         </button>
-                      } @else {
-                        <button mat-flat-button type="button" class="join-committee-btn"
-                          (click)="onRequestMemberRole(committee.id, $event)">
-                          <mat-icon>group_add</mat-icon>
-                          <span>Join</span>
-                        </button>
-                      }
-                    }
+                       }
+                       @if (committee.committeeRole === 'COMMITTEE_MASTER_ADMIN') {
+                         <span class="user-role-badge badge-master-admin">
+                           <mat-icon class="role-badge-icon">verified</mat-icon>MASTER ADMIN
+                         </span>
+                       }
+                       @if (committee.committeeRole === 'COMMITTEE_ADMIN') {
+                         <span class="user-role-badge badge-admin">
+                           <mat-icon class="role-badge-icon">verified</mat-icon>ADMIN
+                         </span>
+                       }
+                       @if (committee.committeeRole === 'COMMITTEE_MEMBER') {
+                         <span class="user-role-badge badge-member">
+                           <mat-icon class="role-badge-icon">verified</mat-icon>MEMBER
+                         </span>
+                       }
+
+                       @if (!committee.committeeRole && committee.status !== 'PENDING') {
+                         <button mat-flat-button type="button" class="join-committee-btn"
+                           (click)="onRequestMemberRole(committee.id, $event)">
+                           <mat-icon>group_add</mat-icon>
+                           <span>Join</span>
+                         </button>
+                       }
+                     }
                     <button type="button" class="proximity-display-row"
                       (click)="openCommitteeInMaps(committee, $event)"
                       matTooltip="Navigate with Google Maps" matTooltipPosition="above">
@@ -294,7 +308,7 @@
             <ng-template mat-tab-label>
               <mat-icon class="tab-leading-icon">adjust</mat-icon>
               <span>Near By</span>
-              <span class="tab-badge">{{ nearbyGroups.length }}</span>
+              <span class="tab-badge">{{ filteredNearbyGroups().length }}</span>
             </ng-template>
 
             <div class="committees-scroll">
@@ -302,14 +316,14 @@
                 <ng-container [ngTemplateOutlet]="committeeSkeletonTpl"></ng-container>
               } @else {
               <mat-accordion #nearbyAccordion="matAccordion" [multi]="true" class="custom-clean-accordion">
-                @for (committee of nearbyGroups; track committee.id) {
+                @for (committee of filteredNearbyGroups(); track committee.id) {
                 <ng-container [ngTemplateOutlet]="committeeCardTemplate"
                   [ngTemplateOutletContext]="{ $implicit: committee, isAuth: false, panelPrefix: 'nearby' }">
                 </ng-container>
                 }
               </mat-accordion>
 
-              @if (nearbyGroups.length === 0) {
+              @if (filteredNearbyGroups().length === 0) {
               <div class="col-empty">
                 <mat-icon>gavel</mat-icon>
                 <p>No committees found within {{selectedCommitteeRadius}} km.</p>
@@ -338,7 +352,7 @@
             <ng-template mat-tab-label>
               <mat-icon class="tab-leading-icon">adjust</mat-icon>
               <span>Near By</span>
-              <span class="tab-badge">{{ nearbyGroups.length }}</span>
+              <span class="tab-badge">{{ filteredNearbyGroups().length }}</span>
             </ng-template>
 
             <div class="committees-scroll">
@@ -346,14 +360,14 @@
                 <ng-container [ngTemplateOutlet]="committeeSkeletonTpl"></ng-container>
               } @else {
               <mat-accordion #nearbyAccordion="matAccordion" [multi]="true" class="custom-clean-accordion">
-                @for (committee of nearbyGroups; track committee.id) {
+                @for (committee of filteredNearbyGroups(); track committee.id) {
                 <ng-container [ngTemplateOutlet]="committeeCardTemplate"
                   [ngTemplateOutletContext]="{ $implicit: committee, isAuth: true, panelPrefix: 'nearby' }">
                 </ng-container>
                 }
               </mat-accordion>
 
-              @if (nearbyGroups.length === 0) {
+              @if (filteredNearbyGroups().length === 0) {
               <div class="col-empty">
                 <mat-icon>gavel</mat-icon>
                 <p>No committees found within {{selectedCommitteeRadius}} km.</p>
@@ -367,7 +381,7 @@
             <ng-template mat-tab-label>
               <mat-icon class="tab-leading-icon">favorite_border</mat-icon>
               <span>Favourites</span>
-              <span class="tab-badge">{{ favouriteGroups.length }}</span>
+              <span class="tab-badge">{{ filteredFavouriteGroups().length }}</span>
             </ng-template>
 
             <div class="committees-scroll">
@@ -375,14 +389,14 @@
                 <ng-container [ngTemplateOutlet]="committeeSkeletonTpl"></ng-container>
               } @else {
               <mat-accordion #favouriteAccordion="matAccordion" [multi]="true" class="custom-clean-accordion">
-                @for (committee of favouriteGroups; track committee.id) {
+                @for (committee of filteredFavouriteGroups(); track committee.id) {
                 <ng-container [ngTemplateOutlet]="committeeCardTemplate"
                   [ngTemplateOutletContext]="{ $implicit: committee, isAuth: true, panelPrefix: 'favourite' }">
                 </ng-container>
                 }
               </mat-accordion>
 
-              @if (favouriteGroups.length === 0) {
+              @if (filteredFavouriteGroups().length === 0) {
               <div class="col-empty">
                 <mat-icon>favorite_border</mat-icon>
                 <p>Mark committees as favourite to track them here.</p>
@@ -396,7 +410,7 @@
             <ng-template mat-tab-label>
               <mat-icon class="tab-leading-icon">preview</mat-icon>
               <span>Preview</span>
-              <span class="tab-badge">{{ previewGroups.length }}</span>
+              <span class="tab-badge">{{ filteredPreviewGroups().length }}</span>
             </ng-template>
 
             <div class="committees-scroll">
@@ -404,14 +418,14 @@
                 <ng-container [ngTemplateOutlet]="committeeSkeletonTpl"></ng-container>
               } @else {
               <mat-accordion #previewAccordion="matAccordion" [multi]="true" class="custom-clean-accordion">
-                @for (committee of previewGroups; track committee.id) {
+                @for (committee of filteredPreviewGroups(); track committee.id) {
                 <ng-container [ngTemplateOutlet]="committeeCardTemplate"
                   [ngTemplateOutletContext]="{ $implicit: committee, isAuth: true, panelPrefix: 'preview' }">
                 </ng-container>
                 }
               </mat-accordion>
 
-              @if (previewGroups.length === 0) {
+              @if (filteredPreviewGroups().length === 0) {
               <div class="col-empty">
                 <mat-icon>preview</mat-icon>
                 <p>No preview committees available.</p>
@@ -443,7 +457,9 @@
 
           <div class="section-search-pill">
             <mat-icon class="ssp-icon">search</mat-icon>
-            <input class="ssp-input" type="text" placeholder="Search Programs…" />
+            <input class="ssp-input" type="text" placeholder="Search Programs…"
+              [ngModel]="programSearchQuery()" (ngModelChange)="programSearchQuery.set($event)"
+              (focus)="onSearchFocus()" (blur)="onSearchBlur()" />
             <span class="ssp-divider"></span>
             <mat-icon class="ssp-km-icon">radar</mat-icon>
             <select class="ssp-select" name="programRadius" [(ngModel)]="selectedCommitteeRadius"
@@ -452,6 +468,11 @@
               <option [value]="radius">{{ radius }} km</option>
               }
             </select>
+            @if (programSearchQuery()) {
+              <button type="button" class="clear-search-trigger" (mousedown)="clearProgramSearch()">
+                <mat-icon>close</mat-icon>
+              </button>
+            }
           </div>
         </div>
       </div>

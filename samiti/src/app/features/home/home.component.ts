@@ -1,4 +1,4 @@
-import { Component, inject, effect, ChangeDetectorRef, OnDestroy } from '@angular/core';
+import { Component, inject, effect, ChangeDetectorRef, OnDestroy, signal, computed } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
@@ -68,10 +68,49 @@ export class HomeComponent implements OnDestroy {
   selectedCommitteeRadius: number = 5;
   selectedProgramRadius: number = 5;
   selectedTabIndex: number = 2;
-  committeeList: CommitteesList[] = [];
+  committeeList = signal<CommitteesList[]>([]);
   copiedCommitteeId: string | null = null;
   isCommitteeListLoading: boolean = true;
   private hasAppliedDefaultPreviewExpansion = false;
+
+  public readonly committeeSearchQuery = signal<string>('');
+  public readonly programSearchQuery = signal<string>('');
+  public readonly isSearchFocused = signal<boolean>(false);
+
+  public onSearchFocus(): void { this.isSearchFocused.set(true); }
+  public onSearchBlur(): void { this.isSearchFocused.set(false); }
+  public clearSearch(): void { this.committeeSearchQuery.set(''); }
+  public clearProgramSearch(): void { this.programSearchQuery.set(''); }
+
+  public readonly filteredNearbyGroups = computed(() => {
+    const query = this.committeeSearchQuery().toLowerCase().trim();
+    const source = this.nearbyGroups;
+    if (!query) return source;
+    return source.filter(c =>
+      c.committeeName.toLowerCase().includes(query) ||
+      (c.address || '').toLowerCase().includes(query)
+    );
+  });
+
+  public readonly filteredPreviewGroups = computed(() => {
+    const query = this.committeeSearchQuery().toLowerCase().trim();
+    const source = this.previewGroups;
+    if (!query) return source;
+    return source.filter(c =>
+      c.committeeName.toLowerCase().includes(query) ||
+      (c.address || '').toLowerCase().includes(query)
+    );
+  });
+
+  public readonly filteredFavouriteGroups = computed(() => {
+    const query = this.committeeSearchQuery().toLowerCase().trim();
+    const source = this.favouriteGroups;
+    if (!query) return source;
+    return source.filter(c =>
+      c.committeeName.toLowerCase().includes(query) ||
+      (c.address || '').toLowerCase().includes(query)
+    );
+  });
 
   // 🛠️ Reactive Computed Getter: Sync changes natively across header operations
   get isLoggedIn(): boolean {
@@ -80,8 +119,8 @@ export class HomeComponent implements OnDestroy {
 
   // Show committees where logged-in user is not yet an accepted member/admin and not in favourites
   get nearbyGroups(): CommitteesList[] {
-    if (!this.isLoggedIn) return this.committeeList;
-    return this.committeeList.filter(c =>
+    if (!this.isLoggedIn) return this.committeeList();
+    return this.committeeList().filter(c =>
       this.isAuthItem(c) &&
       !this.hasCommitteeMembership(c) &&
       !c.isFavourite
@@ -103,7 +142,7 @@ export class HomeComponent implements OnDestroy {
   // and the committee is NOT marked as favourite.
   get previewGroups(): CommitteesList[] {
     if (!this.isLoggedIn) return [];
-    return this.committeeList.filter((c) => {
+    return this.committeeList().filter((c) => {
       if (!this.isAuthItem(c)) return false;
       if (c.isFavourite === 1) return false;
 
@@ -114,7 +153,7 @@ export class HomeComponent implements OnDestroy {
 
   get favouriteGroups(): CommitteesList[] {
     if (!this.isLoggedIn) return [];
-    return this.committeeList.filter(c => this.isAuthItem(c) && c.isFavourite === 1);
+    return this.committeeList().filter(c => this.isAuthItem(c) && c.isFavourite === 1);
   }
 
   // ─── Event year tabs helpers ──────────────────────────────
@@ -193,7 +232,7 @@ export class HomeComponent implements OnDestroy {
   private startCarouselAutoPlay(): void {
     this.stopCarouselAutoPlay();
     this.carouselTimer = setInterval(() => {
-      for (const committee of this.committeeList) {
+      for (const committee of this.committeeList()) {
         for (const event of committee.events) {
           if ((event.bannerImages?.length ?? 0) > 1) {
             const current = this.carouselIndices.get(event.eventId) ?? 0;
@@ -253,6 +292,13 @@ export class HomeComponent implements OnDestroy {
     this.getCommitteeListByRange();
   }
 
+  getPendingRoleLabel(pendingRole: string | null | undefined): string {
+    if (!pendingRole) return '';
+    if (pendingRole === 'COMMITTEE_ADMIN') return 'Admin Role';
+    if (pendingRole === 'COMMITTEE_MEMBER') return 'Member Role';
+    return pendingRole.replace('COMMITTEE_', '').toLowerCase() + ' Role';
+  }
+
   getCommitteeListByRange() {
 
     const locationCoords = this.userLocationCords();
@@ -272,7 +318,7 @@ export class HomeComponent implements OnDestroy {
 
     fetch$.subscribe({
       next: (res) => {
-        this.committeeList = Array.isArray(res) ? res : [res];
+        this.committeeList.set(Array.isArray(res) ? res : [res]);
         this.isCommitteeListLoading = false;
         this.startupLoaderService.markCommitteesSettled();
         this.syncExpandedPanelState();
@@ -282,7 +328,7 @@ export class HomeComponent implements OnDestroy {
       },
       error: (error) => {
         this.isCommitteeListLoading = false;
-        this.committeeList = [];
+        this.committeeList.set([]);
         this.stopCarouselAutoPlay();
         this.startupLoaderService.markCommitteesFailed();
         this.cdr.detectChanges();
@@ -295,7 +341,7 @@ export class HomeComponent implements OnDestroy {
     event.stopPropagation(); // Avoid panel toggle conflict during interaction
 
     // Find the committee details for confirmation message
-    const committee = this.committeeList.find(c => c.id === id);
+    const committee = this.committeeList().find(c => c.id === id);
     if (!committee) {
       this.notifier.error('Committee not found');
       return;
@@ -338,7 +384,7 @@ export class HomeComponent implements OnDestroy {
     event.stopPropagation(); // Avoid panel toggle conflict during interaction
 
     // Find the committee details for confirmation message
-    const committee = this.committeeList.find(c => c.id === id);
+    const committee = this.committeeList().find(c => c.id === id);
     if (!committee) {
       this.notifier.error('Committee not found');
       return;
@@ -377,7 +423,7 @@ export class HomeComponent implements OnDestroy {
 
   toggleFavouriteCommittee(committeeId: number, event: Event): void {
     event.stopPropagation();
-    const target = this.committeeList.find(g => g.id === committeeId);
+    const target = this.committeeList().find(g => g.id === committeeId);
     if (!target || !this.isAuthItem(target)) {
       return;
     }
