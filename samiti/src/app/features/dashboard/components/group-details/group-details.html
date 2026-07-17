@@ -355,7 +355,7 @@
         <div class="panel-card-header">
           <div class="header-title-left">
             <mat-icon class="icon-accent-event">event</mat-icon>
-            <span class="title-text">Events Matrix Ledger</span>
+            <span class="title-text">All Events</span>
             <span class="count-pill">{{ committeeEvents().length }}</span>
           </div>
         </div>
@@ -366,6 +366,8 @@
             <div class="event-meta-card">
               <span class="event-logo-circle circle-shape event-logo-upload"
                 [class.can-upload]="isCurrentUserMasterAdmin() || isCurrentUserAdmin()"
+                matTooltip="Change Event Logo"
+                matTooltipPosition="above"
                 (click)="onEventLogoCircleClicked(event, $event)">
                 @if (event.eventLogo) { <img [src]="event.eventLogo" [alt]="event.eventName" (error)="event.eventLogo = null" /> }
                 @else { {{ (event.eventName || '?').charAt(0).toUpperCase() }} }
@@ -383,6 +385,7 @@
                   <div class="event-title-row">
                     <span class="main-title event-main-title">{{ event.eventName | titlecase }}</span>
                     <div class="event-col-controls" (click)="$event.stopPropagation()">
+                      <span class="visibility-label">{{ event.visibility === 'VISIBLE' ? 'HIDE' : 'SHOW' }}</span>
                       <mat-slide-toggle
                         class="density-toggle"
                         [checked]="event.visibility === 'VISIBLE'"
@@ -390,7 +393,6 @@
                         [matTooltip]="event.visibility === 'VISIBLE' ? 'Event will be hidden to everyone' : 'Event will be shown to everyone'"
                         matTooltipPosition="above"
                         (change)="onEventVisibilityChange(event, $event.checked)">
-                        {{ event.visibility === 'VISIBLE' ? 'HIDE' : 'SHOW' }}
                       </mat-slide-toggle>
                     </div>
                   </div>
@@ -406,43 +408,72 @@
                     <span class="event-pill event-date-pill">
                       <span class="label">End:</span> {{ event.endDate ? (event.endDate | date:'dd MMM yyyy') : 'N/A' }}
                     </span>
+                    <span class="event-pill roles-pill">
+                      <span class="roles-dropdown-trigger-wrapper">
+                        <button type="button" class="roles-dropdown-label"
+                          [disabled]="savingRolesEventId() === event.id || (openRolesDropdownEventId() === event.id && !hasRolesChanged(event))"
+                          (click)="onRolesLabelClick(event, $event)">
+                          <span class="roles-label-text">{{ getEventDropdownLabel(event.id) }}</span>
+                          <span class="roles-label-icon">
+                            @if (savingRolesEventId() === event.id) {
+                              <mat-spinner [diameter]="16" [strokeWidth]="3"></mat-spinner>
+                            } @else if (openRolesDropdownEventId() === event.id) {
+                              <mat-icon>save</mat-icon>
+                            } @else {
+                              <mat-icon>expand_more</mat-icon>
+                            }
+                          </span>
+                        </button>
+                        <div class="roles-dropdown-panel" [class.saving]="savingRolesEventId() === event.id" *ngIf="openRolesDropdownEventId() === event.id" (click)="$event.stopPropagation()">
+                          <div class="roles-dropdown-header">Available Roles</div>
+                          <div class="roles-dropdown-list">
+                            @for (role of availableRoles(); track role.roleId) {
+                              @if (role.roleId != null) {
+                                <label class="roles-dropdown-option" [class.disabled]="savingRolesEventId() === event.id">
+                                  <input type="checkbox"
+                                    [checked]="isRoleSelected(event, role.roleId)"
+                                    [disabled]="savingRolesEventId() === event.id"
+                                    (change)="onRoleCheckboxChange(event, role.roleId, $event.target.checked)" />
+                                  <span class="roles-option-label">{{ getRoleDisplayName(role) }}</span>
+                                </label>
+                              }
+                            }
+                          </div>
+                        </div>
+                      </span>
+                    </span>
                   </div>
                 </div>
               </div>
             </div>
 
-              @if (event.designationPhotos && event.designationPhotos.length) {
-                <div class="event-designation-strip" (click)="$event.stopPropagation()">
-                  @for (dp of event.designationPhotos; track dp.userId) {
-                    <div class="designation-chip">
-                      <span class="designation-avatar circle-shape">
-                        @if (dp.photo) { <img [src]="dp.photo" [alt]="dp.name" (error)="dp.photo = null" /> }
-                        @else { {{ (dp.name || '?').charAt(0).toUpperCase() }} }
-                      </span>
-                      <span class="designation-name">{{ dp.designation | titlecase }}</span>
-                    </div>
-                  }
-                </div>
-              } @else {
+            <div class="event-designation-area">
+              @if (event.mappedVotingRoles && event.mappedVotingRoles.length) {
                 <div class="event-designation-placeholder">
-                  @for (slot of defaultDesignationSlots; track slot.role) {
+                  @for (role of event.mappedVotingRoles; track role.roleId) {
                     <span class="designation-avatar circle-shape empty designation-upload-slot"
-                      (click)="onDesignationPhotoSlotClicked(event.id, slot.role, $event)">
-                      @if (getDesignationPhoto(event.id, slot.role); as photoUrl) {
-                        <img [src]="photoUrl" [alt]="slot.role" />
+                      (click)="onDesignationPhotoSlotClicked(event.id, role.roleId, $event)">
+                      @if (getDesignationPhoto(event.id, role.roleId); as photoUrl) {
+                        <img [src]="photoUrl" [alt]="role.roleName" />
                       } @else {
                         <mat-icon class="photo-slot-icon">add_a_photo</mat-icon>
-                        <span class="photo-slot-label">{{ slot.label }}</span>
+                        <span class="photo-slot-label">{{ getRoleDisplayName(role) }}</span>
                       }
                       <span class="photo-edit-overlay" aria-hidden="true">
                         <mat-icon>edit</mat-icon>
                       </span>
                       <input #designationPhotoInput type="file" hidden accept="image/*"
-                        (change)="onDesignationPhotoSelected(event.id, slot.role, $event)" />
+                        (change)="onDesignationPhotoSelected(event.id, role.roleId, $event)" />
                     </span>
                   }
                 </div>
+              } @else {
+                <div class="no-roles-mapped-message">
+                  <mat-icon class="no-roles-icon">info</mat-icon>
+                  <span class="no-roles-text">No roles mapped for this event</span>
+                </div>
               }
+            </div>
             </div>
           } @empty {
             <div class="mini-empty-state">No active dynamic events configured yet.</div>

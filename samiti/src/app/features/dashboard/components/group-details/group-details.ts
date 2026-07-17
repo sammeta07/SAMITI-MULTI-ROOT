@@ -1,4 +1,4 @@
-import { Component, inject, OnInit, signal, computed } from '@angular/core';
+import { Component, inject, OnInit, signal, computed, HostListener } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
@@ -17,6 +17,7 @@ import { firstValueFrom } from 'rxjs';
 import { GroupDetailsService } from './group-details.service';
 import { NotifierService } from '../../../../shared/notifier/notifier.service';
 import { CancelCommitteeMembershipRequestPayload, CommitteeEventListItem, CommitteeProfileMeta, CommitteeRosterMember, CommitteeDetailsPayload, SubmitCommitteeMembershipRequestPayload } from './group-details.models';
+import { EventAvailableRole, EventMappedVotingRole } from '../event-details/event-details.models';
 import { ConfirmDialogService } from '../../../../components/dialog/confirm/confirm-dialog.service';
 import { ConfirmDialogData } from '../../../../components/dialog/confirm/confirm-dialog.models';
 import { CreateEventDialogComponent } from '../../../../components/dialog/create-event/create-event.component';
@@ -51,6 +52,15 @@ import { ImageCropperDialogComponent } from '../../../../shared/components/image
   styleUrl: './group-details.scss'
 })
 export class GroupDetailsComponent implements OnInit {
+  @HostListener('document:click', ['$event'])
+  onDocumentClick(event: Event): void {
+    if (this.openRolesDropdownEventId() !== null) {
+      const target = event.target as HTMLElement;
+      if (!target.closest('.roles-dropdown-trigger-wrapper')) {
+        this.closeRolesDropdown();
+      }
+    }
+  }
   private readonly route = inject(ActivatedRoute);
   private readonly router = inject(Router);
   private readonly notifier = inject(NotifierService);
@@ -75,6 +85,10 @@ export class GroupDetailsComponent implements OnInit {
   public readonly userCommitteeRole = signal<'COMMITTEE_MEMBER' | 'COMMITTEE_ADMIN' | 'COMMITTEE_MASTER_ADMIN' | null>(null);
   public readonly groupData = signal<CommitteeProfileMeta | null>(null);
   public readonly committeeEvents = signal<CommitteeEventListItem[]>([]);
+  public readonly availableRoles = signal<EventAvailableRole[]>([]);
+  public readonly openRolesDropdownEventId = signal<number | null>(null);
+  public readonly savingRolesEventId = signal<number | null>(null);
+  public readonly rolesSnapshot = signal<{ eventId: number; roles: EventMappedVotingRole[] } | null>(null);
   
   public readonly masterAdminsList = signal<CommitteeRosterMember[]>([]);
   public readonly adminsList = signal<CommitteeRosterMember[]>([]);
@@ -212,17 +226,17 @@ export class GroupDetailsComponent implements OnInit {
 
   private readonly designationPhotos = signal<Record<string, string>>({});
 
-  public getDesignationPhoto(eventId: number, role: string): string | undefined {
+  public getDesignationPhoto(eventId: number, role: number | string): string | undefined {
     return this.designationPhotos()[`${eventId}:${role}`];
   }
 
-  public onDesignationPhotoSlotClicked(eventId: number, role: string, event: Event): void {
+  public onDesignationPhotoSlotClicked(eventId: number, role: number | string, event: Event): void {
     event.stopPropagation();
     const host = (event.currentTarget as HTMLElement).querySelector('input[type="file"]') as HTMLInputElement | null;
     host?.click();
   }
 
-  public async onDesignationPhotoSelected(eventId: number, role: string, event: Event): Promise<void> {
+  public async onDesignationPhotoSelected(eventId: number, role: number | string, event: Event): Promise<void> {
     event.stopPropagation();
     const inputElement = event.target as HTMLInputElement;
     const selectedFile = inputElement.files?.[0] || null;
@@ -415,7 +429,120 @@ export class GroupDetailsComponent implements OnInit {
     this.notifier.warn(`Edit event flow is not available yet for "${eventItem.eventName}".`);
   }
 
-  private toTitleCase(value: string): string {
+  public getSelectedRoleIds(event: CommitteeEventListItem): number[] {
+    return (event.mappedVotingRoles || []).map((r) => r.roleId);
+  }
+
+  public isRoleSelected(event: CommitteeEventListItem, roleId: number | null | undefined): boolean {
+    if (!roleId) return false;
+    return (event.mappedVotingRoles || []).some((r) => r.roleId === roleId);
+  }
+
+  public onRolesLabelClick(eventItem: CommitteeEventListItem, $event: Event): void {
+    $event.stopPropagation();
+    if (this.savingRolesEventId() === eventItem.eventId) return;
+    if (this.openRolesDropdownEventId() === eventItem.eventId) {
+      this.saveRolesForEvent(eventItem);
+    } else {
+      this.toggleRolesDropdown(eventItem.eventId, $event);
+    }
+  }
+
+  public toggleRolesDropdown(eventId: number, $event: Event): void {
+    $event.stopPropagation();
+    const isOpening = this.openRolesDropdownEventId() !== eventId;
+    this.openRolesDropdownEventId.update((current) => current === eventId ? null : eventId);
+    if (isOpening) {
+      const eventItem = this.committeeEvents().find((e) => e.eventId === eventId);
+      this.rolesSnapshot.set({
+        eventId,
+        roles: (eventItem?.mappedVotingRoles || []).map((r) => ({ ...r, nominees: [...r.nominees] }))
+      });
+    }
+  }
+
+  public async saveRolesForEvent(eventItem: CommitteeEventListItem): Promise<void> {
+    const changed = this.hasRolesChanged(eventItem);
+    if (!changed) {
+      this.openRolesDropdownEventId.set(null);
+      this.rolesSnapshot.set(null);
+      return;
+    }
+    const selectedRoleIds = (eventItem.mappedVotingRoles || []).map((r) => r.roleId);
+    this.savingRolesEventId.set(eventItem.eventId);
+    try {
+      await firstValueFrom(
+        this.groupDetailsService.updateEventVotingRoles(eventItem.eventId, selectedRoleIds)
+      );
+      this.openRolesDropdownEventId.set(null);
+      this.rolesSnapshot.set(null);
+    } catch (err) {
+      this.notifier.error(err instanceof Error ? err.message : 'Failed to save roles');
+    } finally {
+      this.savingRolesEventId.set(null);
+    }
+  }
+
+  public hasRolesChanged(eventItem: CommitteeEventListItem): boolean {
+    const snapshot = this.rolesSnapshot();
+    if (!snapshot || snapshot.eventId !== eventItem.eventId) return false;
+    const currentIds = (eventItem.mappedVotingRoles || []).map((r) => r.roleId).sort((a, b) => a - b);
+    const originalIds = snapshot.roles.map((r) => r.roleId).sort((a, b) => a - b);
+    if (currentIds.length !== originalIds.length) return true;
+    return currentIds.some((id, idx) => id !== originalIds[idx]);
+  }
+
+  public closeRolesDropdown(): void {
+    const snapshot = this.rolesSnapshot();
+    if (snapshot) {
+      this.committeeEvents.update((currentEvents) =>
+        currentEvents.map((ev) => {
+          if (ev.eventId !== snapshot.eventId) return ev;
+          return { ...ev, mappedVotingRoles: snapshot.roles.map((r) => ({ ...r, nominees: [...r.nominees] })) };
+        })
+      );
+    }
+    this.openRolesDropdownEventId.set(null);
+    this.rolesSnapshot.set(null);
+  }
+
+  public onRoleCheckboxChange(eventItem: CommitteeEventListItem, roleId: number | null | undefined, checked: boolean): void {
+    if (!roleId || this.savingRolesEventId() === eventItem.eventId) return;
+    const availableRole = this.availableRoles().find((r) => r.roleId === roleId);
+    const newRole = {
+      roleId,
+      roleName: availableRole?.roleName || '',
+      hindiName: availableRole?.hindiName || null,
+      englishName: availableRole?.englishName || null,
+      sortOrder: 0,
+      nominationCount: 0,
+      isNominatedByCurrentUser: false,
+      nominees: []
+    };
+    this.committeeEvents.update((currentEvents) =>
+      currentEvents.map((ev) => {
+        if (ev.eventId !== eventItem.eventId) return ev;
+        const currentRoles = ev.mappedVotingRoles || [];
+        const updatedRoles = checked
+          ? [...currentRoles, newRole]
+          : currentRoles.filter((r) => r.roleId !== roleId);
+        return { ...ev, mappedVotingRoles: updatedRoles };
+      })
+    );
+  }
+
+  public getEventDropdownLabel(eventId: number): string {
+    if (this.savingRolesEventId() === eventId) return '';
+    return this.openRolesDropdownEventId() === eventId ? 'Save Changes' : 'Please Select Roles';
+  }
+
+  public getRoleDisplayName(role: EventAvailableRole | EventMappedVotingRole): string {
+    const english = this.toTitleCase((role.englishName || role.roleName || '').replace(/_/g, ' '));
+    const hindi = role.hindiName ? this.toTitleCase(role.hindiName.replace(/_/g, ' ')) : null;
+    return hindi ? `${hindi} / ${english}` : english;
+  }
+
+  public toTitleCase(value: string): string {
     return value
       .toLowerCase()
       .replace(/\s+/g, ' ')
@@ -472,6 +599,8 @@ export class GroupDetailsComponent implements OnInit {
           } else {
             this.committeeEvents.set([]);
           }
+
+          this.availableRoles.set(data.availableRoles || []);
 
         } else {
           this.notifier.error('Failed to parse committee details.');

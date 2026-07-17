@@ -46,6 +46,7 @@ export interface CommitteeEventListItem {
   updatedBy?: number | null;
   createdAt?: string | null;
   designationPhotos?: EventDesignationPhoto[];
+  mappedVotingRoles: EventMappedVotingRole[];
 }
 
 export interface UpdatedEventVisibilityPayload {
@@ -79,7 +80,6 @@ export interface CommitteeDetailsPayload {
   members: CommitteeRosterMember[];
   events: CommitteeEventListItem[];
   availableRoles: EventAvailableRole[];
-  mappedVotingRoles: EventMappedVotingRole[];
 }
 
 export interface SubmitCommitteeMembershipRequestPayload {

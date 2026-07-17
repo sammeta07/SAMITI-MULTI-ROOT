@@ -4,6 +4,7 @@ import { Observable } from 'rxjs';
 import { map } from 'rxjs/operators';
 import { environment } from '../../../../../environments/environment';
 import { CancelCommitteeMembershipRequestPayload, CommitteeDetailsPayload, CommitteeEventListItem, CommitteeMembershipRequestRole, CommitteeProfileMeta, DeletedEventPayload, SubmitCommitteeMembershipRequestPayload, UpdatedEventVisibilityPayload } from './group-details.models';
+import { EventMappedVotingRole } from '../event-details/event-details.models';
 import { CommitteeMembershipRequestService } from '../../../../core/services/committee-membership-request.service';
 import { sanitizeCloudinaryLogoUrl } from '../../../../shared/services/cloudinary-logo.util';
 
@@ -64,6 +65,21 @@ export class GroupDetailsService {
           createdBy
           updatedBy
           createdAt
+          mappedVotingRoles {
+            roleId
+            roleName
+            hindiName
+            englishName
+            sortOrder
+            nominationCount
+            isNominatedByCurrentUser
+            nominees {
+              userId
+              name
+              email
+              photo
+            }
+          }
         }
         availableRoles {
           roleId
@@ -71,21 +87,6 @@ export class GroupDetailsService {
           roleCode
           hindiName
           englishName
-        }
-        mappedVotingRoles {
-          roleId
-          roleName
-          hindiName
-          englishName
-          sortOrder
-          nominationCount
-          isNominatedByCurrentUser
-          nominees {
-            userId
-            name
-            email
-            photo
-          }
         }
       }
     }`;
@@ -129,6 +130,43 @@ export class GroupDetailsService {
       { withCredentials: true }
     ).pipe(
       map((res) => res.data.updateEventVisibility)
+    );
+  }
+
+  public updateEventVotingRoles(eventId: number, roleIds: number[]): Observable<{ eventId: number; mappedVotingRoles: EventMappedVotingRole[] }> {
+    const query = `mutation UpdateEventVotingRoles($eventId: Int!, $roleIds: [Int!]!) {
+      updateEventVotingRoles(eventId: $eventId, roleIds: $roleIds) {
+        eventId
+        mappedVotingRoles {
+          roleId
+          roleName
+          hindiName
+          englishName
+          sortOrder
+          nominationCount
+          isNominatedByCurrentUser
+          nominees {
+            userId
+            name
+            email
+            photo
+          }
+        }
+      }
+    }`;
+
+    return this.http.post<{ data: { updateEventVotingRoles: { eventId: number; mappedVotingRoles: EventMappedVotingRole[] } } }>(
+      this.graphqlUrl,
+      {
+        query,
+        variables: {
+          eventId,
+          roleIds
+        }
+      },
+      { withCredentials: true }
+    ).pipe(
+      map((res) => res.data.updateEventVotingRoles)
     );
   }
 
