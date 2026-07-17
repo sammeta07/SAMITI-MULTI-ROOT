@@ -159,7 +159,7 @@
             <h3 class="committee-display-name">{{ groupData()?.committeeName | titlecase }}</h3>
           </div>
           <div class="card-location-row">
-            <span class="location-text-trim">{{ groupData()?.address | textFormatPipe:'sentence' }}</span>
+            <span class="location-text-trim">{{ groupData()?.address | textFormatPipe:'title' }}</span>
           </div>
         </div>
 
@@ -175,9 +175,6 @@
             </div>
             }
             <span class="meta-pill text-muted-badge since-year-badge logo-est-badge">Est. {{ groupData()?.establishYear }}</span>
-            <span class="user-role-badge" [ngClass]="currentUserRoleBadgeClass()">
-              <mat-icon class="role-badge-icon">verified</mat-icon>{{ currentUserRoleLabel() }}
-            </span>
             <div class="committee-id-pill">
               <span>ID: {{ committeeIdString() }}</span>
               <button mat-icon-button type="button" class="copy-id-btn"
@@ -190,17 +187,26 @@
                 }
               </button>
             </div>
+            @if (isCurrentUserPending()) {
+              <span class="user-role-badge badge-pending"
+                [matTooltip]="'Pending Approval For ' + (userRequestRole()?.replaceAll('_', ' ') | textFormatPipe:'title')"
+                matTooltipPosition="above">
+                PENDING
+              </span>
+            }
+            <span class="user-role-badge" [ngClass]="currentUserRoleBadgeClass()">
+              <mat-icon class="role-badge-icon">verified</mat-icon>{{ currentUserRoleLabel() }}
+            </span>
           </div>
 
           <div class="directions-status-row">
             @if (isCurrentUserMember() || (!userCommitteeRole() && !isCurrentUserPending())) {
               @if (isCurrentUserPending()) {
                 <button mat-stroked-button 
-        class="action-btn delete-btn" 
-        [matTooltip]="'Pending Approval For ' + (userRequestRole() | textFormatPipe:'title')"
+        class="action-btn delete-btn"
         matTooltipPosition="above" 
         (click)="onCancelAdminRoleRequest()">
-  <mat-icon>cancel</mat-icon>Cancel Request
+  <mat-icon>cancel</mat-icon>Cancel
 </button>
               } @else {
                 <button mat-stroked-button class="action-btn" (click)="onRequestAdminRole()">
@@ -442,6 +448,13 @@
                         </div>
                       </span>
                     </span>
+                    <button type="button" class="event-lock-roles-btn"
+                      [disabled]="!(event.mappedVotingRoles && event.mappedVotingRoles.length > 0) || openRolesDropdownEventId() === event.id"
+                      matTooltip="Lock voting role selection for this event" matTooltipPosition="above"
+                      (click)="onLockEventRoles(event); $event.stopPropagation()">
+                      <mat-icon class="event-lock-roles-icon">lock</mat-icon>
+                      <span>Lock</span>
+                    </button>
                   </div>
                 </div>
               </div>
@@ -479,7 +492,10 @@
             </div>
             </div>
           } @empty {
-            <div class="mini-empty-state">No active dynamic events configured yet.</div>
+            <div class="mini-empty-state">
+              <mat-icon class="mini-empty-icon">event_busy</mat-icon>
+              <span class="mini-empty-text">No active dynamic events configured yet.</span>
+            </div>
           }
         </div>
       </section>

@@ -153,38 +153,41 @@
                         }
                       </button>
                     </div>
+                    @if (isAuth) {
+                      @if (committee.status === 'PENDING' && committee.pendingRequestRole) {
+                        <span class="user-role-badge badge-pending"
+                          [matTooltip]="'Pending Approval For' +' ' + getPendingRoleLabel(committee.pendingRequestRole)"
+                          matTooltipPosition="above">
+                          {{committee.status}}
+                        </span>
+                      }
+                      @if (committee.committeeRole === 'COMMITTEE_MASTER_ADMIN') {
+                        <span class="user-role-badge badge-master-admin">
+                          <mat-icon class="role-badge-icon">verified</mat-icon>MASTER ADMIN
+                        </span>
+                      }
+                      @if (committee.committeeRole === 'COMMITTEE_ADMIN') {
+                        <span class="user-role-badge badge-admin">
+                          <mat-icon class="role-badge-icon">verified</mat-icon>ADMIN
+                        </span>
+                      }
+                      @if (committee.committeeRole === 'COMMITTEE_MEMBER') {
+                        <span class="user-role-badge badge-member">
+                          <mat-icon class="role-badge-icon">verified</mat-icon>MEMBER
+                        </span>
+                      }
+                    }
                   </div>
 
                    <div class="directions-status-row">
                      @if (isAuth) {
                        @if (committee.status === 'PENDING' && committee.pendingRequestRole) {
-                        <span class="user-role-badge badge-pending"
-                          [matTooltip]="getPendingRoleLabel(committee.pendingRequestRole) + ' Pending'"
-                          matTooltipPosition="above">
-                          {{committee.status}}
-                        </span>
                         <button mat-stroked-button type="button" class="action-btn delete-btn"
                           (click)="cancelRequest(committee.id, $event)">
                           <mat-icon>cancel</mat-icon>
                           <span>Cancel</span>
                         </button>
                        }
-                       @if (committee.committeeRole === 'COMMITTEE_MASTER_ADMIN') {
-                         <span class="user-role-badge badge-master-admin">
-                           <mat-icon class="role-badge-icon">verified</mat-icon>MASTER ADMIN
-                         </span>
-                       }
-                       @if (committee.committeeRole === 'COMMITTEE_ADMIN') {
-                         <span class="user-role-badge badge-admin">
-                           <mat-icon class="role-badge-icon">verified</mat-icon>ADMIN
-                         </span>
-                       }
-                       @if (committee.committeeRole === 'COMMITTEE_MEMBER') {
-                         <span class="user-role-badge badge-member">
-                           <mat-icon class="role-badge-icon">verified</mat-icon>MEMBER
-                         </span>
-                       }
-
                        @if (!committee.committeeRole && committee.status !== 'PENDING') {
                          <button mat-flat-button type="button" class="join-committee-btn"
                            (click)="onRequestMemberRole(committee.id, $event)">

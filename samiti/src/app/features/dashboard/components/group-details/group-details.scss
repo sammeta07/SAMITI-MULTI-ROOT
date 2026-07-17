@@ -286,7 +286,11 @@
     display: inline-flex !important; align-items: center !important; gap: 4px !important;
     background: #ffffff; border: 1px solid #cbd5e1 !important; color: #334155 !important;
     white-space: nowrap; flex-shrink: 0;
-    mat-icon { font-size: 0.95rem !important; width: 0.8rem !important; height: 0.8rem !important; }
+    mat-icon {
+      font-size: 1rem !important; width: 1rem !important; height: 1rem !important;
+      line-height: 1rem !important; overflow: visible !important;
+      display: inline-flex !important; align-items: center !important; justify-content: center !important;
+    }
     &:hover:not(:disabled) { background: #f8fafc !important; border-color: #94a3b8 !important; }
     &:disabled { opacity: 0.5; cursor: not-allowed; }
   }
@@ -330,7 +334,7 @@
     color: #1e293b;
 
     mat-icon { font-size: 1.35rem; width: 1.35rem; height: 1.35rem; }
-    .icon-accent-event { color: #10b981; }
+    .icon-accent-event { color: inherit; }
     .icon-accent-master { color: #ef4444; font-size: 1.7rem; width: 1.5rem; height: 1.5rem; } // 🚀 NEW
     .icon-accent-admin { color: #10b981; font-size: 1.7rem; width: 1.5rem; height: 1.5rem; }
     .icon-accent-member { color: #1e40af; font-size: 1.7rem; width: 1.5rem; height: 1.5rem; }
@@ -390,9 +394,31 @@
 .horizontal-list-container .mini-empty-state {
   flex: 1;
   display: flex;
+  flex-direction: column;
   align-items: center;
   justify-content: center;
+  gap: 10px;
   min-height: 110px;
+  margin: 8px;
+  padding: 24px 16px;
+  border: 2px dashed #cbd5e1;
+  border-radius: 12px;
+  background: #f8fafc;
+  text-align: center;
+
+  .mini-empty-icon {
+    font-size: 2.4rem;
+    width: 2.4rem;
+    height: 2.4rem;
+    line-height: 2.4rem;
+    color: #94a3b8;
+  }
+
+  .mini-empty-text {
+    color: #64748b;
+    font-size: 0.9rem;
+    font-weight: 500;
+  }
 }
 
 .event-aligned-row {
@@ -526,6 +552,13 @@
   margin-top: 4px;
   flex: 1 1 auto;
   min-height: 0;
+  overflow-x: auto;
+  overflow-y: hidden;
+  padding-bottom: 2px;
+  max-width: 100%;
+
+  &::-webkit-scrollbar { height: 3px; }
+  &::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 2px; }
 }
 
 /* Designation area wrapper — grows to fill remaining card height */
@@ -700,11 +733,53 @@
   display: inline-flex;
 }
 
+.event-lock-roles-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  height: 34px;
+  padding: 0 12px;
+  font-size: 0.85rem;
+  font-weight: 600;
+  line-height: 1.2;
+  color: #334155;
+  background: #f1f5f9;
+  border: 1px solid #cbd5e1;
+  border-radius: 6px;
+  cursor: pointer;
+  white-space: nowrap;
+  box-sizing: border-box;
+  transition: background 0.15s ease, border-color 0.15s ease, opacity 0.15s ease;
+
+  &:hover:not(:disabled) {
+    background: #e2e8f0;
+    border-color: #94a3b8;
+  }
+
+  &:disabled {
+    opacity: 0.65;
+    cursor: not-allowed;
+  }
+
+  .event-lock-roles-icon {
+    font-size: 1.05rem;
+    width: 1.05rem;
+    height: 1.05rem;
+    line-height: 1.05rem;
+    overflow: visible;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+  }
+}
+
 .roles-dropdown-label {
   display: inline-flex;
   align-items: center;
   justify-content: space-between;
-  width: 260px;
+  width: 200px;
   height: 34px;
   padding: 0 12px;
   font-size: 0.85rem;

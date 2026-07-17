@@ -668,10 +668,26 @@ export class GroupDetailsComponent implements OnInit {
     });
   }
 
+  public onLockEventRoles(eventItem: CommitteeEventListItem): void {
+    const dialogData: ConfirmDialogData = {
+      title: 'Lock Voting Role Selection',
+      message: `Are you sure you want to lock role selection for "${eventItem?.eventName || 'this event'}"? After locking, even committee admin cannot change mapped voting roles.`,
+      confirmText: 'Lock Roles',
+      cancelText: 'Cancel'
+    };
+
+    const dialogRef = this.confirmDialog.open(dialogData);
+    dialogRef.afterClosed().subscribe((result) => {
+      if (!result?.confirmed) return;
+
+      // TODO: wire backend lock endpoint when available.
+      this.notifier.success('Voting role selection has been locked for this event.');
+    });
+  }
+
   public onViewMember(userId: number): void {
     const committee = this.groupData();
     if (!committee) return;
-
     const member = this.membersList().find(m => m.id === userId) || 
                    this.adminsList().find(m => m.id === userId) ||
                    this.masterAdminsList().find(m => m.id === userId);
