@@ -138,7 +138,7 @@
             <input #committeeLogoInput type="file" hidden accept="image/*" (change)="onCommitteeLogoSelected($event)">
             <button type="button" class="committee-logo-edit-trigger"
               (click)="committeeLogoInput.click()" [disabled]="isUploadingCommitteeLogo() || !isCurrentUserMasterAdmin()"
-              matTooltip="Change committee logo" matTooltipPosition="above"
+              matTooltip="Change Committee Logo" matTooltipPosition="above"
               aria-label="Change committee logo">
               <ng-container [ngTemplateOutlet]="committeeLogoContent"></ng-container>
               <span class="logo-edit-overlay" aria-hidden="true">
@@ -197,7 +197,7 @@
               @if (isCurrentUserPending()) {
                 <button mat-stroked-button 
         class="action-btn delete-btn" 
-        [matTooltip]="'Pending Approval for ' + (userRequestRole() | textFormatPipe:'title')"
+        [matTooltip]="'Pending Approval For ' + (userRequestRole() | textFormatPipe:'title')"
         matTooltipPosition="above" 
         (click)="onCancelAdminRoleRequest()">
   <mat-icon>cancel</mat-icon>Cancel Request
@@ -216,7 +216,7 @@
                 <mat-icon>delete</mat-icon>Delete
               </button>
               <button mat-stroked-button class="action-btn create-event-btn" (click)="onCreateEvent('PUBLIC')"  [disabled] = "!isCurrentUserMasterAdmin()"
-                matTooltip="Launch a visible public event entry container">
+                matTooltip="Launch A Visible Public Event Entry Container">
                 <mat-icon>add</mat-icon>Public Event
               </button>
               }
@@ -408,12 +408,12 @@
                     <span class="event-pill event-date-pill">
                       <span class="label">End:</span> {{ event.endDate ? (event.endDate | date:'dd MMM yyyy') : 'N/A' }}
                     </span>
-                    <span class="event-pill roles-pill">
+                    <span class="roles-pill">
                       <span class="roles-dropdown-trigger-wrapper">
                         <button type="button" class="roles-dropdown-label"
                           [disabled]="savingRolesEventId() === event.id || (openRolesDropdownEventId() === event.id && !hasRolesChanged(event))"
                           (click)="onRolesLabelClick(event, $event)">
-                          <span class="roles-label-text">{{ getEventDropdownLabel(event.id) }}</span>
+                          <span class="roles-label-text">{{ getEventDropdownLabel(event.id) }}<span class="required-star" *ngIf="openRolesDropdownEventId() !== event.id">*</span></span>
                           <span class="roles-label-icon">
                             @if (savingRolesEventId() === event.id) {
                               <mat-spinner [diameter]="16" [strokeWidth]="3"></mat-spinner>
@@ -457,7 +457,10 @@
                         <img [src]="photoUrl" [alt]="role.roleName" />
                       } @else {
                         <mat-icon class="photo-slot-icon">add_a_photo</mat-icon>
-                        <span class="photo-slot-label">{{ getRoleDisplayName(role) }}</span>
+                        <span class="photo-slot-label">
+                          <span class="role-name-hindi">{{ role.hindiName ? role.hindiName.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase()) : '' }}</span>
+                          <span class="role-name-english">{{ (role.englishName || role.roleName || '').replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase()) }}</span>
+                        </span>
                       }
                       <span class="photo-edit-overlay" aria-hidden="true">
                         <mat-icon>edit</mat-icon>

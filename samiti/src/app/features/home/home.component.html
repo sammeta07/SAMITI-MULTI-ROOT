@@ -133,7 +133,7 @@
                       </span>
                       }
                     </div>
-                    <span class="meta-pill text-muted-badge since-year-badge">Since {{ committee.establishYear }}</span>
+                    <span class="meta-pill text-muted-badge since-year-badge">Est. {{ committee.establishYear }}</span>
                     <div class="committee-id-pill">
                       <span>ID: {{ committee.id }}</span>
                       <button mat-icon-button type="button" class="copy-id-btn"
@@ -151,13 +151,21 @@
                   <div class="directions-status-row">
                     @if (isAuth) {
                       @if (committee.committeeRole === 'COMMITTEE_MASTER_ADMIN') {
-                        <span class="badge-pill admin-pill">MASTER ADMIN</span>
+                        <span class="user-role-badge badge-master-admin">
+                          <mat-icon class="role-badge-icon">verified</mat-icon>MASTER ADMIN
+                        </span>
                       } @else if (committee.committeeRole === 'COMMITTEE_ADMIN') {
-                        <span class="badge-pill admin-role-pill">ADMIN</span>
+                        <span class="user-role-badge badge-admin">
+                          <mat-icon class="role-badge-icon">verified</mat-icon>ADMIN
+                        </span>
                       } @else if (committee.committeeRole === 'COMMITTEE_MEMBER') {
-                        <span class="badge-pill member-pill">MEMBER</span>
+                        <span class="user-role-badge badge-member">
+                          <mat-icon class="role-badge-icon">verified</mat-icon>MEMBER
+                        </span>
                       } @else if (committee.status === 'PENDING') {
-                        <span class="badge-pill pending-pill">{{ committee.pendingRequestRole + '-' + committee.status }}</span>
+                        <span class="user-role-badge badge-pending">
+                          <mat-icon class="role-badge-icon">verified</mat-icon>{{ committee.pendingRequestRole + '-' + committee.status }}
+                        </span>
                         <button mat-button type="button" class="cancel-request-btn"
                           (click)="cancelRequest(committee.id, $event)">
                           <mat-icon>close</mat-icon>

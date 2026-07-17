@@ -532,7 +532,7 @@ export class GroupDetailsComponent implements OnInit {
   }
 
   public getEventDropdownLabel(eventId: number): string {
-    if (this.savingRolesEventId() === eventId) return '';
+    if (this.savingRolesEventId() === eventId) return 'Saving Changes...';
     return this.openRolesDropdownEventId() === eventId ? 'Save Changes' : 'Please Select Roles';
   }
 
