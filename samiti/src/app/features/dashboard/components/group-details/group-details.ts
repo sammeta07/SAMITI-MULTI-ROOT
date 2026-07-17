@@ -88,6 +88,7 @@ export class GroupDetailsComponent implements OnInit {
   public readonly availableRoles = signal<EventAvailableRole[]>([]);
   public readonly openRolesDropdownEventId = signal<number | null>(null);
   public readonly savingRolesEventId = signal<number | null>(null);
+  public readonly isLockingVotingRoles = signal<boolean>(false);
   public readonly rolesSnapshot = signal<{ eventId: number; roles: EventMappedVotingRole[] } | null>(null);
   
   public readonly masterAdminsList = signal<CommitteeRosterMember[]>([]);
@@ -669,6 +670,26 @@ export class GroupDetailsComponent implements OnInit {
   }
 
   public onLockEventRoles(eventItem: CommitteeEventListItem): void {
+    if (!eventItem?.eventId) {
+      this.notifier.error('No event available for role locking');
+      return;
+    }
+
+    if (!(this.isCurrentUserMasterAdmin() || this.isCurrentUserAdmin())) {
+      this.notifier.error('Only committee admin can lock event voting roles');
+      return;
+    }
+
+    const mappedRoleCount = eventItem.mappedVotingRoles?.length ?? 0;
+    if (mappedRoleCount === 0) {
+      this.notifier.warn('Select and save at least one role before locking voting role selection.');
+      return;
+    }
+
+    if (this.savingRolesEventId() === eventItem.eventId || this.isLockingVotingRoles()) {
+      return;
+    }
+
     const dialogData: ConfirmDialogData = {
       title: 'Lock Voting Role Selection',
       message: `Are you sure you want to lock role selection for "${eventItem?.eventName || 'this event'}"? After locking, even committee admin cannot change mapped voting roles.`,
@@ -680,8 +701,22 @@ export class GroupDetailsComponent implements OnInit {
     dialogRef.afterClosed().subscribe((result) => {
       if (!result?.confirmed) return;
 
-      // TODO: wire backend lock endpoint when available.
-      this.notifier.success('Voting role selection has been locked for this event.');
+      this.isLockingVotingRoles.set(true);
+      this.groupDetailsService.lockEventVotingRoles(eventItem.eventId).subscribe({
+        next: () => {
+          this.committeeEvents.update((currentEvents) =>
+            currentEvents.map((ev) =>
+              ev.eventId === eventItem.eventId ? { ...ev, votingRolesLocked: 1 } : ev
+            )
+          );
+          this.notifier.success('Voting role selection has been locked for this event.');
+          this.isLockingVotingRoles.set(false);
+        },
+        error: (err: HttpErrorResponse) => {
+          this.notifier.error(err?.error?.message || 'Failed to lock voting role selection.');
+          this.isLockingVotingRoles.set(false);
+        }
+      });
     });
   }
 

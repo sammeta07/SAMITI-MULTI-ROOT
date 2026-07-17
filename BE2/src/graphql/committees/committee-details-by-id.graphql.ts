@@ -1,6 +1,34 @@
 import { query } from '../../config/db';
 import { RowDataPacket } from 'mysql2/promise';
 import { hasEventsDisplayNameColumn } from '../events/event-display-name-support';
+import { hasEventsVotingRolesLockedColumn } from '../events/event-voting-roles-lock-support';
+import { hasEventsVotingPhaseStateColumn } from '../events/event-voting-phase-support';
+
+async function hasEventsVotingEnabledColumn(): Promise<boolean> {
+  const rows = await query<any[]>(
+    `SELECT 1 AS column_exists
+     FROM INFORMATION_SCHEMA.COLUMNS
+     WHERE TABLE_SCHEMA = DATABASE()
+       AND TABLE_NAME = 'events'
+       AND COLUMN_NAME = 'voting_enabled'
+     LIMIT 1`
+  );
+
+  return rows.length > 0;
+}
+
+async function hasEventsVotingClosedColumn(): Promise<boolean> {
+  const rows = await query<any[]>(
+    `SELECT 1 AS column_exists
+     FROM INFORMATION_SCHEMA.COLUMNS
+     WHERE TABLE_SCHEMA = DATABASE()
+       AND TABLE_NAME = 'events'
+       AND COLUMN_NAME = 'voting_closed'
+     LIMIT 1`
+  );
+
+  return rows.length > 0;
+}
 
 const normalizeContactNumbers = (rawContactNumbers: unknown): string[] => {
   if (Array.isArray(rawContactNumbers)) {
@@ -226,6 +254,10 @@ export const committeeDetailsTypes = `
     updatedBy: Int
     createdAt: String
     mappedVotingRoles: [EventMappedVotingRole!]!
+    votingRolesLocked: Int
+    votingEnabled: Int
+    votingClosed: Int
+    votingPhaseState: Int
   }
 
   type CommitteeDetailsData {
@@ -329,6 +361,10 @@ export const committeeDetailsResolvers = {
           String(adminCheckResult[0].committee_role || '') === 'COMMITTEE_MASTER_ADMIN');
 
       const supportsEventDisplayName = await hasEventsDisplayNameColumn();
+      const supportsVotingRolesLocked = await hasEventsVotingRolesLockedColumn();
+      const supportsVotingPhaseState = await hasEventsVotingPhaseStateColumn();
+      const supportsVotingEnabled = await hasEventsVotingEnabledColumn();
+      const supportsVotingClosed = await hasEventsVotingClosedColumn();
 
       const eventRows = await query<any[]>(`
         SELECT
@@ -347,7 +383,11 @@ export const committeeDetailsResolvers = {
           e.created_by AS createdBy,
           e.updated_by AS updatedBy,
           e.created_at AS createdAt,
-          e.event_logo AS eventLogo
+          e.event_logo AS eventLogo,
+          ${supportsVotingRolesLocked ? 'COALESCE(e.voting_roles_locked, 0)' : '0'} AS votingRolesLocked,
+          ${supportsVotingEnabled ? 'COALESCE(e.voting_enabled, 0)' : '0'} AS votingEnabled,
+          ${supportsVotingClosed ? 'COALESCE(e.voting_closed, 0)' : '0'} AS votingClosed,
+          ${supportsVotingPhaseState ? 'COALESCE(e.voting_phase_state, 0)' : '0'} AS votingPhaseState
         FROM events e
         WHERE e.committee_id = ?
         ORDER BY e.start_date ASC, e.name ASC
@@ -400,7 +440,11 @@ export const committeeDetailsResolvers = {
           createdBy: event.createdBy,
           updatedBy: event.updatedBy || null,
           createdAt: event.createdAt || null,
-          mappedVotingRoles: await getEventMappedVotingRoles(event.id, loggedInUserId)
+          mappedVotingRoles: await getEventMappedVotingRoles(event.id, loggedInUserId),
+          votingRolesLocked: Number(event.votingRolesLocked || 0),
+          votingEnabled: Number(event.votingEnabled || 0),
+          votingClosed: Number(event.votingClosed || 0),
+          votingPhaseState: Number(event.votingPhaseState || 0)
         }))
       );
 

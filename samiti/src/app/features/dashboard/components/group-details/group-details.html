@@ -449,11 +449,16 @@
                       </span>
                     </span>
                     <button type="button" class="event-lock-roles-btn"
-                      [disabled]="!(event.mappedVotingRoles && event.mappedVotingRoles.length > 0) || openRolesDropdownEventId() === event.id"
-                      matTooltip="Lock voting role selection for this event" matTooltipPosition="above"
+                      [class.locked]="event.votingRolesLocked"
+                      [disabled]="!(event.mappedVotingRoles && event.mappedVotingRoles.length > 0) || savingRolesEventId() === event.id || isLockingVotingRoles() || event.votingRolesLocked"
+                      matTooltip="{{ event.votingRolesLocked ? 'Voting role selection is already locked' : 'Lock voting role selection for this event' }}" matTooltipPosition="above"
                       (click)="onLockEventRoles(event); $event.stopPropagation()">
-                      <mat-icon class="event-lock-roles-icon">lock</mat-icon>
-                      <span>Lock</span>
+                      @if (isLockingVotingRoles()) {
+                        <mat-spinner [diameter]="16" [strokeWidth]="2"></mat-spinner>
+                      } @else {
+                        <mat-icon class="event-lock-roles-icon">{{ event.votingRolesLocked ? 'lock' : 'lock_open' }}</mat-icon>
+                        <span>{{ event.votingRolesLocked ? 'Locked' : 'Lock' }}</span>
+                      }
                     </button>
                   </div>
                 </div>

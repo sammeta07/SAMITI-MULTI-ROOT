@@ -47,6 +47,10 @@ export interface CommitteeEventListItem {
   createdAt?: string | null;
   designationPhotos?: EventDesignationPhoto[];
   mappedVotingRoles: EventMappedVotingRole[];
+  votingRolesLocked?: number;
+  votingEnabled?: number;
+  votingClosed?: number;
+  votingPhaseState?: number;
 }
 
 export interface UpdatedEventVisibilityPayload {
@@ -60,6 +64,16 @@ export interface DeletedEventPayload {
   eventName: string;
   deletedBy: number;
   deletedAt: string;
+}
+
+export interface LockEventVotingRolesPayload {
+  eventId: number;
+  votingRolesLocked: boolean;
+}
+
+export interface UnlockEventVotingRolesPayload {
+  eventId: number;
+  votingRolesLocked: boolean;
 }
 
 export interface CommitteeDetailsPayload {

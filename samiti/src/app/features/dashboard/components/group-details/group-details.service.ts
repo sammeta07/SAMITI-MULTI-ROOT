@@ -3,7 +3,7 @@ import { HttpClient } from '@angular/common/http';
 import { Observable } from 'rxjs';
 import { map } from 'rxjs/operators';
 import { environment } from '../../../../../environments/environment';
-import { CancelCommitteeMembershipRequestPayload, CommitteeDetailsPayload, CommitteeEventListItem, CommitteeMembershipRequestRole, CommitteeProfileMeta, DeletedEventPayload, SubmitCommitteeMembershipRequestPayload, UpdatedEventVisibilityPayload } from './group-details.models';
+import { CancelCommitteeMembershipRequestPayload, CommitteeDetailsPayload, CommitteeEventListItem, CommitteeMembershipRequestRole, CommitteeProfileMeta, DeletedEventPayload, SubmitCommitteeMembershipRequestPayload, UpdatedEventVisibilityPayload, LockEventVotingRolesPayload, UnlockEventVotingRolesPayload } from './group-details.models';
 import { EventMappedVotingRole } from '../event-details/event-details.models';
 import { CommitteeMembershipRequestService } from '../../../../core/services/committee-membership-request.service';
 import { sanitizeCloudinaryLogoUrl } from '../../../../shared/services/cloudinary-logo.util';
@@ -56,7 +56,7 @@ export class GroupDetailsService {
           eventName
            eventDisplayName
            eventLogo
-           status
+          status
           category
           type
           visibility
@@ -80,6 +80,10 @@ export class GroupDetailsService {
               photo
             }
           }
+          votingClosed
+          votingEnabled
+          votingPhaseState
+          votingRolesLocked
         }
         availableRoles {
           roleId
@@ -266,5 +270,49 @@ export class GroupDetailsService {
     return this.committeeMembershipRequestService
       .cancelCommitteeMembershipRequest(committeeId, true)
       .pipe(map((payload) => payload as CancelCommitteeMembershipRequestPayload));
+  }
+
+  public lockEventVotingRoles(eventId: number): Observable<LockEventVotingRolesPayload> {
+    const mutation = `mutation LockEventVotingRoles($eventId: Int!) {
+      lockEventVotingRoles(eventId: $eventId) {
+        eventId
+        votingRolesLocked
+      }
+    }`;
+
+    return this.http.post<{ data: { lockEventVotingRoles: LockEventVotingRolesPayload } }>(
+      this.graphqlUrl,
+      {
+        query: mutation,
+        variables: {
+          eventId
+        }
+      },
+      { withCredentials: true }
+    ).pipe(
+      map((res) => res.data.lockEventVotingRoles)
+    );
+  }
+
+  public unlockEventVotingRoles(eventId: number): Observable<UnlockEventVotingRolesPayload> {
+    const mutation = `mutation UnlockEventVotingRoles($eventId: Int!) {
+      unlockEventVotingRoles(eventId: $eventId) {
+        eventId
+        votingRolesLocked
+      }
+    }`;
+
+    return this.http.post<{ data: { unlockEventVotingRoles: UnlockEventVotingRolesPayload } }>(
+      this.graphqlUrl,
+      {
+        query: mutation,
+        variables: {
+          eventId
+        }
+      },
+      { withCredentials: true }
+    ).pipe(
+      map((res) => res.data.unlockEventVotingRoles)
+    );
   }
 }
