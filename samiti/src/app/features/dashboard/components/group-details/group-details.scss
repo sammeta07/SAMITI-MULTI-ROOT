@@ -358,13 +358,17 @@
   &::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 2px; }
 }
 
-/* Within the events section, distribute available height so 3 events fill it equally */
+/* Within the events section, fix each event card height so only 2 fit; 3rd scrolls */
 .events-full-height .horizontal-list-container {
   flex: 1;
   min-height: 0;
   max-height: none;
 
-  .event-aligned-row { flex: 1 1 0; min-height: 0; }
+  .event-aligned-row {
+    flex: 0 0 auto;
+    min-height: 180px;
+    height: 270px;
+  }
 }
 
 .horizontal-list-container .mini-empty-state {

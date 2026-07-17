@@ -362,7 +362,7 @@
 
         <div class="horizontal-list-container">
           @for (event of committeeEvents(); track event.id) {
-          <div class="event-aligned-row" (click)="openEventDetails(event.id || 0)">
+          <div class="event-aligned-row">
             <div class="event-meta-card">
               <span class="event-logo-circle circle-shape event-logo-upload"
                 [class.can-upload]="isCurrentUserMasterAdmin() || isCurrentUserAdmin()"

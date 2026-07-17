@@ -65,6 +65,28 @@ export class GroupDetailsService {
           updatedBy
           createdAt
         }
+        availableRoles {
+          roleId
+          roleName
+          roleCode
+          hindiName
+          englishName
+        }
+        mappedVotingRoles {
+          roleId
+          roleName
+          hindiName
+          englishName
+          sortOrder
+          nominationCount
+          isNominatedByCurrentUser
+          nominees {
+            userId
+            name
+            email
+            photo
+          }
+        }
       }
     }`;
 

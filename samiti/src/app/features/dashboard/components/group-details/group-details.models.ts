@@ -1,3 +1,5 @@
+import { EventAvailableRole, EventMappedVotingRole } from '../event-details/event-details.models';
+
 export interface CommitteeProfileMeta {
   id?: number;
   committeeId?: number;
@@ -76,6 +78,8 @@ export interface CommitteeDetailsPayload {
   userRequestRole: 'COMMITTEE_MEMBER' | 'COMMITTEE_ADMIN' | null;
   members: CommitteeRosterMember[];
   events: CommitteeEventListItem[];
+  availableRoles: EventAvailableRole[];
+  mappedVotingRoles: EventMappedVotingRole[];
 }
 
 export interface SubmitCommitteeMembershipRequestPayload {

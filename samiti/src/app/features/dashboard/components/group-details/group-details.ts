@@ -371,10 +371,10 @@ export class GroupDetailsComponent implements OnInit {
     });
   }
 
-  public openEventDetails(eventId: number): void {
-    if (!eventId) return;
-    this.router.navigate(['/dashboard/event', eventId]);
-  }
+  // public openEventDetails(eventId: number): void {
+  //   if (!eventId) return;
+  //   this.router.navigate(['/dashboard/event', eventId]);
+  // }
 
   public onEventVisibilityChange(eventItem: CommitteeEventListItem, isVisible: boolean): void {
     if (!this.isCurrentUserMasterAdmin()) {
