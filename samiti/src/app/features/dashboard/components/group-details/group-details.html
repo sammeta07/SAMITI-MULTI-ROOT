@@ -414,6 +414,8 @@
                     <span class="event-pill event-date-pill">
                       <span class="label">End:</span> {{ event.endDate ? (event.endDate | date:'dd MMM yyyy') : 'N/A' }}
                     </span>
+                    <div class="event-voting-controls">
+                    @if (!event.votingRolesLocked) {
                     <span class="roles-pill">
                       <span class="roles-dropdown-trigger-wrapper">
                         <button type="button" class="roles-dropdown-label"
@@ -457,9 +459,80 @@
                         <mat-spinner [diameter]="16" [strokeWidth]="2"></mat-spinner>
                       } @else {
                         <mat-icon class="event-lock-roles-icon">{{ event.votingRolesLocked ? 'lock' : 'lock_open' }}</mat-icon>
-                        <span>{{ event.votingRolesLocked ? 'Locked' : 'Lock' }}</span>
+                        <span>{{ event.votingRolesLocked ? 'Roles Locked' : 'Lock Roles' }}</span>
                       }
                     </button>
+                    } @else if (event.votingPhaseState === 0) {
+                    <button type="button" class="event-nomination-btn start-nomination-btn"
+                      [disabled]="isUpdatingVotingPhase()"
+                      matTooltip="Open nominations and withdrawals" matTooltipPosition="above"
+                      (click)="onStartNominations(event); $event.stopPropagation()">
+                      @if (isUpdatingVotingPhase()) {
+                        <mat-spinner [diameter]="16" [strokeWidth]="2"></mat-spinner>
+                      } @else {
+                        <mat-icon>how_to_reg</mat-icon>
+                        <span>Start Nomination</span>
+                      }
+                    </button>
+                    } @else if (event.votingPhaseState === 1) {
+                    <button type="button" class="event-nomination-btn stop-nomination-btn"
+                      [disabled]="isUpdatingVotingPhase()"
+                      matTooltip="Close nominations and withdrawals" matTooltipPosition="above"
+                      (click)="onStopNominations(event); $event.stopPropagation()">
+                      @if (isUpdatingVotingPhase()) {
+                        <mat-spinner [diameter]="16" [strokeWidth]="2"></mat-spinner>
+                      } @else {
+                        <mat-icon>remove_circle</mat-icon>
+                        <span>Stop Nomination</span>
+                      }
+                    </button>
+                    } @else if (event.votingPhaseState === 2) {
+                    <button type="button" class="event-voting-btn start-voting-btn"
+                      [disabled]="isUpdatingVotingPhase()"
+                      matTooltip="Open voting for all members" matTooltipPosition="above"
+                      (click)="onStartVoting(event); $event.stopPropagation()">
+                      @if (isUpdatingVotingPhase()) {
+                        <mat-spinner [diameter]="16" [strokeWidth]="2"></mat-spinner>
+                      } @else {
+                        <mat-icon>how_to_vote</mat-icon>
+                        <span>Start Voting</span>
+                      }
+                    </button>
+                    } @else if (event.votingPhaseState === 3) {
+                    <button type="button" class="event-voting-btn stop-voting-btn"
+                      [disabled]="isUpdatingVotingPhase()"
+                      matTooltip="Close voting for this event" matTooltipPosition="above"
+                      (click)="onStopVoting(event); $event.stopPropagation()">
+                      @if (isUpdatingVotingPhase()) {
+                        <mat-spinner [diameter]="16" [strokeWidth]="2"></mat-spinner>
+                      } @else {
+                        <mat-icon>event_busy</mat-icon>
+                        <span>Stop Voting</span>
+                      }
+                    </button>
+                    <span class="voting-phase-status-chip voting-phase-status-voting">
+                      <mat-icon>how_to_vote</mat-icon>
+                      <span>Voting Open</span>
+                    </span>
+                    } @else if (event.votingPhaseState === 4) {
+                    <button type="button" class="event-results-btn declare-results-btn"
+                      [disabled]="isUpdatingVotingPhase()"
+                      matTooltip="Declare and publish event results" matTooltipPosition="above"
+                      (click)="onDeclareResults(event); $event.stopPropagation()">
+                      @if (isUpdatingVotingPhase()) {
+                        <mat-spinner [diameter]="16" [strokeWidth]="2"></mat-spinner>
+                      } @else {
+                        <mat-icon>emoji_events</mat-icon>
+                        <span>Declare Results</span>
+                      }
+                    </button>
+                    } @else {
+                    <span class="voting-phase-status-chip voting-phase-status-done">
+                      <mat-icon>emoji_events</mat-icon>
+                      <span>Results Declared</span>
+                    </span>
+                    }
+                    </div>
                   </div>
                 </div>
               </div>

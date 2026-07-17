@@ -350,6 +350,11 @@ export const eventDetailsTypes = `
     votingClosed: Boolean!
   }
 
+  type DeclareEventResultsPayload {
+    eventId: Int!
+    votingPhaseState: Int!
+  }
+
   type NominateEventVotingRolePayload {
     eventId: Int!
     roleId: Int!
@@ -444,6 +449,7 @@ export const eventDetailsMutationFields = `
   stopEventNominations(eventId: Int!): StopEventNominationsPayload!
   allowEventVoting(eventId: Int!): AllowEventVotingPayload!
   stopEventVoting(eventId: Int!): StopEventVotingPayload!
+  declareEventResults(eventId: Int!): DeclareEventResultsPayload!
   nominateEventVotingRole(eventId: Int!, roleId: Int!): NominateEventVotingRolePayload!
   withdrawEventVotingRole(eventId: Int!, roleId: Int!): WithdrawEventVotingRolePayload!
 `;
@@ -1225,6 +1231,71 @@ export const eventDetailsResolvers = {
       return {
         eventId,
         votingClosed: true
+      };
+    },
+
+    async declareEventResults(_: any, args: { eventId: number }, context: any) {
+      const eventId = Number(args?.eventId);
+      if (!Number.isInteger(eventId) || eventId <= 0) {
+        throwEventError('BAD_REQUEST', 'eventId must be a positive integer');
+      }
+
+      const supportsVotingPhaseState = await hasEventsVotingPhaseStateColumn();
+      if (!supportsVotingPhaseState) {
+        throwEventError('INTERNAL', 'Voting phase columns are missing. Please run latest migrations.');
+      }
+
+      const loggedInUserId = await getLoggedInUserId(context);
+
+      const eventRows = await query<Array<RowDataPacket & {
+        id: number;
+        committeeId: number;
+        votingPhaseState: number;
+      }>>(
+        `SELECT
+           id,
+           committee_id AS committeeId,
+           COALESCE(voting_phase_state, 0) AS votingPhaseState
+         FROM events
+         WHERE id = ?
+         LIMIT 1`,
+        [eventId]
+      );
+
+      if (!eventRows.length) {
+        throwEventError('NOT_FOUND', 'Event not found');
+      }
+
+      const event = eventRows[0];
+
+      const membershipRows = await query<Array<RowDataPacket & { isCommitteeAdmin: number }>>(
+        `SELECT CASE WHEN committee_role IN ('COMMITTEE_ADMIN', 'COMMITTEE_MASTER_ADMIN') THEN 1 ELSE 0 END AS isCommitteeAdmin
+         FROM users_committees
+         WHERE committee_id = ? AND user_id = ?
+         LIMIT 1`,
+        [Number(event.committeeId), loggedInUserId]
+      );
+
+      const isCommitteeAdmin = Boolean(membershipRows[0] && Number(membershipRows[0].isCommitteeAdmin) === 1);
+      if (!isCommitteeAdmin) {
+        throwEventError('FORBIDDEN', 'Only committee admin can declare results');
+      }
+
+      if (Number(event.votingPhaseState || 0) !== 4) {
+        throwEventError('BAD_REQUEST', 'Voting must be closed before declaring results');
+      }
+
+      await query(
+        `UPDATE events
+         SET voting_phase_state = 5,
+             updated_by = ?
+         WHERE id = ?`,
+        [loggedInUserId, eventId]
+      );
+
+      return {
+        eventId,
+        votingPhaseState: 5
       };
     },
 

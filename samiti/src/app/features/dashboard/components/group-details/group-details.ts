@@ -89,6 +89,7 @@ export class GroupDetailsComponent implements OnInit {
   public readonly openRolesDropdownEventId = signal<number | null>(null);
   public readonly savingRolesEventId = signal<number | null>(null);
   public readonly isLockingVotingRoles = signal<boolean>(false);
+  public readonly isUpdatingVotingPhase = signal<boolean>(false);
   public readonly rolesSnapshot = signal<{ eventId: number; roles: EventMappedVotingRole[] } | null>(null);
   
   public readonly masterAdminsList = signal<CommitteeRosterMember[]>([]);
@@ -715,6 +716,261 @@ export class GroupDetailsComponent implements OnInit {
         error: (err: HttpErrorResponse) => {
           this.notifier.error(err?.error?.message || 'Failed to lock voting role selection.');
           this.isLockingVotingRoles.set(false);
+        }
+      });
+    });
+  }
+
+  public onStartNominations(eventItem: CommitteeEventListItem): void {
+    if (!eventItem?.eventId) {
+      this.notifier.error('No event available for starting nominations');
+      return;
+    }
+
+    if (!(this.isCurrentUserMasterAdmin() || this.isCurrentUserAdmin())) {
+      this.notifier.error('Only committee admin can start nominations');
+      return;
+    }
+
+    if (Number(eventItem.votingRolesLocked) !== 1) {
+      this.notifier.warn('Lock voting roles before starting nominations');
+      return;
+    }
+
+    if (Number(eventItem.votingPhaseState) !== 0) {
+      this.notifier.warn('Nominations have already been started for this event');
+      return;
+    }
+
+    if (this.isUpdatingVotingPhase() || this.isLockingVotingRoles()) {
+      return;
+    }
+
+    const dialogData: ConfirmDialogData = {
+      title: 'Start Nominations',
+      message: 'Are you sure you want to start nominations? Members will be able to nominate and withdraw until nominations are stopped.',
+      confirmText: 'Start Nominations',
+      cancelText: 'Cancel'
+    };
+
+    const dialogRef = this.confirmDialog.open(dialogData);
+    dialogRef.afterClosed().subscribe((result) => {
+      if (!result?.confirmed) return;
+
+      this.isUpdatingVotingPhase.set(true);
+      this.groupDetailsService.startEventNominations(eventItem.eventId).subscribe({
+        next: () => {
+          this.committeeEvents.update((currentEvents) =>
+            currentEvents.map((ev) =>
+              ev.eventId === eventItem.eventId ? { ...ev, votingPhaseState: 1 } : ev
+            )
+          );
+          this.notifier.success('Nominations have been started successfully.');
+          this.isUpdatingVotingPhase.set(false);
+        },
+        error: (err: HttpErrorResponse) => {
+          this.notifier.error(err?.error?.message || 'Failed to start nominations.');
+          this.isUpdatingVotingPhase.set(false);
+        }
+      });
+    });
+  }
+
+  public onStopNominations(eventItem: CommitteeEventListItem): void {
+    if (!eventItem?.eventId) {
+      this.notifier.error('No event available for stopping nominations');
+      return;
+    }
+
+    if (!(this.isCurrentUserMasterAdmin() || this.isCurrentUserAdmin())) {
+      this.notifier.error('Only committee admin can stop nominations');
+      return;
+    }
+
+    if (Number(eventItem.votingPhaseState) !== 1) {
+      this.notifier.warn('Nominations have not been started for this event');
+      return;
+    }
+
+    if (this.isUpdatingVotingPhase() || this.isLockingVotingRoles()) {
+      return;
+    }
+
+    const dialogData: ConfirmDialogData = {
+      title: 'Stop Nominations',
+      message: 'Are you sure you want to stop nominations? Members will no longer be able to nominate or withdraw after this.',
+      confirmText: 'Stop Nominations',
+      cancelText: 'Cancel'
+    };
+
+    const dialogRef = this.confirmDialog.open(dialogData);
+    dialogRef.afterClosed().subscribe((result) => {
+      if (!result?.confirmed) return;
+
+      this.isUpdatingVotingPhase.set(true);
+      this.groupDetailsService.stopEventNominations(eventItem.eventId).subscribe({
+        next: () => {
+          this.committeeEvents.update((currentEvents) =>
+            currentEvents.map((ev) =>
+              ev.eventId === eventItem.eventId ? { ...ev, votingPhaseState: 2 } : ev
+            )
+          );
+          this.notifier.success('Nominations have been stopped successfully.');
+          this.isUpdatingVotingPhase.set(false);
+        },
+        error: (err: HttpErrorResponse) => {
+          this.notifier.error(err?.error?.message || 'Failed to stop nominations.');
+          this.isUpdatingVotingPhase.set(false);
+        }
+      });
+    });
+  }
+
+  public onStartVoting(eventItem: CommitteeEventListItem): void {
+    if (!eventItem?.eventId) {
+      this.notifier.error('No event available for starting voting');
+      return;
+    }
+
+    if (!(this.isCurrentUserMasterAdmin() || this.isCurrentUserAdmin())) {
+      this.notifier.error('Only committee admin can start voting');
+      return;
+    }
+
+    if (Number(eventItem.votingPhaseState) !== 2) {
+      this.notifier.warn('Stop nominations before starting voting');
+      return;
+    }
+
+    if (this.isUpdatingVotingPhase() || this.isLockingVotingRoles()) {
+      return;
+    }
+
+    const dialogData: ConfirmDialogData = {
+      title: 'Start Voting',
+      message: 'Are you sure you want to start voting now? Nominations will stay closed and all members including admins will be able to vote.',
+      confirmText: 'Start Voting',
+      cancelText: 'Cancel'
+    };
+
+    const dialogRef = this.confirmDialog.open(dialogData);
+    dialogRef.afterClosed().subscribe((result) => {
+      if (!result?.confirmed) return;
+
+      this.isUpdatingVotingPhase.set(true);
+      this.groupDetailsService.allowEventVoting(eventItem.eventId).subscribe({
+        next: () => {
+          this.committeeEvents.update((currentEvents) =>
+            currentEvents.map((ev) =>
+              ev.eventId === eventItem.eventId ? { ...ev, votingPhaseState: 3, votingEnabled: 1 } : ev
+            )
+          );
+          this.notifier.success('Voting has been started successfully.');
+          this.isUpdatingVotingPhase.set(false);
+        },
+        error: (err: HttpErrorResponse) => {
+          this.notifier.error(err?.error?.message || 'Failed to enable voting.');
+          this.isUpdatingVotingPhase.set(false);
+        }
+      });
+    });
+  }
+
+  public onStopVoting(eventItem: CommitteeEventListItem): void {
+    if (!eventItem?.eventId) {
+      this.notifier.error('No event available for stopping voting');
+      return;
+    }
+
+    if (!(this.isCurrentUserMasterAdmin() || this.isCurrentUserAdmin())) {
+      this.notifier.error('Only committee admin can stop voting');
+      return;
+    }
+
+    if (Number(eventItem.votingPhaseState) !== 3) {
+      this.notifier.warn('Voting has not been started for this event');
+      return;
+    }
+
+    if (this.isUpdatingVotingPhase() || this.isLockingVotingRoles()) {
+      return;
+    }
+
+    const dialogData: ConfirmDialogData = {
+      title: 'Stop Voting',
+      message: 'Are you sure you want to stop voting? After this, voting will be closed and nomination actions will stay disabled.',
+      confirmText: 'Stop Voting',
+      cancelText: 'Cancel'
+    };
+
+    const dialogRef = this.confirmDialog.open(dialogData);
+    dialogRef.afterClosed().subscribe((result) => {
+      if (!result?.confirmed) return;
+
+      this.isUpdatingVotingPhase.set(true);
+      this.groupDetailsService.stopEventVoting(eventItem.eventId).subscribe({
+        next: () => {
+          this.committeeEvents.update((currentEvents) =>
+            currentEvents.map((ev) =>
+              ev.eventId === eventItem.eventId ? { ...ev, votingPhaseState: 4, votingClosed: 1 } : ev
+            )
+          );
+          this.notifier.success('Voting has been closed successfully.');
+          this.isUpdatingVotingPhase.set(false);
+        },
+        error: (err: HttpErrorResponse) => {
+          this.notifier.error(err?.error?.message || 'Failed to stop voting.');
+          this.isUpdatingVotingPhase.set(false);
+        }
+      });
+    });
+  }
+
+  public onDeclareResults(eventItem: CommitteeEventListItem): void {
+    if (!eventItem?.eventId) {
+      this.notifier.error('No event available for declaring results');
+      return;
+    }
+
+    if (!(this.isCurrentUserMasterAdmin() || this.isCurrentUserAdmin())) {
+      this.notifier.error('Only committee admin can declare results');
+      return;
+    }
+
+    if (Number(eventItem.votingPhaseState) !== 4) {
+      this.notifier.warn('Voting must be closed before declaring results');
+      return;
+    }
+
+    if (this.isUpdatingVotingPhase() || this.isLockingVotingRoles()) {
+      return;
+    }
+
+    const dialogData: ConfirmDialogData = {
+      title: 'Declare Results',
+      message: 'Are you sure you want to declare and publish the results for this event? This will finalize the election outcome.',
+      confirmText: 'Declare Results',
+      cancelText: 'Cancel'
+    };
+
+    const dialogRef = this.confirmDialog.open(dialogData);
+    dialogRef.afterClosed().subscribe((result) => {
+      if (!result?.confirmed) return;
+
+      this.isUpdatingVotingPhase.set(true);
+      this.groupDetailsService.declareEventResults(eventItem.eventId).subscribe({
+        next: () => {
+          this.committeeEvents.update((currentEvents) =>
+            currentEvents.map((ev) =>
+              ev.eventId === eventItem.eventId ? { ...ev, votingPhaseState: 5 } : ev
+            )
+          );
+          this.notifier.success('Results have been declared successfully.');
+          this.isUpdatingVotingPhase.set(false);
+        },
+        error: (err: HttpErrorResponse) => {
+          this.notifier.error(err?.error?.message || 'Failed to declare results.');
+          this.isUpdatingVotingPhase.set(false);
         }
       });
     });

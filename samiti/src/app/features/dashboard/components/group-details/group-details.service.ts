@@ -3,7 +3,7 @@ import { HttpClient } from '@angular/common/http';
 import { Observable } from 'rxjs';
 import { map } from 'rxjs/operators';
 import { environment } from '../../../../../environments/environment';
-import { CancelCommitteeMembershipRequestPayload, CommitteeDetailsPayload, CommitteeEventListItem, CommitteeMembershipRequestRole, CommitteeProfileMeta, DeletedEventPayload, SubmitCommitteeMembershipRequestPayload, UpdatedEventVisibilityPayload, LockEventVotingRolesPayload, UnlockEventVotingRolesPayload } from './group-details.models';
+import { CancelCommitteeMembershipRequestPayload, CommitteeDetailsPayload, CommitteeEventListItem, CommitteeMembershipRequestRole, CommitteeProfileMeta, DeletedEventPayload, SubmitCommitteeMembershipRequestPayload, UpdatedEventVisibilityPayload, LockEventVotingRolesPayload, UnlockEventVotingRolesPayload, StartEventNominationsPayload, StopEventNominationsPayload, AllowEventVotingPayload, StopEventVotingPayload, DeclareEventResultsPayload } from './group-details.models';
 import { EventMappedVotingRole } from '../event-details/event-details.models';
 import { CommitteeMembershipRequestService } from '../../../../core/services/committee-membership-request.service';
 import { sanitizeCloudinaryLogoUrl } from '../../../../shared/services/cloudinary-logo.util';
@@ -313,6 +313,91 @@ export class GroupDetailsService {
       { withCredentials: true }
     ).pipe(
       map((res) => res.data.unlockEventVotingRoles)
+    );
+  }
+
+  public startEventNominations(eventId: number): Observable<StartEventNominationsPayload> {
+    const mutation = `mutation StartEventNominations($eventId: Int!) {
+      startEventNominations(eventId: $eventId) {
+        eventId
+        votingPhaseState
+      }
+    }`;
+
+    return this.http.post<{ data: { startEventNominations: StartEventNominationsPayload } }>(
+      this.graphqlUrl,
+      { query: mutation, variables: { eventId } },
+      { withCredentials: true }
+    ).pipe(
+      map((res) => res.data.startEventNominations)
+    );
+  }
+
+  public stopEventNominations(eventId: number): Observable<StopEventNominationsPayload> {
+    const mutation = `mutation StopEventNominations($eventId: Int!) {
+      stopEventNominations(eventId: $eventId) {
+        eventId
+        votingPhaseState
+      }
+    }`;
+
+    return this.http.post<{ data: { stopEventNominations: StopEventNominationsPayload } }>(
+      this.graphqlUrl,
+      { query: mutation, variables: { eventId } },
+      { withCredentials: true }
+    ).pipe(
+      map((res) => res.data.stopEventNominations)
+    );
+  }
+
+  public allowEventVoting(eventId: number): Observable<AllowEventVotingPayload> {
+    const mutation = `mutation AllowEventVoting($eventId: Int!) {
+      allowEventVoting(eventId: $eventId) {
+        eventId
+        votingEnabled
+      }
+    }`;
+
+    return this.http.post<{ data: { allowEventVoting: AllowEventVotingPayload } }>(
+      this.graphqlUrl,
+      { query: mutation, variables: { eventId } },
+      { withCredentials: true }
+    ).pipe(
+      map((res) => res.data.allowEventVoting)
+    );
+  }
+
+  public stopEventVoting(eventId: number): Observable<StopEventVotingPayload> {
+    const mutation = `mutation StopEventVoting($eventId: Int!) {
+      stopEventVoting(eventId: $eventId) {
+        eventId
+        votingClosed
+      }
+    }`;
+
+    return this.http.post<{ data: { stopEventVoting: StopEventVotingPayload } }>(
+      this.graphqlUrl,
+      { query: mutation, variables: { eventId } },
+      { withCredentials: true }
+    ).pipe(
+      map((res) => res.data.stopEventVoting)
+    );
+  }
+
+  public declareEventResults(eventId: number): Observable<DeclareEventResultsPayload> {
+    const mutation = `mutation DeclareEventResults($eventId: Int!) {
+      declareEventResults(eventId: $eventId) {
+        eventId
+        votingPhaseState
+      }
+    }`;
+
+    return this.http.post<{ data: { declareEventResults: DeclareEventResultsPayload } }>(
+      this.graphqlUrl,
+      { query: mutation, variables: { eventId } },
+      { withCredentials: true }
+    ).pipe(
+      map((res) => res.data.declareEventResults)
     );
   }
 }

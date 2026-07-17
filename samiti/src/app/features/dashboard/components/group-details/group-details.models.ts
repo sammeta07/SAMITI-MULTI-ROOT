@@ -76,6 +76,31 @@ export interface UnlockEventVotingRolesPayload {
   votingRolesLocked: boolean;
 }
 
+export interface StartEventNominationsPayload {
+  eventId: number;
+  votingPhaseState: number;
+}
+
+export interface StopEventNominationsPayload {
+  eventId: number;
+  votingPhaseState: number;
+}
+
+export interface AllowEventVotingPayload {
+  eventId: number;
+  votingEnabled: boolean;
+}
+
+export interface StopEventVotingPayload {
+  eventId: number;
+  votingClosed: boolean;
+}
+
+export interface DeclareEventResultsPayload {
+  eventId: number;
+  votingPhaseState: number;
+}
+
 export interface CommitteeDetailsPayload {
   id: number;
   committeeId: number;
