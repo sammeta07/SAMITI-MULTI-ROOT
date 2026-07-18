@@ -51,7 +51,7 @@ export class EventDetailsComponent implements OnInit {
   private readonly confirmDialog = inject(ConfirmDialogService);
   private readonly hierarchyTreeService = inject(DashboardHierarchyTreeService);
 
-  public readonly isLoading = signal<boolean>(false);
+  // public readonly isLoading = signal<boolean>(false);
   public readonly isBannerUploading = signal<boolean>(false);
   public readonly isVisibilityUpdating = signal<boolean>(false);
   public readonly eventData = signal<EventDetailsPayload | null>(null);
@@ -62,7 +62,6 @@ export class EventDetailsComponent implements OnInit {
   public readonly isLockingVotingRoles = signal<boolean>(false);
   public readonly isUnlockingVotingRoles = signal<boolean>(false);
   public readonly isUpdatingVotingPhase = signal<boolean>(false);
-  public readonly isSubmittingNomination = signal<boolean>(false);
 
   public readonly MAX_BANNERS = 5;
 
@@ -231,10 +230,6 @@ export class EventDetailsComponent implements OnInit {
     }));
   }
 
-  public get isCurrentUserOnlyMember(): boolean {
-    return Boolean(this.eventData()?.canSelfNominate);
-  }
-
   public get currentCommitteeRoleLabel(): string {
     const role = String(this.eventData()?.currentCommitteeRole || 'NONE').toUpperCase();
     if (role === 'COMMITTEE_ADMIN' || role === 'COMMITTEE_MASTER_ADMIN') {
@@ -260,11 +255,6 @@ export class EventDetailsComponent implements OnInit {
     return Number(this.authService.getStoredUserData()?.id || 0);
   }
 
-  public isCurrentUserNominee(userId?: number | null): boolean {
-    const normalizedUserId = Number(userId);
-    return Number.isInteger(normalizedUserId) && normalizedUserId > 0 && normalizedUserId === this.currentLoggedInUserId;
-  }
-
   public get bannerCount(): number {
     return this.eventData()?.bannerImages?.length ?? 0;
   }
@@ -283,12 +273,11 @@ export class EventDetailsComponent implements OnInit {
   }
 
   private fetchEventDetails(id: string): void {
-    this.isLoading.set(true);
+    // this.isLoading.set(true);
     this.eventData.set(null);
     this.eventAdmins.set([]);
     this.eventMembers.set([]);
     this.selectedVotingRoleIds.set([]);
-    this.isSubmittingNomination.set(false);
     this.isUpdatingVotingPhase.set(false);
 
     this.eventDetailsService.getEventDetails(id).subscribe({
@@ -300,8 +289,7 @@ export class EventDetailsComponent implements OnInit {
             .map((role) => Number(role.roleId))
             .filter((roleId) => Number.isInteger(roleId) && roleId > 0)
         );
-        this.isSubmittingNomination.set(false);
-        this.isLoading.set(false);
+        this.isUpdatingVotingPhase.set(false);
       },
       error: (err: HttpErrorResponse) => {
         this.notifier.error(err?.error?.message || 'Failed to load event details.');
@@ -309,112 +297,8 @@ export class EventDetailsComponent implements OnInit {
         this.eventAdmins.set([]);
         this.eventMembers.set([]);
         this.selectedVotingRoleIds.set([]);
-        this.isSubmittingNomination.set(false);
         this.isUpdatingVotingPhase.set(false);
-        this.isLoading.set(false);
-      }
-    });
-  }
-
-  public isNominatedForRole(roleId?: number | null): boolean {
-    const normalizedRoleId = Number(roleId);
-    if (!Number.isInteger(normalizedRoleId) || normalizedRoleId <= 0) {
-      return false;
-    }
-
-    return Number(this.eventData()?.myNominatedRoleId || 0) === normalizedRoleId;
-  }
-
-  public get hasAlreadyNominated(): boolean {
-    return Number(this.eventData()?.myNominatedRoleId || 0) > 0;
-  }
-
-  public onToggleNomination(roleId?: number | null): void {
-    const normalizedRoleId = Number(roleId);
-    if (!Number.isInteger(normalizedRoleId) || normalizedRoleId <= 0) {
-      return;
-    }
-
-    if (this.votingPhaseState === 0) {
-      this.notifier.warn('Wait for your admin to start nominations after locking roles.');
-      return;
-    }
-
-    if (this.votingPhaseState >= 2) {
-      this.notifier.warn('Nomination and withdrawal are closed because nominations have been stopped for this event.');
-      return;
-    }
-
-    if (!this.isCurrentUserOnlyMember) {
-      this.notifier.warn('Only members can add nomination in voting cards.');
-      return;
-    }
-
-    if (this.isSubmittingNomination()) {
-      return;
-    }
-
-    const currentEventId = Number(this.eventData()?.eventId || 0);
-    if (!Number.isInteger(currentEventId) || currentEventId <= 0) {
-      this.notifier.error('Event context not found for nomination.');
-      return;
-    }
-
-    if (this.isNominatedForRole(normalizedRoleId)) {
-      this.isSubmittingNomination.set(true);
-      this.eventDetailsService.withdrawEventVotingRole(currentEventId, normalizedRoleId).subscribe({
-        next: (payload) => {
-          this.eventData.update((prev) => {
-            if (!prev) {
-              return prev;
-            }
-
-            return {
-              ...prev,
-              mappedVotingRoles: payload.mappedVotingRoles,
-              totalNominations: payload.totalNominations,
-              myNominatedRoleId: payload.myNominatedRoleId
-            };
-          });
-
-          this.notifier.success('Nomination withdrawn successfully.');
-          this.isSubmittingNomination.set(false);
-        },
-        error: (err: HttpErrorResponse) => {
-          this.notifier.error(err?.error?.message || 'Failed to withdraw nomination.');
-          this.isSubmittingNomination.set(false);
-        }
-      });
-      return;
-    }
-
-    if (this.hasAlreadyNominated) {
-      this.notifier.warn('You can nominate only once and only for one role in this event.');
-      return;
-    }
-
-    this.isSubmittingNomination.set(true);
-    this.eventDetailsService.nominateEventVotingRole(currentEventId, normalizedRoleId).subscribe({
-      next: (payload) => {
-        this.eventData.update((prev) => {
-          if (!prev) {
-            return prev;
-          }
-
-          return {
-            ...prev,
-            mappedVotingRoles: payload.mappedVotingRoles,
-            totalNominations: payload.totalNominations,
-            myNominatedRoleId: payload.myNominatedRoleId
-          };
-        });
-
-        this.notifier.success('Nomination submitted successfully. You cannot nominate again in this event until you withdraw it.');
-        this.isSubmittingNomination.set(false);
-      },
-      error: (err: HttpErrorResponse) => {
-        this.notifier.error(err?.error?.message || 'Failed to submit nomination.');
-        this.isSubmittingNomination.set(false);
+        // this.isLoading.set(false);
       }
     });
   }
@@ -503,16 +387,6 @@ export class EventDetailsComponent implements OnInit {
         }
       });
     });
-  }
-
-  public getRoleNominationCount(roleId?: number | null): number {
-    const normalizedRoleId = Number(roleId);
-    if (!Number.isInteger(normalizedRoleId) || normalizedRoleId <= 0) {
-      return 0;
-    }
-
-    const role = (this.eventData()?.mappedVotingRoles || []).find((mappedRole) => Number(mappedRole.roleId) === normalizedRoleId);
-    return Number(role?.nominationCount || 0);
   }
 
   public isPresidentRole(role?: EventMappedVotingRole | null): boolean {

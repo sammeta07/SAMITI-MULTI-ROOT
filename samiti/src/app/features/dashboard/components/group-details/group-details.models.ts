@@ -1,4 +1,4 @@
-import { EventAvailableRole, EventMappedVotingRole } from '../event-details/event-details.models';
+import { EventMappedVotingRole } from '../event-details/event-details.models';
 
 export interface CommitteeProfileMeta {
   id?: number;
@@ -47,10 +47,6 @@ export interface CommitteeEventListItem {
   createdAt?: string | null;
   designationPhotos?: EventDesignationPhoto[];
   mappedVotingRoles: EventMappedVotingRole[];
-  votingRolesLocked?: number;
-  votingEnabled?: number;
-  votingClosed?: number;
-  votingPhaseState?: number;
 }
 
 export interface UpdatedEventVisibilityPayload {
@@ -64,41 +60,6 @@ export interface DeletedEventPayload {
   eventName: string;
   deletedBy: number;
   deletedAt: string;
-}
-
-export interface LockEventVotingRolesPayload {
-  eventId: number;
-  votingRolesLocked: boolean;
-}
-
-export interface UnlockEventVotingRolesPayload {
-  eventId: number;
-  votingRolesLocked: boolean;
-}
-
-export interface StartEventNominationsPayload {
-  eventId: number;
-  votingPhaseState: number;
-}
-
-export interface StopEventNominationsPayload {
-  eventId: number;
-  votingPhaseState: number;
-}
-
-export interface AllowEventVotingPayload {
-  eventId: number;
-  votingEnabled: boolean;
-}
-
-export interface StopEventVotingPayload {
-  eventId: number;
-  votingClosed: boolean;
-}
-
-export interface DeclareEventResultsPayload {
-  eventId: number;
-  votingPhaseState: number;
 }
 
 export interface CommitteeDetailsPayload {
@@ -118,7 +79,6 @@ export interface CommitteeDetailsPayload {
   userRequestRole: 'COMMITTEE_MEMBER' | 'COMMITTEE_ADMIN' | null;
   members: CommitteeRosterMember[];
   events: CommitteeEventListItem[];
-  availableRoles: EventAvailableRole[];
 }
 
 export interface SubmitCommitteeMembershipRequestPayload {

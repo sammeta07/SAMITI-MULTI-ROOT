@@ -1,6 +1,7 @@
 <div class="event-details-workspace drawer-layout-shell">
 
-  @if (isLoading()) {
+  @if (0) {
+     <!-- @if (isLoading()) { -->
   <div class="spinner-loading-overlay">
     <mat-progress-spinner mode="indeterminate" diameter="32"></mat-progress-spinner>
     <span>Loading event details...</span>
@@ -36,51 +37,14 @@
 
             <div class="voting-nomination-grid" [class]="'voting-nomination-grid ' + votingGridLayoutClass">
               @for (card of votingDisplayCards; track card.slot) {
-              <mat-card class="voting-nomination-card" [class.voting-nomination-card-selected]="isNominatedForRole(card.role.roleId)">
+              <mat-card class="voting-nomination-card">
                 <mat-card-content>
                   <div class="voting-card-icon-wrap" [class.voting-card-icon-wrap-president]="isPresidentRole(card.role)">
                     <mat-icon>{{ getVotingRoleIcon(card.role) }}</mat-icon>
                   </div>
 
-                  @if (isNominatedForRole(card.role.roleId)) {
-                  <div class="voting-card-status-chip">
-                    <mat-icon>verified</mat-icon>
-                    <span>Nominated By You</span>
-                  </div>
-                  }
-
                   <div class="voting-card-role-primary" [class.voting-card-role-primary-president]="isPresidentRole(card.role)">{{ (card.role.hindiName || card.role.roleName) | uppercase }}</div>
                   <div class="voting-card-role-secondary" [class.voting-card-role-secondary-president]="isPresidentRole(card.role)">{{ ((card.role.englishName || card.role.roleName || '').split('_').join(' ')) | titlecase }}</div>
-                  <div class="voting-card-nomination-count">
-                    <mat-icon>person</mat-icon>
-                    <span>Nominations: {{ getRoleNominationCount(card.role.roleId) }}</span>
-                  </div>
-
-                  <div class="voting-card-nominees-list">
-                    @for (nominee of card.role.nominees; track nominee.userId; let nomineeIndex = $index) {
-                    <div class="voting-card-nominee-row">
-                      <div class="voting-card-nominee-serial">{{ nomineeIndex + 1 }}</div>
-                      <div class="voting-card-nominee-avatar">
-                        @if (nominee.photo) {
-                        <img [src]="nominee.photo" [alt]="nominee.name" class="voting-card-nominee-avatar-img" />
-                        } @else {
-                        <span>{{ nominee.name.charAt(0).toUpperCase() }}</span>
-                        }
-                      </div>
-                      <div class="voting-card-nominee-info">
-                        <div class="voting-card-nominee-name">
-                          <span>{{ nominee.name }}</span>
-                          @if (isCurrentUserNominee(nominee.userId)) {
-                          <span class="voting-card-nominee-you-badge">You</span>
-                          }
-                        </div>
-                        <div class="voting-card-nominee-email">{{ nominee.email }}</div>
-                      </div>
-                    </div>
-                    } @empty {
-                    <div class="voting-card-nominee-empty">No nominations yet.</div>
-                    }
-                  </div>
                 </mat-card-content>
 
                 <mat-card-actions>
@@ -89,21 +53,6 @@
                     <mat-icon>lock_clock</mat-icon>
                     <span>Wait for your admin to lock roles</span>
                   </div>
-                  } @else if (isVotingRolesLocked && votingPhaseState === 0) {
-                  <div class="voting-wait-admin-pill">
-                    <mat-icon>schedule</mat-icon>
-                    <span>{{ nominationWaitMessage }}</span>
-                  </div>
-                  } @else if (votingPhaseState === 2) {
-                  <span class="voting-nomination-disabled-wrap" [matTooltip]="'You can not withdraw as nominations are stopped'">
-                    <button
-                      mat-stroked-button
-                      class="voting-nomination-btn"
-                      disabled>
-                      <mat-icon>{{ isNominatedForRole(card.role.roleId) ? 'person_remove' : 'person_add' }}</mat-icon>
-                      <span>{{ isNominatedForRole(card.role.roleId) ? 'Withdraw' : 'Nominate' }}</span>
-                    </button>
-                  </span>
                   } @else if (isVotingEnabled) {
                   <div class="voting-open-card-pill">
                     <mat-icon>how_to_vote</mat-icon>
@@ -115,15 +64,10 @@
                     <span>Voting closed</span>
                   </div>
                   } @else {
-                  <button
-                    mat-stroked-button
-                    class="voting-nomination-btn"
-                    [class.voting-nomination-btn-active]="isNominatedForRole(card.role.roleId)"
-                    [disabled]="votingPhaseState >= 2 || !isCurrentUserOnlyMember || isSubmittingNomination() || (hasAlreadyNominated && !isNominatedForRole(card.role.roleId))"
-                    (click)="onToggleNomination(card.role.roleId)">
-                    <mat-icon>{{ isNominatedForRole(card.role.roleId) ? 'person_remove' : 'person_add' }}</mat-icon>
-                    <span>{{ isNominatedForRole(card.role.roleId) ? 'Withdraw' : 'Nominate' }}</span>
-                  </button>
+                  <div class="voting-wait-admin-pill">
+                    <mat-icon>schedule</mat-icon>
+                    <span>{{ nominationWaitMessage }}</span>
+                  </div>
                   }
                 </mat-card-actions>
               </mat-card>

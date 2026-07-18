@@ -194,20 +194,12 @@ async function getEventMasterRoles(): Promise<Array<{ roleId: number | null; rol
   return [];
 }
 
-async function getMappedVotingRolesWithNominees(eventId: number, loggedInUserId: number): Promise<Array<{
+async function getMappedVotingRoles(eventId: number): Promise<Array<{
   roleId: number;
   roleName: string;
   hindiName: string | null;
   englishName: string | null;
   sortOrder: number;
-  nominationCount: number;
-  isNominatedByCurrentUser: boolean;
-  nominees: Array<{
-    userId: number;
-    name: string;
-    email: string;
-    photo: string | null;
-  }>;
 }>> {
   const mappedVotingRoleRows = await query<Array<RowDataPacket & {
     roleId: number;
@@ -215,87 +207,30 @@ async function getMappedVotingRolesWithNominees(eventId: number, loggedInUserId:
     hindiName: string | null;
     englishName: string | null;
     sortOrder: number;
-    nominationCount: number;
-    isNominatedByCurrentUser: number;
   }>>(
     `SELECT
        evr.role_id AS roleId,
        erm.role_name AS roleName,
        erm.hindi_name AS hindiName,
        erm.english_name AS englishName,
-       COALESCE(erm.sort_order, 0) AS sortOrder,
-       COALESCE(nc.nominationCount, 0) AS nominationCount,
-       CASE WHEN myNom.user_id IS NULL THEN 0 ELSE 1 END AS isNominatedByCurrentUser
+       COALESCE(erm.sort_order, 0) AS sortOrder
      FROM event_voting_roles evr
      INNER JOIN events_roles_master erm ON erm.role_id = evr.role_id
-     LEFT JOIN (
-       SELECT role_id, COUNT(*) AS nominationCount
-       FROM event_voting_role_nominations
-       WHERE event_id = ?
-       GROUP BY role_id
-     ) nc ON nc.role_id = evr.role_id
-     LEFT JOIN event_voting_role_nominations myNom
-       ON myNom.event_id = evr.event_id
-      AND myNom.role_id = evr.role_id
-      AND myNom.user_id = ?
      WHERE evr.event_id = ?
      ORDER BY COALESCE(erm.sort_order, 0) ASC, erm.role_name ASC`,
-    [eventId, loggedInUserId, eventId]
-  );
-
-  const nomineeRows = await query<Array<RowDataPacket & {
-    roleId: number;
-    userId: number;
-    name: string;
-    email: string;
-    photo: string | null;
-  }>>(
-    `SELECT
-       evrn.role_id AS roleId,
-       u.id AS userId,
-       u.name AS name,
-       u.email AS email,
-       u.profile_photo AS photo
-     FROM event_voting_role_nominations evrn
-     INNER JOIN users u ON u.id = evrn.user_id
-     WHERE evrn.event_id = ?
-     ORDER BY evrn.role_id ASC, u.name ASC`,
     [eventId]
   );
-
-  const nomineesByRoleId = new Map<number, Array<{ userId: number; name: string; email: string; photo: string | null }>>();
-  for (const nomineeRow of nomineeRows) {
-    const normalizedRoleId = Number(nomineeRow.roleId);
-    const bucket = nomineesByRoleId.get(normalizedRoleId) || [];
-    bucket.push({
-      userId: Number(nomineeRow.userId),
-      name: String(nomineeRow.name || ''),
-      email: String(nomineeRow.email || ''),
-      photo: nomineeRow.photo ? String(nomineeRow.photo) : null
-    });
-    nomineesByRoleId.set(normalizedRoleId, bucket);
-  }
 
   return mappedVotingRoleRows.map((mappedRoleRow) => ({
     roleId: Number(mappedRoleRow.roleId),
     roleName: String(mappedRoleRow.roleName || ''),
     hindiName: mappedRoleRow.hindiName ? String(mappedRoleRow.hindiName) : null,
     englishName: mappedRoleRow.englishName ? String(mappedRoleRow.englishName) : null,
-    sortOrder: Number(mappedRoleRow.sortOrder || 0),
-    nominationCount: Number(mappedRoleRow.nominationCount || 0),
-    isNominatedByCurrentUser: Number(mappedRoleRow.isNominatedByCurrentUser || 0) === 1,
-    nominees: nomineesByRoleId.get(Number(mappedRoleRow.roleId)) || []
+    sortOrder: Number(mappedRoleRow.sortOrder || 0)
   }));
 }
 
 export const eventDetailsTypes = `
-  type EventRoleNominee {
-    userId: Int!
-    name: String!
-    email: String!
-    photo: String
-  }
-
   type EventAvailableRole {
     roleId: Int
     roleName: String!
@@ -310,9 +245,6 @@ export const eventDetailsTypes = `
     hindiName: String
     englishName: String
     sortOrder: Int!
-    nominationCount: Int!
-    isNominatedByCurrentUser: Boolean!
-    nominees: [EventRoleNominee!]!
   }
 
   type UpdateEventVotingRolesPayload {
@@ -353,22 +285,6 @@ export const eventDetailsTypes = `
   type DeclareEventResultsPayload {
     eventId: Int!
     votingPhaseState: Int!
-  }
-
-  type NominateEventVotingRolePayload {
-    eventId: Int!
-    roleId: Int!
-    myNominatedRoleId: Int!
-    totalNominations: Int!
-    mappedVotingRoles: [EventMappedVotingRole!]!
-  }
-
-  type WithdrawEventVotingRolePayload {
-    eventId: Int!
-    roleId: Int!
-    myNominatedRoleId: Int
-    totalNominations: Int!
-    mappedVotingRoles: [EventMappedVotingRole!]!
   }
 
   type EventParticipant {
@@ -424,7 +340,6 @@ export const eventDetailsTypes = `
     availableRoles: [EventAvailableRole!]!
     mappedVotingRoles: [EventMappedVotingRole!]!
     canManageVotingRoles: Boolean!
-    canSelfNominate: Boolean!
     currentCommitteeRole: String!
     committeeMemberCount: Int!
     committeeAdminCount: Int!
@@ -432,8 +347,6 @@ export const eventDetailsTypes = `
     votingEnabled: Boolean!
     votingClosed: Boolean!
     votingPhaseState: Int!
-    totalNominations: Int!
-    myNominatedRoleId: Int
   }
 `;
 
@@ -450,8 +363,6 @@ export const eventDetailsMutationFields = `
   allowEventVoting(eventId: Int!): AllowEventVotingPayload!
   stopEventVoting(eventId: Int!): StopEventVotingPayload!
   declareEventResults(eventId: Int!): DeclareEventResultsPayload!
-  nominateEventVotingRole(eventId: Int!, roleId: Int!): NominateEventVotingRolePayload!
-  withdrawEventVotingRole(eventId: Int!, roleId: Int!): WithdrawEventVotingRolePayload!
 `;
 
 export const eventDetailsResolvers = {
@@ -629,21 +540,7 @@ export const eventDetailsResolvers = {
 
       const availableRoles = await getEventMasterRoles();
 
-      const mappedVotingRoleRows = await getMappedVotingRolesWithNominees(eventId, loggedInUserId);
-
-      const nominationMetaRows = await query<Array<RowDataPacket & {
-        totalNominations: number;
-        myNominatedRoleId: number | null;
-      }>>(
-        `SELECT
-           COUNT(*) AS totalNominations,
-           MAX(CASE WHEN user_id = ? THEN role_id ELSE NULL END) AS myNominatedRoleId
-         FROM event_voting_role_nominations
-         WHERE event_id = ?`,
-        [loggedInUserId, eventId]
-      );
-
-      const nominationMeta = nominationMetaRows[0] || { totalNominations: 0, myNominatedRoleId: null };
+      const mappedVotingRoleRows = await getMappedVotingRoles(eventId);
 
       return {
         ...event,
@@ -681,16 +578,13 @@ export const eventDetailsResolvers = {
         })),
         mappedVotingRoles: mappedVotingRoleRows,
         canManageVotingRoles,
-        canSelfNominate,
         currentCommitteeRole,
         committeeMemberCount,
         committeeAdminCount,
         votingRolesLocked: Number(event.votingRolesLocked || 0) === 1,
         votingEnabled: Number(event.votingEnabled || 0) === 1,
         votingClosed: Number(event.votingClosed || 0) === 1,
-        votingPhaseState: getEventVotingPhaseState(event, supportsVotingPhaseState),
-        totalNominations: Number(nominationMeta.totalNominations || 0),
-        myNominatedRoleId: nominationMeta.myNominatedRoleId !== null ? Number(nominationMeta.myNominatedRoleId) : null
+        votingPhaseState: getEventVotingPhaseState(event, supportsVotingPhaseState)
       };
     }
   },
@@ -784,7 +678,7 @@ export const eventDetailsResolvers = {
         );
       }
 
-      const mappedVotingRoleRows = await getMappedVotingRolesWithNominees(eventId, loggedInUserId);
+      const mappedVotingRoleRows = await getMappedVotingRoles(eventId);
 
       return {
         eventId,
@@ -1296,242 +1190,6 @@ export const eventDetailsResolvers = {
       return {
         eventId,
         votingPhaseState: 5
-      };
-    },
-
-    async nominateEventVotingRole(_: any, args: { eventId: number; roleId: number }, context: any) {
-      const eventId = Number(args?.eventId);
-      const roleId = Number(args?.roleId);
-
-      if (!Number.isInteger(eventId) || eventId <= 0) {
-        throwEventError('BAD_REQUEST', 'eventId must be a positive integer');
-      }
-
-      if (!Number.isInteger(roleId) || roleId <= 0) {
-        throwEventError('BAD_REQUEST', 'roleId must be a positive integer');
-      }
-
-      const loggedInUserId = await getLoggedInUserId(context);
-
-      const eventRows = await query<Array<RowDataPacket & { id: number; committeeId: number; votingPhaseState: number }>>(
-        `SELECT
-           id,
-           committee_id AS committeeId,
-           COALESCE(voting_phase_state, 0) AS votingPhaseState
-         FROM events
-         WHERE id = ?
-         LIMIT 1`,
-        [eventId]
-      );
-
-      if (!eventRows.length) {
-        throwEventError('NOT_FOUND', 'Event not found');
-      }
-
-      const membershipRows = await query<Array<RowDataPacket & {
-        isCommitteeMember: number;
-        isCommitteeAdmin: number;
-      }>>(
-        `SELECT
-           CASE WHEN committee_role IN ('COMMITTEE_MEMBER', 'COMMITTEE_ADMIN', 'COMMITTEE_MASTER_ADMIN') THEN 1 ELSE 0 END AS isCommitteeMember,
-           CASE WHEN committee_role IN ('COMMITTEE_ADMIN', 'COMMITTEE_MASTER_ADMIN') THEN 1 ELSE 0 END AS isCommitteeAdmin
-         FROM users_committees
-         WHERE committee_id = ? AND user_id = ?
-         LIMIT 1`,
-        [Number(eventRows[0].committeeId), loggedInUserId]
-      );
-
-      const membership = membershipRows[0];
-      const isOnlyMember = Boolean(membership && Number(membership.isCommitteeMember) === 1 && Number(membership.isCommitteeAdmin) !== 1);
-      if (!isOnlyMember) {
-        throwEventError('FORBIDDEN', 'Only group members can nominate themselves');
-      }
-
-      if (Number(eventRows[0].votingPhaseState || 0) !== 1) {
-        throwEventError('FORBIDDEN', 'Nominations are not open for this event');
-      }
-
-      const mappedRoleRows = await query<Array<RowDataPacket & { roleId: number }>>(
-        `SELECT role_id AS roleId
-         FROM event_voting_roles
-         WHERE event_id = ? AND role_id = ?
-         LIMIT 1`,
-        [eventId, roleId]
-      );
-
-      if (!mappedRoleRows.length) {
-        throwEventError('BAD_REQUEST', 'Selected role is not mapped for this event');
-      }
-
-      const existingNominationRows = await query<Array<RowDataPacket & { roleId: number }>>(
-        `SELECT role_id AS roleId
-         FROM event_voting_role_nominations
-         WHERE event_id = ? AND user_id = ?
-         LIMIT 1`,
-        [eventId, loggedInUserId]
-      );
-
-      if (existingNominationRows.length) {
-        throwEventError('BAD_REQUEST', 'You can nominate only once for one role in this event');
-      }
-
-      await query(
-        `INSERT INTO event_voting_role_nominations (event_id, role_id, user_id)
-         VALUES (?, ?, ?)`,
-        [eventId, roleId, loggedInUserId]
-      );
-
-      const mappedVotingRoleRows = await getMappedVotingRolesWithNominees(eventId, loggedInUserId);
-
-      const nominationMetaRows = await query<Array<RowDataPacket & {
-        totalNominations: number;
-      }>>(
-        `SELECT COUNT(*) AS totalNominations
-         FROM event_voting_role_nominations
-         WHERE event_id = ?`,
-        [eventId]
-      );
-
-      return {
-        eventId,
-        roleId,
-        myNominatedRoleId: roleId,
-        totalNominations: Number(nominationMetaRows[0]?.totalNominations || 0),
-        mappedVotingRoles: mappedVotingRoleRows
-      };
-    },
-
-    async withdrawEventVotingRole(_: any, args: { eventId: number; roleId: number }, context: any) {
-      const eventId = Number(args?.eventId);
-      const roleId = Number(args?.roleId);
-
-      if (!Number.isInteger(eventId) || eventId <= 0) {
-        throwEventError('BAD_REQUEST', 'eventId must be a positive integer');
-      }
-
-      if (!Number.isInteger(roleId) || roleId <= 0) {
-        throwEventError('BAD_REQUEST', 'roleId must be a positive integer');
-      }
-
-      const loggedInUserId = await getLoggedInUserId(context);
-
-      const eventRows = await query<Array<RowDataPacket & { id: number; committeeId: number; votingPhaseState: number }>>(
-        `SELECT
-           id,
-           committee_id AS committeeId,
-           COALESCE(voting_phase_state, 0) AS votingPhaseState
-         FROM events
-         WHERE id = ?
-         LIMIT 1`,
-        [eventId]
-      );
-
-      if (!eventRows.length) {
-        throwEventError('NOT_FOUND', 'Event not found');
-      }
-
-      const membershipRows = await query<Array<RowDataPacket & {
-        isCommitteeMember: number;
-        isCommitteeAdmin: number;
-      }>>(
-        `SELECT
-           CASE WHEN committee_role IN ('COMMITTEE_MEMBER', 'COMMITTEE_ADMIN', 'COMMITTEE_MASTER_ADMIN') THEN 1 ELSE 0 END AS isCommitteeMember,
-           CASE WHEN committee_role IN ('COMMITTEE_ADMIN', 'COMMITTEE_MASTER_ADMIN') THEN 1 ELSE 0 END AS isCommitteeAdmin
-         FROM users_committees
-         WHERE committee_id = ? AND user_id = ?
-         LIMIT 1`,
-        [Number(eventRows[0].committeeId), loggedInUserId]
-      );
-
-      const membership = membershipRows[0];
-      const isOnlyMember = Boolean(membership && Number(membership.isCommitteeMember) === 1 && Number(membership.isCommitteeAdmin) !== 1);
-      if (!isOnlyMember) {
-        throwEventError('FORBIDDEN', 'Only group members can withdraw their nomination');
-      }
-
-      if (Number(eventRows[0].votingPhaseState || 0) !== 1) {
-        throwEventError('FORBIDDEN', 'Nomination withdrawal is closed because nominations are not open for this event');
-      }
-
-      const existingNominationRows = await query<Array<RowDataPacket & { roleId: number }>>(
-        `SELECT role_id AS roleId
-         FROM event_voting_role_nominations
-         WHERE event_id = ? AND user_id = ?
-         LIMIT 1`,
-        [eventId, loggedInUserId]
-      );
-
-      if (!existingNominationRows.length) {
-        throwEventError('BAD_REQUEST', 'No nomination found to withdraw for this event');
-      }
-
-      if (Number(existingNominationRows[0].roleId) !== roleId) {
-        throwEventError('BAD_REQUEST', 'You can only withdraw your currently nominated role');
-      }
-
-      await query(
-        `DELETE FROM event_voting_role_nominations
-         WHERE event_id = ? AND user_id = ? AND role_id = ?`,
-        [eventId, loggedInUserId, roleId]
-      );
-
-      const mappedVotingRoleRows = await query<Array<RowDataPacket & {
-        roleId: number;
-        roleName: string;
-        hindiName: string | null;
-        englishName: string | null;
-        sortOrder: number;
-        nominationCount: number;
-        isNominatedByCurrentUser: number;
-      }>>(
-        `SELECT
-           evr.role_id AS roleId,
-           erm.role_name AS roleName,
-           erm.hindi_name AS hindiName,
-           erm.english_name AS englishName,
-           COALESCE(erm.sort_order, 0) AS sortOrder,
-           COALESCE(nc.nominationCount, 0) AS nominationCount,
-           CASE WHEN myNom.user_id IS NULL THEN 0 ELSE 1 END AS isNominatedByCurrentUser
-         FROM event_voting_roles evr
-         INNER JOIN events_roles_master erm ON erm.role_id = evr.role_id
-         LEFT JOIN (
-           SELECT role_id, COUNT(*) AS nominationCount
-           FROM event_voting_role_nominations
-           WHERE event_id = ?
-           GROUP BY role_id
-         ) nc ON nc.role_id = evr.role_id
-         LEFT JOIN event_voting_role_nominations myNom
-           ON myNom.event_id = evr.event_id
-          AND myNom.role_id = evr.role_id
-          AND myNom.user_id = ?
-         WHERE evr.event_id = ?
-         ORDER BY COALESCE(erm.sort_order, 0) ASC, erm.role_name ASC`,
-        [eventId, loggedInUserId, eventId]
-      );
-
-      const nominationMetaRows = await query<Array<RowDataPacket & {
-        totalNominations: number;
-      }>>(
-        `SELECT COUNT(*) AS totalNominations
-         FROM event_voting_role_nominations
-         WHERE event_id = ?`,
-        [eventId]
-      );
-
-      return {
-        eventId,
-        roleId,
-        myNominatedRoleId: null,
-        totalNominations: Number(nominationMetaRows[0]?.totalNominations || 0),
-        mappedVotingRoles: mappedVotingRoleRows.map((mappedRoleRow) => ({
-          roleId: Number(mappedRoleRow.roleId),
-          roleName: String(mappedRoleRow.roleName || ''),
-          hindiName: mappedRoleRow.hindiName ? String(mappedRoleRow.hindiName) : null,
-          englishName: mappedRoleRow.englishName ? String(mappedRoleRow.englishName) : null,
-          sortOrder: Number(mappedRoleRow.sortOrder || 0),
-          nominationCount: Number(mappedRoleRow.nominationCount || 0),
-          isNominatedByCurrentUser: Number(mappedRoleRow.isNominatedByCurrentUser || 0) === 1
-        }))
       };
     }
   }

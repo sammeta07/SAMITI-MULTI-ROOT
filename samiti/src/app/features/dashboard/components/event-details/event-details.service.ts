@@ -31,14 +31,6 @@ export interface UpdateEventVotingRolesPayload {
     hindiName?: string | null;
     englishName?: string | null;
     sortOrder: number;
-    nominationCount: number;
-    isNominatedByCurrentUser: boolean;
-    nominees: Array<{
-      userId: number;
-      name: string;
-      email: string;
-      photo?: string | null;
-    }>;
   }>;
 }
 
@@ -70,50 +62,6 @@ export interface AllowEventVotingPayload {
 export interface StopEventVotingPayload {
   eventId: number;
   votingClosed: boolean;
-}
-
-export interface NominateEventVotingRolePayload {
-  eventId: number;
-  roleId: number;
-  myNominatedRoleId: number;
-  totalNominations: number;
-  mappedVotingRoles: Array<{
-    roleId: number;
-    roleName: string;
-    hindiName?: string | null;
-    englishName?: string | null;
-    sortOrder: number;
-    nominationCount: number;
-    isNominatedByCurrentUser: boolean;
-    nominees: Array<{
-      userId: number;
-      name: string;
-      email: string;
-      photo?: string | null;
-    }>;
-  }>;
-}
-
-export interface WithdrawEventVotingRolePayload {
-  eventId: number;
-  roleId: number;
-  myNominatedRoleId: number | null;
-  totalNominations: number;
-  mappedVotingRoles: Array<{
-    roleId: number;
-    roleName: string;
-    hindiName?: string | null;
-    englishName?: string | null;
-    sortOrder: number;
-    nominationCount: number;
-    isNominatedByCurrentUser: boolean;
-    nominees: Array<{
-      userId: number;
-      name: string;
-      email: string;
-      photo?: string | null;
-    }>;
-  }>;
 }
 
 @Injectable({
@@ -181,17 +129,8 @@ export class EventDetailsService {
           hindiName
           englishName
           sortOrder
-          nominationCount
-          isNominatedByCurrentUser
-          nominees {
-            userId
-            name
-            email
-            photo
-          }
         }
         canManageVotingRoles
-        canSelfNominate
         currentCommitteeRole
         committeeMemberCount
         committeeAdminCount
@@ -199,8 +138,6 @@ export class EventDetailsService {
         votingEnabled
         votingClosed
         votingPhaseState
-        totalNominations
-        myNominatedRoleId
       }
     }`;
 
@@ -305,14 +242,6 @@ export class EventDetailsService {
           hindiName
           englishName
           sortOrder
-          nominationCount
-          isNominatedByCurrentUser
-          nominees {
-            userId
-            name
-            email
-            photo
-          }
         }
       }
     }`;
@@ -451,86 +380,6 @@ export class EventDetailsService {
       { withCredentials: true }
     ).pipe(
       map((res) => res.data.stopEventVoting)
-    );
-  }
-
-  public nominateEventVotingRole(eventId: number, roleId: number): Observable<NominateEventVotingRolePayload> {
-    const mutation = `mutation NominateEventVotingRole($eventId: Int!, $roleId: Int!) {
-      nominateEventVotingRole(eventId: $eventId, roleId: $roleId) {
-        eventId
-        roleId
-        myNominatedRoleId
-        totalNominations
-        mappedVotingRoles {
-          roleId
-          roleName
-          hindiName
-          englishName
-          sortOrder
-          nominationCount
-          isNominatedByCurrentUser
-          nominees {
-            userId
-            name
-            email
-            photo
-          }
-        }
-      }
-    }`;
-
-    return this.http.post<{ data: { nominateEventVotingRole: NominateEventVotingRolePayload } }>(
-      this.graphqlUrl,
-      {
-        query: mutation,
-        variables: {
-          eventId,
-          roleId
-        }
-      },
-      { withCredentials: true }
-    ).pipe(
-      map((res) => res.data.nominateEventVotingRole)
-    );
-  }
-
-  public withdrawEventVotingRole(eventId: number, roleId: number): Observable<WithdrawEventVotingRolePayload> {
-    const mutation = `mutation WithdrawEventVotingRole($eventId: Int!, $roleId: Int!) {
-      withdrawEventVotingRole(eventId: $eventId, roleId: $roleId) {
-        eventId
-        roleId
-        myNominatedRoleId
-        totalNominations
-        mappedVotingRoles {
-          roleId
-          roleName
-          hindiName
-          englishName
-          sortOrder
-          nominationCount
-          isNominatedByCurrentUser
-          nominees {
-            userId
-            name
-            email
-            photo
-          }
-        }
-      }
-    }`;
-
-    return this.http.post<{ data: { withdrawEventVotingRole: WithdrawEventVotingRolePayload } }>(
-      this.graphqlUrl,
-      {
-        query: mutation,
-        variables: {
-          eventId,
-          roleId
-        }
-      },
-      { withCredentials: true }
-    ).pipe(
-      map((res) => res.data.withdrawEventVotingRole)
     );
   }
 }

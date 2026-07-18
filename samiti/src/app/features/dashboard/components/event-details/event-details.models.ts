@@ -12,14 +12,6 @@ export interface EventMappedVotingRole {
   hindiName?: string | null;
   englishName?: string | null;
   sortOrder: number;
-  nominationCount: number;
-  isNominatedByCurrentUser: boolean;
-  nominees: Array<{
-    userId: number;
-    name: string;
-    email: string;
-    photo?: string | null;
-  }>;
 }
 export interface EventPerson {
   id: number;
@@ -80,7 +72,6 @@ export interface EventDetailsPayload {
   availableRoles: EventAvailableRole[];
   mappedVotingRoles: EventMappedVotingRole[];
   canManageVotingRoles: boolean;
-  canSelfNominate: boolean;
   currentCommitteeRole: string;
   committeeMemberCount: number;
   committeeAdminCount: number;
@@ -88,6 +79,4 @@ export interface EventDetailsPayload {
   votingEnabled: boolean;
   votingClosed: boolean;
   votingPhaseState: number;
-  totalNominations: number;
-  myNominatedRoleId?: number | null;
 }
