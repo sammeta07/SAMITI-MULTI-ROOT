@@ -1,521 +1,505 @@
-<div class="event-details-workspace drawer-layout-shell">
-
-  @if (0) {
-     <!-- @if (isLoading()) { -->
-  <div class="spinner-loading-overlay">
-    <mat-progress-spinner mode="indeterminate" diameter="32"></mat-progress-spinner>
-    <span>Loading event details...</span>
-  </div>
-  } @else if (eventData()) {
-
-  <div class="workspace-body scrollable-container">
-    <mat-tab-group class="event-details-tabs" animationDuration="200ms">
-      <mat-tab>
-        <ng-template mat-tab-label>
-          <mat-icon class="event-tab-icon">how_to_vote</mat-icon>
-          <span>Voting</span>
-        </ng-template>
-        <div class="tab-panel-content">
-          <section class="voting-nomination-shell">
-            <div class="voting-event-debug-bar">
-              <div class="voting-event-debug-chip">
-                <mat-icon>event</mat-icon>
-                <span>{{ currentEventDisplayTitle }}</span>
-                <span class="debug-separator">|</span>
-                <span>Mapped Roles: {{ currentEventMappedRoleCount }}</span>
+<!-- @if(0){ -->
+  <div class="event-details-workspace drawer-layout-shell">
+  
+    @if (0) {
+       <!-- @if (isLoading()) { -->
+    <div class="spinner-loading-overlay">
+      <mat-progress-spinner mode="indeterminate" diameter="32"></mat-progress-spinner>
+      <span>Loading event details...</span>
+    </div>
+    } @else if (eventData()) {
+  
+    <div class="workspace-body scrollable-container">
+      <mat-tab-group class="event-details-tabs" animationDuration="200ms">
+        <mat-tab>
+          <ng-template mat-tab-label>
+            <mat-icon class="event-tab-icon">how_to_vote</mat-icon>
+            <span>Voting</span>
+          </ng-template>
+          <div class="tab-panel-content">
+            <section class="voting-nomination-shell">
+              <div class="voting-nomination-grid" [class]="'voting-nomination-grid ' + votingGridLayoutClass">
+                @for (card of votingDisplayCards; track card.slot) {
+                <mat-card class="voting-nomination-card">
+                  <mat-card-content>
+                    <div class="voting-card-icon-wrap" [class.voting-card-icon-wrap-president]="isPresidentRole(card.role)">
+                      <mat-icon>{{ getVotingRoleIcon(card.role) }}</mat-icon>
+                    </div>
+  
+                    <div class="voting-card-role-primary" [class.voting-card-role-primary-president]="isPresidentRole(card.role)">{{ (card.role.hindiName || card.role.roleName) | uppercase }}</div>
+                    <div class="voting-card-role-secondary" [class.voting-card-role-secondary-president]="isPresidentRole(card.role)">{{ ((card.role.englishName || card.role.roleName || '').split('_').join(' ')) | titlecase }}</div>
+                  </mat-card-content>
+  
+                  <mat-card-actions>
+                    @if (!isVotingRolesLocked) {
+                    <div class="voting-wait-admin-pill">
+                      <mat-icon>lock_clock</mat-icon>
+                      <span>Wait for your admin to lock roles</span>
+                    </div>
+                    } @else if (isVotingEnabled) {
+                    <div class="voting-open-card-pill">
+                      <mat-icon>how_to_vote</mat-icon>
+                      <span>Voting open for all members</span>
+                    </div>
+                    } @else if (isVotingClosed) {
+                    <div class="voting-open-card-pill voting-open-card-pill-closed">
+                      <mat-icon>event_busy</mat-icon>
+                      <span>Voting closed</span>
+                    </div>
+                    } @else {
+                    <div class="voting-wait-admin-pill">
+                      <mat-icon>schedule</mat-icon>
+                      <span>{{ nominationWaitMessage }}</span>
+                    </div>
+                    }
+                  </mat-card-actions>
+                </mat-card>
+                } @empty {
+                <div class="mini-empty-state">No voting roles mapped for this event yet.</div>
+                }
               </div>
-
-              <div class="voting-member-count-chip">
-                <span>Members: {{ eventData()?.committeeMemberCount || 0 }} | Admins: {{ eventData()?.committeeAdminCount || 0 }}</span>
-              </div>
-
-              <span class="role-lock-status-chip role-lock-status-chip-voting voting-status-chip-right" [class.role-lock-status-chip-voting-open]="isVotingEnabled">
-                <mat-icon>{{ votingPhaseIcon }}</mat-icon>
-                <span>{{ votingPhaseLabel }}</span>
-              </span>
-            </div>
-
-            <div class="voting-nomination-grid" [class]="'voting-nomination-grid ' + votingGridLayoutClass">
-              @for (card of votingDisplayCards; track card.slot) {
-              <mat-card class="voting-nomination-card">
-                <mat-card-content>
-                  <div class="voting-card-icon-wrap" [class.voting-card-icon-wrap-president]="isPresidentRole(card.role)">
-                    <mat-icon>{{ getVotingRoleIcon(card.role) }}</mat-icon>
-                  </div>
-
-                  <div class="voting-card-role-primary" [class.voting-card-role-primary-president]="isPresidentRole(card.role)">{{ (card.role.hindiName || card.role.roleName) | uppercase }}</div>
-                  <div class="voting-card-role-secondary" [class.voting-card-role-secondary-president]="isPresidentRole(card.role)">{{ ((card.role.englishName || card.role.roleName || '').split('_').join(' ')) | titlecase }}</div>
-                </mat-card-content>
-
-                <mat-card-actions>
-                  @if (!isVotingRolesLocked) {
-                  <div class="voting-wait-admin-pill">
-                    <mat-icon>lock_clock</mat-icon>
-                    <span>Wait for your admin to lock roles</span>
-                  </div>
-                  } @else if (isVotingEnabled) {
-                  <div class="voting-open-card-pill">
-                    <mat-icon>how_to_vote</mat-icon>
-                    <span>Voting open for all members</span>
-                  </div>
-                  } @else if (isVotingClosed) {
-                  <div class="voting-open-card-pill voting-open-card-pill-closed">
-                    <mat-icon>event_busy</mat-icon>
-                    <span>Voting closed</span>
-                  </div>
+            </section>
+          </div>
+        </mat-tab>
+  
+        <mat-tab>
+          <ng-template mat-tab-label>
+            <mat-icon class="event-tab-icon">info</mat-icon>
+            <span>Overview</span>
+          </ng-template>
+          <div class="tab-panel-content">
+            <section class="gd-committee-card">
+              <div class="committee-card-grid">
+  
+                <div class="card-logo-area">
+                  @if (eventData()?.eventBanner || eventData()?.bannerImages?.length) {
+                  <img [src]="eventData()?.eventBanner || eventData()?.bannerImages?.[0]" [alt]="eventData()?.eventName" class="committee-avatar" />
                   } @else {
-                  <div class="voting-wait-admin-pill">
-                    <mat-icon>schedule</mat-icon>
-                    <span>{{ nominationWaitMessage }}</span>
+                  <div class="committee-avatar-fallback event-avatar-fallback">{{ eventData()?.eventName?.charAt(0) || 'E' }}</div>
+                  }
+                </div>
+  
+                <div class="card-main-info-area">
+                  <div class="card-title-row">
+                    <h3 class="committee-display-name">{{ eventData()?.eventName }}</h3>
                   </div>
+                  <div class="card-location-row">
+                    <span class="location-text-trim">{{ eventData()?.committeeAddress || eventData()?.category || 'General event' }}</span>
+                  </div>
+                </div>
+  
+                <div class="card-actions-identity-area">
+                  <div class="identity-top-row">
+                    <span class="meta-pill status-pill status-badge-{{ eventData()?.status?.toLowerCase() }}">
+                      <mat-icon>circle</mat-icon>{{ eventData()?.status }}
+                    </span>
+                    <span class="meta-pill category-pill">
+                      <mat-icon>category</mat-icon>{{ eventData()?.category || 'General' }}
+                    </span>
+                    <span class="meta-pill visibility-pill">
+                      <mat-icon>visibility</mat-icon>{{ eventData()?.visibility === 'VISIBLE' ? 'Public' : 'Private' }}
+                    </span>
+                    @if (eventData()?.startDate) {
+                    <span class="meta-pill date-pill"><mat-icon>calendar_month</mat-icon> {{ eventData()?.startDate | date:'dd MMM yyyy' }}</span>
+                    }
+                    @if (eventData()?.endDate) {
+                    <span class="meta-pill date-pill"><mat-icon>event_busy</mat-icon> {{ eventData()?.endDate | date:'dd MMM yyyy' }}</span>
+                    }
+                  </div>
+  
+                  <div class="directions-status-row">
+                    <mat-slide-toggle
+                      class="event-visibility-toggle"
+                      [checked]="eventData()?.visibility === 'VISIBLE'"
+                      [disabled]="isVisibilityUpdating()"
+                      (change)="onEventVisibilityChange($event.checked)">
+                      {{ eventData()?.visibility }}
+                    </mat-slide-toggle>
+                    <button mat-stroked-button class="action-btn edit-btn" (click)="onEditEvent()">
+                      <mat-icon>edit</mat-icon>Edit
+                    </button>
+                    <button mat-stroked-button class="action-btn delete-btn" (click)="onDeleteEvent()">
+                      <mat-icon>delete</mat-icon>Delete
+                    </button>
+                  </div>
+                </div>
+  
+              </div>
+            </section>
+  
+            <section class="banner-images-section">
+              <div class="panel-card-header banner-header-bg">
+                <div class="header-title-left">
+                  <mat-icon class="icon-accent-banner">photo_library</mat-icon>
+                  <span class="title-text">Banner Images</span>
+                  <span class="count-pill">{{ bannerCount }}/{{ MAX_BANNERS }}</span>
+                </div>
+                <button mat-stroked-button class="banner-add-btn"
+                        [disabled]="!canUploadMoreBanners || isBannerUploading()"
+                        (click)="onAddBannerClick()"
+                        [matTooltip]="canUploadMoreBanners ? 'Upload up to ' + (MAX_BANNERS - bannerCount) + ' more image(s)' : 'Maximum ' + MAX_BANNERS + ' banners reached'">
+                  @if (isBannerUploading()) {
+                    <mat-progress-spinner mode="indeterminate" diameter="14" strokeWidth="2"></mat-progress-spinner>
+                  } @else {
+                    <mat-icon>add_photo_alternate</mat-icon>
                   }
-                </mat-card-actions>
-              </mat-card>
-              } @empty {
-              <div class="mini-empty-state">No voting roles mapped for this event yet.</div>
-              }
-            </div>
-          </section>
-        </div>
-      </mat-tab>
-
-      <mat-tab>
-        <ng-template mat-tab-label>
-          <mat-icon class="event-tab-icon">info</mat-icon>
-          <span>Overview</span>
-        </ng-template>
-        <div class="tab-panel-content">
-          <section class="gd-committee-card">
-            <div class="committee-card-grid">
-
-              <div class="card-logo-area">
-                @if (eventData()?.eventBanner || eventData()?.bannerImages?.length) {
-                <img [src]="eventData()?.eventBanner || eventData()?.bannerImages?.[0]" [alt]="eventData()?.eventName" class="committee-avatar" />
-                } @else {
-                <div class="committee-avatar-fallback event-avatar-fallback">{{ eventData()?.eventName?.charAt(0) || 'E' }}</div>
+                  <span>Add</span>
+                </button>
+              </div>
+  
+              @if (bannerCount > 0) {
+              <div class="banner-grid">
+                @for (imgUrl of eventData()!.bannerImages; track imgUrl) {
+                <div class="banner-image-card">
+                  <img [src]="imgUrl" [alt]="eventData()?.eventName" class="banner-img" />
+                  <button mat-icon-button class="banner-delete-btn" title="Delete banner"
+                          (click)="onDeleteBanner(imgUrl)">
+                    <mat-icon>delete</mat-icon>
+                  </button>
+                </div>
+                }
+                @if (canUploadMoreBanners) {
+                <button type="button" class="banner-upload-tile"
+                        [disabled]="isBannerUploading()"
+                        (click)="onAddBannerClick()">
+                  @if (isBannerUploading()) {
+                    <mat-progress-spinner mode="indeterminate" diameter="20" strokeWidth="2"></mat-progress-spinner>
+                  } @else {
+                    <mat-icon>add_photo_alternate</mat-icon>
+                    <span>Add Banner</span>
+                  }
+                </button>
                 }
               </div>
-
-              <div class="card-main-info-area">
-                <div class="card-title-row">
-                  <h3 class="committee-display-name">{{ eventData()?.eventName }}</h3>
-                </div>
-                <div class="card-location-row">
-                  <span class="location-text-trim">{{ eventData()?.committeeAddress || eventData()?.category || 'General event' }}</span>
-                </div>
-              </div>
-
-              <div class="card-actions-identity-area">
-                <div class="identity-top-row">
-                  <span class="meta-pill status-pill status-badge-{{ eventData()?.status?.toLowerCase() }}">
-                    <mat-icon>circle</mat-icon>{{ eventData()?.status }}
-                  </span>
-                  <span class="meta-pill category-pill">
-                    <mat-icon>category</mat-icon>{{ eventData()?.category || 'General' }}
-                  </span>
-                  <span class="meta-pill visibility-pill">
-                    <mat-icon>visibility</mat-icon>{{ eventData()?.visibility === 'VISIBLE' ? 'Public' : 'Private' }}
-                  </span>
-                  @if (eventData()?.startDate) {
-                  <span class="meta-pill date-pill"><mat-icon>calendar_month</mat-icon> {{ eventData()?.startDate | date:'dd MMM yyyy' }}</span>
+              } @else {
+              <div class="banner-empty-state">
+                <mat-icon>image_not_supported</mat-icon>
+                <p>No banner images uploaded yet.</p>
+                <button mat-flat-button class="banner-empty-upload-btn"
+                        [disabled]="isBannerUploading()"
+                        (click)="onAddBannerClick()">
+                  @if (isBannerUploading()) {
+                    <mat-progress-spinner mode="indeterminate" diameter="14" strokeWidth="2"></mat-progress-spinner>
+                  } @else {
+                    <mat-icon>add_photo_alternate</mat-icon>
                   }
-                  @if (eventData()?.endDate) {
-                  <span class="meta-pill date-pill"><mat-icon>event_busy</mat-icon> {{ eventData()?.endDate | date:'dd MMM yyyy' }}</span>
-                  }
-                </div>
-
-                <div class="directions-status-row">
-                  <mat-slide-toggle
-                    class="event-visibility-toggle"
-                    [checked]="eventData()?.visibility === 'VISIBLE'"
-                    [disabled]="isVisibilityUpdating()"
-                    (change)="onEventVisibilityChange($event.checked)">
-                    {{ eventData()?.visibility }}
-                  </mat-slide-toggle>
-                  <button mat-stroked-button class="action-btn edit-btn" (click)="onEditEvent()">
-                    <mat-icon>edit</mat-icon>Edit
-                  </button>
-                  <button mat-stroked-button class="action-btn delete-btn" (click)="onDeleteEvent()">
-                    <mat-icon>delete</mat-icon>Delete
-                  </button>
-                </div>
-              </div>
-
-            </div>
-          </section>
-
-          <section class="banner-images-section">
-            <div class="panel-card-header banner-header-bg">
-              <div class="header-title-left">
-                <mat-icon class="icon-accent-banner">photo_library</mat-icon>
-                <span class="title-text">Banner Images</span>
-                <span class="count-pill">{{ bannerCount }}/{{ MAX_BANNERS }}</span>
-              </div>
-              <button mat-stroked-button class="banner-add-btn"
-                      [disabled]="!canUploadMoreBanners || isBannerUploading()"
-                      (click)="onAddBannerClick()"
-                      [matTooltip]="canUploadMoreBanners ? 'Upload up to ' + (MAX_BANNERS - bannerCount) + ' more image(s)' : 'Maximum ' + MAX_BANNERS + ' banners reached'">
-                @if (isBannerUploading()) {
-                  <mat-progress-spinner mode="indeterminate" diameter="14" strokeWidth="2"></mat-progress-spinner>
-                } @else {
-                  <mat-icon>add_photo_alternate</mat-icon>
-                }
-                <span>Add</span>
-              </button>
-            </div>
-
-            @if (bannerCount > 0) {
-            <div class="banner-grid">
-              @for (imgUrl of eventData()!.bannerImages; track imgUrl) {
-              <div class="banner-image-card">
-                <img [src]="imgUrl" [alt]="eventData()?.eventName" class="banner-img" />
-                <button mat-icon-button class="banner-delete-btn" title="Delete banner"
-                        (click)="onDeleteBanner(imgUrl)">
-                  <mat-icon>delete</mat-icon>
+                  <span>Upload Banner</span>
                 </button>
               </div>
               }
-              @if (canUploadMoreBanners) {
-              <button type="button" class="banner-upload-tile"
-                      [disabled]="isBannerUploading()"
-                      (click)="onAddBannerClick()">
-                @if (isBannerUploading()) {
-                  <mat-progress-spinner mode="indeterminate" diameter="20" strokeWidth="2"></mat-progress-spinner>
-                } @else {
-                  <mat-icon>add_photo_alternate</mat-icon>
-                  <span>Add Banner</span>
-                }
-              </button>
-              }
-            </div>
-            } @else {
-            <div class="banner-empty-state">
-              <mat-icon>image_not_supported</mat-icon>
-              <p>No banner images uploaded yet.</p>
-              <button mat-flat-button class="banner-empty-upload-btn"
-                      [disabled]="isBannerUploading()"
-                      (click)="onAddBannerClick()">
-                @if (isBannerUploading()) {
-                  <mat-progress-spinner mode="indeterminate" diameter="14" strokeWidth="2"></mat-progress-spinner>
-                } @else {
-                  <mat-icon>add_photo_alternate</mat-icon>
-                }
-                <span>Upload Banner</span>
-              </button>
-            </div>
-            }
-          </section>
-
-          <section class="voting-master-roles-section">
-            <div class="panel-card-header voting-master-roles-header">
-              <div class="header-title-left">
-                <mat-icon class="icon-accent-voting">fact_check</mat-icon>
-                <span class="title-text">Available Roles (Master)</span>
-                <span class="count-pill">{{ eventData()?.availableRoles?.length || 0 }}</span>
-              </div>
-              <span class="role-lock-status-chip role-lock-status-chip-voting" [class.role-lock-status-chip-voting-open]="isVotingEnabled">
-                <mat-icon>{{ votingPhaseIcon }}</mat-icon>
-                <span>{{ votingPhaseLabel }}</span>
-              </span>
-            </div>
-
-            @if (canManageVotingRoles) {
-            <div class="voting-master-roles-actions-row">
-              @if (!isVotingRolesLocked) {
-              <button mat-stroked-button class="action-btn create-program-btn voting-phase-btn voting-phase-btn-save"
-                      [disabled]="!canEditVotingRoles || isSavingVotingRoles() || isLockingVotingRoles() || selectedVotingRoleIds().length === 0"
-                      (click)="onSaveVotingRoles()"
-                      [matTooltip]="canEditVotingRoles ? 'Save selected roles' : 'Save is available before roles are locked'">
-                @if (isSavingVotingRoles()) {
-                <mat-progress-spinner mode="indeterminate" diameter="14" strokeWidth="2"></mat-progress-spinner>
-                } @else {
-                <mat-icon>save</mat-icon>
-                }
-                <span>Save Roles</span>
-              </button>
-
-              <mat-icon class="voting-flow-arrow">chevron_right</mat-icon>
-              }
-
-              <button mat-stroked-button class="action-btn role-lock-btn voting-phase-btn"
-                      [disabled]="!canLockVotingRoles || isSavingVotingRoles() || isLockingVotingRoles()"
-                      (click)="onLockVotingRoles()"
-                      [matTooltip]="currentEventMappedRoleCount > 0 ? 'Lock selected roles for the full event lifecycle' : 'Save at least one role before locking'">
-                @if (isLockingVotingRoles()) {
-                <mat-progress-spinner mode="indeterminate" diameter="14" strokeWidth="2"></mat-progress-spinner>
-                } @else {
-                <mat-icon>lock</mat-icon>
-                }
-                <span>{{ isVotingRolesLocked ? 'Locked' : 'Lock Roles' }}</span>
-              </button>
-
-              <mat-icon class="voting-flow-arrow">chevron_right</mat-icon>
-
-              <button mat-stroked-button class="action-btn allow-voting-btn voting-phase-btn"
-                      [disabled]="!canStartNominations || isUpdatingVotingPhase()"
-                      (click)="onStartNominations()"
-                      [matTooltip]="canStartNominations ? 'Open nominations and withdrawals' : 'Start nominations after locking roles'">
-                @if (isUpdatingVotingPhase()) {
-                <mat-progress-spinner mode="indeterminate" diameter="14" strokeWidth="2"></mat-progress-spinner>
-                } @else {
-                <mat-icon>how_to_reg</mat-icon>
-                }
-                <span>Start Nominations</span>
-              </button>
-
-              <mat-icon class="voting-flow-arrow">chevron_right</mat-icon>
-
-              <button mat-stroked-button class="action-btn stop-voting-btn voting-phase-btn"
-                      [disabled]="!canStopNominations || isUpdatingVotingPhase()"
-                      (click)="onStopNominations()"
-                      [matTooltip]="canStopNominations ? 'Close nominations and withdrawals' : 'Stop nominations after they are opened'">
-                @if (isUpdatingVotingPhase()) {
-                <mat-progress-spinner mode="indeterminate" diameter="14" strokeWidth="2"></mat-progress-spinner>
-                } @else {
-                <mat-icon>remove_circle</mat-icon>
-                }
-                <span>Stop Nominations</span>
-              </button>
-
-              <mat-icon class="voting-flow-arrow">chevron_right</mat-icon>
-
-              <button mat-stroked-button class="action-btn voting-started-btn voting-phase-btn"
-                      [disabled]="!canStartVoting || isUpdatingVotingPhase()"
-                      (click)="onStartVoting()"
-                      [matTooltip]="canStartVoting ? 'Start voting after nominations are stopped' : 'Stop nominations before voting starts'">
-                @if (isUpdatingVotingPhase()) {
-                <mat-progress-spinner mode="indeterminate" diameter="14" strokeWidth="2"></mat-progress-spinner>
-                } @else {
-                <mat-icon>how_to_vote</mat-icon>
-                }
-                <span>Start Voting</span>
-              </button>
-
-              <mat-icon class="voting-flow-arrow">chevron_right</mat-icon>
-
-              <button mat-stroked-button class="action-btn voting-closed-btn voting-phase-btn"
-                      [disabled]="!canStopVoting || isUpdatingVotingPhase()"
-                      (click)="onStopVoting()"
-                      [matTooltip]="canStopVoting ? 'Close voting for this event' : 'Stop voting after it starts'">
-                @if (isUpdatingVotingPhase()) {
-                <mat-progress-spinner mode="indeterminate" diameter="14" strokeWidth="2"></mat-progress-spinner>
-                } @else {
-                <mat-icon>event_busy</mat-icon>
-                }
-                <span>Stop Voting</span>
-              </button>
-            </div>
-            }
-
-            <div class="voting-phase-banner">{{ votingPhaseBannerMessage }}</div>
-
-            @if (!isVotingRolesLocked) {
-            <div class="mini-empty-state">Select roles, save them, and lock the final list before opening nominations.</div>
-            }
-
-            <div class="role-picker-grid">
-              @for (role of eventData()?.availableRoles || []; track role.roleId || role.roleName) {
-              <label class="role-picker-card" [class.role-picker-card-selected]="isRoleMapped(role.roleId)">
-                <div class="role-picker-text">
-                  <div class="role-name-primary">{{ (role.hindiName || role.roleName) | uppercase }}</div>
-                  <div class="role-name-secondary">{{ ((role.englishName || role.roleCode || role.roleName || '').split('_').join(' ')) | titlecase }}</div>
+            </section>
+  
+            <section class="voting-master-roles-section">
+              <div class="panel-card-header voting-master-roles-header">
+                <div class="header-title-left">
+                  <mat-icon class="icon-accent-voting">fact_check</mat-icon>
+                  <span class="title-text">Available Roles (Master)</span>
+                  <span class="count-pill">{{ eventData()?.availableRoles?.length || 0 }}</span>
                 </div>
-                <input type="checkbox"
-                       [checked]="isRoleMapped(role.roleId)"
-                    [disabled]="!canEditVotingRoles || !role.roleId"
-                       (change)="onToggleVotingRole(role.roleId || 0, $any($event.target).checked)" />
-              </label>
-              } @empty {
-              <div class="table-empty-cell">No master roles available.</div>
-              }
-            </div>
-          </section>
-        </div>
-      </mat-tab>
-
-      <mat-tab>
-        <ng-template mat-tab-label>
-          <mat-icon class="event-tab-icon">event_note</mat-icon>
-          <span>Programs</span>
-        </ng-template>
-        <div class="tab-panel-content">
-          <section class="horizontal-full-card programs-section-style">
-            <div class="panel-card-header">
-              <div class="header-title-left">
-                <mat-icon class="icon-accent-program">event_note</mat-icon>
-                <span class="title-text">Programs</span>
-                <span class="count-pill">{{ programsCount }}</span>
+                <span class="role-lock-status-chip role-lock-status-chip-voting" [class.role-lock-status-chip-voting-open]="isVotingEnabled">
+                  <mat-icon>{{ votingPhaseIcon }}</mat-icon>
+                  <span>{{ votingPhaseLabel }}</span>
+                </span>
               </div>
-              <button mat-stroked-button class="action-btn create-program-btn" (click)="onCreateProgram()">
-                <mat-icon>add</mat-icon>Program
-              </button>
-            </div>
-            <div class="horizontal-list-container">
-              @for (program of eventData()!.programs; track program.programId) {
-              <article class="event-program-row" (click)="onOpenProgram(program.programId)">
-                <div class="program-row-left">
-                  @if (program.programBanner) {
-                  <img [src]="program.programBanner" [alt]="program.programName" class="program-row-banner" />
+  
+              @if (canManageVotingRoles) {
+              <div class="voting-master-roles-actions-row">
+                @if (!isVotingRolesLocked) {
+                <button mat-stroked-button class="action-btn create-program-btn voting-phase-btn voting-phase-btn-save"
+                        [disabled]="!canEditVotingRoles || isSavingVotingRoles() || isLockingVotingRoles() || selectedVotingRoleIds().length === 0"
+                        (click)="onSaveVotingRoles()"
+                        [matTooltip]="canEditVotingRoles ? 'Save selected roles' : 'Save is available before roles are locked'">
+                  @if (isSavingVotingRoles()) {
+                  <mat-progress-spinner mode="indeterminate" diameter="14" strokeWidth="2"></mat-progress-spinner>
                   } @else {
-                  <div class="program-row-banner-fallback">{{ program.programName.charAt(0).toUpperCase() }}</div>
+                  <mat-icon>save</mat-icon>
                   }
-                  <div class="program-row-info">
-                    <div class="main-title">{{ program.programName }}</div>
-                    <div class="secondary-sub-lbl">
-                      {{ program.startDate ? (program.startDate | date:'dd MMM yyyy') : 'Date TBD' }}
+                  <span>Save Roles</span>
+                </button>
+  
+                <mat-icon class="voting-flow-arrow">chevron_right</mat-icon>
+                }
+  
+                <button mat-stroked-button class="action-btn role-lock-btn voting-phase-btn"
+                        [disabled]="!canLockVotingRoles || isSavingVotingRoles() || isLockingVotingRoles()"
+                        (click)="onLockVotingRoles()"
+                        [matTooltip]="currentEventMappedRoleCount > 0 ? 'Lock selected roles for the full event lifecycle' : 'Save at least one role before locking'">
+                  @if (isLockingVotingRoles()) {
+                  <mat-progress-spinner mode="indeterminate" diameter="14" strokeWidth="2"></mat-progress-spinner>
+                  } @else {
+                  <mat-icon>lock</mat-icon>
+                  }
+                  <span>{{ isVotingRolesLocked ? 'Locked' : 'Lock Roles' }}</span>
+                </button>
+  
+                <mat-icon class="voting-flow-arrow">chevron_right</mat-icon>
+  
+                <button mat-stroked-button class="action-btn allow-voting-btn voting-phase-btn"
+                        [disabled]="!canStartNominations || isUpdatingVotingPhase()"
+                        (click)="onStartNominations()"
+                        [matTooltip]="canStartNominations ? 'Open nominations and withdrawals' : 'Start nominations after locking roles'">
+                  @if (isUpdatingVotingPhase()) {
+                  <mat-progress-spinner mode="indeterminate" diameter="14" strokeWidth="2"></mat-progress-spinner>
+                  } @else {
+                  <mat-icon>how_to_reg</mat-icon>
+                  }
+                  <span>Start Nominations</span>
+                </button>
+  
+                <mat-icon class="voting-flow-arrow">chevron_right</mat-icon>
+  
+                <button mat-stroked-button class="action-btn stop-voting-btn voting-phase-btn"
+                        [disabled]="!canStopNominations || isUpdatingVotingPhase()"
+                        (click)="onStopNominations()"
+                        [matTooltip]="canStopNominations ? 'Close nominations and withdrawals' : 'Stop nominations after they are opened'">
+                  @if (isUpdatingVotingPhase()) {
+                  <mat-progress-spinner mode="indeterminate" diameter="14" strokeWidth="2"></mat-progress-spinner>
+                  } @else {
+                  <mat-icon>remove_circle</mat-icon>
+                  }
+                  <span>Stop Nominations</span>
+                </button>
+  
+                <mat-icon class="voting-flow-arrow">chevron_right</mat-icon>
+  
+                <button mat-stroked-button class="action-btn voting-started-btn voting-phase-btn"
+                        [disabled]="!canStartVoting || isUpdatingVotingPhase()"
+                        (click)="onStartVoting()"
+                        [matTooltip]="canStartVoting ? 'Start voting after nominations are stopped' : 'Stop nominations before voting starts'">
+                  @if (isUpdatingVotingPhase()) {
+                  <mat-progress-spinner mode="indeterminate" diameter="14" strokeWidth="2"></mat-progress-spinner>
+                  } @else {
+                  <mat-icon>how_to_vote</mat-icon>
+                  }
+                  <span>Start Voting</span>
+                </button>
+  
+                <mat-icon class="voting-flow-arrow">chevron_right</mat-icon>
+  
+                <button mat-stroked-button class="action-btn voting-closed-btn voting-phase-btn"
+                        [disabled]="!canStopVoting || isUpdatingVotingPhase()"
+                        (click)="onStopVoting()"
+                        [matTooltip]="canStopVoting ? 'Close voting for this event' : 'Stop voting after it starts'">
+                  @if (isUpdatingVotingPhase()) {
+                  <mat-progress-spinner mode="indeterminate" diameter="14" strokeWidth="2"></mat-progress-spinner>
+                  } @else {
+                  <mat-icon>event_busy</mat-icon>
+                  }
+                  <span>Stop Voting</span>
+                </button>
+              </div>
+              }
+  
+              <div class="voting-phase-banner">{{ votingPhaseBannerMessage }}</div>
+  
+              @if (!isVotingRolesLocked) {
+              <div class="mini-empty-state">Select roles, save them, and lock the final list before opening nominations.</div>
+              }
+  
+              <div class="role-picker-grid">
+                @for (role of eventData()?.availableRoles || []; track role.roleId || role.roleName) {
+                <label class="role-picker-card" [class.role-picker-card-selected]="isRoleMapped(role.roleId)">
+                  <div class="role-picker-text">
+                    <div class="role-name-primary">{{ (role.hindiName || role.roleName) | uppercase }}</div>
+                    <div class="role-name-secondary">{{ ((role.englishName || role.roleCode || role.roleName || '').split('_').join(' ')) | titlecase }}</div>
+                  </div>
+                  <input type="checkbox"
+                         [checked]="isRoleMapped(role.roleId)"
+                      [disabled]="!canEditVotingRoles || !role.roleId"
+                         (change)="onToggleVotingRole(role.roleId || 0, $any($event.target).checked)" />
+                </label>
+                } @empty {
+                <div class="table-empty-cell">No master roles available.</div>
+                }
+              </div>
+            </section>
+          </div>
+        </mat-tab>
+  
+        <mat-tab>
+          <ng-template mat-tab-label>
+            <mat-icon class="event-tab-icon">event_note</mat-icon>
+            <span>Programs</span>
+          </ng-template>
+          <div class="tab-panel-content">
+            <section class="horizontal-full-card programs-section-style">
+              <div class="panel-card-header">
+                <div class="header-title-left">
+                  <mat-icon class="icon-accent-program">event_note</mat-icon>
+                  <span class="title-text">Programs</span>
+                  <span class="count-pill">{{ programsCount }}</span>
+                </div>
+                <button mat-stroked-button class="action-btn create-program-btn" (click)="onCreateProgram()">
+                  <mat-icon>add</mat-icon>Program
+                </button>
+              </div>
+              <div class="horizontal-list-container">
+                @for (program of eventData()!.programs; track program.programId) {
+                <article class="event-program-row" (click)="onOpenProgram(program.programId)">
+                  <div class="program-row-left">
+                    @if (program.programBanner) {
+                    <img [src]="program.programBanner" [alt]="program.programName" class="program-row-banner" />
+                    } @else {
+                    <div class="program-row-banner-fallback">{{ program.programName.charAt(0).toUpperCase() }}</div>
+                    }
+                    <div class="program-row-info">
+                      <div class="main-title">{{ program.programName }}</div>
+                      <div class="secondary-sub-lbl">
+                        {{ program.startDate ? (program.startDate | date:'dd MMM yyyy') : 'Date TBD' }}
+                      </div>
                     </div>
                   </div>
-                </div>
-                <div class="program-row-right">
-                  <span class="status-tag tag-{{ program.status.toLowerCase() }}">{{ program.status }}</span>
-                  <button mat-icon-button class="circle-btn view-btn" type="button" title="Open program"
-                          (click)="onOpenProgram(program.programId); $event.stopPropagation()">
-                    <mat-icon>open_in_new</mat-icon>
-                  </button>
-                </div>
-              </article>
-              } @empty {
-              <div class="mini-empty-state">No programs available</div>
-              }
-            </div>
-          </section>
-        </div>
-      </mat-tab>
-
-      <mat-tab>
-        <ng-template mat-tab-label>
-          <mat-icon class="event-tab-icon">badge</mat-icon>
-          <span>Designations</span>
-        </ng-template>
-        <div class="tab-panel-content">
-          <section class="horizontal-full-card designations-section-style">
-            <div class="panel-card-header designations-header-bg">
-              <div class="header-title-left">
-                <mat-icon class="icon-accent-designation">badge</mat-icon>
-                <span class="title-text">Designations</span>
-              </div>
-            </div>
-            <div class="designations-grid">
-              <div class="designation-card adhyaksh-card">
-                <div class="designation-icon-wrap adhyaksh-icon"><mat-icon>person</mat-icon></div>
-                <div class="designation-info">
-                  <span class="designation-title">Adhyaksh</span>
-                  <span class="designation-name">—</span>
-                </div>
-              </div>
-              <div class="designation-card upadhyaksh-card">
-                <div class="designation-icon-wrap upadhyaksh-icon"><mat-icon>person_outline</mat-icon></div>
-                <div class="designation-info">
-                  <span class="designation-title">Upadhyaksh</span>
-                  <span class="designation-name">—</span>
-                </div>
-              </div>
-              <div class="designation-card casher-card">
-                <div class="designation-icon-wrap casher-icon"><mat-icon>account_balance_wallet</mat-icon></div>
-                <div class="designation-info">
-                  <span class="designation-title">Casher</span>
-                  <span class="designation-name">—</span>
-                </div>
-              </div>
-              <div class="designation-card anka-card">
-                <div class="designation-icon-wrap anka-icon"><mat-icon>calculate</mat-icon></div>
-                <div class="designation-info">
-                  <span class="designation-title">Anka</span>
-                  <span class="designation-name">—</span>
-                </div>
-              </div>
-            </div>
-          </section>
-
-          <main class="dashboard-split-grid">
-
-            <section class="mesh-card admins-card-style">
-              <div class="panel-card-header admins-header-bg">
-                <div class="header-title-left">
-                  <mat-icon class="icon-accent-admin">admin_panel_settings</mat-icon>
-                  <span class="title-text">Admins</span>
-                  <span class="count-pill">{{ eventAdmins().length }}</span>
-                </div>
-              </div>
-              <div class="mesh-list-scroll-box">
-                @for (admin of eventAdmins(); track admin.id) {
-                <div class="item-density-row">
-                  <div class="row-avatar circle-shape admin-bg">
-                    @if (admin.photo) {
-                    <img [src]="admin.photo" [alt]="admin.name" class="avatar-img" (error)="admin.photo = null" />
-                    } @else {
-                    {{ admin.name.charAt(0).toUpperCase() }}
-                    }
+                  <div class="program-row-right">
+                    <span class="status-tag tag-{{ program.status.toLowerCase() }}">{{ program.status }}</span>
+                    <button mat-icon-button class="circle-btn view-btn" type="button" title="Open program"
+                            (click)="onOpenProgram(program.programId); $event.stopPropagation()">
+                      <mat-icon>open_in_new</mat-icon>
+                    </button>
                   </div>
-                  <div class="row-info-core">
-                    <div class="main-title">{{ admin.name }}</div>
-                    <div class="secondary-sub-lbl">{{ admin.email }}</div>
-                  </div>
-                  <div class="row-action-deck">
-                    <button mat-icon-button class="circle-btn view-btn" title="View"><mat-icon>visibility</mat-icon></button>
-                    <button mat-icon-button class="circle-btn delete-btn" title="Remove"><mat-icon>person_remove</mat-icon></button>
-                  </div>
-                </div>
+                </article>
                 } @empty {
-                <div class="mini-empty-state">No administrators</div>
+                <div class="mini-empty-state">No programs available</div>
                 }
               </div>
             </section>
-
-            <section class="mesh-card members-card-style">
-              <div class="panel-card-header members-header-bg">
+          </div>
+        </mat-tab>
+  
+        <mat-tab>
+          <ng-template mat-tab-label>
+            <mat-icon class="event-tab-icon">badge</mat-icon>
+            <span>Designations</span>
+          </ng-template>
+          <div class="tab-panel-content">
+            <section class="horizontal-full-card designations-section-style">
+              <div class="panel-card-header designations-header-bg">
                 <div class="header-title-left">
-                  <mat-icon class="icon-accent-member">group</mat-icon>
-                  <span class="title-text">Members</span>
-                  <span class="count-pill">{{ eventMembers().length }}</span>
+                  <mat-icon class="icon-accent-designation">badge</mat-icon>
+                  <span class="title-text">Designations</span>
                 </div>
               </div>
-              <div class="mesh-list-scroll-box">
-                @for (member of eventMembers(); track member.id) {
-                <div class="item-density-row">
-                  <div class="row-avatar circle-shape member-bg">
-                    @if (member.photo) {
-                    <img [src]="member.photo" [alt]="member.name" class="avatar-img" (error)="member.photo = null" />
-                    } @else {
-                    {{ member.name.charAt(0).toUpperCase() }}
-                    }
-                  </div>
-                  <div class="row-info-core">
-                    <div class="main-title">{{ member.name }}</div>
-                    <div class="secondary-sub-lbl">{{ member.email }}</div>
-                  </div>
-                  <div class="row-action-deck">
-                    <button mat-icon-button class="circle-btn view-btn" title="View"><mat-icon>visibility</mat-icon></button>
-                    <button mat-icon-button class="circle-btn delete-btn" title="Remove"><mat-icon>person_remove</mat-icon></button>
+              <div class="designations-grid">
+                <div class="designation-card adhyaksh-card">
+                  <div class="designation-icon-wrap adhyaksh-icon"><mat-icon>person</mat-icon></div>
+                  <div class="designation-info">
+                    <span class="designation-title">Adhyaksh</span>
+                    <span class="designation-name">—</span>
                   </div>
                 </div>
-                } @empty {
-                <div class="mini-empty-state">No members</div>
-                }
+                <div class="designation-card upadhyaksh-card">
+                  <div class="designation-icon-wrap upadhyaksh-icon"><mat-icon>person_outline</mat-icon></div>
+                  <div class="designation-info">
+                    <span class="designation-title">Upadhyaksh</span>
+                    <span class="designation-name">—</span>
+                  </div>
+                </div>
+                <div class="designation-card casher-card">
+                  <div class="designation-icon-wrap casher-icon"><mat-icon>account_balance_wallet</mat-icon></div>
+                  <div class="designation-info">
+                    <span class="designation-title">Casher</span>
+                    <span class="designation-name">—</span>
+                  </div>
+                </div>
+                <div class="designation-card anka-card">
+                  <div class="designation-icon-wrap anka-icon"><mat-icon>calculate</mat-icon></div>
+                  <div class="designation-info">
+                    <span class="designation-title">Anka</span>
+                    <span class="designation-name">—</span>
+                  </div>
+                </div>
               </div>
             </section>
-
-          </main>
-        </div>
-      </mat-tab>
-
-    </mat-tab-group>
-
-    <input
-      #bannerFileInput
-      type="file"
-      accept="image/*"
-      multiple
-      hidden
-      (change)="onBannerFilesSelected($event)"
-    />
+  
+            <main class="dashboard-split-grid">
+  
+              <section class="mesh-card admins-card-style">
+                <div class="panel-card-header admins-header-bg">
+                  <div class="header-title-left">
+                    <mat-icon class="icon-accent-admin">admin_panel_settings</mat-icon>
+                    <span class="title-text">Admins</span>
+                    <span class="count-pill">{{ eventAdmins().length }}</span>
+                  </div>
+                </div>
+                <div class="mesh-list-scroll-box">
+                  @for (admin of eventAdmins(); track admin.id) {
+                  <div class="item-density-row">
+                    <div class="row-avatar circle-shape admin-bg">
+                      @if (admin.photo) {
+                      <img [src]="admin.photo" [alt]="admin.name" class="avatar-img" (error)="admin.photo = null" />
+                      } @else {
+                      {{ admin.name.charAt(0).toUpperCase() }}
+                      }
+                    </div>
+                    <div class="row-info-core">
+                      <div class="main-title">{{ admin.name }}</div>
+                      <div class="secondary-sub-lbl">{{ admin.email }}</div>
+                    </div>
+                    <div class="row-action-deck">
+                      <button mat-icon-button class="circle-btn view-btn" title="View"><mat-icon>visibility</mat-icon></button>
+                      <button mat-icon-button class="circle-btn delete-btn" title="Remove"><mat-icon>person_remove</mat-icon></button>
+                    </div>
+                  </div>
+                  } @empty {
+                  <div class="mini-empty-state">No administrators</div>
+                  }
+                </div>
+              </section>
+  
+              <section class="mesh-card members-card-style">
+                <div class="panel-card-header members-header-bg">
+                  <div class="header-title-left">
+                    <mat-icon class="icon-accent-member">group</mat-icon>
+                    <span class="title-text">Members</span>
+                    <span class="count-pill">{{ eventMembers().length }}</span>
+                  </div>
+                </div>
+                <div class="mesh-list-scroll-box">
+                  @for (member of eventMembers(); track member.id) {
+                  <div class="item-density-row">
+                    <div class="row-avatar circle-shape member-bg">
+                      @if (member.photo) {
+                      <img [src]="member.photo" [alt]="member.name" class="avatar-img" (error)="member.photo = null" />
+                      } @else {
+                      {{ member.name.charAt(0).toUpperCase() }}
+                      }
+                    </div>
+                    <div class="row-info-core">
+                      <div class="main-title">{{ member.name }}</div>
+                      <div class="secondary-sub-lbl">{{ member.email }}</div>
+                    </div>
+                    <div class="row-action-deck">
+                      <button mat-icon-button class="circle-btn view-btn" title="View"><mat-icon>visibility</mat-icon></button>
+                      <button mat-icon-button class="circle-btn delete-btn" title="Remove"><mat-icon>person_remove</mat-icon></button>
+                    </div>
+                  </div>
+                  } @empty {
+                  <div class="mini-empty-state">No members</div>
+                  }
+                </div>
+              </section>
+  
+            </main>
+          </div>
+        </mat-tab>
+  
+      </mat-tab-group>
+  
+      <input
+        #bannerFileInput
+        type="file"
+        accept="image/*"
+        multiple
+        hidden
+        (change)="onBannerFilesSelected($event)"
+      />
+    </div>
+    } @else {
+    <div class="empty-layout-shell">
+      <mat-icon class="icon-off">event_busy</mat-icon>
+      <h3>No Event Selected</h3>
+      <p>Select an event from the navigation tree to view its details.</p>
+    </div>
+    }
+  
   </div>
-  } @else {
-  <div class="empty-layout-shell">
-    <mat-icon class="icon-off">event_busy</mat-icon>
-    <h3>No Event Selected</h3>
-    <p>Select an event from the navigation tree to view its details.</p>
-  </div>
-  }
-
-</div>
+<!-- } -->
