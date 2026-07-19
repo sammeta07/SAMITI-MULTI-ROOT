@@ -1,4 +1,4 @@
-import { execute, query } from '../../config/db';
+import { execute, query } from '../../../config/db';
 
 // ─── Master admin demotes an existing COMMITTEE_ADMIN to COMMITTEE_MEMBER ──────
 
@@ -119,3 +119,4 @@ export const demoteCommitteeAdminResolvers = {
     }
   }
 };
+

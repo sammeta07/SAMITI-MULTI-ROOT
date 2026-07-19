@@ -1,5 +1,5 @@
-import { execute, query } from '../../config/db';
-import { hasEventsDisplayNameColumn } from './event-display-name-support';
+import { execute, query } from '../../../config/db';
+import { hasEventsDisplayNameColumn } from '../details/event-display-name-support';
 
 const ALLOWED_EVENT_STATUSES = new Set(['UPCOMING', 'ONGOING', 'COMPLETED', 'CANCELLED']);
 const ALLOWED_EVENT_VISIBILITIES = new Set(['VISIBLE', 'HIDDEN']);
@@ -423,3 +423,5 @@ export const updateEventResolvers = {
     }
   }
 };
+
+

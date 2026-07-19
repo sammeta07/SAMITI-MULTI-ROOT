@@ -1,4 +1,4 @@
-import { getConnection, query } from '../../config/db';
+import { getConnection, query } from '../../../config/db';
 
 function throwEventError(code: string, message: string): never {
   throw new Error(`${code}: ${message}`);
@@ -190,3 +190,4 @@ export const deleteEventResolvers = {
     }
   }
 };
+

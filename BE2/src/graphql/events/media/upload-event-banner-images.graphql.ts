@@ -1,4 +1,4 @@
-import { query, execute } from '../../config/db';
+import { query, execute } from '../../../config/db';
 
 const MAX_BANNER_IMAGES = 5;
 
@@ -155,3 +155,4 @@ export const uploadEventBannerImagesResolvers = {
     }
   }
 };
+

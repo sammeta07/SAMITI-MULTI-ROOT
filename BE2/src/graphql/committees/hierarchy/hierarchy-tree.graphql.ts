@@ -1,5 +1,5 @@
-import { query } from '../../config/db';
-import { hasEventsDisplayNameColumn } from '../events/event-display-name-support';
+import { query } from '../../../config/db';
+import { hasEventsDisplayNameColumn } from '../../events/details/event-display-name-support';
 
 export const hierarchyTreeTypes = `
   type HierarchyTreeNode {
@@ -349,3 +349,6 @@ export const hierarchyTreeResolvers = {
     }
   }
 };
+
+
+

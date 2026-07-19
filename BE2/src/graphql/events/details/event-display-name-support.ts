@@ -1,4 +1,4 @@
-import { query } from '../../config/db';
+import { query } from '../../../config/db';
 
 let cachedHasEventsDisplayNameColumn: boolean | null = null;
 
@@ -19,3 +19,4 @@ export async function hasEventsDisplayNameColumn(): Promise<boolean> {
   cachedHasEventsDisplayNameColumn = rows.length > 0;
   return cachedHasEventsDisplayNameColumn;
 }
+

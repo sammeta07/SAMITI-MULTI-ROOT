@@ -1,18 +1,23 @@
-import { execute, query } from '../../config/db';
+import { execute, query } from '../../../config/db';
 
-// ─── Master admin removes a COMMITTEE_MEMBER or COMMITTEE_ADMIN from committee ─
+// ─── Master admin promotes an existing COMMITTEE_MEMBER to COMMITTEE_ADMIN ─────
 
-export const removeCommitteeMemberTypes = `
-  type RemoveCommitteeMemberResponse {
+export const promoteCommitteeMemberTypes = `
+  enum CommitteeMemberPromotionRole {
+    COMMITTEE_ADMIN
+  }
+
+  type PromoteCommitteeMemberResponse {
     committeeId: Int!
     targetUserId: Int!
-    removedByUserId: Int!
-    removedAtTime: String!
+    newRole: String!
+    actionByUserId: Int!
+    actionAtTime: String!
   }
 `;
 
-export const removeCommitteeMemberMutationFields = `
-  removeCommitteeMember(committeeId: Int!, targetUserId: Int!): RemoveCommitteeMemberResponse!
+export const promoteCommitteeMemberMutationFields = `
+  promoteCommitteeMember(committeeId: Int!, targetUserId: Int!, newRole: CommitteeMemberPromotionRole!): PromoteCommitteeMemberResponse!
 `;
 
 async function resolveLoggedInUserIdFromGraphQLContext(context: any): Promise<number> {
@@ -39,17 +44,21 @@ async function resolveLoggedInUserIdFromGraphQLContext(context: any): Promise<nu
   return loggedInUserId;
 }
 
-export const removeCommitteeMemberResolvers = {
+export const promoteCommitteeMemberResolvers = {
   Mutation: {
-    // ── Master admin removes a member/admin from the committee ────────────────
-    async removeCommitteeMember(
+    // ── Master admin promotes a member to admin ──────────────────────────────
+    async promoteCommitteeMember(
       _: any,
-      args: { committeeId: number; targetUserId: number },
+      args: { committeeId: number; targetUserId: number; newRole: 'COMMITTEE_ADMIN' },
       context: any
     ) {
-      const { committeeId, targetUserId } = args;
+      const { committeeId, targetUserId, newRole } = args;
       const loggedInUserId = await resolveLoggedInUserIdFromGraphQLContext(context);
-      const removedAtTime = new Date().toISOString();
+      const actionAtTime = new Date().toISOString();
+
+      if (newRole !== 'COMMITTEE_ADMIN') {
+        throw new Error('Unsupported promotion role');
+      }
 
       // Verify actor is the committee master admin or admin
       const actorRows = await query<any[]>(
@@ -61,12 +70,12 @@ export const removeCommitteeMemberResolvers = {
         [committeeId, loggedInUserId]
       );
       if (actorRows.length === 0) {
-        throw new Error('Forbidden: Only committee admins can remove members');
+        throw new Error('Forbidden: Only committee admins can promote members');
       }
 
       const actorRole = String(actorRows[0].committee_role || '');
 
-      // Verify target exists in this committee
+      // Verify target is currently an accepted COMMITTEE_MEMBER
       const targetRows = await query<any[]>(
         `SELECT committee_role FROM users_committees
          WHERE committee_id = ? AND user_id = ?
@@ -78,37 +87,26 @@ export const removeCommitteeMemberResolvers = {
       }
 
       const targetRole = String(targetRows[0].committee_role || '');
-      if (actorRole === 'COMMITTEE_ADMIN') {
-        // Admins can only remove COMMITTEE_MEMBER
-        if (targetRole !== 'COMMITTEE_MEMBER') {
-          throw new Error('Admins can only remove committee members');
-        }
-      } else {
-        // Master admin can remove members or admins
-        if (targetRole !== 'COMMITTEE_MEMBER' && targetRole !== 'COMMITTEE_ADMIN') {
-          throw new Error('Only committee members or admins can be removed');
-        }
+      if (targetRole !== 'COMMITTEE_MEMBER') {
+        throw new Error('Only committee members can be promoted to admin');
       }
 
-      // 1) Remove the membership row
+      // 1) Update final membership state
       await execute(
-        `DELETE FROM users_committees
+        `UPDATE users_committees
+         SET committee_role = 'COMMITTEE_ADMIN'
          WHERE committee_id = ? AND user_id = ?`,
         [committeeId, targetUserId]
       );
 
-      // 2) Record the removal as a new audit record on every action
-      await execute(
-        `INSERT INTO committee_role_requests
-           (committee_id, requester_user_id, request_role, status, requested_at, action_by_user_id, action_at, cancel_by_user_id, cancel_at)
-         VALUES (?, ?, ?, 'REMOVED', NOW(), ?, NOW(), ?, NOW())`,
-        [committeeId, targetUserId, targetRole, loggedInUserId, loggedInUserId]
-      );
-
-      // 3) Resolve any lingering PENDING requests so nothing is orphaned
+      // 2) Resolve the original PENDING request row with the performed action
+      //    (updates the same record to PROMOTED so it leaves the received list)
       await execute(
         `UPDATE committee_role_requests
-         SET status = 'REJECTED', action_by_user_id = ?, action_at = NOW()
+         SET status = 'PROMOTED',
+             request_role = 'COMMITTEE_ADMIN',
+             action_by_user_id = ?,
+             action_at = NOW()
          WHERE committee_id = ? AND requester_user_id = ? AND status = 'PENDING'`,
         [loggedInUserId, committeeId, targetUserId]
       );
@@ -116,9 +114,11 @@ export const removeCommitteeMemberResolvers = {
       return {
         committeeId,
         targetUserId,
-        removedByUserId: loggedInUserId,
-        removedAtTime
+        newRole: 'COMMITTEE_ADMIN',
+        actionByUserId: loggedInUserId,
+        actionAtTime
       };
     }
   }
 };
+

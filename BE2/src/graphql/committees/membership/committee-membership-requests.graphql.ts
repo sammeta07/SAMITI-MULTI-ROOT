@@ -1,4 +1,4 @@
-import { execute, query } from '../../config/db';
+import { execute, query } from '../../../config/db';
 
 // ─── All queries/mutations now use committee_role_requests for workflow ───────
 

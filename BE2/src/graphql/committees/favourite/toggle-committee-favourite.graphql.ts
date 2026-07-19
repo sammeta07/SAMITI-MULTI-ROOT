@@ -1,4 +1,4 @@
-import { execute } from '../../config/db';
+import { execute } from '../../../config/db';
 
 export const toggleCommitteeFavouriteTypes = `
   type ToggleCommitteeFavouritePayload {
@@ -52,3 +52,4 @@ export const toggleCommitteeFavouriteResolvers = {
     }
   }
 };
+

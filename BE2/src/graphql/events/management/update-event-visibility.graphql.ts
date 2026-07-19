@@ -1,4 +1,4 @@
-import { execute, query } from '../../config/db';
+import { execute, query } from '../../../config/db';
 
 const ALLOWED_EVENT_VISIBILITIES = new Set(['VISIBLE', 'HIDDEN']);
 
@@ -108,3 +108,4 @@ export const updateEventVisibilityResolvers = {
     }
   }
 };
+

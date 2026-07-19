@@ -1,4 +1,4 @@
-import { query } from '../../config/db';
+import { query } from '../../../config/db';
 
 export async function hasEventsVotingPhaseStateColumn(): Promise<boolean> {
   const rows = await query<any[]>(

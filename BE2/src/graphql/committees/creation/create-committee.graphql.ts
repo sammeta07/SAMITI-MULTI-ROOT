@@ -1,5 +1,5 @@
 import { RowDataPacket } from 'mysql2/promise';
-import { execute, query } from '../../config/db';
+import { execute, query } from '../../../config/db';
 
 type CommitteeRow = RowDataPacket & {
   id: number;
@@ -206,3 +206,4 @@ export const createCommitteeResolvers = {
     }
   }
 };
+

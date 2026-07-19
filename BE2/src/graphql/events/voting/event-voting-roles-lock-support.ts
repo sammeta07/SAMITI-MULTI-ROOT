@@ -1,4 +1,4 @@
-import { query } from '../../config/db';
+import { query } from '../../../config/db';
 
 let cachedHasVotingRolesLockedColumn: boolean | null = null;
 
