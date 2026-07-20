@@ -1,0 +1,90 @@
+<div class="drawer-layout-shell">
+
+  <mat-toolbar class="drawer-synchronized-header">
+    <div class="drawer-title-group">
+      <mat-icon class="mode-indicator-icon">history</mat-icon>
+      <h2>Voting History</h2>
+    </div>
+    <button mat-icon-button type="button" class="drawer-close-btn" (click)="onClose()" aria-label="Close dialog">
+      <mat-icon>close</mat-icon>
+    </button>
+  </mat-toolbar>
+
+  <div class="dialog-body">
+    <div class="vote-history-event-name">
+      <mat-icon>event</mat-icon>
+      <span>{{ data.eventName }}</span>
+    </div>
+
+    <div class="vote-history-summary">
+      <div class="summary-card summary-total">
+        <span class="summary-value">{{ data.totalMembers }}</span>
+        <span class="summary-label">Total Members</span>
+      </div>
+      <div class="summary-card summary-voted">
+        <span class="summary-value">{{ data.votedCount }}</span>
+        <span class="summary-label">Voted</span>
+      </div>
+      <div class="summary-card summary-pending">
+        <span class="summary-value">{{ data.notVotedCount }}</span>
+        <span class="summary-label">Not Voted</span>
+      </div>
+    </div>
+
+    <div class="vote-history-progress">
+      <div class="vote-history-progress-bar">
+        <div class="vote-history-progress-fill" [style.width.%]="votePercent()"></div>
+      </div>
+      <span class="vote-history-progress-text">{{ votePercent() }}% votes cast</span>
+    </div>
+
+    @if (!data.liveTracking) {
+    <div class="vote-history-banner">
+      <mat-icon>info</mat-icon>
+      <span>Live per-member vote tracking is not available yet. Showing the full committee roster.</span>
+    </div>
+    }
+
+    <div class="vote-history-list">
+      <div class="vote-history-list-head">
+        <span class="vh-col-name">Member</span>
+        <span class="vh-col-role">Role</span>
+        <span class="vh-col-status">Status</span>
+      </div>
+      @for (member of data.members; track member.id) {
+      <div class="vote-history-row" [class.voted]="member.hasVoted">
+        <div class="vh-col-name">
+          @if (member.photo) {
+          <img class="vh-avatar" [src]="member.photo" [alt]="member.name" />
+          } @else {
+          <span class="vh-avatar vh-avatar-fallback">{{ member.name.charAt(0).toUpperCase() }}</span>
+          }
+          <div class="vh-member-info">
+            <span class="vh-member-name">{{ member.name }}</span>
+            <span class="vh-member-email">{{ member.email }}</span>
+          </div>
+        </div>
+        <div class="vh-col-role">{{ member.role }}</div>
+        <div class="vh-col-status">
+          @if (member.hasVoted) {
+          <span class="vh-status vh-status-voted">
+            <mat-icon>check_circle</mat-icon> Voted
+          </span>
+          } @else {
+          <span class="vh-status vh-status-pending">
+            <mat-icon>pending</mat-icon> Not Voted
+          </span>
+          }
+        </div>
+      </div>
+      } @empty {
+      <div class="vote-history-empty">No committee members found.</div>
+      }
+    </div>
+  </div>
+
+  <footer class="drawer-action-footer">
+    <button mat-button type="button" class="btn-cancel-flat" (click)="onClose()">Close</button>
+  </footer>
+
+</div>

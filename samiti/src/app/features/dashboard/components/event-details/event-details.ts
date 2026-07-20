@@ -17,6 +17,8 @@ import { ConfirmDialogData } from '../../../../components/dialog/confirm/confirm
 import { DashboardHierarchyTreeService } from '../dashboard-hierarchy-tree/dashboard-hierarchy-tree.service';
 import { CreateProgramDialogComponent } from '../../../../components/dialog/create-program/create-program.component';
 import { CreateEventDialogComponent } from '../../../../components/dialog/create-event/create-event.component';
+import { VoteHistoryDialogComponent } from '../../../../components/dialog/vote-history/vote-history.component';
+import { VoteHistoryDialogData, VoteHistoryMember } from '../../../../components/dialog/vote-history/vote-history.models';
 import { ImageAssetService } from '../../../../core/services/image-asset.service';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { MatCardModule } from '@angular/material/card';
@@ -74,6 +76,7 @@ export class EventDetailsComponent implements OnInit {
     userName: string;
     userEmail: string;
     userPhoto?: string | null;
+    status: string;
   }>>([]);
 
   public readonly MAX_BANNERS = 5;
@@ -148,6 +151,13 @@ export class EventDetailsComponent implements OnInit {
 
   public get isNominationsInProgress(): boolean {
     return this.votingPhaseState >= 1 && this.votingPhaseState <= 3;
+  }
+
+  // Compact card layout: master admin during phases 2-4 (review + voting mode),
+  // and admin/members during phases 2-4 once the read-only list is shown.
+  // Phase 1 shows the big-circle card for everyone.
+  public get isCompactVotingCard(): boolean {
+    return this.votingPhaseState === 2 || this.votingPhaseState === 3 || this.votingPhaseState === 4;
   }
 
   public get canStopNominations(): boolean {
@@ -269,6 +279,9 @@ export class EventDetailsComponent implements OnInit {
   }
 
   public get isAllDesignationsVisible(): boolean {
+    if (this.votingPhaseState >= 1) {
+      return false;
+    }
     return String(this.eventData()?.currentCommitteeRole || 'NONE').toUpperCase() !== 'COMMITTEE_MEMBER';
   }
 
@@ -282,6 +295,12 @@ export class EventDetailsComponent implements OnInit {
 
   public get canReviewInterest(): boolean {
     return this.eventData()?.canReviewInterest ?? false;
+  }
+
+  // Load pending interests as soon as the event is available so the list
+  // shows without waiting on a second conditional pass.
+  private get shouldLoadPendingInterests(): boolean {
+    return !!this.eventData()?.eventId && (this.canReviewInterest || this.votingPhaseState >= 1);
   }
 
   public get pendingInterestCount(): number {
@@ -302,9 +321,84 @@ export class EventDetailsComponent implements OnInit {
     userName: string;
     userEmail: string;
     userPhoto?: string | null;
+    status: string;
   }> {
     const roleIdNum = Number(roleId);
-    return this.interestReviewList().filter((item) => Number(item.roleId) === roleIdNum);
+    const allForRole = this.interestReviewList().filter((item) => Number(item.roleId) === roleIdNum);
+
+    // During the finalized selection phase (voting started), non-master-admins
+    // (ADMIN / MEMBER) must only see the rows the master admin approved.
+    if (this.isVotingEnabled && !this.isMasterAdmin) {
+      return allForRole.filter((item) => String(item.status).toUpperCase() === 'APPROVED');
+    }
+
+    return allForRole;
+  }
+
+  public isApprovedOnlyView(roleId: number): boolean {
+    return this.isVotingEnabled && !this.isMasterAdmin;
+  }
+
+  public onCastVote(roleId: number, candidate?: { userId: number; userName: string }): void {
+    if (!this.isVotingEnabled) {
+      return;
+    }
+    const roleName = this.getRoleDisplayName(roleId);
+    const candidateName = candidate?.userName ? `**${candidate.userName}**` : '';
+    this.notifier.info(`Your vote for ${candidateName} (${roleName}) has been recorded.`);
+  }
+
+  public openVoteHistory(): void {
+    const event = this.eventData();
+    if (!event?.eventId) {
+      return;
+    }
+
+    // Roster is built from the event participants available on the client.
+    // Per-member vote tracking is not wired to the backend yet, so the
+    // individual voted status is shown as pending and liveTracking is false.
+    const roster: VoteHistoryMember[] = [
+      ...this.eventAdmins().map((p) => this.toHistoryMember(p, 'Admin')),
+      ...this.eventMembers().map((p) => this.toHistoryMember(p, 'Member'))
+    ];
+
+    const totalMembers = Number(event.committeeMemberCount) || roster.length;
+    const votedCount = roster.filter((m) => m.hasVoted).length;
+    const notVotedCount = totalMembers - votedCount;
+
+    const dialogData: VoteHistoryDialogData = {
+      eventName: event.eventName,
+      totalMembers,
+      votedCount,
+      notVotedCount,
+      members: roster,
+      liveTracking: false
+    };
+
+    document.body.classList.add('dialog-open');
+    this.dialog.open(VoteHistoryDialogComponent, {
+      position: { right: '0', top: '0' },
+      height: '100%',
+      width: '50%',
+      autoFocus: true,
+      disableClose: true,
+      hasBackdrop: true,
+      panelClass: 'slide-in-dialog',
+      data: dialogData
+    }).afterClosed().subscribe(() => {
+      document.body.classList.remove('dialog-open');
+    });
+  }
+
+  private toHistoryMember(person: EventPerson, role: string): VoteHistoryMember {
+    return {
+      id: Number(person.id),
+      name: person.name,
+      email: person.email,
+      role,
+      photo: person.photo ?? null,
+      hasVoted: false
+    };
   }
 
   public isInterestedInRole(roleId: number): boolean {
@@ -378,9 +472,8 @@ export class EventDetailsComponent implements OnInit {
         this.myInterestStatuses.set(
           (data?.myInterestStatuses || []).map((item) => ({ roleId: Number(item.roleId), status: String(item.status || 'PENDING') }))
         );
-        if (this.canReviewInterest) {
-          this.loadPendingInterests();
-        }
+        this.interestReviewList.set([]);
+        this.loadPendingInterests();
         this.isUpdatingVotingPhase.set(false);
       },
       error: (err: HttpErrorResponse) => {
@@ -689,8 +782,29 @@ export class EventDetailsComponent implements OnInit {
       ? this.myInterestStatuses().filter((item) => item.roleId !== normalizedRoleId)
       : [...this.myInterestStatuses(), { roleId: normalizedRoleId, status: 'PENDING' }];
 
+    const loggedInUser = this.authService.getStoredUserData();
+    const previousReviewList = this.interestReviewList();
+    const optimisticReviewList = wasInterested
+      ? previousReviewList.filter(
+          (entry) => !(entry.roleId === normalizedRoleId && entry.userId === this.currentLoggedInUserId)
+        )
+      : [
+          ...previousReviewList,
+          {
+            id: -Date.now(),
+            eventId: Number(currentEvent.eventId),
+            roleId: normalizedRoleId,
+            userId: this.currentLoggedInUserId,
+            userName: loggedInUser?.name || 'You',
+            userEmail: loggedInUser?.email || '',
+            userPhoto: loggedInUser?.photo || null,
+            status: 'PENDING'
+          }
+        ];
+
     this.myInterestRoleIds.set(optimisticIds);
     this.myInterestStatuses.set(optimisticStatuses);
+    this.interestReviewList.set(optimisticReviewList);
     this.isExpressingInterest.set(true);
 
     const roleLabel = this.getRoleDisplayName(normalizedRoleId);
@@ -701,6 +815,7 @@ export class EventDetailsComponent implements OnInit {
         this.myInterestStatuses.set(
           (payload.myInterestStatuses || []).map((item) => ({ roleId: Number(item.roleId), status: String(item.status || 'PENDING') }))
         );
+        this.loadPendingInterests();
         this.isExpressingInterest.set(false);
         this.notifier.success(
           payload.expressed
@@ -711,6 +826,7 @@ export class EventDetailsComponent implements OnInit {
       error: (err: HttpErrorResponse) => {
         this.myInterestRoleIds.set(optimisticIds);
         this.myInterestStatuses.set(optimisticStatuses);
+        this.interestReviewList.set(previousReviewList);
         this.isExpressingInterest.set(false);
         this.notifier.error(err?.error?.message || 'Failed to update interest.');
       }
@@ -719,7 +835,7 @@ export class EventDetailsComponent implements OnInit {
 
   private loadPendingInterests(): void {
     const currentEvent = this.eventData();
-    if (!currentEvent?.eventId || !this.canReviewInterest) {
+    if (!currentEvent?.eventId) {
       return;
     }
 
@@ -734,7 +850,8 @@ export class EventDetailsComponent implements OnInit {
             userId: Number(item.userId),
             userName: item.userName,
             userEmail: item.userEmail,
-            userPhoto: item.userPhoto
+            userPhoto: item.userPhoto,
+            status: String(item.status || 'PENDING').toUpperCase()
           }))
         );
       },
@@ -744,7 +861,7 @@ export class EventDetailsComponent implements OnInit {
     });
   }
 
-  public onReviewInterest(item: { eventId: number; roleId: number; userId: number }, status: 'APPROVED' | 'REJECTED'): void {
+  public onReviewInterest(item: { eventId: number; roleId: number; userId: number; userName?: string }, status: 'APPROVED' | 'REJECTED'): void {
     if (!this.canReviewInterest) {
       return;
     }
@@ -753,18 +870,45 @@ export class EventDetailsComponent implements OnInit {
     const normalizedUserId = Number(item.userId);
     const normalizedEventId = Number(item.eventId);
 
+    const previousList = this.interestReviewList();
+    this.interestReviewList.update((list) =>
+      list.map((entry) =>
+        entry.roleId === normalizedRoleId && entry.userId === normalizedUserId
+          ? { ...entry, status }
+          : entry
+      )
+    );
+
     this.eventDetailsService.reviewEventInterest(normalizedEventId, normalizedRoleId, normalizedUserId, status).subscribe({
-      next: () => {
-        this.interestReviewList.update((list) =>
-          list.filter((entry) => !(entry.roleId === normalizedRoleId && entry.userId === normalizedUserId))
-        );
-        this.notifier.success(status === 'APPROVED' ? 'Interest approved.' : 'Interest rejected.');
-        this.fetchEventDetails(String(normalizedEventId));
+      next: (payload) => {
+        if (status === 'APPROVED') {
+          const designation = this.getRoleDisplayName(normalizedRoleId);
+          if (payload?.autoRejectedOthers) {
+            this.notifier.success(`You approved **${item.userName}** for **${designation}**. Their remaining requests in other designations have been auto-rejected.`);
+          } else {
+            this.notifier.success(`You approved **${item.userName}** for **${designation}**.`);
+          }
+        } else {
+          this.notifier.success('Interest rejected.');
+        }
+        this.loadPendingInterests();
       },
       error: (err: HttpErrorResponse) => {
+        this.interestReviewList.set(previousList);
         this.notifier.error(err?.error?.message || 'Failed to review interest.');
       }
     });
+  }
+
+  public getInterestStatusClass(status: string): string {
+    const normalized = String(status || 'PENDING').toUpperCase();
+    if (normalized === 'APPROVED') {
+      return 'pending-row-approved';
+    }
+    if (normalized === 'REJECTED') {
+      return 'pending-row-rejected';
+    }
+    return 'pending-row-pending';
   }
 
   private populateEventPeople(data: EventDetailsPayload | null): void {

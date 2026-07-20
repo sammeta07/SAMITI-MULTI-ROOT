@@ -1,5 +1,5 @@
 import { query } from '../../../config/db';
-import { RowDataPacket } from 'mysql2/promise';
+import { RowDataPacket, ResultSetHeader } from 'mysql2/promise';
 import { throwEventError, getLoggedInUserId } from '../voting/event-voting.graphql';
 
 export interface EventInterestPerson {
@@ -94,6 +94,8 @@ export const eventInterestTypes = `
     roleId: Int!
     userId: Int!
     status: String!
+    autoRejectedOthers: Boolean
+    previousDesignation: String
   }
 
   type PendingEventInterest {
@@ -124,17 +126,48 @@ export const eventInterestMutationFields = `
   reviewEventInterest(eventId: Int!, roleId: Int!, userId: Int!, status: String!): ReviewEventInterestPayload!
 `;
 
-async function isMasterAdminForEvent(eventId: number, userId: number): Promise<boolean> {
-  const membershipRows = await query<Array<RowDataPacket & { committeeRole: string }>>(
-    `SELECT c.committee_role AS committeeRole
+interface EventAccessContext {
+  eventExists: boolean;
+  isCommitteeMember: boolean;
+  committeeRole: string;
+  isMasterAdmin: boolean;
+  votingPhaseState: number;
+}
+
+async function getEventAccessContext(eventId: number, userId: number): Promise<EventAccessContext> {
+  const rows = await query<Array<RowDataPacket & {
+    committeeRole: string | null;
+    votingPhaseState: number;
+  }>>(
+    `SELECT
+        c.committee_role AS committeeRole,
+        COALESCE(e.voting_phase_state, 0) AS votingPhaseState
       FROM events e
-      INNER JOIN users_committees c ON c.committee_id = e.committee_id
-      WHERE e.id = ? AND c.user_id = ?
+      LEFT JOIN users_committees c ON c.committee_id = e.committee_id AND c.user_id = ?
+      WHERE e.id = ?
       LIMIT 1`,
-    [eventId, userId]
+    [userId, eventId]
   );
 
-  return String(membershipRows[0]?.committeeRole || '').toUpperCase() === 'COMMITTEE_MASTER_ADMIN';
+  if (!rows.length) {
+    return {
+      eventExists: false,
+      isCommitteeMember: false,
+      committeeRole: '',
+      isMasterAdmin: false,
+      votingPhaseState: 0
+    };
+  }
+
+  const committeeRole = String(rows[0].committeeRole || '').toUpperCase();
+
+  return {
+    eventExists: true,
+    isCommitteeMember: committeeRole.length > 0,
+    committeeRole,
+    isMasterAdmin: committeeRole === 'COMMITTEE_MASTER_ADMIN',
+    votingPhaseState: Number(rows[0].votingPhaseState || 0)
+  };
 }
 
 async function requireMappedRole(eventId: number, roleId: number): Promise<void> {
@@ -166,8 +199,13 @@ export const eventInterestResolvers = {
         return { eventId, pending: [] };
       }
 
-      const isMaster = await isMasterAdminForEvent(eventId, loggedInUserId);
-      if (!isMaster) {
+      const access = await getEventAccessContext(eventId, loggedInUserId);
+      // Master admin can always view pending interests.
+      // Other committee members (ADMIN / MEMBER) can view once roles are locked (votingPhaseState >= 1).
+      const canViewPending =
+        access.isMasterAdmin ||
+        (access.isCommitteeMember && access.votingPhaseState >= 1);
+      if (!canViewPending) {
         return { eventId, pending: [] };
       }
 
@@ -194,12 +232,12 @@ export const eventInterestResolvers = {
             u.profile_photo AS userPhoto,
             eie.status AS status,
             DATE_FORMAT(eie.created_at, '%Y-%m-%d %H:%i:%s') AS createdAt
-          FROM event_interest_expressions eie
-          INNER JOIN users u ON u.id = eie.user_id
-          LEFT JOIN events_roles_master erm ON erm.role_id = eie.role_id
-          WHERE eie.event_id = ? AND eie.status = 'PENDING'
-          ORDER BY eie.created_at ASC`,
-        [eventId]
+           FROM event_interest_expressions eie
+           INNER JOIN users u ON u.id = eie.user_id
+           LEFT JOIN events_roles_master erm ON erm.role_id = eie.role_id
+           WHERE eie.event_id = ?
+           ORDER BY eie.created_at ASC`,
+         [eventId]
       );
 
       return {
@@ -316,9 +354,16 @@ export const eventInterestResolvers = {
       }
 
       const loggedInUserId = await getLoggedInUserId(context);
-      const isMaster = await isMasterAdminForEvent(eventId, loggedInUserId);
-      if (!isMaster) {
+      const access = await getEventAccessContext(eventId, loggedInUserId);
+      if (!access.eventExists) {
+        throwEventError('NOT_FOUND', 'Event not found');
+      }
+      if (!access.isMasterAdmin) {
         throwEventError('FORBIDDEN', 'Only the master admin can review interest expressions');
+      }
+      // Approve/Reject is only allowed during the review phase (votingPhaseState === 3).
+      if (access.votingPhaseState !== 3) {
+        throwEventError('BAD_REQUEST', 'Interest can only be reviewed while voting phase state is 3');
       }
       await requireMappedRole(eventId, roleId);
 
@@ -330,6 +375,59 @@ export const eventInterestResolvers = {
       );
       if (existingRows.length === 0) {
         throwEventError('NOT_FOUND', 'No interest expression found for this user and role');
+      }
+
+      if (status === 'APPROVED') {
+        // If the user is already approved for a different designation, the
+        // master admin is allowed to change it: auto-reject the previously
+        // approved role (and any other pending roles) so the member ends up
+        // approved for exactly one designation.
+        const previousApproved = await query<Array<RowDataPacket & {
+          roleId: number;
+          roleName: string | null;
+        }>>(
+          `SELECT eie.role_id AS roleId, erm.role_name AS roleName
+            FROM event_interest_expressions eie
+            LEFT JOIN events_roles_master erm ON erm.role_id = eie.role_id
+            WHERE eie.event_id = ? AND eie.user_id = ? AND eie.status = 'APPROVED' AND eie.role_id <> ?
+            LIMIT 1`,
+          [eventId, targetUserId, roleId]
+        );
+
+        await query(
+          `UPDATE event_interest_expressions
+            SET status = ?, reviewed_by = ?, reviewed_at = CURRENT_TIMESTAMP, updated_at = CURRENT_TIMESTAMP
+            WHERE id = ?`,
+          [status, loggedInUserId, existingRows[0].id]
+        );
+
+        const rejectResult = await query(
+          `UPDATE event_interest_expressions
+            SET status = 'REJECTED', reviewed_by = ?, reviewed_at = CURRENT_TIMESTAMP, updated_at = CURRENT_TIMESTAMP
+            WHERE event_id = ? AND user_id = ? AND role_id <> ? AND (status = 'PENDING' OR status = 'APPROVED')`,
+          [loggedInUserId, eventId, targetUserId, roleId]
+        ) as unknown as ResultSetHeader;
+
+        if (rejectResult.affectedRows > 0 || previousApproved.length > 0) {
+          const previousName = previousApproved.length > 0
+            ? (previousApproved[0].roleName || `Role ${previousApproved[0].roleId}`)
+            : null;
+          return {
+            eventId,
+            roleId,
+            userId: targetUserId,
+            status,
+            autoRejectedOthers: true,
+            previousDesignation: previousName
+          };
+        }
+
+        return {
+          eventId,
+          roleId,
+          userId: targetUserId,
+          status
+        };
       }
 
       await query(

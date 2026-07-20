@@ -84,6 +84,8 @@ export interface ReviewEventInterestPayload {
   roleId: number;
   userId: number;
   status: string;
+  autoRejectedOthers?: boolean;
+  previousDesignation?: string | null;
 }
 
 export interface PendingEventInterest {
