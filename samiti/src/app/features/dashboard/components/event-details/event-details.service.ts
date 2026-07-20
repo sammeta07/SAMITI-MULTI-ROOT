@@ -71,6 +71,39 @@ export interface DeclareEventResultsPayload {
   votingPhaseState: number;
 }
 
+export interface ExpressEventInterestPayload {
+  eventId: number;
+  roleId: number;
+  expressed: boolean;
+  myInterestRoleIds: number[];
+  myInterestStatuses: Array<{ roleId: number; status: string }>;
+}
+
+export interface ReviewEventInterestPayload {
+  eventId: number;
+  roleId: number;
+  userId: number;
+  status: string;
+}
+
+export interface PendingEventInterest {
+  id: number;
+  eventId: number;
+  roleId: number;
+  roleName?: string | null;
+  userId: number;
+  userName: string;
+  userEmail: string;
+  userPhoto?: string | null;
+  status: string;
+  createdAt?: string | null;
+}
+
+export interface EventInterestSummary {
+  eventId: number;
+  pending: PendingEventInterest[];
+}
+
 @Injectable({
   providedIn: 'root'
 })
@@ -137,6 +170,21 @@ export class EventDetailsService {
           englishName
           sortOrder
         }
+        myInterestRoleIds
+        myInterestStatuses {
+          roleId
+          status
+        }
+        interestApprovedPeople {
+          roleId
+          approvedPeople {
+            userId
+            name
+            email
+            photo
+          }
+        }
+        canReviewInterest
         canManageVotingRoles
         currentCommitteeRole
         committeeMemberCount
@@ -409,6 +457,95 @@ export class EventDetailsService {
       { withCredentials: true }
     ).pipe(
       map((res) => res.data.declareEventResults)
+    );
+  }
+
+  public expressEventInterest(eventId: number, roleId: number): Observable<ExpressEventInterestPayload> {
+    const mutation = `mutation ExpressEventInterest($eventId: Int!, $roleId: Int!) {
+      expressEventInterest(eventId: $eventId, roleId: $roleId) {
+        eventId
+        roleId
+        expressed
+        myInterestRoleIds
+        myInterestStatuses {
+          roleId
+          status
+        }
+      }
+    }`;
+
+    return this.http.post<{ data: { expressEventInterest: ExpressEventInterestPayload } }>(
+      this.graphqlUrl,
+      {
+        query: mutation,
+        variables: {
+          eventId,
+          roleId
+        }
+      },
+      { withCredentials: true }
+    ).pipe(
+      map((res) => res.data.expressEventInterest)
+    );
+  }
+
+  public reviewEventInterest(eventId: number, roleId: number, userId: number, status: 'APPROVED' | 'REJECTED'): Observable<ReviewEventInterestPayload> {
+    const mutation = `mutation ReviewEventInterest($eventId: Int!, $roleId: Int!, $userId: Int!, $status: String!) {
+      reviewEventInterest(eventId: $eventId, roleId: $roleId, userId: $userId, status: $status) {
+        eventId
+        roleId
+        userId
+        status
+      }
+    }`;
+
+    return this.http.post<{ data: { reviewEventInterest: ReviewEventInterestPayload } }>(
+      this.graphqlUrl,
+      {
+        query: mutation,
+        variables: {
+          eventId,
+          roleId,
+          userId,
+          status
+        }
+      },
+      { withCredentials: true }
+    ).pipe(
+      map((res) => res.data.reviewEventInterest)
+    );
+  }
+
+  public getPendingInterests(eventId: number): Observable<EventInterestSummary> {
+    const query = `query GetPendingInterests($eventId: Int!) {
+      pendingEventInterests(eventId: $eventId) {
+        eventId
+        pending {
+          id
+          eventId
+          roleId
+          roleName
+          userId
+          userName
+          userEmail
+          userPhoto
+          status
+          createdAt
+        }
+      }
+    }`;
+
+    return this.http.post<{ data: { pendingEventInterests: EventInterestSummary } }>(
+      this.graphqlUrl,
+      {
+        query,
+        variables: {
+          eventId
+        }
+      },
+      { withCredentials: true }
+    ).pipe(
+      map((res) => res.data.pendingEventInterests)
     );
   }
 }

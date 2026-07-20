@@ -38,7 +38,9 @@
 
               <div class="role-picker-grid">
                 @for (role of eventData()?.availableRoles || []; track role.roleId || role.roleName) {
-                <label class="role-picker-card" [class.role-picker-card-selected]="isRoleMapped(role.roleId)">
+                <label class="role-picker-card"
+                       [class.role-picker-card-selected]="isRoleMapped(role.roleId)"
+                       [class.role-picker-card-locked]="isVotingRolesLocked">
                   <span class="role-selected-badge" aria-hidden="true">
                     <mat-icon>check_circle</mat-icon>
                   </span>
@@ -111,12 +113,104 @@
                   @for (card of votingDisplayCards; track card.slot) {
                   <mat-card class="voting-nomination-card">
                     <mat-card-content>
-                      <div class="voting-card-icon-wrap" [class.voting-card-icon-wrap-president]="isPresidentRole(card.role)">
-                        <mat-icon>{{ getVotingRoleIcon(card.role) }}</mat-icon>
+                      <div class="voting-card-head">
+                        <div class="voting-card-icon-wrap"
+                             [class.voting-card-icon-wrap-president]="isPresidentRole(card.role)"
+                             [class.voting-card-icon-wrap-compact]="isMasterAdmin && votingPhaseState === 2">
+                          <mat-icon>{{ getVotingRoleIcon(card.role) }}</mat-icon>
+                        </div>
+                        <div class="voting-card-names">
+                          <div class="voting-card-role-primary" [class.voting-card-role-primary-president]="isPresidentRole(card.role)">{{ ((card.role.englishName || card.role.roleName || '').split('_').join(' ')) | titlecase }}</div>
+                          <div class="voting-card-role-secondary" [class.voting-card-role-secondary-president]="isPresidentRole(card.role)">{{ (card.role.hindiName || card.role.roleName) | uppercase }}</div>
+                        </div>
                       </div>
 
-                      <div class="voting-card-role-primary" [class.voting-card-role-primary-president]="isPresidentRole(card.role)">{{ (card.role.hindiName || card.role.roleName) | uppercase }}</div>
-                      <div class="voting-card-role-secondary" [class.voting-card-role-secondary-president]="isPresidentRole(card.role)">{{ ((card.role.englishName || card.role.roleName || '').split('_').join(' ')) | titlecase }}</div>
+                      @if (!isMasterAdmin && votingPhaseState === 2) {
+                      <div class="voting-card-interest-row">
+                        @if (isInterestedInRole(card.role.roleId)) {
+                        <button mat-stroked-button class="interest-btn interest-btn-withdraw" (click)="onExpressInterest(card.role.roleId)">
+                          <mat-icon>cancel</mat-icon>
+                          <span>Withdraw</span>
+                        </button>
+                        } @else {
+                        <button mat-stroked-button class="interest-btn" (click)="onExpressInterest(card.role.roleId)">
+                          <mat-icon>add_circle_outline</mat-icon>
+                          <span>I am interested</span>
+                        </button>
+                        }
+                      </div>
+                      }
+
+                      @if (approvedPeopleForRole(card.role.roleId).length > 0) {
+                      <div class="voting-card-approved-list">
+                        <div class="voting-card-approved-title">
+                          <mat-icon>verified</mat-icon>
+                          <span>Approved ({{ approvedPeopleForRole(card.role.roleId).length }})</span>
+                        </div>
+                        <div class="voting-card-approved-scroll">
+                        @for (person of approvedPeopleForRole(card.role.roleId); track person.userId) {
+                        <div class="voting-card-approved-person">
+                          @if (person.photo) {
+                          <img class="voting-card-approved-avatar" [src]="person.photo" [alt]="person.name" />
+                          } @else {
+                          <span class="voting-card-approved-avatar voting-card-approved-avatar-fallback">{{ person.name.charAt(0).toUpperCase() }}</span>
+                          }
+                          <span class="voting-card-approved-name">{{ person.name }}</span>
+                        </div>
+                        }
+                        </div>
+                      </div>
+                      }
+
+                      @if (isMasterAdmin && votingPhaseState === 2 && pendingInterestForRole(card.role.roleId).length > 0) {
+                      <div class="voting-card-pending-list">
+                        <div class="voting-card-pending-title">
+                          <mat-icon>schedule</mat-icon>
+                          <span>Pending Interest ({{ pendingInterestForRole(card.role.roleId).length }})</span>
+                        </div>
+                        <div class="voting-card-pending-scroll">
+                          <table class="voting-card-pending-table">
+                            <thead>
+                              <tr>
+                                <th class="pending-col-index">#</th>
+                                <th class="pending-col-user">Name / Email</th>
+                                <th class="pending-col-action">Action</th>
+                              </tr>
+                            </thead>
+                            <tbody>
+                              @for (item of pendingInterestForRole(card.role.roleId); track item.id; let i = $index) {
+                              <tr>
+                                <td class="pending-col-index">{{ i + 1 }}</td>
+                                <td class="pending-col-user">
+                                  <div class="voting-card-pending-user">
+                                    @if (item.userPhoto) {
+                                    <img class="voting-card-pending-avatar" [src]="item.userPhoto" [alt]="item.userName" />
+                                    } @else {
+                                    <span class="voting-card-pending-avatar voting-card-pending-avatar-fallback">{{ item.userName.charAt(0).toUpperCase() }}</span>
+                                    }
+                                    <div class="voting-card-pending-info">
+                                      <span class="voting-card-pending-name">{{ item.userName }}</span>
+                                      <span class="voting-card-pending-email">{{ item.userEmail }}</span>
+                                    </div>
+                                  </div>
+                                </td>
+                                <td class="pending-col-action">
+                                  <div class="voting-card-pending-actions">
+                                    <button mat-icon-button class="interest-approve-btn" title="Approve" (click)="onReviewInterest(item, 'APPROVED')">
+                                      <mat-icon>check</mat-icon>
+                                    </button>
+                                    <button mat-icon-button class="interest-reject-btn" title="Reject" (click)="onReviewInterest(item, 'REJECTED')">
+                                      <mat-icon>close</mat-icon>
+                                    </button>
+                                  </div>
+                                </td>
+                              </tr>
+                              }
+                            </tbody>
+                          </table>
+                        </div>
+                      </div>
+                      }
                     </mat-card-content>
 
                     <mat-card-actions>
@@ -136,10 +230,6 @@
                         <span>Voting closed</span>
                       </div>
                       } @else if (isNominationsInProgress) {
-                      <div class="voting-open-card-pill voting-open-card-pill-nominations">
-                        <mat-icon>how_to_reg</mat-icon>
-                        <span>Nominations open</span>
-                      </div>
                       } @else {
                       <div class="voting-wait-admin-pill">
                         <mat-icon>schedule</mat-icon>

@@ -20,6 +20,7 @@ import { updateEventVisibilityTypes, updateEventVisibilityMutationFields, update
 import { uploadEventBannerImagesTypes, uploadEventBannerImagesMutationFields, uploadEventBannerImagesResolvers } from './events/media/upload-event-banner-images.graphql';
 import { deleteEventTypes, deleteEventMutationFields, deleteEventResolvers } from './events/management/delete-event.graphql';
 import { eventVotingTypes, eventVotingMutationFields, eventVotingResolvers } from './events/voting/event-voting.graphql';
+import { eventInterestTypes, eventInterestQueryFields, eventInterestMutationFields, eventInterestResolvers } from './events/interest/event-interest.graphql';
 import { createProgramTypes, createProgramMutationFields, createProgramResolvers } from './programs/create-program.graphql';
 import { updateProgramTypes, updateProgramMutationFields, updateProgramResolvers } from './programs/update-program.graphql';
 import { uploadProgramBannerImagesTypes, uploadProgramBannerImagesMutationFields, uploadProgramBannerImagesResolvers } from './programs/upload-program-banner-images.graphql';
@@ -57,6 +58,7 @@ export const typeDefs = `
   ${uploadProgramBannerImagesTypes}
   ${programDetailsTypes}
   ${eventVotingTypes}
+  ${eventInterestTypes}
   ${eventDetailsTypes}
   ${updateEventVisibilityTypes}
   ${uploadEventBannerImagesTypes}
@@ -72,6 +74,7 @@ export const typeDefs = `
     ${committeeDetailsQueryFields}
     ${programDetailsQueryFields}
     ${eventDetailsQueryFields}
+    ${eventInterestQueryFields}
   }
 
   type Mutation {
@@ -91,6 +94,7 @@ export const typeDefs = `
     ${uploadEventBannerImagesMutationFields}
     ${deleteEventMutationFields}
     ${eventVotingMutationFields}
+    ${eventInterestMutationFields}
     ${toggleCommitteeFavouriteMutationFields}
     ${cancelCommitteeMembershipRequestMutationFields}
     ${submitCommitteeMembershipRequestMutationFields}
@@ -112,6 +116,7 @@ export const resolvers = {
     ...committeeDetailsResolvers.Query,
     ...programDetailsResolvers.Query,
     ...eventDetailsResolvers.Query,
+    ...eventInterestResolvers.Query,
   },
   Mutation: {
     ...loginResolvers.Mutation,
@@ -136,6 +141,7 @@ export const resolvers = {
     ...promoteCommitteeMemberResolvers.Mutation,
     ...demoteCommitteeAdminResolvers.Mutation,
     ...removeCommitteeMemberResolvers.Mutation,
-    ...eventVotingResolvers.Mutation
+    ...eventVotingResolvers.Mutation,
+    ...eventInterestResolvers.Mutation
   }
 };

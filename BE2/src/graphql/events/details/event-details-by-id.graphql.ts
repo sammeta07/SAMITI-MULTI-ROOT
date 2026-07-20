@@ -3,6 +3,7 @@ import { RowDataPacket } from 'mysql2/promise';
 import { hasEventsDisplayNameColumn } from './event-display-name-support';
 import { hasEventsVotingPhaseStateColumn } from '../voting/event-voting-phase-support';
 import { getEventVotingPhaseState, getMappedVotingRoles, throwEventError, getLoggedInUserId } from '../voting/event-voting.graphql';
+import { getEventInterestApprovedPeople, getMyEventInterestRoleIds, getMyEventInterestStatuses } from '../interest/event-interest.graphql';
 
 async function getEventMasterRoles(): Promise<Array<{ roleId: number | null; roleName: string; roleCode: string | null; hindiName: string | null; englishName: string | null; isActive: boolean }>> {
   const candidateTables = ['events_roles_master', 'event_roles_master'];
@@ -174,6 +175,10 @@ export const eventDetailsTypes = `
     eligibleVoterCount: Int!
     availableRoles: [EventAvailableRole!]!
     mappedVotingRoles: [EventMappedVotingRole!]!
+    myInterestRoleIds: [Int!]!
+    myInterestStatuses: [EventInterestStatus!]!
+    interestApprovedPeople: [EventInterestInfo!]!
+    canReviewInterest: Boolean!
     canManageVotingRoles: Boolean!
     currentCommitteeRole: String!
     committeeMemberCount: Int!
@@ -261,11 +266,14 @@ export const eventDetailsResolvers = {
         )
       );
       const canSelfNominate = Boolean(membership && String(membership.committee_role || '') === 'COMMITTEE_MEMBER');
-      const currentCommitteeRole = canManageVotingRoles
-        ? 'COMMITTEE_ADMIN'
-        : canSelfNominate
-          ? 'COMMITTEE_MEMBER'
-          : 'NONE';
+      const isCurrentUserMasterAdmin = Boolean(membership && String(membership.committee_role || '') === 'COMMITTEE_MASTER_ADMIN');
+      const currentCommitteeRole = isCurrentUserMasterAdmin
+        ? 'COMMITTEE_MASTER_ADMIN'
+        : canManageVotingRoles
+          ? 'COMMITTEE_ADMIN'
+          : canSelfNominate
+            ? 'COMMITTEE_MEMBER'
+            : 'NONE';
 
       const committeeCountRows = await query<Array<RowDataPacket & { memberCount: number; adminCount: number }>>(
         `SELECT
@@ -357,6 +365,16 @@ export const eventDetailsResolvers = {
 
       const mappedVotingRoleRows = await getMappedVotingRoles(eventId);
 
+      const isMasterAdmin = String(membership?.committee_role || '').toUpperCase() === 'COMMITTEE_MASTER_ADMIN';
+      const myInterestRoleIds = await getMyEventInterestRoleIds(eventId, loggedInUserId);
+      const myInterestStatuses = await getMyEventInterestStatuses(eventId, loggedInUserId);
+
+      const interestApprovedPeople: Array<{ roleId: number; approvedPeople: Array<{ userId: number; name: string; email: string; photo: string | null }> }> = [];
+      for (const mappedRole of mappedVotingRoleRows) {
+        const approvedPeople = await getEventInterestApprovedPeople(eventId, Number(mappedRole.roleId));
+        interestApprovedPeople.push({ roleId: Number(mappedRole.roleId), approvedPeople });
+      }
+
       return {
         ...event,
         eventBanner: bannerImageRows[0]?.mediaUrl || null,
@@ -392,6 +410,10 @@ export const eventDetailsResolvers = {
           englishName: roleRow.englishName
         })),
         mappedVotingRoles: mappedVotingRoleRows,
+        myInterestRoleIds: Array.from(myInterestRoleIds),
+        myInterestStatuses,
+        interestApprovedPeople,
+        canReviewInterest: isMasterAdmin,
         canManageVotingRoles,
         currentCommitteeRole,
         committeeMemberCount,

@@ -13,6 +13,23 @@ export interface EventMappedVotingRole {
   englishName?: string | null;
   sortOrder: number;
 }
+
+export interface EventInterestPerson {
+  userId: number;
+  name: string;
+  email: string;
+  photo?: string | null;
+}
+
+export interface EventInterestInfo {
+  roleId: number;
+  approvedPeople: EventInterestPerson[];
+}
+
+export interface EventInterestStatus {
+  roleId: number;
+  status: string;
+}
 export interface EventPerson {
   id: number;
   name: string;
@@ -71,6 +88,10 @@ export interface EventDetailsPayload {
   eligibleVoterCount: number;
   availableRoles: EventAvailableRole[];
   mappedVotingRoles: EventMappedVotingRole[];
+  myInterestRoleIds: number[];
+  myInterestStatuses: EventInterestStatus[];
+  interestApprovedPeople: EventInterestInfo[];
+  canReviewInterest: boolean;
   canManageVotingRoles: boolean;
   currentCommitteeRole: string;
   committeeMemberCount: number;

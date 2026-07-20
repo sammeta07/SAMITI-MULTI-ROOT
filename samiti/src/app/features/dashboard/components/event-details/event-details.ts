@@ -62,6 +62,19 @@ export class EventDetailsComponent implements OnInit {
   public readonly isLockingVotingRoles = signal<boolean>(false);
   public readonly isUnlockingVotingRoles = signal<boolean>(false);
   public readonly isUpdatingVotingPhase = signal<boolean>(false);
+  public readonly myInterestRoleIds = signal<number[]>([]);
+  public readonly myInterestStatuses = signal<Array<{ roleId: number; status: string }>>([]);
+  public readonly isExpressingInterest = signal<boolean>(false);
+  public readonly interestReviewList = signal<Array<{
+    id: number;
+    eventId: number;
+    roleId: number;
+    roleName?: string | null;
+    userId: number;
+    userName: string;
+    userEmail: string;
+    userPhoto?: string | null;
+  }>>([]);
 
   public readonly MAX_BANNERS = 5;
 
@@ -263,6 +276,56 @@ export class EventDetailsComponent implements OnInit {
     return String(this.eventData()?.currentCommitteeRole || 'NONE').toUpperCase() === 'COMMITTEE_MEMBER';
   }
 
+  public get isMasterAdmin(): boolean {
+    return String(this.eventData()?.currentCommitteeRole || 'NONE').toUpperCase() === 'COMMITTEE_MASTER_ADMIN';
+  }
+
+  public get canReviewInterest(): boolean {
+    return this.eventData()?.canReviewInterest ?? false;
+  }
+
+  public get pendingInterestCount(): number {
+    return this.interestReviewList().length;
+  }
+
+  public approvedPeopleForRole(roleId: number): Array<{ userId: number; name: string; email: string; photo?: string | null }> {
+    const list = this.eventData()?.interestApprovedPeople ?? [];
+    const match = list.find((info) => Number(info.roleId) === Number(roleId));
+    return match?.approvedPeople ?? [];
+  }
+
+  public pendingInterestForRole(roleId: number): Array<{
+    id: number;
+    eventId: number;
+    roleId: number;
+    userId: number;
+    userName: string;
+    userEmail: string;
+    userPhoto?: string | null;
+  }> {
+    const roleIdNum = Number(roleId);
+    return this.interestReviewList().filter((item) => Number(item.roleId) === roleIdNum);
+  }
+
+  public isInterestedInRole(roleId: number): boolean {
+    return this.myInterestRoleIds().includes(Number(roleId));
+  }
+
+  public getMyInterestStatus(roleId: number): string {
+    const match = this.myInterestStatuses().find((item) => Number(item.roleId) === Number(roleId));
+    return match ? String(match.status).toUpperCase() : 'NONE';
+  }
+
+  public getRoleDisplayName(roleId: number): string {
+    const role = (this.eventData()?.mappedVotingRoles || []).find((r) => Number(r.roleId) === Number(roleId));
+    const raw = role?.englishName || role?.roleName || role?.hindiName || '';
+    return String(raw)
+      .split(/[_\s]+/)
+      .filter((part) => part.length > 0)
+      .map((part) => part.charAt(0).toUpperCase() + part.slice(1).toLowerCase())
+      .join(' ');
+  }
+
   public get nominationWaitMessage(): string {
     if (this.currentCommitteeRoleLabel === 'Group Member') {
       return 'Wait for your admin to start nominations';
@@ -309,6 +372,15 @@ export class EventDetailsComponent implements OnInit {
             .map((role) => Number(role.roleId))
             .filter((roleId) => Number.isInteger(roleId) && roleId > 0)
         );
+        this.myInterestRoleIds.set(
+          (data?.myInterestRoleIds || []).map((id) => Number(id))
+        );
+        this.myInterestStatuses.set(
+          (data?.myInterestStatuses || []).map((item) => ({ roleId: Number(item.roleId), status: String(item.status || 'PENDING') }))
+        );
+        if (this.canReviewInterest) {
+          this.loadPendingInterests();
+        }
         this.isUpdatingVotingPhase.set(false);
       },
       error: (err: HttpErrorResponse) => {
@@ -590,6 +662,108 @@ export class EventDetailsComponent implements OnInit {
           this.notifier.error(err?.error?.message || 'Failed to declare results.');
         }
       });
+    });
+  }
+
+  public onExpressInterest(roleId: number): void {
+    const currentEvent = this.eventData();
+    if (!currentEvent?.eventId) {
+      this.notifier.error('No event available for expressing interest');
+      return;
+    }
+
+    if (this.isExpressingInterest()) {
+      return;
+    }
+
+    const normalizedRoleId = Number(roleId);
+    if (!Number.isInteger(normalizedRoleId) || normalizedRoleId <= 0) {
+      return;
+    }
+
+    const wasInterested = this.isInterestedInRole(normalizedRoleId);
+    const optimisticIds = wasInterested
+      ? this.myInterestRoleIds().filter((id) => id !== normalizedRoleId)
+      : [...this.myInterestRoleIds(), normalizedRoleId];
+    const optimisticStatuses = wasInterested
+      ? this.myInterestStatuses().filter((item) => item.roleId !== normalizedRoleId)
+      : [...this.myInterestStatuses(), { roleId: normalizedRoleId, status: 'PENDING' }];
+
+    this.myInterestRoleIds.set(optimisticIds);
+    this.myInterestStatuses.set(optimisticStatuses);
+    this.isExpressingInterest.set(true);
+
+    const roleLabel = this.getRoleDisplayName(normalizedRoleId);
+
+    this.eventDetailsService.expressEventInterest(currentEvent.eventId, normalizedRoleId).subscribe({
+      next: (payload) => {
+        this.myInterestRoleIds.set((payload.myInterestRoleIds || []).map((id) => Number(id)));
+        this.myInterestStatuses.set(
+          (payload.myInterestStatuses || []).map((item) => ({ roleId: Number(item.roleId), status: String(item.status || 'PENDING') }))
+        );
+        this.isExpressingInterest.set(false);
+        this.notifier.success(
+          payload.expressed
+            ? `Your interest has been submitted for **${roleLabel}**.`
+            : `Interest withdrawn for **${roleLabel}**.`
+        );
+      },
+      error: (err: HttpErrorResponse) => {
+        this.myInterestRoleIds.set(optimisticIds);
+        this.myInterestStatuses.set(optimisticStatuses);
+        this.isExpressingInterest.set(false);
+        this.notifier.error(err?.error?.message || 'Failed to update interest.');
+      }
+    });
+  }
+
+  private loadPendingInterests(): void {
+    const currentEvent = this.eventData();
+    if (!currentEvent?.eventId || !this.canReviewInterest) {
+      return;
+    }
+
+    this.eventDetailsService.getPendingInterests(currentEvent.eventId).subscribe({
+      next: (summary) => {
+        this.interestReviewList.set(
+          (summary?.pending || []).map((item) => ({
+            id: Number(item.id),
+            eventId: Number(item.eventId),
+            roleId: Number(item.roleId),
+            roleName: item.roleName,
+            userId: Number(item.userId),
+            userName: item.userName,
+            userEmail: item.userEmail,
+            userPhoto: item.userPhoto
+          }))
+        );
+      },
+      error: () => {
+        this.interestReviewList.set([]);
+      }
+    });
+  }
+
+  public onReviewInterest(item: { eventId: number; roleId: number; userId: number }, status: 'APPROVED' | 'REJECTED'): void {
+    if (!this.canReviewInterest) {
+      return;
+    }
+
+    const normalizedRoleId = Number(item.roleId);
+    const normalizedUserId = Number(item.userId);
+    const normalizedEventId = Number(item.eventId);
+
+    this.eventDetailsService.reviewEventInterest(normalizedEventId, normalizedRoleId, normalizedUserId, status).subscribe({
+      next: () => {
+        this.interestReviewList.update((list) =>
+          list.filter((entry) => !(entry.roleId === normalizedRoleId && entry.userId === normalizedUserId))
+        );
+        this.notifier.success(status === 'APPROVED' ? 'Interest approved.' : 'Interest rejected.');
+        this.fetchEventDetails(String(normalizedEventId));
+      },
+      error: (err: HttpErrorResponse) => {
+        this.notifier.error(err?.error?.message || 'Failed to review interest.');
+      }
     });
   }
 

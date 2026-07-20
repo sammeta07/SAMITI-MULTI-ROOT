@@ -765,7 +765,6 @@
   border: 1px solid #e2e8f0;
   border-radius: 8px;
   background: #ffffff;
-  overflow: hidden;
 }
 
 .voting-controls-card {
@@ -1077,7 +1076,8 @@
   grid-auto-rows: 50px;
   gap: 8px;
   padding: 8px;
-  height:200px;
+  max-height: 120px;
+  overflow-x: hidden;
   overflow-y: auto;
 }
 
@@ -1113,6 +1113,19 @@
   input[type='checkbox']:disabled {
     cursor: not-allowed;
     opacity: 0.5;
+  }
+}
+
+.role-picker-card-locked {
+  cursor: not-allowed;
+
+  &:hover {
+    border-color: #e2e8f0;
+    background: #ffffff;
+  }
+
+  input[type='checkbox'] {
+    cursor: not-allowed;
   }
 }
 
@@ -1321,6 +1334,8 @@
   display: flex;
   flex-direction: column;
   justify-content: space-between;
+  height: 100%;
+  overflow: hidden;
   transition: border-color 0.16s ease, box-shadow 0.16s ease, transform 0.16s ease;
 
   &:hover {
@@ -1334,10 +1349,21 @@
     display: flex;
     flex-direction: column;
     align-items: center;
-    justify-content: center;
+    justify-content: flex-start;
     text-align: center;
     gap: 4px;
     min-height: 300px;
+    height: 100%;
+    flex: 1 1 auto;
+    overflow: hidden;
+  }
+
+  ::ng-deep .mat-mdc-card-content {
+    display: flex;
+    flex-direction: column;
+    flex: 1 1 auto;
+    min-height: 0;
+    height: 100%;
   }
 
   mat-card-actions {
@@ -1352,6 +1378,29 @@
   border-color: #3b82f6;
   background: linear-gradient(180deg, #eff6ff 0%, #f0f7ff 100%);
   box-shadow: 0 8px 20px rgba(37, 99, 235, 0.14);
+}
+
+.voting-card-head {
+  width: 100%;
+  display: flex;
+  flex-direction: row;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+
+  .voting-card-icon-wrap {
+    flex: 0 0 auto;
+    align-self: flex-start;
+  }
+
+  .voting-card-names {
+    flex: 1 1 auto;
+    align-self: flex-start;
+    text-align: right;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+  }
 }
 
 .voting-card-icon-wrap {
@@ -1377,6 +1426,62 @@
   mat-icon {
     color: #b45309;
   }
+}
+
+.voting-card-icon-wrap-label {
+  flex-direction: column;
+  gap: 6px;
+  padding: 0 14px;
+  text-align: center;
+
+  mat-icon {
+    font-size: 3.4rem;
+    width: 3.4rem;
+    height: 3.4rem;
+  }
+}
+
+.voting-card-icon-wrap-compact {
+  width: 44px;
+  height: 44px;
+  border-radius: 999px;
+  padding: 0;
+  flex-direction: column;
+  gap: 0;
+
+  mat-icon {
+    font-size: 1.4rem;
+    width: 1.4rem;
+    height: 1.4rem;
+  }
+
+  .voting-card-icon-label {
+    display: none;
+  }
+}
+
+.voting-card-icon-label {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  line-height: 1.1;
+}
+
+.voting-card-icon-label-hindi {
+  font-size: 1.1rem;
+  font-weight: 900;
+  letter-spacing: 0.02em;
+  color: #92400e;
+  text-transform: uppercase;
+  word-break: break-word;
+}
+
+.voting-card-icon-label-english {
+  font-size: 0.78rem;
+  font-weight: 700;
+  color: #b45309;
+  text-transform: capitalize;
+  word-break: break-word;
 }
 
 .voting-card-role-primary {
@@ -1593,6 +1698,8 @@
 }
 
 .voting-wait-admin-pill {
+  width: 100%;
+  justify-content: center;
   height: 28px;
   border-radius: 999px;
   padding: 0 10px;
@@ -1614,6 +1721,8 @@
 }
 
 .voting-open-card-pill {
+  width: 100%;
+  justify-content: center;
   height: 28px;
   border-radius: 999px;
   padding: 0 10px;
@@ -1904,4 +2013,320 @@
   .designations-grid {
     grid-template-columns: 1fr 1fr;
   }
+}
+
+/* ========== INTEREST EXPRESSION (I AM INTERESTED) ========== */
+.voting-card-interest-row {
+  margin-top: 10px;
+  display: flex;
+}
+
+.interest-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 32px;
+  padding: 0 14px;
+  font-size: 0.78rem;
+  font-weight: 700;
+  border-radius: 999px;
+  border: 1px solid #f59e0b;
+  color: #b45309;
+  background: #fffbeb;
+  cursor: pointer;
+  transition: background 0.15s ease, border-color 0.15s ease, color 0.15s ease;
+
+  mat-icon {
+    font-size: 1.05rem;
+    width: 1.05rem;
+    height: 1.05rem;
+  }
+
+  &:hover {
+    background: #fef3c7;
+  }
+}
+
+.interest-btn-active {
+  border-color: #16a34a;
+  color: #15803d;
+  background: #f0fdf4;
+
+  &:hover {
+    background: #dcfce7;
+  }
+}
+
+.interest-btn-approved {
+  border-color: #16a34a;
+  color: #15803d;
+  background: #dcfce7;
+
+  &:hover {
+    background: #bbf7d0;
+  }
+}
+
+.interest-btn-withdraw {
+  border-color: #cbd5e1;
+  color: #64748b;
+  background: #f8fafc;
+
+  &:hover {
+    border-color: #dc2626;
+    color: #b91c1c;
+    background: #fef2f2;
+  }
+}
+
+.voting-card-approved-list {
+  margin-top: 10px;
+  padding: 8px 10px;
+  border-radius: 8px;
+  background: #f0fdf4;
+  border: 1px solid #bbf7d0;
+  width: 100%;
+  flex: 1 1 auto;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.voting-card-approved-title {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 0.66rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
+  color: #15803d;
+  margin-bottom: 6px;
+
+  mat-icon {
+    font-size: 0.9rem;
+    width: 0.9rem;
+    height: 0.9rem;
+    color: #16a34a;
+  }
+}
+
+.voting-card-approved-person {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  padding: 3px 0;
+
+  & + & {
+    border-top: 1px dashed #d1fae5;
+  }
+}
+
+.voting-card-approved-scroll {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  padding-right: 4px;
+
+  &::-webkit-scrollbar {
+    width: 4px;
+  }
+
+  &::-webkit-scrollbar-thumb {
+    background: #bbf7d0;
+    border-radius: 999px;
+  }
+}
+
+.voting-card-approved-avatar {
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  object-fit: cover;
+  flex-shrink: 0;
+  background: #16a34a;
+}
+
+.voting-card-approved-avatar-fallback {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.62rem;
+  font-weight: 800;
+  color: #ffffff;
+}
+
+.voting-card-approved-name {
+  font-size: 0.72rem;
+  font-weight: 600;
+  color: #14532d;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* ========== MASTER ADMIN PENDING INTEREST (inline per role) ========== */
+.voting-card-pending-list {
+  margin-top: 10px;
+  padding: 8px 10px;
+  border-radius: 8px;
+  background: #fffbeb;
+  border: 1px solid #fde68a;
+  width: 100%;
+  flex: 1 1 auto;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.voting-card-pending-title {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 0.66rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
+  color: #b45309;
+  margin-bottom: 6px;
+
+  mat-icon {
+    font-size: 0.9rem;
+    width: 0.9rem;
+    height: 0.9rem;
+    color: #f59e0b;
+  }
+}
+
+.voting-card-pending-scroll {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  padding-right: 4px;
+
+  &::-webkit-scrollbar {
+    width: 4px;
+  }
+
+  &::-webkit-scrollbar-thumb {
+    background: #fde68a;
+    border-radius: 999px;
+  }
+}
+
+.voting-card-pending-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.7rem;
+
+  th, td {
+    text-align: left;
+    padding: 5px 6px;
+    vertical-align: middle;
+  }
+
+  thead th {
+    position: sticky;
+    top: 0;
+    z-index: 1;
+    background: #fffbeb;
+    font-size: 0.6rem;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: 0.02em;
+    color: #b45309;
+    border-bottom: 1px solid #fcd34d;
+  }
+
+  tbody tr + tr td {
+    border-top: 1px dashed #fde68a;
+  }
+}
+
+.pending-col-index {
+  width: 24px;
+  color: #92400e;
+  font-weight: 700;
+}
+
+.pending-col-action {
+  width: 64px;
+  text-align: right;
+}
+
+.voting-card-pending-user {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  min-width: 0;
+}
+
+.voting-card-pending-avatar {
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  object-fit: cover;
+  flex-shrink: 0;
+  background: #f59e0b;
+}
+
+.voting-card-pending-avatar-fallback {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.64rem;
+  font-weight: 800;
+  color: #ffffff;
+}
+
+.voting-card-pending-info {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.voting-card-pending-name {
+  font-size: 0.72rem;
+  font-weight: 700;
+  color: #7c2d12;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.voting-card-pending-email {
+  font-size: 0.6rem;
+  color: #92400e;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.voting-card-pending-actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 2px;
+}
+
+.interest-approve-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  border-color: #16a34a !important;
+  color: #15803d !important;
+
+  mat-icon { font-size: 1rem; width: 1rem; height: 1rem; }
+}
+
+.interest-reject-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  border-color: #dc2626 !important;
+  color: #b91c1c !important;
+
+  mat-icon { font-size: 1rem; width: 1rem; height: 1rem; }
 }
