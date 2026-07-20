@@ -106,6 +106,32 @@ export interface EventInterestSummary {
   pending: PendingEventInterest[];
 }
 
+export interface EventVoteMember {
+  userId: number;
+  name: string;
+  email: string;
+  photo?: string | null;
+  committeeRole: string;
+  hasVoted: boolean;
+}
+
+export interface EventVoteHistory {
+  eventId: number;
+  eventName: string;
+  totalMembers: number;
+  votedCount: number;
+  notVotedCount: number;
+  members: EventVoteMember[];
+}
+
+export interface CastEventVotePayload {
+  eventId: number;
+  roleId: number;
+  voterId: number;
+  candidateId: number;
+  voted: boolean;
+}
+
 @Injectable({
   providedIn: 'root'
 })
@@ -548,6 +574,66 @@ export class EventDetailsService {
       { withCredentials: true }
     ).pipe(
       map((res) => res.data.pendingEventInterests)
+    );
+  }
+
+  public getEventVoteHistory(eventId: number): Observable<EventVoteHistory> {
+    const query = `query GetEventVoteHistory($eventId: Int!) {
+      eventVoteHistory(eventId: $eventId) {
+        eventId
+        eventName
+        totalMembers
+        votedCount
+        notVotedCount
+        members {
+          userId
+          name
+          email
+          photo
+          committeeRole
+          hasVoted
+        }
+      }
+    }`;
+
+    return this.http.post<{ data: { eventVoteHistory: EventVoteHistory } }>(
+      this.graphqlUrl,
+      {
+        query,
+        variables: {
+          eventId
+        }
+      },
+      { withCredentials: true }
+    ).pipe(
+      map((res) => res.data.eventVoteHistory)
+    );
+  }
+
+  public castEventVote(eventId: number, roleId: number, candidateId: number): Observable<CastEventVotePayload> {
+    const mutation = `mutation CastEventVote($eventId: Int!, $roleId: Int!, $candidateId: Int!) {
+      castEventVote(eventId: $eventId, roleId: $roleId, candidateId: $candidateId) {
+        eventId
+        roleId
+        voterId
+        candidateId
+        voted
+      }
+    }`;
+
+    return this.http.post<{ data: { castEventVote: CastEventVotePayload } }>(
+      this.graphqlUrl,
+      {
+        query: mutation,
+        variables: {
+          eventId,
+          roleId,
+          candidateId
+        }
+      },
+      { withCredentials: true }
+    ).pipe(
+      map((res) => res.data.castEventVote)
     );
   }
 }

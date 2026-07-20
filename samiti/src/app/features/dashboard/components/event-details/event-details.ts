@@ -10,6 +10,7 @@ import { MatTabsModule } from '@angular/material/tabs';
 import { HttpErrorResponse } from '@angular/common/http';
 import { firstValueFrom } from 'rxjs';
 import { EventDetailsService } from './event-details.service';
+import { EventVoteHistory } from './event-details.service';
 import { EventDetailsPayload, EventMappedVotingRole, EventPerson } from './event-details.models';
 import { NotifierService } from '../../../../shared/notifier/notifier.service';
 import { ConfirmDialogService } from '../../../../components/dialog/confirm/confirm-dialog.service';
@@ -18,7 +19,6 @@ import { DashboardHierarchyTreeService } from '../dashboard-hierarchy-tree/dashb
 import { CreateProgramDialogComponent } from '../../../../components/dialog/create-program/create-program.component';
 import { CreateEventDialogComponent } from '../../../../components/dialog/create-event/create-event.component';
 import { VoteHistoryDialogComponent } from '../../../../components/dialog/vote-history/vote-history.component';
-import { VoteHistoryDialogData, VoteHistoryMember } from '../../../../components/dialog/vote-history/vote-history.models';
 import { ImageAssetService } from '../../../../core/services/image-asset.service';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { MatCardModule } from '@angular/material/card';
@@ -169,31 +169,22 @@ export class EventDetailsComponent implements OnInit {
   }
 
   public get votingPhaseLabel(): string {
-    if (this.votingPhaseState >= 6) {
-      return 'Results Declared';
+    switch (this.votingPhaseState) {
+      case 6:
+        return 'Results Declared';
+      case 5:
+        return 'Voting Stopped';
+      case 4:
+        return 'Voting Started';
+      case 3:
+        return 'Nominations Stopped';
+      case 2:
+        return 'Nominations Started';
+      case 1:
+        return 'Roles Locked';
+      default:
+        return '';
     }
-
-    if (this.isVotingClosed) {
-      return 'Voting Stopped';
-    }
-
-    if (this.isVotingEnabled) {
-      return 'Voting Started';
-    }
-
-    if (this.isNominationsStopped) {
-      return 'Nominations Stopped';
-    }
-
-    if (this.isNominationsStarted) {
-      return 'Nominations Started';
-    }
-
-    if (this.isVotingRolesLocked) {
-      return 'Roles Locked';
-    }
-
-    return '';
   }
 
   public get votingPhaseIcon(): string {
@@ -340,12 +331,23 @@ export class EventDetailsComponent implements OnInit {
   }
 
   public onCastVote(roleId: number, candidate?: { userId: number; userName: string }): void {
-    if (!this.isVotingEnabled) {
+    const event = this.eventData();
+    if (!this.isVotingEnabled || !event?.eventId || !candidate) {
       return;
     }
     const roleName = this.getRoleDisplayName(roleId);
-    const candidateName = candidate?.userName ? `**${candidate.userName}**` : '';
-    this.notifier.info(`Your vote for ${candidateName} (${roleName}) has been recorded.`);
+    this.eventDetailsService.castEventVote(Number(event.eventId), Number(roleId), Number(candidate.userId)).subscribe({
+      next: (payload) => {
+        if (payload?.voted) {
+          this.notifier.success(`Your vote for **${candidate.userName}** (${roleName}) has been recorded.`);
+        } else {
+          this.notifier.error('Failed to record your vote.');
+        }
+      },
+      error: (err: HttpErrorResponse) => {
+        this.notifier.error(err?.error?.message || 'Failed to record your vote.');
+      }
+    });
   }
 
   public openVoteHistory(): void {
@@ -354,29 +356,22 @@ export class EventDetailsComponent implements OnInit {
       return;
     }
 
-    // Roster is built from the event participants available on the client.
-    // Per-member vote tracking is not wired to the backend yet, so the
-    // individual voted status is shown as pending and liveTracking is false.
-    const roster: VoteHistoryMember[] = [
-      ...this.eventAdmins().map((p) => this.toHistoryMember(p, 'Admin')),
-      ...this.eventMembers().map((p) => this.toHistoryMember(p, 'Member'))
-    ];
+    const eventId = Number(event.eventId);
 
-    const totalMembers = Number(event.committeeMemberCount) || roster.length;
-    const votedCount = roster.filter((m) => m.hasVoted).length;
-    const notVotedCount = totalMembers - votedCount;
+    this.eventDetailsService.getEventVoteHistory(eventId).subscribe({
+      next: (history) => {
+        this.openVoteHistoryDialog(history);
+      },
+      error: (err: HttpErrorResponse) => {
+        this.notifier.error(err?.error?.message || 'Failed to load vote history.');
+      }
+    });
+  }
 
-    const dialogData: VoteHistoryDialogData = {
-      eventName: event.eventName,
-      totalMembers,
-      votedCount,
-      notVotedCount,
-      members: roster,
-      liveTracking: false
-    };
-
+  private openVoteHistoryDialog(history: EventVoteHistory): void {
+    const event = this.eventData();
     document.body.classList.add('dialog-open');
-    this.dialog.open(VoteHistoryDialogComponent, {
+    const dialogRef = this.dialog.open(VoteHistoryDialogComponent, {
       position: { right: '0', top: '0' },
       height: '100%',
       width: '50%',
@@ -384,22 +379,17 @@ export class EventDetailsComponent implements OnInit {
       disableClose: true,
       hasBackdrop: true,
       panelClass: 'slide-in-dialog',
-      data: dialogData
-    }).afterClosed().subscribe(() => {
+      data: {
+        history,
+        eventLogo: event?.eventBanner || event?.bannerImages?.[0] || null
+      }
+    });
+
+    dialogRef.afterClosed().subscribe(() => {
       document.body.classList.remove('dialog-open');
     });
   }
 
-  private toHistoryMember(person: EventPerson, role: string): VoteHistoryMember {
-    return {
-      id: Number(person.id),
-      name: person.name,
-      email: person.email,
-      role,
-      photo: person.photo ?? null,
-      hasVoted: false
-    };
-  }
 
   public isInterestedInRole(roleId: number): boolean {
     return this.myInterestRoleIds().includes(Number(roleId));

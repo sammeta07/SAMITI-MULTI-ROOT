@@ -106,16 +106,16 @@
                   </button>
                   }
                  </div>
+                  <span class="voting-phase-status-pill" [class]="'voting-phase-status-' + votingPhaseState">
+                    <mat-icon>{{ votingPhaseIcon }}</mat-icon>
+                    <span class="voting-phase-status-text">{{ votingPhaseLabel || 'Not Started' }}</span>
+                  </span>
                   @if (votingPhaseState === 4) {
                   <button mat-stroked-button class="history-btn" (click)="openVoteHistory()">
                     <mat-icon>history</mat-icon>
                     <span>History</span>
                   </button>
                   }
-                  <span class="voting-phase-status-pill" [class]="'voting-phase-status-' + votingPhaseState">
-                    <mat-icon>{{ votingPhaseIcon }}</mat-icon>
-                    <span class="voting-phase-status-text">{{ votingPhaseLabel || 'Not Started' }}</span>
-                  </span>
                 </div>
 
               <section class="voting-nomination-shell">
