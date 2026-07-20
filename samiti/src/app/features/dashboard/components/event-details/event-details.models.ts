@@ -75,7 +75,6 @@ export interface EventDetailsPayload {
   currentCommitteeRole: string;
   committeeMemberCount: number;
   committeeAdminCount: number;
-  votingRolesLocked: boolean;
   votingEnabled: boolean;
   votingClosed: boolean;
   votingPhaseState: number;

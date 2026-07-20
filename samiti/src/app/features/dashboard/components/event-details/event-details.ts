@@ -74,7 +74,7 @@ export class EventDetailsComponent implements OnInit {
   }
 
   public get isVotingRolesLocked(): boolean {
-    return Boolean(this.eventData()?.votingRolesLocked);
+    return this.votingPhaseState >= 1;
   }
 
   public get votingPhaseState(): number {
@@ -138,7 +138,7 @@ export class EventDetailsComponent implements OnInit {
       return 'Roles Locked';
     }
 
-    return 'Roles Selection Open';
+    return '';
   }
 
   public get votingPhaseIcon(): string {
@@ -163,30 +163,6 @@ export class EventDetailsComponent implements OnInit {
 
   public get canStopVoting(): boolean {
     return this.canManageVotingRoles && this.votingPhaseState === 3;
-  }
-
-  public get votingPhaseBannerMessage(): string {
-    if (this.isVotingClosed) {
-      return 'Voting is closed. Nominations and withdrawals remain disabled.';
-    }
-
-    if (this.isVotingEnabled) {
-      return 'Voting is open. Nominations and withdrawals remain disabled.';
-    }
-
-    if (this.isNominationsStopped) {
-      return 'Nominations are stopped. Start voting when you are ready.';
-    }
-
-    if (this.isNominationsStarted) {
-      return 'Nominations are open. Members can nominate or withdraw.';
-    }
-
-    if (this.isVotingRolesLocked) {
-      return 'Roles are locked. Start nominations to open the nomination window.';
-    }
-
-    return 'Save and lock roles before starting nominations.';
   }
 
   public get currentEventMappedRoleCount(): number {
@@ -241,6 +217,14 @@ export class EventDetailsComponent implements OnInit {
     }
 
     return 'No Group Role';
+  }
+
+  public get isAllDesignationsVisible(): boolean {
+    return String(this.eventData()?.currentCommitteeRole || 'NONE').toUpperCase() !== 'COMMITTEE_MEMBER';
+  }
+
+  public get isCommitteeMember(): boolean {
+    return String(this.eventData()?.currentCommitteeRole || 'NONE').toUpperCase() === 'COMMITTEE_MEMBER';
   }
 
   public get nominationWaitMessage(): string {
@@ -304,89 +288,9 @@ export class EventDetailsComponent implements OnInit {
   }
 
   public onStartNominations(): void {
-    const currentEvent = this.eventData();
-    if (!currentEvent?.eventId) {
-      this.notifier.error('No event available for starting nominations');
-      return;
-    }
-
-    if (!this.canStartNominations) {
-      return;
-    }
-
-    if (this.isSavingVotingRoles() || this.isLockingVotingRoles() || this.isUpdatingVotingPhase()) {
-      return;
-    }
-
-    const dialogData: ConfirmDialogData = {
-      title: 'Start Nominations',
-      message: 'Are you sure you want to start nominations? Members will be able to nominate and withdraw until nominations are stopped.',
-      confirmText: 'Start Nominations',
-      cancelText: 'Cancel'
-    };
-
-    const dialogRef = this.confirmDialog.open(dialogData);
-    dialogRef.afterClosed().subscribe((result) => {
-      if (!result?.confirmed) {
-        return;
-      }
-
-      this.isUpdatingVotingPhase.set(true);
-      this.eventDetailsService.startEventNominations(currentEvent.eventId).subscribe({
-        next: () => {
-          this.notifier.success('Nominations have been started successfully.');
-          this.isUpdatingVotingPhase.set(false);
-          this.fetchEventDetails(String(currentEvent.eventId));
-        },
-        error: (err: HttpErrorResponse) => {
-          this.notifier.error(err?.error?.message || 'Failed to start nominations.');
-          this.isUpdatingVotingPhase.set(false);
-        }
-      });
-    });
   }
 
   public onStopNominations(): void {
-    const currentEvent = this.eventData();
-    if (!currentEvent?.eventId) {
-      this.notifier.error('No event available for stopping nominations');
-      return;
-    }
-
-    if (!this.canStopNominations) {
-      return;
-    }
-
-    if (this.isSavingVotingRoles() || this.isLockingVotingRoles() || this.isUpdatingVotingPhase()) {
-      return;
-    }
-
-    const dialogData: ConfirmDialogData = {
-      title: 'Stop Nominations',
-      message: 'Are you sure you want to stop nominations? Members will no longer be able to nominate or withdraw after this.',
-      confirmText: 'Stop Nominations',
-      cancelText: 'Cancel'
-    };
-
-    const dialogRef = this.confirmDialog.open(dialogData);
-    dialogRef.afterClosed().subscribe((result) => {
-      if (!result?.confirmed) {
-        return;
-      }
-
-      this.isUpdatingVotingPhase.set(true);
-      this.eventDetailsService.stopEventNominations(currentEvent.eventId).subscribe({
-        next: () => {
-          this.notifier.success('Nominations have been stopped successfully.');
-          this.isUpdatingVotingPhase.set(false);
-          this.fetchEventDetails(String(currentEvent.eventId));
-        },
-        error: (err: HttpErrorResponse) => {
-          this.notifier.error(err?.error?.message || 'Failed to stop nominations.');
-          this.isUpdatingVotingPhase.set(false);
-        }
-      });
-    });
   }
 
   public isPresidentRole(role?: EventMappedVotingRole | null): boolean {
@@ -426,6 +330,12 @@ export class EventDetailsComponent implements OnInit {
   }
 
   public onToggleVotingRole(roleId: number, checked: boolean): void {
+    const currentEvent = this.eventData();
+    if (!currentEvent?.eventId) {
+      this.notifier.error('No event available for role mapping');
+      return;
+    }
+
     if (!this.canEditVotingRoles) {
       return;
     }
@@ -436,49 +346,19 @@ export class EventDetailsComponent implements OnInit {
     }
 
     const currentIds = this.selectedVotingRoleIds();
-    if (checked) {
-      if (!currentIds.includes(normalizedRoleId)) {
-        this.selectedVotingRoleIds.set([...currentIds, normalizedRoleId]);
-      }
-      return;
-    }
+    const optimisticIds = checked
+      ? (currentIds.includes(normalizedRoleId) ? currentIds : [...currentIds, normalizedRoleId])
+      : currentIds.filter((id) => id !== normalizedRoleId);
+    this.selectedVotingRoleIds.set(optimisticIds);
 
-    this.selectedVotingRoleIds.set(currentIds.filter((id) => id !== normalizedRoleId));
-  }
-
-  public onSaveVotingRoles(): void {
-    const currentEvent = this.eventData();
-    if (!currentEvent?.eventId) {
-      this.notifier.error('No event available for role mapping');
-      return;
-    }
-
-    if (!this.canManageVotingRoles) {
-      this.notifier.error('Only committee admin can manage event voting roles');
-      return;
-    }
-
-    if (this.isVotingRolesLocked) {
-      this.notifier.warn('Voting role selection is locked for this event. Changes are disabled.');
-      return;
-    }
-
-    if (this.isSavingVotingRoles()) {
-      return;
-    }
-
-    const roleIds = Array.from(new Set(this.selectedVotingRoleIds().filter((roleId) => Number.isInteger(roleId) && roleId > 0)));
-
-    this.isSavingVotingRoles.set(true);
-    this.eventDetailsService.updateEventVotingRoles(currentEvent.eventId, roleIds).subscribe({
+    this.eventDetailsService.toggleEventVotingRole(currentEvent.eventId, normalizedRoleId, checked).subscribe({
       next: () => {
-        this.notifier.success('Voting roles mapped to event successfully.');
-        this.isSavingVotingRoles.set(false);
+        this.notifier.success(checked ? 'Role added for voting.' : 'Role removed from voting.');
         this.fetchEventDetails(String(currentEvent.eventId));
       },
       error: (err: HttpErrorResponse) => {
-        this.notifier.error(err?.error?.message || 'Failed to save event voting roles.');
-        this.isSavingVotingRoles.set(false);
+        this.selectedVotingRoleIds.set(currentIds);
+        this.notifier.error(err?.error?.message || 'Failed to update voting role.');
       }
     });
   }
@@ -490,34 +370,14 @@ export class EventDetailsComponent implements OnInit {
       return;
     }
 
-    if (!this.canManageVotingRoles) {
-      this.notifier.error('Only committee admin can lock event voting roles');
-      return;
-    }
-
-    if (this.isVotingRolesLocked) {
-      this.notifier.warn('Voting role selection is already locked for this event.');
-      return;
-    }
-
     if (this.currentEventMappedRoleCount === 0) {
-      this.notifier.warn('Select and save at least one role before locking voting role selection.');
-      return;
-    }
-
-    if (this.isSavingVotingRoles() || this.isLockingVotingRoles()) {
-      return;
-    }
-
-    const roleIds = Array.from(new Set(this.selectedVotingRoleIds().filter((roleId) => Number.isInteger(roleId) && roleId > 0)));
-    if (!roleIds.length) {
       this.notifier.warn('Select at least one role before locking voting role selection.');
       return;
     }
 
     const dialogData: ConfirmDialogData = {
       title: 'Lock Voting Role Selection',
-      message: 'Are you sure you want to lock role selection for this event? After locking, even committee admin cannot change mapped voting roles.',
+      message: 'Are you sure you want to lock role selection for this event? This will start the voting lifecycle (phase 1) and after locking, even committee admin cannot change mapped voting roles.',
       confirmText: 'Lock Roles',
       cancelText: 'Cancel'
     };
@@ -529,22 +389,14 @@ export class EventDetailsComponent implements OnInit {
       }
 
       this.isLockingVotingRoles.set(true);
-      this.eventDetailsService.updateEventVotingRoles(currentEvent.eventId, roleIds).subscribe({
+      this.eventDetailsService.lockEventVotingRoles(currentEvent.eventId).subscribe({
         next: () => {
-          this.eventDetailsService.lockEventVotingRoles(currentEvent.eventId).subscribe({
-            next: () => {
-              this.notifier.success('Voting role selection has been locked successfully.');
-              this.isLockingVotingRoles.set(false);
-              this.fetchEventDetails(String(currentEvent.eventId));
-            },
-            error: (err: HttpErrorResponse) => {
-              this.notifier.error(err?.error?.message || 'Failed to lock voting role selection.');
-              this.isLockingVotingRoles.set(false);
-            }
-          });
+          this.notifier.success('Voting role selection has been locked and the voting lifecycle has started.');
+          this.isLockingVotingRoles.set(false);
+          this.fetchEventDetails(String(currentEvent.eventId));
         },
         error: (err: HttpErrorResponse) => {
-          this.notifier.error(err?.error?.message || 'Failed to save selected roles before locking.');
+          this.notifier.error(err?.error?.message || 'Failed to lock voting role selection.');
           this.isLockingVotingRoles.set(false);
         }
       });
@@ -552,71 +404,25 @@ export class EventDetailsComponent implements OnInit {
   }
 
   public onStartVoting(): void {
-    const currentEvent = this.eventData();
-    if (!currentEvent?.eventId) {
-      this.notifier.error('No event available for starting voting');
-      return;
-    }
-
-    if (!this.canStartVoting) {
-      return;
-    }
-
-    if (this.isSavingVotingRoles() || this.isLockingVotingRoles() || this.isUpdatingVotingPhase()) {
-      return;
-    }
-
-    const dialogData: ConfirmDialogData = {
-      title: 'Start Voting',
-      message: 'Are you sure you want to start voting now? Nominations will stay closed and all members including admins will be able to vote.',
-      confirmText: 'Start Voting',
-      cancelText: 'Cancel'
-    };
-
-    const dialogRef = this.confirmDialog.open(dialogData);
-    dialogRef.afterClosed().subscribe((result) => {
-      if (!result?.confirmed) {
-        return;
-      }
-
-      this.isUpdatingVotingPhase.set(true);
-      this.eventDetailsService.allowEventVoting(currentEvent.eventId).subscribe({
-        next: () => {
-          this.notifier.success('Voting has been started successfully.');
-          this.isUpdatingVotingPhase.set(false);
-          this.fetchEventDetails(String(currentEvent.eventId));
-        },
-        error: (err: HttpErrorResponse) => {
-          this.notifier.error(err?.error?.message || 'Failed to enable voting.');
-          this.isUpdatingVotingPhase.set(false);
-        }
-      });
-    });
   }
 
   public onAllowVoting(): void {
-    this.onStartVoting();
   }
 
   public onStopVoting(): void {
+  }
+
+  public onDeclareResults(): void {
     const currentEvent = this.eventData();
     if (!currentEvent?.eventId) {
-      this.notifier.error('No event available for stopping voting');
-      return;
-    }
-
-    if (!this.canStopVoting) {
-      return;
-    }
-
-    if (this.isUpdatingVotingPhase() || this.isLockingVotingRoles()) {
+      this.notifier.error('No event available for declaring results');
       return;
     }
 
     const dialogData: ConfirmDialogData = {
-      title: 'Stop Voting',
-      message: 'Are you sure you want to stop voting? After this, voting will be closed and nomination actions will stay disabled.',
-      confirmText: 'Stop Voting',
+      title: 'Declare Results',
+      message: 'Are you sure you want to declare the results? Voting will be finalized and results will be published.',
+      confirmText: 'Declare Results',
       cancelText: 'Cancel'
     };
 
@@ -626,16 +432,13 @@ export class EventDetailsComponent implements OnInit {
         return;
       }
 
-      this.isUpdatingVotingPhase.set(true);
-      this.eventDetailsService.stopEventVoting(currentEvent.eventId).subscribe({
+      this.eventDetailsService.declareEventResults(currentEvent.eventId).subscribe({
         next: () => {
-          this.notifier.success('Voting has been closed successfully.');
-          this.isUpdatingVotingPhase.set(false);
+          this.notifier.success('Results have been declared successfully.');
           this.fetchEventDetails(String(currentEvent.eventId));
         },
         error: (err: HttpErrorResponse) => {
-          this.notifier.error(err?.error?.message || 'Failed to stop voting.');
-          this.isUpdatingVotingPhase.set(false);
+          this.notifier.error(err?.error?.message || 'Failed to declare results.');
         }
       });
     });

@@ -23,8 +23,10 @@ export interface UpdatedEventVisibilityPayload {
   updatedBy: number;
 }
 
-export interface UpdateEventVotingRolesPayload {
+export interface ToggleEventVotingRolePayload {
   eventId: number;
+  roleId: number;
+  enabled: boolean;
   mappedVotingRoles: Array<{
     roleId: number;
     roleName: string;
@@ -36,12 +38,12 @@ export interface UpdateEventVotingRolesPayload {
 
 export interface LockEventVotingRolesPayload {
   eventId: number;
-  votingRolesLocked: boolean;
+  votingPhaseState: number;
 }
 
 export interface UnlockEventVotingRolesPayload {
   eventId: number;
-  votingRolesLocked: boolean;
+  votingPhaseState: number;
 }
 
 export interface StartEventNominationsPayload {
@@ -62,6 +64,11 @@ export interface AllowEventVotingPayload {
 export interface StopEventVotingPayload {
   eventId: number;
   votingClosed: boolean;
+}
+
+export interface DeclareEventResultsPayload {
+  eventId: number;
+  votingPhaseState: number;
 }
 
 @Injectable({
@@ -134,7 +141,6 @@ export class EventDetailsService {
         currentCommitteeRole
         committeeMemberCount
         committeeAdminCount
-        votingRolesLocked
         votingEnabled
         votingClosed
         votingPhaseState
@@ -232,10 +238,12 @@ export class EventDetailsService {
     );
   }
 
-  public updateEventVotingRoles(eventId: number, roleIds: number[]): Observable<UpdateEventVotingRolesPayload> {
-    const mutation = `mutation UpdateEventVotingRoles($eventId: Int!, $roleIds: [Int!]!) {
-      updateEventVotingRoles(eventId: $eventId, roleIds: $roleIds) {
+  public toggleEventVotingRole(eventId: number, roleId: number, enabled: boolean): Observable<ToggleEventVotingRolePayload> {
+    const mutation = `mutation ToggleEventVotingRole($eventId: Int!, $roleId: Int!, $enabled: Boolean!) {
+      toggleEventVotingRole(eventId: $eventId, roleId: $roleId, enabled: $enabled) {
         eventId
+        roleId
+        enabled
         mappedVotingRoles {
           roleId
           roleName
@@ -246,18 +254,19 @@ export class EventDetailsService {
       }
     }`;
 
-    return this.http.post<{ data: { updateEventVotingRoles: UpdateEventVotingRolesPayload } }>(
+    return this.http.post<{ data: { toggleEventVotingRole: ToggleEventVotingRolePayload } }>(
       this.graphqlUrl,
       {
         query: mutation,
         variables: {
           eventId,
-          roleIds
+          roleId,
+          enabled
         }
       },
       { withCredentials: true }
     ).pipe(
-      map((res) => res.data.updateEventVotingRoles)
+      map((res) => res.data.toggleEventVotingRole)
     );
   }
 
@@ -265,7 +274,7 @@ export class EventDetailsService {
     const mutation = `mutation LockEventVotingRoles($eventId: Int!) {
       lockEventVotingRoles(eventId: $eventId) {
         eventId
-        votingRolesLocked
+        votingPhaseState
       }
     }`;
 
@@ -287,7 +296,7 @@ export class EventDetailsService {
     const mutation = `mutation UnlockEventVotingRoles($eventId: Int!) {
       unlockEventVotingRoles(eventId: $eventId) {
         eventId
-        votingRolesLocked
+        votingPhaseState
       }
     }`;
 
@@ -380,6 +389,28 @@ export class EventDetailsService {
       { withCredentials: true }
     ).pipe(
       map((res) => res.data.stopEventVoting)
+    );
+  }
+
+  public declareEventResults(eventId: number): Observable<DeclareEventResultsPayload> {
+    const mutation = `mutation DeclareEventResults($eventId: Int!) {
+      declareEventResults(eventId: $eventId) {
+        eventId
+        votingPhaseState
+      }
+    }`;
+
+    return this.http.post<{ data: { declareEventResults: DeclareEventResultsPayload } }>(
+      this.graphqlUrl,
+      {
+        query: mutation,
+        variables: {
+          eventId
+        }
+      },
+      { withCredentials: true }
+    ).pipe(
+      map((res) => res.data.declareEventResults)
     );
   }
 }

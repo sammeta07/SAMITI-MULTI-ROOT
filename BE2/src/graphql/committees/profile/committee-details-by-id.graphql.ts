@@ -1,7 +1,6 @@
 import { query } from '../../../config/db';
 import { RowDataPacket } from 'mysql2/promise';
 import { hasEventsDisplayNameColumn } from '../../events/details/event-display-name-support';
-import { hasEventsVotingRolesLockedColumn } from '../../events/voting/event-voting-roles-lock-support';
 import { hasEventsVotingPhaseStateColumn } from '../../events/voting/event-voting-phase-support';
 
 async function hasEventsVotingEnabledColumn(): Promise<boolean> {
