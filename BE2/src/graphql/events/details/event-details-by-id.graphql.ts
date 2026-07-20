@@ -2,7 +2,7 @@ import { query } from '../../../config/db';
 import { RowDataPacket } from 'mysql2/promise';
 import { hasEventsDisplayNameColumn } from './event-display-name-support';
 import { hasEventsVotingPhaseStateColumn } from '../voting/event-voting-phase-support';
-import { hasEventsVotingEnabledColumn, hasEventsVotingClosedColumn, getEventVotingPhaseState, getMappedVotingRoles, throwEventError, getLoggedInUserId } from '../voting/event-voting.graphql';
+import { getEventVotingPhaseState, getMappedVotingRoles, throwEventError, getLoggedInUserId } from '../voting/event-voting.graphql';
 
 async function getEventMasterRoles(): Promise<Array<{ roleId: number | null; roleName: string; roleCode: string | null; hindiName: string | null; englishName: string | null; isActive: boolean }>> {
   const candidateTables = ['events_roles_master', 'event_roles_master'];
@@ -178,8 +178,6 @@ export const eventDetailsTypes = `
     currentCommitteeRole: String!
     committeeMemberCount: Int!
     committeeAdminCount: Int!
-    votingEnabled: Boolean!
-    votingClosed: Boolean!
     votingPhaseState: Int!
   }
 `;
@@ -198,8 +196,6 @@ export const eventDetailsResolvers = {
 
       const loggedInUserId = await getLoggedInUserId(context);
       const supportsEventDisplayName = await hasEventsDisplayNameColumn();
-      const supportsVotingEnabled = await hasEventsVotingEnabledColumn();
-      const supportsVotingClosed = await hasEventsVotingClosedColumn();
       const supportsVotingPhaseState = await hasEventsVotingPhaseStateColumn();
 
       const eventResult = await query<any[]>(`
@@ -221,9 +217,7 @@ export const eventDetailsResolvers = {
           e.longitude,
           e.created_by AS createdBy,
           e.updated_by AS updatedBy,
-          e.created_at AS createdAt,
-          ${supportsVotingEnabled ? 'COALESCE(e.voting_enabled, 0) AS votingEnabled' : '0 AS votingEnabled'}
-          ${supportsVotingClosed ? ', COALESCE(e.voting_closed, 0) AS votingClosed' : ', 0 AS votingClosed'}
+          e.created_at AS createdAt
           ${supportsVotingPhaseState ? ', COALESCE(e.voting_phase_state, 0) AS votingPhaseState' : ', 0 AS votingPhaseState'}
         FROM events e
         LEFT JOIN committees c ON c.id = e.committee_id
@@ -402,8 +396,6 @@ export const eventDetailsResolvers = {
         currentCommitteeRole,
         committeeMemberCount,
         committeeAdminCount,
-        votingEnabled: Number(event.votingEnabled || 0) === 1,
-        votingClosed: Number(event.votingClosed || 0) === 1,
         votingPhaseState: getEventVotingPhaseState(event, supportsVotingPhaseState)
       };
     }

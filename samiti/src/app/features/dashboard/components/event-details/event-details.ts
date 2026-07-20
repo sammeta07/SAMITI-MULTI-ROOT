@@ -81,6 +81,30 @@ export class EventDetailsComponent implements OnInit {
     return Number(this.eventData()?.votingPhaseState || 0);
   }
 
+  public get isLockControlEnabled(): boolean {
+    return this.votingPhaseState === 0 && this.currentEventMappedRoleCount > 0;
+  }
+
+  public get isStartNominationsEnabled(): boolean {
+    return this.votingPhaseState === 1;
+  }
+
+  public get isStopNominationsEnabled(): boolean {
+    return this.votingPhaseState === 2;
+  }
+
+  public get isStartVotingEnabled(): boolean {
+    return this.votingPhaseState === 3;
+  }
+
+  public get isStopVotingEnabled(): boolean {
+    return this.votingPhaseState === 4;
+  }
+
+  public get isDeclareResultsEnabled(): boolean {
+    return this.votingPhaseState === 5;
+  }
+
   public get canEditVotingRoles(): boolean {
     return this.canManageVotingRoles && !this.isVotingRolesLocked && this.votingPhaseState === 0;
   }
@@ -94,11 +118,11 @@ export class EventDetailsComponent implements OnInit {
   }
 
   public get isVotingEnabled(): boolean {
-    return this.votingPhaseState >= 3;
+    return this.votingPhaseState === 4;
   }
 
   public get isVotingClosed(): boolean {
-    return this.votingPhaseState >= 4;
+    return this.votingPhaseState >= 5;
   }
 
   public get isNominationsStarted(): boolean {
@@ -107,6 +131,10 @@ export class EventDetailsComponent implements OnInit {
 
   public get isNominationsStopped(): boolean {
     return this.votingPhaseState >= 2;
+  }
+
+  public get isNominationsInProgress(): boolean {
+    return this.votingPhaseState >= 1 && this.votingPhaseState <= 3;
   }
 
   public get canStopNominations(): boolean {
@@ -118,6 +146,10 @@ export class EventDetailsComponent implements OnInit {
   }
 
   public get votingPhaseLabel(): string {
+    if (this.votingPhaseState >= 6) {
+      return 'Results Declared';
+    }
+
     if (this.isVotingClosed) {
       return 'Voting Stopped';
     }
@@ -142,6 +174,10 @@ export class EventDetailsComponent implements OnInit {
   }
 
   public get votingPhaseIcon(): string {
+    if (this.votingPhaseState >= 6) {
+      return 'emoji_events';
+    }
+
     if (this.isVotingClosed) {
       return 'event_busy';
     }
@@ -232,7 +268,7 @@ export class EventDetailsComponent implements OnInit {
       return 'Wait for your admin to start nominations';
     }
 
-    return 'Members are waiting for nomination';
+    return 'Nominations not started';
   }
 
   public get currentLoggedInUserId(): number {
@@ -285,12 +321,6 @@ export class EventDetailsComponent implements OnInit {
         // this.isLoading.set(false);
       }
     });
-  }
-
-  public onStartNominations(): void {
-  }
-
-  public onStopNominations(): void {
   }
 
   public isPresidentRole(role?: EventMappedVotingRole | null): boolean {
@@ -403,13 +433,132 @@ export class EventDetailsComponent implements OnInit {
     });
   }
 
-  public onStartVoting(): void {
+  public onStartNominations(): void {
+    const currentEvent = this.eventData();
+    if (!currentEvent?.eventId) {
+      this.notifier.error('No event available for starting nominations');
+      return;
+    }
+
+    const dialogData: ConfirmDialogData = {
+      title: 'Start Nominations',
+      message: 'Are you sure you want to start nominations? Members will be able to nominate and withdraw.',
+      confirmText: 'Start Nominations',
+      cancelText: 'Cancel'
+    };
+
+    const dialogRef = this.confirmDialog.open(dialogData);
+    dialogRef.afterClosed().subscribe((result) => {
+      if (!result?.confirmed) {
+        return;
+      }
+
+      this.eventDetailsService.startEventNominations(currentEvent.eventId).subscribe({
+        next: () => {
+          this.notifier.success('Nominations have been started successfully.');
+          this.fetchEventDetails(String(currentEvent.eventId));
+        },
+        error: (err: HttpErrorResponse) => {
+          this.notifier.error(err?.error?.message || 'Failed to start nominations.');
+        }
+      });
+    });
   }
 
-  public onAllowVoting(): void {
+  public onStopNominations(): void {
+    const currentEvent = this.eventData();
+    if (!currentEvent?.eventId) {
+      this.notifier.error('No event available for stopping nominations');
+      return;
+    }
+
+    const dialogData: ConfirmDialogData = {
+      title: 'Stop Nominations',
+      message: 'Are you sure you want to stop nominations? Members will no longer be able to nominate or withdraw.',
+      confirmText: 'Stop Nominations',
+      cancelText: 'Cancel'
+    };
+
+    const dialogRef = this.confirmDialog.open(dialogData);
+    dialogRef.afterClosed().subscribe((result) => {
+      if (!result?.confirmed) {
+        return;
+      }
+
+      this.eventDetailsService.stopEventNominations(currentEvent.eventId).subscribe({
+        next: () => {
+          this.notifier.success('Nominations have been stopped successfully.');
+          this.fetchEventDetails(String(currentEvent.eventId));
+        },
+        error: (err: HttpErrorResponse) => {
+          this.notifier.error(err?.error?.message || 'Failed to stop nominations.');
+        }
+      });
+    });
+  }
+
+  public onStartVoting(): void {
+    const currentEvent = this.eventData();
+    if (!currentEvent?.eventId) {
+      this.notifier.error('No event available for starting voting');
+      return;
+    }
+
+    const dialogData: ConfirmDialogData = {
+      title: 'Start Voting',
+      message: 'Are you sure you want to start voting? All members including admins will be able to vote.',
+      confirmText: 'Start Voting',
+      cancelText: 'Cancel'
+    };
+
+    const dialogRef = this.confirmDialog.open(dialogData);
+    dialogRef.afterClosed().subscribe((result) => {
+      if (!result?.confirmed) {
+        return;
+      }
+
+      this.eventDetailsService.allowEventVoting(currentEvent.eventId).subscribe({
+        next: () => {
+          this.notifier.success('Voting has been started successfully.');
+          this.fetchEventDetails(String(currentEvent.eventId));
+        },
+        error: (err: HttpErrorResponse) => {
+          this.notifier.error(err?.error?.message || 'Failed to start voting.');
+        }
+      });
+    });
   }
 
   public onStopVoting(): void {
+    const currentEvent = this.eventData();
+    if (!currentEvent?.eventId) {
+      this.notifier.error('No event available for stopping voting');
+      return;
+    }
+
+    const dialogData: ConfirmDialogData = {
+      title: 'Stop Voting',
+      message: 'Are you sure you want to stop voting? After this, voting will be closed.',
+      confirmText: 'Stop Voting',
+      cancelText: 'Cancel'
+    };
+
+    const dialogRef = this.confirmDialog.open(dialogData);
+    dialogRef.afterClosed().subscribe((result) => {
+      if (!result?.confirmed) {
+        return;
+      }
+
+      this.eventDetailsService.stopEventVoting(currentEvent.eventId).subscribe({
+        next: () => {
+          this.notifier.success('Voting has been stopped successfully.');
+          this.fetchEventDetails(String(currentEvent.eventId));
+        },
+        error: (err: HttpErrorResponse) => {
+          this.notifier.error(err?.error?.message || 'Failed to stop voting.');
+        }
+      });
+    });
   }
 
   public onDeclareResults(): void {

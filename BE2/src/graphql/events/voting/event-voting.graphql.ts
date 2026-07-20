@@ -2,32 +2,6 @@ import { query } from '../../../config/db';
 import { RowDataPacket } from 'mysql2/promise';
 import { hasEventsVotingPhaseStateColumn } from './event-voting-phase-support';
 
-export async function hasEventsVotingEnabledColumn(): Promise<boolean> {
-  const rows = await query<any[]>(
-    `SELECT 1 AS column_exists
-     FROM INFORMATION_SCHEMA.COLUMNS
-     WHERE TABLE_SCHEMA = DATABASE()
-       AND TABLE_NAME = 'events'
-       AND COLUMN_NAME = 'voting_enabled'
-     LIMIT 1`
-  );
-
-  return rows.length > 0;
-}
-
-export async function hasEventsVotingClosedColumn(): Promise<boolean> {
-  const rows = await query<any[]>(
-    `SELECT 1 AS column_exists
-     FROM INFORMATION_SCHEMA.COLUMNS
-     WHERE TABLE_SCHEMA = DATABASE()
-       AND TABLE_NAME = 'events'
-       AND COLUMN_NAME = 'voting_closed'
-     LIMIT 1`
-  );
-
-  return rows.length > 0;
-}
-
 export function throwEventError(code: string, message: string): never {
   throw new Error(`${code}: ${message}`);
 }
@@ -70,14 +44,6 @@ export async function getLoggedInUserId(context: any): Promise<number> {
 export function getEventVotingPhaseState(event: any, supportsVotingPhaseState: boolean): number {
   if (supportsVotingPhaseState) {
     return Number(event?.votingPhaseState || 0);
-  }
-
-  if (Number(event?.votingClosed || 0) === 1) {
-    return 4;
-  }
-
-  if (Number(event?.votingEnabled || 0) === 1) {
-    return 3;
   }
 
   return 0;
@@ -157,12 +123,12 @@ export const eventVotingTypes = `
 
   type AllowEventVotingPayload {
     eventId: Int!
-    votingEnabled: Boolean!
+    votingPhaseState: Int!
   }
 
   type StopEventVotingPayload {
     eventId: Int!
-    votingClosed: Boolean!
+    votingPhaseState: Int!
   }
 
   type DeclareEventResultsPayload {
@@ -198,16 +164,12 @@ export const eventVotingResolvers = {
       const enabled = Boolean(args?.enabled);
 
       const loggedInUserId = await getLoggedInUserId(context);
-      const supportsVotingEnabled = await hasEventsVotingEnabledColumn();
-      const supportsVotingClosed = await hasEventsVotingClosedColumn();
       const supportsVotingPhaseState = await hasEventsVotingPhaseStateColumn();
 
       const eventRows = await query<any[]>(
         `SELECT
            id,
            committee_id AS committeeId,
-           ${supportsVotingEnabled ? 'COALESCE(voting_enabled, 0)' : '0'} AS votingEnabled,
-           ${supportsVotingClosed ? 'COALESCE(voting_closed, 0)' : '0'} AS votingClosed,
            ${supportsVotingPhaseState ? 'COALESCE(voting_phase_state, 0)' : '0'} AS votingPhaseState
          FROM events
          WHERE id = ?
@@ -241,14 +203,6 @@ export const eventVotingResolvers = {
 
       if (Number(event.votingPhaseState || 0) >= 1) {
         throwEventError('FORBIDDEN', 'Voting role selection is locked for this event and cannot be changed');
-      }
-
-      if (Number(event.votingEnabled || 0) === 1) {
-        throwEventError('FORBIDDEN', 'Voting is already enabled for this event; role selection cannot be changed');
-      }
-
-      if (Number(event.votingClosed || 0) === 1) {
-        throwEventError('FORBIDDEN', 'Voting has been closed for this event; role selection cannot be changed');
       }
 
       const validRoleRows = await query<Array<RowDataPacket & { roleId: number }>>(
@@ -292,15 +246,7 @@ export const eventVotingResolvers = {
         throwEventError('BAD_REQUEST', 'eventId must be a positive integer');
       }
 
-      const supportsVotingEnabled = await hasEventsVotingEnabledColumn();
-      const supportsVotingClosed = await hasEventsVotingClosedColumn();
       const supportsVotingPhaseState = await hasEventsVotingPhaseStateColumn();
-      if (!supportsVotingEnabled) {
-        throwEventError('INTERNAL', 'Voting enabled column is missing. Please run latest migrations.');
-      }
-      if (!supportsVotingClosed) {
-        throwEventError('INTERNAL', 'Voting closed column is missing. Please run latest migrations.');
-      }
       if (!supportsVotingPhaseState) {
         throwEventError('INTERNAL', 'Voting phase state column is missing. Please run latest migrations.');
       }
@@ -310,15 +256,11 @@ export const eventVotingResolvers = {
       const eventRows = await query<Array<RowDataPacket & {
         id: number;
         committeeId: number;
-        votingEnabled: number;
-        votingClosed: number;
         votingPhaseState: number;
       }>>(
         `SELECT
            id,
            committee_id AS committeeId,
-           COALESCE(voting_enabled, 0) AS votingEnabled,
-           COALESCE(voting_closed, 0) AS votingClosed,
            COALESCE(voting_phase_state, 0) AS votingPhaseState
          FROM events
          WHERE id = ?
@@ -349,8 +291,6 @@ export const eventVotingResolvers = {
         await query(
           `UPDATE events
            SET voting_phase_state = 1,
-               voting_enabled = 0,
-               voting_closed = 0,
                updated_by = ?
            WHERE id = ?`,
           [loggedInUserId, eventId]
@@ -410,17 +350,13 @@ export const eventVotingResolvers = {
         throwEventError('FORBIDDEN', 'Only committee admin can start nominations');
       }
 
-      if (Number(event.votingPhaseState || 0) < 1) {
-        throwEventError('BAD_REQUEST', 'Lock voting roles before starting nominations');
-      }
-
       if (Number(event.votingPhaseState || 0) !== 1) {
-        throwEventError('BAD_REQUEST', 'Nominations have already been started for this event');
+        throwEventError('BAD_REQUEST', 'Lock voting roles before starting nominations');
       }
 
       await query(
         `UPDATE events
-         SET voting_phase_state = 1,
+         SET voting_phase_state = 2,
              updated_by = ?
          WHERE id = ?`,
         [loggedInUserId, eventId]
@@ -428,7 +364,7 @@ export const eventVotingResolvers = {
 
       return {
         eventId,
-        votingPhaseState: 1
+        votingPhaseState: 2
       };
     },
 
@@ -479,13 +415,13 @@ export const eventVotingResolvers = {
         throwEventError('FORBIDDEN', 'Only committee admin can stop nominations');
       }
 
-      if (Number(event.votingPhaseState || 0) !== 1) {
+      if (Number(event.votingPhaseState || 0) !== 2) {
         throwEventError('BAD_REQUEST', 'Nominations are not active for this event');
       }
 
       await query(
         `UPDATE events
-         SET voting_phase_state = 2,
+         SET voting_phase_state = 3,
              updated_by = ?
          WHERE id = ?`,
         [loggedInUserId, eventId]
@@ -493,7 +429,7 @@ export const eventVotingResolvers = {
 
       return {
         eventId,
-        votingPhaseState: 2
+        votingPhaseState: 3
       };
     },
 
@@ -568,11 +504,9 @@ export const eventVotingResolvers = {
         throwEventError('BAD_REQUEST', 'eventId must be a positive integer');
       }
 
-      const supportsVotingEnabled = await hasEventsVotingEnabledColumn();
-      const supportsVotingClosed = await hasEventsVotingClosedColumn();
       const supportsVotingPhaseState = await hasEventsVotingPhaseStateColumn();
-      if (!supportsVotingEnabled || !supportsVotingClosed || !supportsVotingPhaseState) {
-        throwEventError('INTERNAL', 'Voting phase columns are missing. Please run latest migrations.');
+      if (!supportsVotingPhaseState) {
+        throwEventError('INTERNAL', 'Voting phase column is missing. Please run latest migrations.');
       }
 
       const loggedInUserId = await getLoggedInUserId(context);
@@ -580,15 +514,11 @@ export const eventVotingResolvers = {
       const eventRows = await query<Array<RowDataPacket & {
         id: number;
         committeeId: number;
-        votingEnabled: number;
-        votingClosed: number;
         votingPhaseState: number;
       }>>(
         `SELECT
            id,
            committee_id AS committeeId,
-           COALESCE(voting_enabled, 0) AS votingEnabled,
-           COALESCE(voting_closed, 0) AS votingClosed,
            COALESCE(voting_phase_state, 0) AS votingPhaseState
          FROM events
          WHERE id = ?
@@ -615,29 +545,21 @@ export const eventVotingResolvers = {
         throwEventError('FORBIDDEN', 'Only committee admin can allow voting');
       }
 
-      if (Number(event.votingPhaseState || 0) < 1) {
-        throwEventError('BAD_REQUEST', 'Lock voting roles before allowing voting');
-      }
-
-      if (Number(event.votingPhaseState || 0) !== 2) {
+      if (Number(event.votingPhaseState || 0) !== 3) {
         throwEventError('BAD_REQUEST', 'Stop nominations before starting voting');
       }
 
-      if (Number(event.votingEnabled || 0) !== 1) {
-        await query(
-          `UPDATE events
-           SET voting_enabled = 1,
-               voting_closed = 0,
-               voting_phase_state = 3,
-               updated_by = ?
-           WHERE id = ?`,
-          [loggedInUserId, eventId]
-        );
-      }
+      await query(
+        `UPDATE events
+         SET voting_phase_state = 4,
+             updated_by = ?
+         WHERE id = ?`,
+        [loggedInUserId, eventId]
+      );
 
       return {
         eventId,
-        votingEnabled: true
+        votingPhaseState: 4
       };
     },
 
@@ -647,11 +569,9 @@ export const eventVotingResolvers = {
         throwEventError('BAD_REQUEST', 'eventId must be a positive integer');
       }
 
-      const supportsVotingEnabled = await hasEventsVotingEnabledColumn();
-      const supportsVotingClosed = await hasEventsVotingClosedColumn();
       const supportsVotingPhaseState = await hasEventsVotingPhaseStateColumn();
-      if (!supportsVotingEnabled || !supportsVotingClosed || !supportsVotingPhaseState) {
-        throwEventError('INTERNAL', 'Voting phase columns are missing. Please run latest migrations.');
+      if (!supportsVotingPhaseState) {
+        throwEventError('INTERNAL', 'Voting phase column is missing. Please run latest migrations.');
       }
 
       const loggedInUserId = await getLoggedInUserId(context);
@@ -659,15 +579,11 @@ export const eventVotingResolvers = {
       const eventRows = await query<Array<RowDataPacket & {
         id: number;
         committeeId: number;
-        votingEnabled: number;
-        votingClosed: number;
         votingPhaseState: number;
       }>>(
         `SELECT
            id,
            committee_id AS committeeId,
-           COALESCE(voting_enabled, 0) AS votingEnabled,
-           COALESCE(voting_closed, 0) AS votingClosed,
            COALESCE(voting_phase_state, 0) AS votingPhaseState
          FROM events
          WHERE id = ?
@@ -694,19 +610,13 @@ export const eventVotingResolvers = {
         throwEventError('FORBIDDEN', 'Only committee admin can stop voting');
       }
 
-      if (Number(event.votingEnabled || 0) !== 1) {
-        throwEventError('BAD_REQUEST', 'Voting is not active for this event');
-      }
-
-      if (Number(event.votingPhaseState || 0) !== 3) {
+      if (Number(event.votingPhaseState || 0) !== 4) {
         throwEventError('BAD_REQUEST', 'Voting must be started before it can be stopped');
       }
 
       await query(
         `UPDATE events
-         SET voting_enabled = 0,
-             voting_closed = 1,
-             voting_phase_state = 4,
+         SET voting_phase_state = 5,
              updated_by = ?
          WHERE id = ?`,
         [loggedInUserId, eventId]
@@ -714,7 +624,7 @@ export const eventVotingResolvers = {
 
       return {
         eventId,
-        votingClosed: true
+        votingPhaseState: 5
       };
     },
 
@@ -765,13 +675,13 @@ export const eventVotingResolvers = {
         throwEventError('FORBIDDEN', 'Only committee admin can declare results');
       }
 
-      if (Number(event.votingPhaseState || 0) !== 4) {
+      if (Number(event.votingPhaseState || 0) !== 5) {
         throwEventError('BAD_REQUEST', 'Voting must be closed before declaring results');
       }
 
       await query(
         `UPDATE events
-         SET voting_phase_state = 5,
+         SET voting_phase_state = 6,
              updated_by = ?
          WHERE id = ?`,
         [loggedInUserId, eventId]
@@ -779,7 +689,7 @@ export const eventVotingResolvers = {
 
       return {
         eventId,
-        votingPhaseState: 5
+        votingPhaseState: 6
       };
     }
   }

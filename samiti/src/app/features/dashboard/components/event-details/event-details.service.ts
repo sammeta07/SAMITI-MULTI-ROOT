@@ -58,12 +58,12 @@ export interface StopEventNominationsPayload {
 
 export interface AllowEventVotingPayload {
   eventId: number;
-  votingEnabled: boolean;
+  votingPhaseState: number;
 }
 
 export interface StopEventVotingPayload {
   eventId: number;
-  votingClosed: boolean;
+  votingPhaseState: number;
 }
 
 export interface DeclareEventResultsPayload {
@@ -141,8 +141,6 @@ export class EventDetailsService {
         currentCommitteeRole
         committeeMemberCount
         committeeAdminCount
-        votingEnabled
-        votingClosed
         votingPhaseState
       }
     }`;
@@ -352,7 +350,7 @@ export class EventDetailsService {
     const mutation = `mutation AllowEventVoting($eventId: Int!) {
       allowEventVoting(eventId: $eventId) {
         eventId
-        votingEnabled
+        votingPhaseState
       }
     }`;
 
@@ -374,7 +372,7 @@ export class EventDetailsService {
     const mutation = `mutation StopEventVoting($eventId: Int!) {
       stopEventVoting(eventId: $eventId) {
         eventId
-        votingClosed
+        votingPhaseState
       }
     }`;
 

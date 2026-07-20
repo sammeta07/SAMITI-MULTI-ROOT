@@ -28,7 +28,7 @@
 
                 <div class="voting-controls-actions-row voting-controls-header-actions">
                   <button mat-stroked-button class="action-btn role-lock-btn voting-phase-btn"
-                          [disabled]="currentEventMappedRoleCount === 0 || isVotingRolesLocked"
+                          [disabled]="!isLockControlEnabled"
                           (click)="onLockVotingRoles()">
                     <mat-icon>lock</mat-icon>
                     <span>Lock Roles</span>
@@ -39,6 +39,9 @@
               <div class="role-picker-grid">
                 @for (role of eventData()?.availableRoles || []; track role.roleId || role.roleName) {
                 <label class="role-picker-card" [class.role-picker-card-selected]="isRoleMapped(role.roleId)">
+                  <span class="role-selected-badge" aria-hidden="true">
+                    <mat-icon>check_circle</mat-icon>
+                  </span>
                   <div class="role-picker-text">
                     <div class="role-name-primary">{{ (role.hindiName || role.roleName) | uppercase }}</div>
                     <div class="role-name-secondary">{{ ((role.englishName || role.roleCode || role.roleName || '').split('_').join(' ')) | titlecase }}</div>
@@ -57,38 +60,44 @@
 
             <section class="horizontal-full-card designations-section-style">
               <div class="panel-card-header designations-header-bg">
-                <div class="header-title-left">
-                  <mat-icon class="icon-accent-designation">badge</mat-icon>
-                  <span class="title-text">Selected Designations</span>
-                </div>
+                  <div class="header-title-left">
+                    <mat-icon class="icon-accent-designation">badge</mat-icon>
+                    <span class="title-text">Selected Designations</span>
+                    <span class="count-pill">{{ votingDisplayCards.length || 0 }}</span>
+                  </div>
 
                 <div class="voting-controls-actions-row voting-controls-header-actions">
                   @if (!isCommitteeMember) {
                   <button mat-stroked-button class="action-btn allow-voting-btn voting-phase-btn"
+                          [disabled]="!isStartNominationsEnabled"
                           (click)="onStartNominations()">
                     <mat-icon>how_to_reg</mat-icon>
                     <span>Start Nominations</span>
                   </button>
 
                   <button mat-stroked-button class="action-btn stop-voting-btn voting-phase-btn"
+                          [disabled]="!isStopNominationsEnabled"
                           (click)="onStopNominations()">
                     <mat-icon>remove_circle</mat-icon>
                     <span>Stop Nominations</span>
                   </button>
 
                   <button mat-stroked-button class="action-btn voting-started-btn voting-phase-btn"
+                          [disabled]="!isStartVotingEnabled"
                           (click)="onStartVoting()">
                     <mat-icon>how_to_vote</mat-icon>
                     <span>Start Voting</span>
                   </button>
 
                   <button mat-stroked-button class="action-btn voting-closed-btn voting-phase-btn"
+                          [disabled]="!isStopVotingEnabled"
                           (click)="onStopVoting()">
                     <mat-icon>event_busy</mat-icon>
                     <span>Stop Voting</span>
                   </button>
 
                   <button mat-stroked-button class="action-btn voting-declare-btn voting-phase-btn"
+                          [disabled]="!isDeclareResultsEnabled"
                           (click)="onDeclareResults()">
                     <mat-icon>emoji_events</mat-icon>
                     <span>Declare Results</span>
@@ -125,6 +134,11 @@
                       <div class="voting-open-card-pill voting-open-card-pill-closed">
                         <mat-icon>event_busy</mat-icon>
                         <span>Voting closed</span>
+                      </div>
+                      } @else if (isNominationsInProgress) {
+                      <div class="voting-open-card-pill voting-open-card-pill-nominations">
+                        <mat-icon>how_to_reg</mat-icon>
+                        <span>Nominations open</span>
                       </div>
                       } @else {
                       <div class="voting-wait-admin-pill">

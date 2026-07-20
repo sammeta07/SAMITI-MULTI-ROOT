@@ -3,32 +3,6 @@ import { RowDataPacket } from 'mysql2/promise';
 import { hasEventsDisplayNameColumn } from '../../events/details/event-display-name-support';
 import { hasEventsVotingPhaseStateColumn } from '../../events/voting/event-voting-phase-support';
 
-async function hasEventsVotingEnabledColumn(): Promise<boolean> {
-  const rows = await query<any[]>(
-    `SELECT 1 AS column_exists
-     FROM INFORMATION_SCHEMA.COLUMNS
-     WHERE TABLE_SCHEMA = DATABASE()
-       AND TABLE_NAME = 'events'
-       AND COLUMN_NAME = 'voting_enabled'
-     LIMIT 1`
-  );
-
-  return rows.length > 0;
-}
-
-async function hasEventsVotingClosedColumn(): Promise<boolean> {
-  const rows = await query<any[]>(
-    `SELECT 1 AS column_exists
-     FROM INFORMATION_SCHEMA.COLUMNS
-     WHERE TABLE_SCHEMA = DATABASE()
-       AND TABLE_NAME = 'events'
-       AND COLUMN_NAME = 'voting_closed'
-     LIMIT 1`
-  );
-
-  return rows.length > 0;
-}
-
 const normalizeContactNumbers = (rawContactNumbers: unknown): string[] => {
   if (Array.isArray(rawContactNumbers)) {
     return rawContactNumbers
