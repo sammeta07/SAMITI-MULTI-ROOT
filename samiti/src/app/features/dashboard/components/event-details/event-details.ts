@@ -380,6 +380,12 @@ export class EventDetailsComponent implements OnInit {
     return candidateId ? Number(candidateId) : null;
   }
 
+  public isSingleCandidateRole(roleId: number): boolean {
+    const list = this.pendingInterestForRole(Number(roleId));
+    const approved = list.filter((item) => String(item.status).toUpperCase() === 'APPROVED');
+    return approved.length === 1;
+  }
+
   public getWinnerForRole(roleId: number): EventResultCandidate | null {
     const results = this.eventResults();
     if (!results?.roles?.length) {
@@ -390,10 +396,14 @@ export class EventDetailsComponent implements OnInit {
       return null;
     }
     const maxVotes = Math.max(...roleResult.candidates.map((c) => Number(c.voteCount || 0)));
-    if (maxVotes <= 0) {
+    const hasSingleCandidate = roleResult.candidates.length === 1;
+
+    if (maxVotes <= 0 && !hasSingleCandidate) {
       return null;
     }
-    return roleResult.candidates.find((c) => Number(c.voteCount || 0) === maxVotes) || null;
+
+    const winner = roleResult.candidates.find((c) => c.isWinner || Number(c.voteCount || 0) === maxVotes);
+    return winner || null;
   }
 
   public getVoteCountForRole(roleId: number): number {

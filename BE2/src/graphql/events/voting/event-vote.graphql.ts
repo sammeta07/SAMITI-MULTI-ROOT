@@ -1,7 +1,7 @@
 import { query } from '../../../config/db';
 import { RowDataPacket } from 'mysql2/promise';
 import { hasEventsVotingPhaseStateColumn } from './event-voting-phase-support';
-import { throwEventError, getLoggedInUserId } from './event-voting.graphql';
+import { throwEventError, getLoggedInUserId, getMappedVotingRoles } from './event-voting.graphql';
 
 function getAccessToken(context: any): string {
   const authHeader = context.headers?.authorization;
@@ -284,18 +284,22 @@ export const eventVoteResolvers = {
       );
       const eventName = eventRows[0]?.eventName ? String(eventRows[0].eventName) : '';
 
+      const mappedVotingRoleRows = await getMappedVotingRoles(eventId);
+      const mappedRoleIds = mappedVotingRoleRows.map((role: any) => Number(role.roleId)).filter((id: number) => Number.isInteger(id) && id > 0);
+
       const voteRows = await query<Array<RowDataPacket & {
         roleId: number;
         candidateId: number;
       }>>(
         `SELECT role_id AS roleId, candidate_id AS candidateId
-          FROM event_votes
-          WHERE event_id = ?`,
+           FROM event_votes
+           WHERE event_id = ?`,
         [eventId]
       );
 
       const candidateIds = Array.from(new Set(voteRows.map((r) => Number(r.candidateId))));
-      const roleIds = Array.from(new Set(voteRows.map((r) => Number(r.roleId))));
+      const roleIdsFromVotes = Array.from(new Set(voteRows.map((r) => Number(r.roleId))));
+      const roleIds = Array.from(new Set([...mappedRoleIds, ...roleIdsFromVotes]));
 
       const candidateMap = new Map<number, { name: string; email: string; photo: string | null; committeeRole: string }>();
       if (candidateIds.length > 0) {
@@ -330,11 +334,11 @@ export const eventVoteResolvers = {
       }
 
       const roleNameMap = new Map<number, string>();
-      if (roleIds.length > 0) {
-        const placeholders = roleIds.map(() => '?').join(',');
+      if (mappedRoleIds.length > 0) {
+        const placeholders = mappedRoleIds.map(() => '?').join(',');
         const roleRows = await query<Array<RowDataPacket & { roleId: number; roleName: string }>>(
           `SELECT role_id AS roleId, role_name AS roleName FROM events_roles_master WHERE role_id IN (${placeholders})`,
-          roleIds
+          mappedRoleIds
         );
         roleRows.forEach((row) => {
           roleNameMap.set(Number(row.roleId), String(row.roleName || ''));
@@ -350,6 +354,41 @@ export const eventVoteResolvers = {
         roleStats.set(roleId, candidateMap2);
       });
 
+      const singleCandidateMap = new Map<number, { userId: number; name: string; photo: string | null; committeeRole: string }>();
+      if (mappedRoleIds.length > 0) {
+        const placeholders = mappedRoleIds.map(() => '?').join(',');
+        const singleCandidateRows = await query<Array<RowDataPacket & {
+          roleId: number;
+          userId: number;
+          name: string;
+          photo: string | null;
+          committeeRole: string;
+        }>>(
+          `SELECT
+              eie.role_id AS roleId,
+              u.id AS userId,
+              u.name AS name,
+              u.profile_photo AS photo,
+              c.committee_role AS committeeRole
+            FROM event_interest_expressions eie
+            INNER JOIN users u ON u.id = eie.user_id
+            LEFT JOIN users_committees c ON c.user_id = u.id AND c.committee_id = ?
+            WHERE eie.event_id = ? AND eie.role_id IN (${placeholders}) AND eie.status = 'APPROVED'
+            GROUP BY eie.role_id, u.id, u.name, u.profile_photo, c.committee_role`,
+          [access.committeeId, eventId, ...mappedRoleIds]
+        );
+
+        singleCandidateRows.forEach((row) => {
+          const roleId = Number(row.roleId);
+          singleCandidateMap.set(roleId, {
+            userId: Number(row.userId),
+            name: String(row.name || ''),
+            photo: row.photo ? String(row.photo) : null,
+            committeeRole: String(row.committeeRole || 'COMMITTEE_MEMBER')
+          });
+        });
+      }
+
       const roles = roleIds.map((roleId) => {
         const candidateVotes = roleStats.get(roleId) || new Map<number, number>();
         const candidates = Array.from(candidateVotes.entries())
@@ -364,11 +403,26 @@ export const eventVoteResolvers = {
               voteCount,
               isWinner: false
             };
-          })
-          .sort((a, b) => b.voteCount - a.voteCount);
+          });
+
+        const singleCandidate = singleCandidateMap.get(roleId);
+        if (singleCandidate && !candidates.some((c) => c.userId === singleCandidate.userId)) {
+          candidates.push({
+            userId: singleCandidate.userId,
+            name: singleCandidate.name,
+            email: '',
+            photo: singleCandidate.photo,
+            committeeRole: singleCandidate.committeeRole,
+            voteCount: 0,
+            isWinner: false
+          });
+        }
+
+        candidates.sort((a, b) => b.voteCount - a.voteCount);
 
         const maxVotes = candidates.length > 0 ? candidates[0].voteCount : 0;
-        const winners = candidates.filter((c) => c.voteCount === maxVotes && maxVotes > 0);
+        const hasSingleCandidate = candidates.length === 1;
+        const winners = candidates.filter((c) => c.voteCount === maxVotes && (maxVotes > 0 || hasSingleCandidate));
         winners.forEach((w) => (w.isWinner = true));
 
         return {

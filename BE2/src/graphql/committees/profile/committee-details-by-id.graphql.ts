@@ -2,6 +2,7 @@ import { query } from '../../../config/db';
 import { RowDataPacket } from 'mysql2/promise';
 import { hasEventsDisplayNameColumn } from '../../events/details/event-display-name-support';
 import { hasEventsVotingPhaseStateColumn } from '../../events/voting/event-voting-phase-support';
+import { getMappedVotingRoles } from '../../events/voting/event-voting.graphql';
 
 const normalizeContactNumbers = (rawContactNumbers: unknown): string[] => {
   if (Array.isArray(rawContactNumbers)) {
@@ -32,42 +33,6 @@ const normalizeEventDisplayName = (eventName: string, displayName: string | null
   }
 
   return eventName.slice(0, 20);
-};
-
-const getEventMappedVotingRoles = async (eventId: number): Promise<Array<{
-  roleId: number;
-  roleName: string;
-  hindiName: string | null;
-  englishName: string | null;
-  sortOrder: number;
-}>> => {
-  const mappedRoleRows = await query<Array<RowDataPacket & {
-    roleId: number;
-    roleName: string;
-    hindiName: string | null;
-    englishName: string | null;
-    sortOrder: number;
-  }>>(
-    `SELECT
-        evr.role_id AS roleId,
-        erm.role_name AS roleName,
-        erm.hindi_name AS hindiName,
-        erm.english_name AS englishName,
-        COALESCE(erm.sort_order, 0) AS sortOrder
-      FROM event_voting_roles evr
-      INNER JOIN events_roles_master erm ON erm.role_id = evr.role_id
-      WHERE evr.event_id = ?
-      ORDER BY COALESCE(erm.sort_order, 0) ASC, erm.role_name ASC`,
-    [eventId]
-  );
-
-  return mappedRoleRows.map((mappedRoleRow) => ({
-    roleId: Number(mappedRoleRow.roleId),
-    roleName: String(mappedRoleRow.roleName || ''),
-    hindiName: mappedRoleRow.hindiName ? String(mappedRoleRow.hindiName) : null,
-    englishName: mappedRoleRow.englishName ? String(mappedRoleRow.englishName) : null,
-    sortOrder: Number(mappedRoleRow.sortOrder || 0)
-  }));
 };
 
 export const committeeDetailsTypes = `
@@ -266,7 +231,7 @@ export const committeeDetailsResolvers = {
           createdBy: event.createdBy,
           updatedBy: event.updatedBy || null,
           createdAt: event.createdAt || null,
-          mappedVotingRoles: await getEventMappedVotingRoles(event.id)
+          mappedVotingRoles: await getMappedVotingRoles(event.id)
         }))
       );
 

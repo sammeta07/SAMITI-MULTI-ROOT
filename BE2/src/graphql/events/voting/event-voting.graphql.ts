@@ -85,32 +85,36 @@ export async function getMappedVotingRoles(eventId: number): Promise<Array<{
   const winnerMap = new Map<number, { userId: number; name: string; photo: string | null; voteCount: number }>();
   if (roleIds.length > 0) {
     const placeholders = roleIds.map(() => '?').join(',');
-    const winnerRows = await query<Array<RowDataPacket & {
-      roleId: number;
-      winnerUserId: number;
-      winnerName: string;
-      winnerPhoto: string | null;
-      winnerVoteCount: number;
-    }>>(
-      `SELECT
-         role_id AS roleId,
-         winner_user_id AS winnerUserId,
-         winner_name AS winnerName,
-         winner_photo AS winnerPhoto,
-         winner_vote_count AS winnerVoteCount
-       FROM event_winners
-       WHERE event_id = ? AND role_id IN (${placeholders})`,
-      [eventId, ...roleIds]
-    );
+  const winnerRows = await query<Array<RowDataPacket & {
+    roleId: number;
+    winnerUserId: number;
+    winnerName: string;
+    winnerPhoto: string | null;
+    winnerVoteCount: number;
+  }>>(
+    `SELECT
+       role_id AS roleId,
+       winner_user_id AS winnerUserId,
+       winner_name AS winnerName,
+       winner_photo AS winnerPhoto,
+       winner_vote_count AS winnerVoteCount
+     FROM event_winners
+     WHERE event_id = ? AND role_id IN (${placeholders})`,
+    [eventId, ...roleIds]
+  );
 
-    winnerRows.forEach((row) => {
-      winnerMap.set(Number(row.roleId), {
-        userId: Number(row.winnerUserId),
-        name: String(row.winnerName || ''),
-        photo: row.winnerPhoto ? String(row.winnerPhoto) : null,
-        voteCount: Number(row.winnerVoteCount || 0)
-      });
+  console.log('[DEBUG] getMappedVotingRoles eventId=', eventId, 'winnerRows=', JSON.stringify(winnerRows));
+
+  winnerRows.forEach((row) => {
+    winnerMap.set(Number(row.roleId), {
+      userId: Number(row.winnerUserId),
+      name: String(row.winnerName || ''),
+      photo: row.winnerPhoto ? String(row.winnerPhoto) : null,
+      voteCount: Number(row.winnerVoteCount || 0)
     });
+  });
+
+  console.log('[DEBUG] getMappedVotingRoles winnerMap=', JSON.stringify(Array.from(winnerMap.entries())));
   }
 
   return mappedVotingRoleRows.map((mappedRoleRow) => {
@@ -752,23 +756,96 @@ export const eventVotingResolvers = {
         [eventId, ...roleIds]
       );
 
+      const approvedCandidateCount = new Map<number, number>();
+      const singleCandidateRows = new Map<number, {
+        userId: number;
+        name: string;
+        photo: string | null;
+      }>();
+      if (roleIds.length > 0) {
+        const placeholders = roleIds.map(() => '?').join(',');
+        const approvedRows = await query<Array<RowDataPacket & { roleId: number; candidateId: number }>>(
+          `SELECT role_id AS roleId, user_id AS candidateId
+           FROM event_interest_expressions
+           WHERE event_id = ? AND role_id IN (${placeholders}) AND status = 'APPROVED'
+           GROUP BY role_id, user_id`,
+          [eventId, ...roleIds]
+        );
+
+        approvedRows.forEach((row) => {
+          const roleId = Number(row.roleId);
+          approvedCandidateCount.set(roleId, (approvedCandidateCount.get(roleId) || 0) + 1);
+        });
+
+        const singleCandidateRoleIds = Array.from(approvedCandidateCount.entries())
+          .filter(([, count]) => count === 1)
+          .map(([roleId]) => roleId);
+
+        if (singleCandidateRoleIds.length > 0) {
+          const singlePlaceholders = singleCandidateRoleIds.map(() => '?').join(',');
+          const singleCandidateRowsResult = await query<Array<RowDataPacket & {
+            roleId: number;
+            userId: number;
+            name: string;
+            photo: string | null;
+          }>>(
+            `SELECT
+               eie.role_id AS roleId,
+               u.id AS userId,
+               u.name AS name,
+               u.profile_photo AS photo
+             FROM event_interest_expressions eie
+             INNER JOIN users u ON u.id = eie.user_id
+             WHERE eie.event_id = ? AND eie.role_id IN (${singlePlaceholders}) AND eie.status = 'APPROVED'
+             GROUP BY eie.role_id, u.id, u.name, u.profile_photo`,
+            [eventId, ...singleCandidateRoleIds]
+          );
+
+          singleCandidateRowsResult.forEach((row) => {
+            const roleId = Number(row.roleId);
+            singleCandidateRows.set(roleId, {
+              userId: Number(row.userId),
+              name: String(row.name || ''),
+              photo: row.photo ? String(row.photo) : null
+            });
+          });
+        }
+      }
+
       const winnerMap = new Map<number, {
         userId: number;
         name: string;
         photo: string | null;
         voteCount: number;
+        isSingleCandidate: boolean;
       }>();
 
       voteRows.forEach((row) => {
         const roleId = Number(row.roleId);
         const currentWinner = winnerMap.get(roleId);
         const voteCount = Number(row.voteCount || 0);
+        const approvedCount = approvedCandidateCount.get(roleId) || 0;
+        const isSingleCandidate = approvedCount === 1;
+
         if (!currentWinner || voteCount > currentWinner.voteCount) {
           winnerMap.set(roleId, {
             userId: Number(row.candidateId),
             name: String(row.candidateName || ''),
             photo: row.candidatePhoto ? String(row.candidatePhoto) : null,
-            voteCount
+            voteCount,
+            isSingleCandidate
+          });
+        }
+      });
+
+      singleCandidateRows.forEach((candidate, roleId) => {
+        if (!winnerMap.has(roleId)) {
+          winnerMap.set(roleId, {
+            userId: candidate.userId,
+            name: candidate.name,
+            photo: candidate.photo,
+            voteCount: 0,
+            isSingleCandidate: true
           });
         }
       });
@@ -788,8 +865,9 @@ export const eventVotingResolvers = {
         for (const role of mappedVotingRoleRows) {
           const roleId = Number(role.roleId);
           const winner = winnerMap.get(roleId);
+          const approvedCount = approvedCandidateCount.get(roleId) || 0;
 
-          if (!winner || winner.voteCount <= 0) {
+          if (!winner || (!winner.isSingleCandidate && winner.voteCount <= 0)) {
             await connection.query(
               `DELETE FROM event_winners WHERE event_id = ? AND role_id = ?`,
               [eventId, roleId]

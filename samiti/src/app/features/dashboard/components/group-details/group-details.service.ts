@@ -71,6 +71,10 @@ export class GroupDetailsService {
             hindiName
             englishName
             sortOrder
+            winnerUserId
+            winnerName
+            winnerPhoto
+            winnerVoteCount
           }
         }
       }
@@ -128,6 +132,10 @@ export class GroupDetailsService {
           hindiName
           englishName
           sortOrder
+          winnerUserId
+          winnerName
+          winnerPhoto
+          winnerVoteCount
         }
       }
     }`;
