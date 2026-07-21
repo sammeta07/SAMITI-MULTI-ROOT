@@ -92,11 +92,36 @@ export const eventVoteTypes = `
     eventId: Int!
     votes: [MyEventVote!]!
   }
+
+  type EventResultCandidate {
+    userId: Int!
+    name: String!
+    email: String!
+    photo: String
+    committeeRole: String!
+    voteCount: Int!
+    isWinner: Boolean!
+  }
+
+  type EventResultRole {
+    roleId: Int!
+    roleName: String!
+    totalVotes: Int!
+    candidates: [EventResultCandidate!]!
+  }
+
+  type EventResultsPayload {
+    eventId: Int!
+    eventName: String!
+    declaredAt: String!
+    roles: [EventResultRole!]!
+  }
 `;
 
 export const eventVoteQueryFields = `
   eventVoteHistory(eventId: Int!): EventVoteHistory!
   myEventVotes(eventId: Int!): MyEventVotesPayload!
+  eventResults(eventId: Int!): EventResultsPayload!
 `;
 
 export const eventVoteMutationFields = `
@@ -229,6 +254,136 @@ export const eventVoteResolvers = {
       return {
         eventId,
         votes
+      };
+    },
+
+    async eventResults(_: any, args: { eventId: number }, context: any) {
+      const eventId = Number(args?.eventId);
+      if (!Number.isInteger(eventId) || eventId <= 0) {
+        throwEventError('BAD_REQUEST', 'eventId must be a positive integer');
+      }
+
+      let loggedInUserId = 0;
+      try {
+        loggedInUserId = await getLoggedInUserId(context);
+      } catch {
+        return { eventId, eventName: '', declaredAt: new Date().toISOString(), roles: [] };
+      }
+
+      const access = await getEventAccess(eventId, loggedInUserId);
+      if (!access.eventExists) {
+        throwEventError('NOT_FOUND', 'Event not found');
+      }
+      if (!access.isCommitteeMember) {
+        throwEventError('FORBIDDEN', 'Only committee members can view results');
+      }
+
+      const eventRows = await query<Array<RowDataPacket & { eventName: string }>>(
+        `SELECT name AS eventName FROM events WHERE id = ? LIMIT 1`,
+        [eventId]
+      );
+      const eventName = eventRows[0]?.eventName ? String(eventRows[0].eventName) : '';
+
+      const voteRows = await query<Array<RowDataPacket & {
+        roleId: number;
+        candidateId: number;
+      }>>(
+        `SELECT role_id AS roleId, candidate_id AS candidateId
+          FROM event_votes
+          WHERE event_id = ?`,
+        [eventId]
+      );
+
+      const candidateIds = Array.from(new Set(voteRows.map((r) => Number(r.candidateId))));
+      const roleIds = Array.from(new Set(voteRows.map((r) => Number(r.roleId))));
+
+      const candidateMap = new Map<number, { name: string; email: string; photo: string | null; committeeRole: string }>();
+      if (candidateIds.length > 0) {
+        const placeholders = candidateIds.map(() => '?').join(',');
+        const candidateRows = await query<Array<RowDataPacket & {
+          userId: number;
+          name: string;
+          email: string;
+          photo: string | null;
+          committeeRole: string;
+        }>>(
+          `SELECT
+              u.id AS userId,
+              u.name AS name,
+              u.email AS email,
+              u.profile_photo AS photo,
+              c.committee_role AS committeeRole
+            FROM users u
+            LEFT JOIN users_committees c ON c.user_id = u.id AND c.committee_id = ?
+            WHERE u.id IN (${placeholders})`,
+          [access.committeeId, ...candidateIds]
+        );
+
+        candidateRows.forEach((row) => {
+          candidateMap.set(Number(row.userId), {
+            name: String(row.name || ''),
+            email: String(row.email || ''),
+            photo: row.photo ? String(row.photo) : null,
+            committeeRole: String(row.committeeRole || 'COMMITTEE_MEMBER')
+          });
+        });
+      }
+
+      const roleNameMap = new Map<number, string>();
+      if (roleIds.length > 0) {
+        const placeholders = roleIds.map(() => '?').join(',');
+        const roleRows = await query<Array<RowDataPacket & { roleId: number; roleName: string }>>(
+          `SELECT role_id AS roleId, role_name AS roleName FROM events_roles_master WHERE role_id IN (${placeholders})`,
+          roleIds
+        );
+        roleRows.forEach((row) => {
+          roleNameMap.set(Number(row.roleId), String(row.roleName || ''));
+        });
+      }
+
+      const roleStats = new Map<number, Map<number, number>>();
+      voteRows.forEach((row) => {
+        const roleId = Number(row.roleId);
+        const candidateId = Number(row.candidateId);
+        const candidateMap2 = roleStats.get(roleId) || new Map<number, number>();
+        candidateMap2.set(candidateId, (candidateMap2.get(candidateId) || 0) + 1);
+        roleStats.set(roleId, candidateMap2);
+      });
+
+      const roles = roleIds.map((roleId) => {
+        const candidateVotes = roleStats.get(roleId) || new Map<number, number>();
+        const candidates = Array.from(candidateVotes.entries())
+          .map(([candidateId, voteCount]) => {
+            const info = candidateMap.get(candidateId) || { name: '', email: '', photo: null, committeeRole: 'COMMITTEE_MEMBER' };
+            return {
+              userId: candidateId,
+              name: info.name,
+              email: info.email,
+              photo: info.photo,
+              committeeRole: info.committeeRole,
+              voteCount,
+              isWinner: false
+            };
+          })
+          .sort((a, b) => b.voteCount - a.voteCount);
+
+        const maxVotes = candidates.length > 0 ? candidates[0].voteCount : 0;
+        const winners = candidates.filter((c) => c.voteCount === maxVotes && maxVotes > 0);
+        winners.forEach((w) => (w.isWinner = true));
+
+        return {
+          roleId,
+          roleName: roleNameMap.get(roleId) || `Role ${roleId}`,
+          totalVotes: candidates.reduce((sum, c) => sum + c.voteCount, 0),
+          candidates
+        };
+      });
+
+      return {
+        eventId,
+        eventName,
+        declaredAt: new Date().toISOString(),
+        roles
       };
     }
   },

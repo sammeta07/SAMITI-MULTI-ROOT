@@ -10,7 +10,7 @@ import { MatTabsModule } from '@angular/material/tabs';
 import { HttpErrorResponse } from '@angular/common/http';
 import { firstValueFrom } from 'rxjs';
 import { EventDetailsService } from './event-details.service';
-import { EventVoteHistory } from './event-details.service';
+import { EventVoteHistory, EventResultsPayload, EventResultCandidate } from './event-details.service';
 import { EventDetailsPayload, EventMappedVotingRole, EventPerson } from './event-details.models';
 import { NotifierService } from '../../../../shared/notifier/notifier.service';
 import { ConfirmDialogService } from '../../../../components/dialog/confirm/confirm-dialog.service';
@@ -79,6 +79,7 @@ export class EventDetailsComponent implements OnInit {
     status: string;
   }>>([]);
   public readonly myVotes = signal<Record<number, number>>({});
+  public readonly eventResults = signal<EventResultsPayload | null>(null);
 
   public readonly MAX_BANNERS = 5;
 
@@ -379,6 +380,43 @@ export class EventDetailsComponent implements OnInit {
     return candidateId ? Number(candidateId) : null;
   }
 
+  public getWinnerForRole(roleId: number): EventResultCandidate | null {
+    const results = this.eventResults();
+    if (!results?.roles?.length) {
+      return null;
+    }
+    const roleResult = results.roles.find((r) => Number(r.roleId) === Number(roleId));
+    if (!roleResult?.candidates?.length) {
+      return null;
+    }
+    const maxVotes = Math.max(...roleResult.candidates.map((c) => Number(c.voteCount || 0)));
+    if (maxVotes <= 0) {
+      return null;
+    }
+    return roleResult.candidates.find((c) => Number(c.voteCount || 0) === maxVotes) || null;
+  }
+
+  public getVoteCountForRole(roleId: number): number {
+    const results = this.eventResults();
+    if (!results?.roles?.length) {
+      return 0;
+    }
+    const roleResult = results.roles.find((r) => Number(r.roleId) === Number(roleId));
+    return Number(roleResult?.totalVotes || 0);
+  }
+
+  public getCandidatesForRole(roleId: number): EventResultCandidate[] {
+    const results = this.eventResults();
+    if (!results?.roles?.length) {
+      return [];
+    }
+    const roleResult = results.roles.find((r) => Number(r.roleId) === Number(roleId));
+    if (!roleResult?.candidates?.length) {
+      return [];
+    }
+    return [...roleResult.candidates].sort((a, b) => Number(b.voteCount || 0) - Number(a.voteCount || 0));
+  }
+
   public openVoteHistory(): void {
     const event = this.eventData();
     if (!event?.eventId) {
@@ -476,6 +514,7 @@ export class EventDetailsComponent implements OnInit {
     this.selectedVotingRoleIds.set([]);
     this.isUpdatingVotingPhase.set(false);
     this.myVotes.set({});
+    this.eventResults.set(null);
 
     this.eventDetailsService.getEventDetails(id).subscribe({
       next: (data: EventDetailsPayload) => {
@@ -495,6 +534,9 @@ export class EventDetailsComponent implements OnInit {
         this.interestReviewList.set([]);
         this.loadPendingInterests();
         this.loadMyVotes(Number(id));
+        if (Number(data?.votingPhaseState || 0) === 6) {
+          this.loadEventResults(Number(id));
+        }
         this.isUpdatingVotingPhase.set(false);
       },
       error: (err: HttpErrorResponse) => {
@@ -504,6 +546,7 @@ export class EventDetailsComponent implements OnInit {
         this.eventMembers.set([]);
         this.selectedVotingRoleIds.set([]);
         this.isUpdatingVotingPhase.set(false);
+        this.eventResults.set(null);
         // this.isLoading.set(false);
       }
     });
@@ -520,6 +563,17 @@ export class EventDetailsComponent implements OnInit {
       },
       error: () => {
         this.myVotes.set({});
+      }
+    });
+  }
+
+  private loadEventResults(eventId: number): void {
+    this.eventDetailsService.getEventResults(eventId).subscribe({
+      next: (payload) => {
+        this.eventResults.set(payload ?? null);
+      },
+      error: () => {
+        this.eventResults.set(null);
       }
     });
   }
@@ -786,6 +840,7 @@ export class EventDetailsComponent implements OnInit {
         next: () => {
           this.notifier.success('Results have been declared successfully.');
           this.fetchEventDetails(String(currentEvent.eventId));
+          this.loadEventResults(Number(currentEvent.eventId));
         },
         error: (err: HttpErrorResponse) => {
           this.notifier.error(err?.error?.message || 'Failed to declare results.');

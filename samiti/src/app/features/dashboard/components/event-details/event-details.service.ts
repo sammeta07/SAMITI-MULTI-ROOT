@@ -143,6 +143,30 @@ export interface MyEventVotesPayload {
   votes: MyEventVote[];
 }
 
+export interface EventResultCandidate {
+  userId: number;
+  name: string;
+  email: string;
+  photo?: string | null;
+  committeeRole: string;
+  voteCount: number;
+  isWinner: boolean;
+}
+
+export interface EventResultRole {
+  roleId: number;
+  roleName: string;
+  totalVotes: number;
+  candidates: EventResultCandidate[];
+}
+
+export interface EventResultsPayload {
+  eventId: number;
+  eventName: string;
+  declaredAt: string;
+  roles: EventResultRole[];
+}
+
 @Injectable({
   providedIn: 'root'
 })
@@ -666,6 +690,38 @@ export class EventDetailsService {
       { withCredentials: true }
     ).pipe(
       map((res) => res.data.myEventVotes)
+    );
+  }
+
+  public getEventResults(eventId: number): Observable<EventResultsPayload> {
+    const query = `query EventResults($eventId: Int!) {
+      eventResults(eventId: $eventId) {
+        eventId
+        eventName
+        declaredAt
+        roles {
+          roleId
+          roleName
+          totalVotes
+          candidates {
+            userId
+            name
+            email
+            photo
+            committeeRole
+            voteCount
+            isWinner
+          }
+        }
+      }
+    }`;
+
+    return this.http.post<{ data: { eventResults: EventResultsPayload } }>(
+      this.graphqlUrl,
+      { query, variables: { eventId } },
+      { withCredentials: true }
+    ).pipe(
+      map((res) => res.data.eventResults)
     );
   }
 }
