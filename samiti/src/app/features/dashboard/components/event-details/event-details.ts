@@ -427,6 +427,61 @@ export class EventDetailsComponent implements OnInit {
     return [...roleResult.candidates].sort((a, b) => Number(b.voteCount || 0) - Number(a.voteCount || 0));
   }
 
+  public isTieRole(roleId: number): boolean {
+    const results = this.eventResults();
+    if (!results?.roles?.length) {
+      return false;
+    }
+    const roleResult = results.roles.find((r) => Number(r.roleId) === Number(roleId));
+    if (!roleResult?.candidates?.length) {
+      return false;
+    }
+    const winners = roleResult.candidates.filter((c) => c.isWinner);
+    return winners.length === 2;
+  }
+
+  public getTiedCandidatesForRole(roleId: number): EventResultCandidate[] {
+    const results = this.eventResults();
+    if (!results?.roles?.length) {
+      return [];
+    }
+    const roleResult = results.roles.find((r) => Number(r.roleId) === Number(roleId));
+    if (!roleResult?.candidates?.length) {
+      return [];
+    }
+    return roleResult.candidates.filter((c) => c.isWinner);
+  }
+
+  public onResolveTieBreaker(roleId: number, winnerCandidateId: number): void {
+    const currentEvent = this.eventData();
+    if (!currentEvent?.eventId) {
+      this.notifier.error('No event available for resolving tie');
+      return;
+    }
+
+    const normalizedRoleId = Number(roleId);
+    const normalizedWinnerId = Number(winnerCandidateId);
+    if (!Number.isInteger(normalizedRoleId) || normalizedRoleId <= 0) {
+      this.notifier.error('Invalid role');
+      return;
+    }
+    if (!Number.isInteger(normalizedWinnerId) || normalizedWinnerId <= 0) {
+      this.notifier.error('Invalid candidate');
+      return;
+    }
+
+    this.eventDetailsService.resolveTieBreaker(currentEvent.eventId, normalizedRoleId, normalizedWinnerId).subscribe({
+      next: () => {
+        this.notifier.success('Tie breaker resolved successfully');
+        this.loadEventResults(Number(currentEvent.eventId));
+        this.fetchEventDetails(String(currentEvent.eventId));
+      },
+      error: (err: HttpErrorResponse) => {
+        this.notifier.error(err?.error?.message || 'Failed to resolve tie breaker');
+      }
+    });
+  }
+
   public openVoteHistory(): void {
     const event = this.eventData();
     if (!event?.eventId) {

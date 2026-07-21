@@ -188,6 +188,15 @@ export const eventVotingTypes = `
     eventId: Int!
     votingPhaseState: Int!
   }
+
+  type ResolveTieBreakerPayload {
+    eventId: Int!
+    roleId: Int!
+    winnerUserId: Int!
+    winnerName: String!
+    winnerPhoto: String
+    winnerVoteCount: Int!
+  }
 `;
 
 export const eventVotingMutationFields = `
@@ -199,6 +208,7 @@ export const eventVotingMutationFields = `
   allowEventVoting(eventId: Int!): AllowEventVotingPayload!
   stopEventVoting(eventId: Int!): StopEventVotingPayload!
   declareEventResults(eventId: Int!): DeclareEventResultsPayload!
+  resolveTieBreaker(eventId: Int!, roleId: Int!, winnerCandidateId: Int!): ResolveTieBreakerPayload!
 `;
 
 export const eventVotingResolvers = {
@@ -908,6 +918,125 @@ export const eventVotingResolvers = {
       return {
         eventId,
         votingPhaseState: 6
+      };
+    },
+
+    async resolveTieBreaker(_: any, args: { eventId: number; roleId: number; winnerCandidateId: number }, context: any) {
+      const eventId = Number(args?.eventId);
+      const roleId = Number(args?.roleId);
+      const winnerCandidateId = Number(args?.winnerCandidateId);
+
+      if (!Number.isInteger(eventId) || eventId <= 0) {
+        throwEventError('BAD_REQUEST', 'eventId must be a positive integer');
+      }
+      if (!Number.isInteger(roleId) || roleId <= 0) {
+        throwEventError('BAD_REQUEST', 'roleId must be a positive integer');
+      }
+      if (!Number.isInteger(winnerCandidateId) || winnerCandidateId <= 0) {
+        throwEventError('BAD_REQUEST', 'winnerCandidateId must be a positive integer');
+      }
+
+      const loggedInUserId = await getLoggedInUserId(context);
+      const supportsVotingPhaseState = await hasEventsVotingPhaseStateColumn();
+
+      const eventRows = await query<any[]>(
+        `SELECT
+           id,
+           committee_id AS committeeId,
+           ${supportsVotingPhaseState ? 'COALESCE(voting_phase_state, 0)' : '0'} AS votingPhaseState
+         FROM events
+         WHERE id = ?
+         LIMIT 1`,
+        [eventId]
+      );
+
+      if (!eventRows.length) {
+        throwEventError('NOT_FOUND', 'Event not found');
+      }
+
+      const event = eventRows[0];
+
+      const membershipRows = await query<any[]>(
+        `SELECT committee_role
+         FROM users_committees
+         WHERE committee_id = ? AND user_id = ?
+         LIMIT 1`,
+        [Number(event.committeeId), loggedInUserId]
+      );
+
+      const committeeRole = String(membershipRows[0]?.committeeRole || '').toUpperCase();
+      const isMasterAdmin = committeeRole === 'COMMITTEE_MASTER_ADMIN';
+      if (!isMasterAdmin) {
+        throwEventError('FORBIDDEN', 'Only master admin can resolve tie breaker');
+      }
+
+      if (Number(event.votingPhaseState || 0) < 5) {
+        throwEventError('BAD_REQUEST', 'Voting must be closed before resolving tie breaker');
+      }
+
+      const candidateRows = await query<any[]>(
+        `SELECT u.id AS userId, u.name AS name, u.profile_photo AS photo
+         FROM event_interest_expressions eie
+         INNER JOIN users u ON u.id = eie.user_id
+         WHERE eie.event_id = ? AND eie.role_id = ? AND eie.status = 'APPROVED'
+         GROUP BY eie.role_id, u.id, u.name, u.profile_photo`,
+        [eventId, roleId]
+      );
+
+      const candidate = candidateRows.find((r) => Number(r.userId) === winnerCandidateId);
+      if (!candidate) {
+        throwEventError('BAD_REQUEST', 'Selected candidate is not an approved nominee for this role');
+      }
+
+      const voteCountRows = await query<any[]>(
+        `SELECT COUNT(*) AS voteCount
+         FROM event_votes
+         WHERE event_id = ? AND role_id = ? AND candidate_id = ?`,
+        [eventId, roleId, winnerCandidateId]
+      );
+
+      const voteCount = Number(voteCountRows[0]?.voteCount || 0);
+
+      const connection = await getConnection();
+      try {
+        await connection.beginTransaction();
+
+        await connection.query(
+          `INSERT INTO event_winners
+            (event_id, role_id, winner_user_id, winner_name, winner_photo, winner_vote_count, declared_at)
+           VALUES
+            (?, ?, ?, ?, ?, ?, NOW())
+           ON DUPLICATE KEY UPDATE
+            winner_user_id = VALUES(winner_user_id),
+            winner_name = VALUES(winner_name),
+            winner_photo = VALUES(winner_photo),
+            winner_vote_count = VALUES(winner_vote_count),
+            declared_at = NOW()`,
+          [
+            eventId,
+            roleId,
+            winnerCandidateId,
+            candidate.name,
+            candidate.photo || null,
+            voteCount
+          ]
+        );
+
+        await connection.commit();
+      } catch (error) {
+        await connection.rollback();
+        throw error;
+      } finally {
+        connection.release();
+      }
+
+      return {
+        eventId,
+        roleId,
+        winnerUserId: winnerCandidateId,
+        winnerName: candidate.name,
+        winnerPhoto: candidate.photo || null,
+        winnerVoteCount: voteCount
       };
     }
   }

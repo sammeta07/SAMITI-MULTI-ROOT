@@ -147,14 +147,34 @@
                             <div class="voting-card-names">
                               <div class="voting-card-role-primary" [class.voting-card-role-primary-president]="isPresidentRole(card.role)">{{ ((card.role.englishName || card.role.roleName || '').split('_').join(' ')) | titlecase }}</div>
                               <div class="voting-card-role-secondary" [class.voting-card-role-secondary-president]="isPresidentRole(card.role)">{{ (card.role.hindiName || card.role.roleName) | uppercase }}</div>
-                            </div>
-                            </div>
-                        </div>
+                         </div>
+                         </div>
+                    </div>
 
                          @if (votingPhaseState === 6 && getWinnerForRole(card.role.roleId)) {
                          <div class="voting-card-winner-badge">
                            <mat-icon>stars</mat-icon>
                            <span>{{ getWinnerForRole(card.role.roleId)!.name | titlecase }}</span>
+                         </div>
+                         }
+
+                         @if (votingPhaseState >= 5 && isTieRole(card.role.roleId)) {
+                         <div class="voting-card-tie-breaker">
+                           <div class="tie-breaker-label">
+                             <mat-icon>casino</mat-icon>
+                             <span>Tie Breaker</span>
+                           </div>
+                           @if (isMasterAdmin && votingPhaseState >= 5) {
+                           <div class="tie-breaker-actions">
+                             <span class="tie-breaker-hint">Select winner:</span>
+                             @for (candidate of getTiedCandidatesForRole(card.role.roleId); track candidate.userId) {
+                             <button mat-stroked-button class="tie-breaker-btn" (click)="onResolveTieBreaker(card.role.roleId, candidate.userId)">
+                               <span class="tie-breaker-candidate-name">{{ candidate.name | titlecase }}</span>
+                               <span class="tie-breaker-vote-count">{{ candidate.voteCount }} votes</span>
+                             </button>
+                             }
+                           </div>
+                           }
                          </div>
                          }
 

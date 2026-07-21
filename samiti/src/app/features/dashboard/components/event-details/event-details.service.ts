@@ -71,6 +71,15 @@ export interface DeclareEventResultsPayload {
   votingPhaseState: number;
 }
 
+export interface ResolveTieBreakerPayload {
+  eventId: number;
+  roleId: number;
+  winnerUserId: number;
+  winnerName: string;
+  winnerPhoto: string | null;
+  winnerVoteCount: number;
+}
+
 export interface ExpressEventInterestPayload {
   eventId: number;
   roleId: number;
@@ -520,6 +529,34 @@ export class EventDetailsService {
       { withCredentials: true }
     ).pipe(
       map((res) => res.data.declareEventResults)
+    );
+  }
+
+  public resolveTieBreaker(eventId: number, roleId: number, winnerCandidateId: number): Observable<ResolveTieBreakerPayload> {
+    const mutation = `mutation ResolveTieBreaker($eventId: Int!, $roleId: Int!, $winnerCandidateId: Int!) {
+      resolveTieBreaker(eventId: $eventId, roleId: $roleId, winnerCandidateId: $winnerCandidateId) {
+        eventId
+        roleId
+        winnerUserId
+        winnerName
+        winnerPhoto
+        winnerVoteCount
+      }
+    }`;
+
+    return this.http.post<{ data: { resolveTieBreaker: ResolveTieBreakerPayload } }>(
+      this.graphqlUrl,
+      {
+        query: mutation,
+        variables: {
+          eventId,
+          roleId,
+          winnerCandidateId
+        }
+      },
+      { withCredentials: true }
+    ).pipe(
+      map((res) => res.data.resolveTieBreaker)
     );
   }
 

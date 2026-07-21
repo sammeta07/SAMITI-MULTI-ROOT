@@ -1732,6 +1732,79 @@
   }
 }
 
+.voting-card-tie-breaker {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-bottom: 8px;
+  padding: 10px 12px;
+  border-radius: 10px;
+  background: linear-gradient(135deg, #fff7ed, #ffedd5);
+  border: 1px solid #fdba74;
+}
+
+.tie-breaker-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  color: #c2410c;
+  font-size: 0.72rem;
+  font-weight: 800;
+  letter-spacing: 0.03em;
+
+  mat-icon {
+    font-size: 0.85rem;
+    width: 0.85rem;
+    height: 0.85rem;
+    color: #ea580c;
+  }
+}
+
+.tie-breaker-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+
+.tie-breaker-hint {
+  font-size: 0.68rem;
+  font-weight: 700;
+  color: #7c2d12;
+  margin-right: 4px;
+}
+
+.tie-breaker-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 32px;
+  padding: 0 10px;
+  font-size: 0.78rem;
+  font-weight: 700;
+  border-radius: 6px;
+  background: #ffffff;
+  border: 1px solid #fdba74;
+  color: #9a3412;
+  cursor: pointer;
+  transition: background 0.15s ease, border-color 0.15s ease, color 0.15s ease;
+
+  .tie-breaker-candidate-name {
+    font-weight: 700;
+  }
+
+  .tie-breaker-vote-count {
+    font-weight: 600;
+    opacity: 0.85;
+  }
+
+  &:hover {
+    background: #fff7ed;
+    border-color: #fb923c;
+    color: #7c2d12;
+  }
+}
+
 .voting-card-nomination-count {
   margin-top: 5px;
   display: inline-flex;
