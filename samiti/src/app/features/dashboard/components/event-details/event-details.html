@@ -110,12 +110,12 @@
                     <mat-icon>{{ votingPhaseIcon }}</mat-icon>
                     <span class="voting-phase-status-text">{{ votingPhaseLabel || 'Not Started' }}</span>
                   </span>
-                  @if (votingPhaseState === 4) {
-                  <button mat-stroked-button class="history-btn" (click)="openVoteHistory()">
-                    <mat-icon>history</mat-icon>
-                    <span>History</span>
-                  </button>
-                  }
+                   @if (votingPhaseState >= 4) {
+                   <button mat-stroked-button class="history-btn" (click)="openVoteHistory()">
+                     <mat-icon>history</mat-icon>
+                     <span>History</span>
+                   </button>
+                   }
                 </div>
 
               <section class="voting-nomination-shell">
@@ -165,7 +165,7 @@
                  </div>
                        }
 
-                      @if (((isMasterAdmin && (votingPhaseState === 2 || votingPhaseState === 3 || votingPhaseState === 4)) || (!isMasterAdmin && votingPhaseState >= 1)) && pendingInterestForRole(card.role.roleId).length > 0) {
+                       @if (((isMasterAdmin && votingPhaseState >= 2) || (!isMasterAdmin && votingPhaseState >= 1)) && pendingInterestForRole(card.role.roleId).length > 0) {
                        <div class="voting-card-pending-list">
                          <div class="voting-card-pending-scroll">
                           <table class="voting-card-pending-table">
@@ -224,25 +224,28 @@
                                      </div>
                                    </td>
                                    }
-                                     @if (votingPhaseState === 4) {
-                                     <td class="pending-col-vote">
-                                       @if (item.status.toUpperCase() === 'APPROVED') {
-                                         @if (hasVotedFor(card.role.roleId, item.userId)) {
-                                           <button mat-flat-button class="cast-vote-btn cast-vote-btn-voted"
-                                                   (click)="onCastVote(card.role.roleId, { userId: item.userId, userName: item.userName })">
-                                             <mat-icon>check_circle</mat-icon>
-                                             <span>VOTED</span>
-                                           </button>
-                                         } @else {
-                                           <button mat-flat-button class="cast-vote-btn"
-                                                   (click)="onCastVote(card.role.roleId, { userId: item.userId, userName: item.userName })">
-                                             <mat-icon>how_to_vote</mat-icon>
-                                             <span>VOTE</span>
-                                           </button>
-                                         }
-                                       }
-                                     </td>
-                                     }
+                                      @if (votingPhaseState === 4 || votingPhaseState === 5) {
+                                      <td class="pending-col-vote">
+                                        @if (item.status.toUpperCase() === 'APPROVED') {
+                                          @if (hasVotedFor(card.role.roleId, item.userId)) {
+                                            <button mat-flat-button class="cast-vote-btn cast-vote-btn-voted"
+                                                    [disabled]="votingPhaseState === 5"
+                                                    (click)="onCastVote(card.role.roleId, { userId: item.userId, userName: item.userName })">
+                                              <mat-icon>check_circle</mat-icon>
+                                              <span>VOTED</span>
+                                            </button>
+                                          } @else {
+                                            @if (votingPhaseState === 4) {
+                                            <button mat-flat-button class="cast-vote-btn"
+                                                    (click)="onCastVote(card.role.roleId, { userId: item.userId, userName: item.userName })">
+                                              <mat-icon>how_to_vote</mat-icon>
+                                              <span>VOTE</span>
+                                            </button>
+                                            }
+                                          }
+                                        }
+                                      </td>
+                                      }
                                 </tr>
                                }
                             </tbody>

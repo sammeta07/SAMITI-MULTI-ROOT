@@ -154,11 +154,11 @@ export class EventDetailsComponent implements OnInit {
     return this.votingPhaseState >= 1 && this.votingPhaseState <= 3;
   }
 
-  // Compact card layout: master admin during phases 2-4 (review + voting mode),
-  // and admin/members during phases 2-4 once the read-only list is shown.
+  // Compact card layout: master admin during phases 2-5 (review + voting mode),
+  // and admin/members during phases 2-5 once the read-only list is shown.
   // Phase 1 shows the big-circle card for everyone.
   public get isCompactVotingCard(): boolean {
-    return this.votingPhaseState === 2 || this.votingPhaseState === 3 || this.votingPhaseState === 4;
+    return this.votingPhaseState === 2 || this.votingPhaseState === 3 || this.votingPhaseState === 4 || this.votingPhaseState === 5;
   }
 
   public get canStopNominations(): boolean {
@@ -320,11 +320,11 @@ export class EventDetailsComponent implements OnInit {
 
     // During the finalized selection phase (voting started), non-master-admins
     // (ADMIN / MEMBER) must only see the rows the master admin approved.
-    if (this.isVotingEnabled && !this.isMasterAdmin) {
+    if (!this.isMasterAdmin && this.votingPhaseState >= 4) {
       allForRole = allForRole.filter((item) => String(item.status).toUpperCase() === 'APPROVED');
     }
 
-    if (this.votingPhaseState === 4) {
+    if (this.votingPhaseState === 4 || this.votingPhaseState === 5) {
       allForRole = allForRole.sort((a, b) => {
         const aApproved = String(a.status).toUpperCase() === 'APPROVED' ? 0 : 1;
         const bApproved = String(b.status).toUpperCase() === 'APPROVED' ? 0 : 1;
