@@ -690,6 +690,33 @@
   }
 }
 
+.designation-winner-badge {
+  position: absolute;
+  bottom: 4px;
+  left: 50%;
+  transform: translateX(-50%);
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  padding: 2px 8px;
+  background: linear-gradient(135deg, #fef3c7, #fde68a);
+  border: 1px solid #f59e0b;
+  border-radius: 999px;
+  color: #92400e;
+  font-size: 0.68rem;
+  font-weight: 800;
+  letter-spacing: 0.03em;
+  white-space: nowrap;
+  z-index: 1;
+
+  mat-icon {
+    font-size: 0.75rem;
+    width: 0.75rem;
+    height: 0.75rem;
+    color: #b45309;
+  }
+}
+
 /* Event metadata card — logo + name/pills + toggle grouped as one distinct block */
 .event-meta-card {
   display: flex;

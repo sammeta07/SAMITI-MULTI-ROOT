@@ -1,4 +1,4 @@
-import { query } from '../../../config/db';
+import { query, getConnection } from '../../../config/db';
 import { RowDataPacket } from 'mysql2/promise';
 import { hasEventsVotingPhaseStateColumn } from './event-voting-phase-support';
 
@@ -55,6 +55,10 @@ export async function getMappedVotingRoles(eventId: number): Promise<Array<{
   hindiName: string | null;
   englishName: string | null;
   sortOrder: number;
+  winnerUserId: number | null;
+  winnerName: string | null;
+  winnerPhoto: string | null;
+  winnerVoteCount: number | null;
 }>> {
   const mappedVotingRoleRows = await query<Array<RowDataPacket & {
     roleId: number;
@@ -76,13 +80,54 @@ export async function getMappedVotingRoles(eventId: number): Promise<Array<{
     [eventId]
   );
 
-  return mappedVotingRoleRows.map((mappedRoleRow) => ({
-    roleId: Number(mappedRoleRow.roleId),
-    roleName: String(mappedRoleRow.roleName || ''),
-    hindiName: mappedRoleRow.hindiName ? String(mappedRoleRow.hindiName) : null,
-    englishName: mappedRoleRow.englishName ? String(mappedRoleRow.englishName) : null,
-    sortOrder: Number(mappedRoleRow.sortOrder || 0)
-  }));
+  const roleIds = mappedVotingRoleRows.map((row) => Number(row.roleId)).filter((id) => Number.isInteger(id) && id > 0);
+
+  const winnerMap = new Map<number, { userId: number; name: string; photo: string | null; voteCount: number }>();
+  if (roleIds.length > 0) {
+    const placeholders = roleIds.map(() => '?').join(',');
+    const winnerRows = await query<Array<RowDataPacket & {
+      roleId: number;
+      winnerUserId: number;
+      winnerName: string;
+      winnerPhoto: string | null;
+      winnerVoteCount: number;
+    }>>(
+      `SELECT
+         role_id AS roleId,
+         winner_user_id AS winnerUserId,
+         winner_name AS winnerName,
+         winner_photo AS winnerPhoto,
+         winner_vote_count AS winnerVoteCount
+       FROM event_winners
+       WHERE event_id = ? AND role_id IN (${placeholders})`,
+      [eventId, ...roleIds]
+    );
+
+    winnerRows.forEach((row) => {
+      winnerMap.set(Number(row.roleId), {
+        userId: Number(row.winnerUserId),
+        name: String(row.winnerName || ''),
+        photo: row.winnerPhoto ? String(row.winnerPhoto) : null,
+        voteCount: Number(row.winnerVoteCount || 0)
+      });
+    });
+  }
+
+  return mappedVotingRoleRows.map((mappedRoleRow) => {
+    const roleId = Number(mappedRoleRow.roleId);
+    const winner = winnerMap.get(roleId);
+    return {
+      roleId,
+      roleName: String(mappedRoleRow.roleName || ''),
+      hindiName: mappedRoleRow.hindiName ? String(mappedRoleRow.hindiName) : null,
+      englishName: mappedRoleRow.englishName ? String(mappedRoleRow.englishName) : null,
+      sortOrder: Number(mappedRoleRow.sortOrder || 0),
+      winnerUserId: winner?.userId ?? null,
+      winnerName: winner?.name ?? null,
+      winnerPhoto: winner?.photo ?? null,
+      winnerVoteCount: winner?.voteCount ?? null
+    };
+  });
 }
 
 export const eventVotingTypes = `
@@ -92,6 +137,10 @@ export const eventVotingTypes = `
     hindiName: String
     englishName: String
     sortOrder: Int!
+    winnerUserId: Int
+    winnerName: String
+    winnerPhoto: String
+    winnerVoteCount: Int
   }
 
   type ToggleEventVotingRolePayload {
@@ -664,9 +713,9 @@ export const eventVotingResolvers = {
 
       const membershipRows = await query<Array<RowDataPacket & { isCommitteeAdmin: number }>>(
         `SELECT CASE WHEN committee_role IN ('COMMITTEE_ADMIN', 'COMMITTEE_MASTER_ADMIN') THEN 1 ELSE 0 END AS isCommitteeAdmin
-         FROM users_committees
-         WHERE committee_id = ? AND user_id = ?
-         LIMIT 1`,
+          FROM users_committees
+          WHERE committee_id = ? AND user_id = ?
+          LIMIT 1`,
         [Number(event.committeeId), loggedInUserId]
       );
 
@@ -679,13 +728,104 @@ export const eventVotingResolvers = {
         throwEventError('BAD_REQUEST', 'Voting must be closed before declaring results');
       }
 
-      await query(
-        `UPDATE events
-         SET voting_phase_state = 6,
-             updated_by = ?
-         WHERE id = ?`,
-        [loggedInUserId, eventId]
+      const mappedVotingRoleRows = await getMappedVotingRoles(eventId);
+      const roleIds = mappedVotingRoleRows.map((role) => Number(role.roleId)).filter((id) => Number.isInteger(id) && id > 0);
+
+      const voteRows = await query<Array<RowDataPacket & {
+        roleId: number;
+        candidateId: number;
+        candidateName: string;
+        candidatePhoto: string | null;
+        voteCount: number;
+      }>>(
+        `SELECT
+           ev.role_id AS roleId,
+           ev.candidate_id AS candidateId,
+           u.name AS candidateName,
+           u.profile_photo AS candidatePhoto,
+           COUNT(*) AS voteCount
+         FROM event_votes ev
+         INNER JOIN users u ON u.id = ev.candidate_id
+         WHERE ev.event_id = ? AND ev.role_id IN (${roleIds.map(() => '?').join(',')})
+         GROUP BY ev.role_id, ev.candidate_id, u.name, u.profile_photo
+         ORDER BY ev.role_id ASC, voteCount DESC`,
+        [eventId, ...roleIds]
       );
+
+      const winnerMap = new Map<number, {
+        userId: number;
+        name: string;
+        photo: string | null;
+        voteCount: number;
+      }>();
+
+      voteRows.forEach((row) => {
+        const roleId = Number(row.roleId);
+        const currentWinner = winnerMap.get(roleId);
+        const voteCount = Number(row.voteCount || 0);
+        if (!currentWinner || voteCount > currentWinner.voteCount) {
+          winnerMap.set(roleId, {
+            userId: Number(row.candidateId),
+            name: String(row.candidateName || ''),
+            photo: row.candidatePhoto ? String(row.candidatePhoto) : null,
+            voteCount
+          });
+        }
+      });
+
+      const connection = await getConnection();
+      try {
+        await connection.beginTransaction();
+
+        await connection.query(
+          `UPDATE events
+           SET voting_phase_state = 6,
+               updated_by = ?
+           WHERE id = ?`,
+          [loggedInUserId, eventId]
+        );
+
+        for (const role of mappedVotingRoleRows) {
+          const roleId = Number(role.roleId);
+          const winner = winnerMap.get(roleId);
+
+          if (!winner || winner.voteCount <= 0) {
+            await connection.query(
+              `DELETE FROM event_winners WHERE event_id = ? AND role_id = ?`,
+              [eventId, roleId]
+            );
+            continue;
+          }
+
+          await connection.query(
+            `INSERT INTO event_winners
+              (event_id, role_id, winner_user_id, winner_name, winner_photo, winner_vote_count, declared_at)
+             VALUES
+              (?, ?, ?, ?, ?, ?, NOW())
+             ON DUPLICATE KEY UPDATE
+              winner_user_id = VALUES(winner_user_id),
+              winner_name = VALUES(winner_name),
+              winner_photo = VALUES(winner_photo),
+              winner_vote_count = VALUES(winner_vote_count),
+              declared_at = NOW()`,
+            [
+              eventId,
+              roleId,
+              winner.userId,
+              winner.name,
+              winner.photo,
+              winner.voteCount
+            ]
+          );
+        }
+
+        await connection.commit();
+      } catch (error) {
+        await connection.rollback();
+        throw error;
+      } finally {
+        connection.release();
+      }
 
       return {
         eventId,

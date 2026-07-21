@@ -12,6 +12,10 @@ export interface EventMappedVotingRole {
   hindiName?: string | null;
   englishName?: string | null;
   sortOrder: number;
+  winnerUserId?: number | null;
+  winnerName?: string | null;
+  winnerPhoto?: string | null;
+  winnerVoteCount?: number | null;
 }
 
 export interface EventInterestPerson {

@@ -419,34 +419,40 @@
              </div>
             </div>
 
-            <div class="event-designation-area">
-              @if (event.mappedVotingRoles && event.mappedVotingRoles.length) {
-                <div class="event-designation-placeholder">
-                  @for (role of event.mappedVotingRoles; track role.roleId) {
-                    <span class="designation-avatar circle-shape empty designation-upload-slot"
-                      (click)="onDesignationPhotoSlotClicked(event.id, role.roleId, $event)">
-                      @if (getDesignationPhoto(event.id, role.roleId); as photoUrl) {
-                        <img [src]="photoUrl" [alt]="role.roleName" />
-                      } @else {
-                        <mat-icon class="photo-slot-icon">add_a_photo</mat-icon>
-                        <span class="photo-slot-label">
-                          <span class="role-name-hindi">{{ role.hindiName ? role.hindiName.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase()) : '' }}</span>
-                          <span class="role-name-english">{{ (role.englishName || role.roleName || '').replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase()) }}</span>
-                        </span>
-                      }
-                      <span class="photo-edit-overlay" aria-hidden="true">
-                        <mat-icon>edit</mat-icon>
-                      </span>
-                      <input #designationPhotoInput type="file" hidden accept="image/*"
-                        (change)="onDesignationPhotoSelected(event.id, role.roleId, $event)" />
-                    </span>
-                  }
-                </div>
-              } @else {
-                <div class="no-roles-mapped-message">
-                  <mat-icon class="no-roles-icon">info</mat-icon>
-                  <span class="no-roles-text">No roles mapped for this event</span>
-                </div>
+             <div class="event-designation-area">
+               @if (event.mappedVotingRoles && event.mappedVotingRoles.length) {
+                 <div class="event-designation-placeholder">
+                   @for (role of event.mappedVotingRoles; track role.roleId) {
+                     <span class="designation-avatar circle-shape empty designation-upload-slot"
+                       (click)="onDesignationPhotoSlotClicked(event.id, role.roleId, $event)">
+                       @if (getDesignationPhoto(event.id, role.roleId); as photoUrl) {
+                         <img [src]="photoUrl" [alt]="role.roleName" />
+                       } @else {
+                         <mat-icon class="photo-slot-icon">add_a_photo</mat-icon>
+                         <span class="photo-slot-label">
+                           <span class="role-name-hindi">{{ role.hindiName ? role.hindiName.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase()) : '' }}</span>
+                           <span class="role-name-english">{{ (role.englishName || role.roleName || '').replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase()) }}</span>
+                         </span>
+                       }
+                       @if (role.winnerUserId) {
+                       <span class="designation-winner-badge">
+                         <mat-icon>stars</mat-icon>
+                         <span>{{ role.winnerName ? (role.winnerName | titlecase) : 'Winner' }}</span>
+                       </span>
+                       }
+                       <span class="photo-edit-overlay" aria-hidden="true">
+                         <mat-icon>edit</mat-icon>
+                       </span>
+                       <input #designationPhotoInput type="file" hidden accept="image/*"
+                         (change)="onDesignationPhotoSelected(event.id, role.roleId, $event)" />
+                     </span>
+                   }
+                 </div>
+               } @else {
+                 <div class="no-roles-mapped-message">
+                   <mat-icon class="no-roles-icon">info</mat-icon>
+                   <span class="no-roles-text">No roles mapped for this event</span>
+                 </div>
               }
             </div>
             </div>
