@@ -17,7 +17,7 @@
       } @else {
       <mat-icon>event</mat-icon>
       }
-      <span>{{ data.eventName }}</span>
+      <span>{{ titleCaseName(data.eventName) }}</span>
     </div>
 
     <div class="vote-history-summary">
@@ -43,13 +43,28 @@
     </div>
 
     <div class="vote-history-list">
-      <div class="vote-history-list-head">
-        <span class="vh-col-name">Member</span>
-        <span class="vh-col-role">Role</span>
-        <span class="vh-col-status">Status</span>
-      </div>
+       <div class="vote-history-list-head">
+         <span class="vh-col-name" (click)="onSort('name')">
+           Names
+           @if (sortColumn === 'name') {
+             <mat-icon class="sort-icon">{{ sortDirection === 'asc' ? 'arrow_upward' : 'arrow_downward' }}</mat-icon>
+           }
+         </span>
+         <span class="vh-col-role" (click)="onSort('role')">
+           Role
+           @if (sortColumn === 'role') {
+             <mat-icon class="sort-icon">{{ sortDirection === 'asc' ? 'arrow_upward' : 'arrow_downward' }}</mat-icon>
+           }
+         </span>
+         <span class="vh-col-status" (click)="onSort('status')">
+           Status
+           @if (sortColumn === 'status') {
+             <mat-icon class="sort-icon">{{ sortDirection === 'asc' ? 'arrow_upward' : 'arrow_downward' }}</mat-icon>
+           }
+         </span>
+       </div>
       @for (member of sortedMembers; track member.userId) {
-      <div class="vote-history-row" [class.voted]="member.hasVoted">
+      <div class="vote-history-row" [ngClass]="roleClass(member.committeeRole)" [class.voted]="member.hasVoted">
         <div class="vh-col-name">
           @if (member.photo) {
           <img class="vh-avatar" [src]="member.photo" [alt]="member.name" />

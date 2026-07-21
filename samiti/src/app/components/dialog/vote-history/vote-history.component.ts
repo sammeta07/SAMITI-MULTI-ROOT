@@ -28,6 +28,9 @@ export class VoteHistoryDialogComponent {
   public readonly dialogData: VoteHistoryDialogData = inject(MAT_DIALOG_DATA);
   public readonly data: EventVoteHistory = this.dialogData.history;
 
+  public sortColumn: 'name' | 'role' | 'status' = 'name';
+  public sortDirection: 'asc' | 'desc' = 'asc';
+
   constructor(
     public dialogRef: MatDialogRef<VoteHistoryDialogComponent>
   ) { }
@@ -47,6 +50,17 @@ export class VoteHistoryDialogComponent {
     return 'MEMBER';
   }
 
+  public roleClass(committeeRole: string): string {
+    const role = String(committeeRole || '').toUpperCase();
+    if (role === 'COMMITTEE_MASTER_ADMIN') {
+      return 'role-master';
+    }
+    if (role === 'COMMITTEE_ADMIN') {
+      return 'role-admin';
+    }
+    return 'role-member';
+  }
+
   public titleCaseName(name: string): string {
     return String(name || '')
       .toLowerCase()
@@ -64,9 +78,46 @@ export class VoteHistoryDialogComponent {
     return Math.round((this.data.votedCount / total) * 100);
   }
 
+  public onSort(column: 'name' | 'role' | 'status'): void {
+    if (this.sortColumn === column) {
+      this.sortDirection = this.sortDirection === 'asc' ? 'desc' : 'asc';
+    } else {
+      this.sortColumn = column;
+      this.sortDirection = 'asc';
+    }
+  }
+
   public get sortedMembers(): EventVoteHistory['members'] {
-    return [...this.data.members].sort((a, b) =>
-      String(a.name || '').toLowerCase().localeCompare(String(b.name || '').toLowerCase())
-    );
+    const list = [...this.data.members];
+    const direction = this.sortDirection === 'asc' ? 1 : -1;
+
+    return list.sort((a, b) => {
+      if (this.sortColumn === 'name') {
+        const aVal = String(a.name || '').toLowerCase();
+        const bVal = String(b.name || '').toLowerCase();
+        return direction * aVal.localeCompare(bVal);
+      }
+
+      if (this.sortColumn === 'role') {
+        const aVal = String(a.committeeRole || '').toUpperCase();
+        const bVal = String(b.committeeRole || '').toUpperCase();
+        const order: Record<string, number> = {
+          COMMITTEE_MASTER_ADMIN: 0,
+          COMMITTEE_ADMIN: 1,
+          COMMITTEE_MEMBER: 2,
+        };
+        const aIdx = order[aVal] ?? 3;
+        const bIdx = order[bVal] ?? 3;
+        return direction * (aIdx - bIdx);
+      }
+
+      if (this.sortColumn === 'status') {
+        const aVal = a.hasVoted ? 1 : 0;
+        const bVal = b.hasVoted ? 1 : 0;
+        return direction * (aVal - bVal);
+      }
+
+      return 0;
+    });
   }
 }
