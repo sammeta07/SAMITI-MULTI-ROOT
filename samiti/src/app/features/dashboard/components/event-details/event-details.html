@@ -190,11 +190,11 @@
                              </thead>
                              <tbody>
                                 @for (item of pendingInterestForRole(card.role.roleId); track item.id; let i = $index) {
-                                 <tr [class]="getInterestStatusClass(item.status)">
-                                   @if (votingPhaseState !== 4) {
-                                     <td class="pending-col-index">{{ i + 1 }}</td>
-                                   }
-                                   <td class="pending-col-user">
+                                 <tr [class]="getInterestStatusClass(item.status)" [class.voted-by-me]="hasVotedFor(card.role.roleId, item.userId)">
+                                    @if (votingPhaseState !== 4) {
+                                      <td class="pending-col-index">{{ i + 1 }}</td>
+                                    }
+                                    <td class="pending-col-user">
                                     <div class="voting-card-pending-user">
                                       @if (item.userPhoto) {
                                        <img class="voting-card-pending-avatar" [src]="item.userPhoto" [alt]="item.userName | titlecase" />
@@ -224,17 +224,25 @@
                                      </div>
                                    </td>
                                    }
-                                    @if (votingPhaseState === 4) {
-                                    <td class="pending-col-vote">
-                                      @if (item.status.toUpperCase() === 'APPROVED') {
-                                      <button mat-flat-button class="cast-vote-btn"
-                                              (click)="onCastVote(card.role.roleId, { userId: item.userId, userName: item.userName })">
-                                        <mat-icon>how_to_vote</mat-icon>
-                                        <span>VOTE</span>
-                                      </button>
-                                      }
-                                    </td>
-                                    }
+                                     @if (votingPhaseState === 4) {
+                                     <td class="pending-col-vote">
+                                       @if (item.status.toUpperCase() === 'APPROVED') {
+                                         @if (hasVotedFor(card.role.roleId, item.userId)) {
+                                           <button mat-flat-button class="cast-vote-btn cast-vote-btn-voted"
+                                                   (click)="onCastVote(card.role.roleId, { userId: item.userId, userName: item.userName })">
+                                             <mat-icon>check_circle</mat-icon>
+                                             <span>VOTED</span>
+                                           </button>
+                                         } @else {
+                                           <button mat-flat-button class="cast-vote-btn"
+                                                   (click)="onCastVote(card.role.roleId, { userId: item.userId, userName: item.userName })">
+                                             <mat-icon>how_to_vote</mat-icon>
+                                             <span>VOTE</span>
+                                           </button>
+                                         }
+                                       }
+                                     </td>
+                                     }
                                 </tr>
                                }
                             </tbody>

@@ -81,10 +81,22 @@ export const eventVoteTypes = `
     candidateId: Int!
     voted: Boolean!
   }
+
+  type MyEventVote {
+    roleId: Int!
+    candidateId: Int!
+    votedAt: String!
+  }
+
+  type MyEventVotesPayload {
+    eventId: Int!
+    votes: [MyEventVote!]!
+  }
 `;
 
 export const eventVoteQueryFields = `
   eventVoteHistory(eventId: Int!): EventVoteHistory!
+  myEventVotes(eventId: Int!): MyEventVotesPayload!
 `;
 
 export const eventVoteMutationFields = `
@@ -172,6 +184,51 @@ export const eventVoteResolvers = {
         votedCount,
         notVotedCount: totalMembers - votedCount,
         members
+      };
+    },
+
+    async myEventVotes(_: any, args: { eventId: number }, context: any) {
+      const eventId = Number(args?.eventId);
+      if (!Number.isInteger(eventId) || eventId <= 0) {
+        throwEventError('BAD_REQUEST', 'eventId must be a positive integer');
+      }
+
+      let loggedInUserId = 0;
+      try {
+        loggedInUserId = await getLoggedInUserId(context);
+      } catch {
+        return { eventId, votes: [] };
+      }
+
+      const access = await getEventAccess(eventId, loggedInUserId);
+      if (!access.eventExists) {
+        throwEventError('NOT_FOUND', 'Event not found');
+      }
+      if (!access.isCommitteeMember) {
+        throwEventError('FORBIDDEN', 'Only committee members can view votes');
+      }
+
+      const voteRows = await query<Array<RowDataPacket & {
+        roleId: number;
+        candidateId: number;
+        votedAt: string;
+      }>>(
+        `SELECT role_id AS roleId, candidate_id AS candidateId, created_at AS votedAt
+          FROM event_votes
+          WHERE event_id = ? AND voter_id = ?
+          ORDER BY created_at ASC`,
+        [eventId, loggedInUserId]
+      );
+
+      const votes = voteRows.map((row) => ({
+        roleId: Number(row.roleId),
+        candidateId: Number(row.candidateId),
+        votedAt: String(row.votedAt || '')
+      }));
+
+      return {
+        eventId,
+        votes
       };
     }
   },

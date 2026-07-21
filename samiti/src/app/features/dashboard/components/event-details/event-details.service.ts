@@ -132,6 +132,17 @@ export interface CastEventVotePayload {
   voted: boolean;
 }
 
+export interface MyEventVote {
+  roleId: number;
+  candidateId: number;
+  votedAt: string;
+}
+
+export interface MyEventVotesPayload {
+  eventId: number;
+  votes: MyEventVote[];
+}
+
 @Injectable({
   providedIn: 'root'
 })
@@ -634,6 +645,27 @@ export class EventDetailsService {
       { withCredentials: true }
     ).pipe(
       map((res) => res.data.castEventVote)
+    );
+  }
+
+  public getMyEventVotes(eventId: number): Observable<MyEventVotesPayload> {
+    const query = `query MyEventVotes($eventId: Int!) {
+      myEventVotes(eventId: $eventId) {
+        eventId
+        votes {
+          roleId
+          candidateId
+          votedAt
+        }
+      }
+    }`;
+
+    return this.http.post<{ data: { myEventVotes: MyEventVotesPayload } }>(
+      this.graphqlUrl,
+      { query, variables: { eventId } },
+      { withCredentials: true }
+    ).pipe(
+      map((res) => res.data.myEventVotes)
     );
   }
 }

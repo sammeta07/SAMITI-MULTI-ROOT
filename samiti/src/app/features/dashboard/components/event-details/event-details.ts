@@ -78,6 +78,7 @@ export class EventDetailsComponent implements OnInit {
     userPhoto?: string | null;
     status: string;
   }>>([]);
+  public readonly myVotes = signal<Record<number, number>>({});
 
   public readonly MAX_BANNERS = 5;
 
@@ -354,6 +355,7 @@ export class EventDetailsComponent implements OnInit {
     this.eventDetailsService.castEventVote(Number(event.eventId), Number(roleId), Number(candidate.userId)).subscribe({
       next: (payload) => {
         if (payload?.voted) {
+          this.myVotes.update(current => ({ ...current, [Number(roleId)]: Number(candidate.userId) }));
           this.notifier.success(`Your vote for **${candidate.userName}** (${roleName}) has been recorded.`);
         } else {
           this.notifier.error('Failed to record your vote.');
@@ -363,6 +365,18 @@ export class EventDetailsComponent implements OnInit {
         this.notifier.error(err?.error?.message || 'Failed to record your vote.');
       }
     });
+  }
+
+  public hasVotedFor(roleId: number, candidateId: number): boolean {
+    const votes = this.myVotes();
+    const myCandidateId = votes[Number(roleId)];
+    return Number(myCandidateId) === Number(candidateId);
+  }
+
+  public getMyVoteForRole(roleId: number): number | null {
+    const votes = this.myVotes();
+    const candidateId = votes[Number(roleId)];
+    return candidateId ? Number(candidateId) : null;
   }
 
   public openVoteHistory(): void {
@@ -461,6 +475,7 @@ export class EventDetailsComponent implements OnInit {
     this.eventMembers.set([]);
     this.selectedVotingRoleIds.set([]);
     this.isUpdatingVotingPhase.set(false);
+    this.myVotes.set({});
 
     this.eventDetailsService.getEventDetails(id).subscribe({
       next: (data: EventDetailsPayload) => {
@@ -479,6 +494,7 @@ export class EventDetailsComponent implements OnInit {
         );
         this.interestReviewList.set([]);
         this.loadPendingInterests();
+        this.loadMyVotes(Number(id));
         this.isUpdatingVotingPhase.set(false);
       },
       error: (err: HttpErrorResponse) => {
@@ -489,6 +505,21 @@ export class EventDetailsComponent implements OnInit {
         this.selectedVotingRoleIds.set([]);
         this.isUpdatingVotingPhase.set(false);
         // this.isLoading.set(false);
+      }
+    });
+  }
+
+  private loadMyVotes(eventId: number): void {
+    this.eventDetailsService.getMyEventVotes(eventId).subscribe({
+      next: (payload) => {
+        const votes: Record<number, number> = {};
+        (payload?.votes || []).forEach((vote) => {
+          votes[Number(vote.roleId)] = Number(vote.candidateId);
+        });
+        this.myVotes.set(votes);
+      },
+      error: () => {
+        this.myVotes.set({});
       }
     });
   }

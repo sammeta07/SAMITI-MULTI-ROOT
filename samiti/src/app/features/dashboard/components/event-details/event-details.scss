@@ -2325,6 +2325,29 @@
       background: #15803d;
     }
   }
+
+  .cast-vote-btn-voted {
+    background: #0f172a;
+
+    .mat-icon,
+    mat-icon {
+      color: #fbbf24;
+    }
+
+    &:hover {
+      background: #1e293b;
+    }
+  }
+}
+
+.voting-card-pending-table {
+  tbody tr.voted-by-me {
+    background: #fef9c3 !important;
+
+    td {
+      color: #0f172a !important;
+    }
+  }
 }
 
 .voting-card-pending-scroll {
