@@ -315,15 +315,30 @@ export class EventDetailsComponent implements OnInit {
     status: string;
   }> {
     const roleIdNum = Number(roleId);
-    const allForRole = this.interestReviewList().filter((item) => Number(item.roleId) === roleIdNum);
+    let allForRole = this.interestReviewList().filter((item) => Number(item.roleId) === roleIdNum);
 
     // During the finalized selection phase (voting started), non-master-admins
     // (ADMIN / MEMBER) must only see the rows the master admin approved.
     if (this.isVotingEnabled && !this.isMasterAdmin) {
-      return allForRole.filter((item) => String(item.status).toUpperCase() === 'APPROVED');
+      allForRole = allForRole.filter((item) => String(item.status).toUpperCase() === 'APPROVED');
+    }
+
+    if (this.votingPhaseState === 4) {
+      allForRole = allForRole.sort((a, b) => {
+        const aApproved = String(a.status).toUpperCase() === 'APPROVED' ? 0 : 1;
+        const bApproved = String(b.status).toUpperCase() === 'APPROVED' ? 0 : 1;
+        return aApproved - bApproved;
+      });
     }
 
     return allForRole;
+  }
+
+  public pendingInterestCountsForRole(roleId: number): { total: number; approved: number } {
+    const list = this.pendingInterestForRole(roleId);
+    const total = list.length;
+    const approved = list.filter((item) => String(item.status).toUpperCase() === 'APPROVED').length;
+    return { total, approved };
   }
 
   public isApprovedOnlyView(roleId: number): boolean {

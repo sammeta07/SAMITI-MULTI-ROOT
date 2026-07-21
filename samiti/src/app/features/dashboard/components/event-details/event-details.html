@@ -166,21 +166,20 @@
                        }
 
                       @if (((isMasterAdmin && (votingPhaseState === 2 || votingPhaseState === 3 || votingPhaseState === 4)) || (!isMasterAdmin && votingPhaseState >= 1)) && pendingInterestForRole(card.role.roleId).length > 0) {
-                      <div class="voting-card-pending-list">
-                        <div class="voting-card-pending-title">
-                          <mat-icon>schedule</mat-icon>
-                          @if (isApprovedOnlyView(card.role.roleId)) {
-                          <span>Approved Selection ({{ pendingInterestForRole(card.role.roleId).length }})</span>
-                          } @else {
-                          <span>Interest Selection ({{ pendingInterestForRole(card.role.roleId).length }})</span>
-                          }
-                        </div>
-                        <div class="voting-card-pending-scroll">
+                       <div class="voting-card-pending-list">
+                         <div class="voting-card-pending-scroll">
                           <table class="voting-card-pending-table">
                             <thead>
-                              <tr>
-                                <th class="pending-col-index">#</th>
-                                <th class="pending-col-user">Name / Email</th>
+                                <tr>
+                                  @if (votingPhaseState !== 4) {
+                                    <th class="pending-col-index">#</th>
+                                  }
+                                   <th class="pending-col-user">
+                                     Name
+                                     @if (isMasterAdmin && votingPhaseState === 4) {
+                                       ({{ pendingInterestCountsForRole(card.role.roleId).approved }} / {{ pendingInterestCountsForRole(card.role.roleId).total }})
+                                     }
+                                   </th>
                                  @if (isMasterAdmin && votingPhaseState === 3) {
                                  <th class="pending-col-action">Action</th>
                                  }
@@ -191,18 +190,20 @@
                              </thead>
                              <tbody>
                                 @for (item of pendingInterestForRole(card.role.roleId); track item.id; let i = $index) {
-                                <tr [class]="getInterestStatusClass(item.status)">
-                                  <td class="pending-col-index">{{ i + 1 }}</td>
-                                  <td class="pending-col-user">
+                                 <tr [class]="getInterestStatusClass(item.status)">
+                                   @if (votingPhaseState !== 4) {
+                                     <td class="pending-col-index">{{ i + 1 }}</td>
+                                   }
+                                   <td class="pending-col-user">
                                     <div class="voting-card-pending-user">
                                       @if (item.userPhoto) {
-                                      <img class="voting-card-pending-avatar" [src]="item.userPhoto" [alt]="item.userName" />
+                                       <img class="voting-card-pending-avatar" [src]="item.userPhoto" [alt]="item.userName | titlecase" />
                                       } @else {
                                       <span class="voting-card-pending-avatar voting-card-pending-avatar-fallback">{{ item.userName.charAt(0).toUpperCase() }}</span>
                                       }
                                        <div class="voting-card-pending-info">
                                          <span class="voting-card-pending-name">
-                                           {{ item.userName }}
+                                            {{ item.userName | titlecase }}
                                            @if (item.userId === currentLoggedInUserId) {
                                            <span class="pending-you-badge">YOU</span>
                                            }
@@ -223,15 +224,17 @@
                                      </div>
                                    </td>
                                    }
-                                   @if (votingPhaseState === 4) {
-                                   <td class="pending-col-vote">
-                                     <button mat-flat-button class="cast-vote-btn"
-                                             (click)="onCastVote(card.role.roleId, { userId: item.userId, userName: item.userName })">
-                                       <mat-icon>how_to_vote</mat-icon>
-                                       <span>VOTE</span>
-                                     </button>
-                                   </td>
-                                   }
+                                    @if (votingPhaseState === 4) {
+                                    <td class="pending-col-vote">
+                                      @if (item.status.toUpperCase() === 'APPROVED') {
+                                      <button mat-flat-button class="cast-vote-btn"
+                                              (click)="onCastVote(card.role.roleId, { userId: item.userId, userName: item.userName })">
+                                        <mat-icon>how_to_vote</mat-icon>
+                                        <span>VOTE</span>
+                                      </button>
+                                      }
+                                    </td>
+                                    }
                                 </tr>
                                }
                             </tbody>
@@ -452,13 +455,13 @@
                   <div class="item-density-row">
                     <div class="row-avatar circle-shape admin-bg">
                       @if (admin.photo) {
-                      <img [src]="admin.photo" [alt]="admin.name" class="avatar-img" (error)="admin.photo = null" />
+                       <img [src]="admin.photo" [alt]="admin.name | titlecase" class="avatar-img" (error)="admin.photo = null" />
                       } @else {
                       {{ admin.name.charAt(0).toUpperCase() }}
                       }
                     </div>
                     <div class="row-info-core">
-                      <div class="main-title">{{ admin.name }}</div>
+                       <div class="main-title">{{ admin.name | titlecase }}</div>
                       <div class="secondary-sub-lbl">{{ admin.email }}</div>
                     </div>
                     <div class="row-action-deck">
@@ -485,7 +488,7 @@
                   <div class="item-density-row">
                     <div class="row-avatar circle-shape member-bg">
                       @if (member.photo) {
-                      <img [src]="member.photo" [alt]="member.name" class="avatar-img" (error)="member.photo = null" />
+                       <img [src]="member.photo" [alt]="member.name | titlecase" class="avatar-img" (error)="member.photo = null" />
                       } @else {
                       {{ member.name.charAt(0).toUpperCase() }}
                       }

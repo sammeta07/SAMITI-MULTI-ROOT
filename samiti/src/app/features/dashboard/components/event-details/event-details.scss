@@ -1216,7 +1216,7 @@
 }
 
 .role-name-primary {
-  font-size: 0.74rem;
+  font-size: 0.88rem;
   font-weight: 700;
   color: #0f172a;
   line-height: 1.2;
@@ -1550,7 +1550,7 @@
 
 .voting-card-role-primary {
   margin-top: 2px;
-  font-size: 0.74rem;
+  font-size: 0.88rem;
   font-weight: 800;
   color: #065f46;
   line-height: 1.25;
@@ -2259,8 +2259,6 @@
 
 /* ========== MASTER ADMIN PENDING INTEREST (inline per role) ========== */
 .voting-card-pending-list {
-  margin-top: 10px;
-  padding: 8px 10px;
   border-radius: 8px;
   background: transparent;
   border: 1px solid #ededed;
@@ -2329,31 +2327,11 @@
   }
 }
 
-.voting-card-pending-title {
-  display: flex;
-  align-items: center;
-  gap: 5px;
-  font-size: 0.66rem;
-  font-weight: 800;
-  text-transform: uppercase;
-  letter-spacing: 0.02em;
-  color: #6b7280;
-  margin-bottom: 6px;
-
-  mat-icon {
-    font-size: 0.9rem;
-    width: 0.9rem;
-    height: 0.9rem;
-    color: #9ca3af;
-  }
-}
-
 .voting-card-pending-scroll {
   flex: 1 1 auto;
   min-height: 0;
   overflow-y: auto;
   overflow-x: hidden;
-  padding-right: 4px;
 
   &::-webkit-scrollbar {
     width: 4px;
@@ -2379,8 +2357,8 @@
   thead th {
     position: sticky;
     top: 0;
-    z-index: 1;
-    background: transparent;
+    z-index: 2;
+    background: #ffffff;
     font-size: 0.6rem;
     font-weight: 800;
     text-transform: uppercase;
@@ -2393,8 +2371,13 @@
     border-top: 1px dashed #eeeeee;
   }
 
+  tbody tr.pending-row-approved + tr td,
+  tbody tr + tr.pending-row-approved td {
+    border-top: 1px dashed #4ade80;
+  }
+
   tbody tr {
-    background: #F5F527;
+    background: #f5f52773;
 
     td {
       color: #1f2937;
@@ -2402,7 +2385,7 @@
   }
 
   tbody tr.pending-row-approved {
-    background: #27F561;
+    background: #27f5613d;
 
     td {
       color: #065f46;
@@ -2410,7 +2393,7 @@
   }
 
   tbody tr.pending-row-rejected {
-    background: #F54627;
+    background: #ff26005c;
 
     td {
       color: #991b1b;
@@ -2450,8 +2433,8 @@
 }
 
 .voting-card-pending-avatar {
-  width: 22px;
-  height: 22px;
+  width: 32px;
+  height: 32px;
   border-radius: 50%;
   object-fit: cover;
   flex-shrink: 0;
@@ -2462,7 +2445,7 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  font-size: 0.64rem;
+  font-size: 0.82rem;
   font-weight: 800;
   color: #ffffff;
 }
