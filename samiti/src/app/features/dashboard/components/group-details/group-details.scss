@@ -547,13 +547,13 @@
 /* Placeholder shown when no designation photos are available yet */
 .event-designation-placeholder {
   display: flex;
-  align-items: stretch;
-  gap: 8px;
-  margin-top: 4px;
+  align-items: flex-start;
+  gap: 10px;
+  margin-top: 6px;
   flex: 1 1 auto;
   min-height: 0;
   overflow-x: auto;
-  overflow-y: hidden;
+  overflow-y: visible;
   padding-bottom: 2px;
   max-width: 100%;
 
@@ -608,112 +608,99 @@
   }
 }
 
-.designation-avatar.empty {
-  background: #f1f5f9;
-  border: 2px dashed #94a3b8;
-  color: transparent;
-  height: 100%;
-  aspect-ratio: 1 / 1;
-  width: auto;
+.designation-item {
+  display: flex;
   flex-direction: column;
-  gap: 2px;
-  cursor: pointer;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+  flex: 1 1 auto;
+  min-height: 0;
+}
+
+.designation-header {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  padding: 10px 8px 12px;
+  border-radius: 12px;
+  background: linear-gradient(180deg, #f8fafc 0%, #f1f5f9 100%);
+  border: 1px solid #e2e8f0;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.06);
+}
+
+.designation-avatar {
+  aspect-ratio: 1 / 1;
+  border-radius: 50%;
+  overflow: hidden;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(135deg, #e2e8f0, #cbd5e1);
+  color: #ffffff;
+  font-size: 1.4rem;
+  font-weight: 700;
+  flex-shrink: 0;
   position: relative;
-
-  .photo-slot-icon {
-    color: #94a3b8;
-    font-size: 1.6rem;
-    width: 1.4rem;
-    height: 1.4rem;
-    line-height: 1.4rem;
-  }
-
-  .photo-slot-label {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    gap: 2px;
-    color: #475569;
-    font-size: 0.9rem;
-    font-weight: 600;
-    line-height: 1.15;
-    text-align: center;
-    white-space: nowrap;
-
-    .role-name-hindi {
-      font-size: 0.88rem;
-      font-weight: 700;
-      color: #1e293b;
-      line-height: 1.15;
-    }
-
-    .role-name-english {
-      font-size: 0.85rem;
-      font-weight: 600;
-      color: #334155;
-      line-height: 1.15;
-    }
-  }
+  width: 100%;
+  max-width: 140px;
+  border: 3px solid #ffffff;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.12), 0 0 0 1px rgba(0, 0, 0, 0.06);
 
   img {
-    position: absolute;
-    inset: 0;
     width: 100%;
     height: 100%;
     object-fit: cover;
-    border-radius: 50%;
+    display: block;
   }
 
-  .photo-edit-overlay {
-    position: absolute;
-    inset: 0;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    background: rgba(15, 23, 42, 0.45);
+  .dummy-avatar-text {
     color: #ffffff;
-    opacity: 0;
-    transition: opacity 0.2s ease;
-    border-radius: 50%;
+    font-size: 1.4rem;
+    font-weight: 700;
+    line-height: 1;
+    user-select: none;
     pointer-events: none;
-
-    mat-icon {
-      font-size: 1.45rem;
-      width: 1.25rem;
-      height: 1.25rem;
-    }
-  }
-
-  &:hover .photo-edit-overlay,
-  &:focus-visible .photo-edit-overlay {
-    opacity: 1;
+    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
   }
 }
 
-.designation-winner-badge {
-  position: absolute;
-  bottom: 4px;
-  left: 50%;
-  transform: translateX(-50%);
-  display: inline-flex;
+.designation-info {
+  display: flex;
+  flex-direction: column;
   align-items: center;
   gap: 3px;
-  padding: 2px 8px;
-  background: linear-gradient(135deg, #fef3c7, #fde68a);
-  border: 1px solid #f59e0b;
-  border-radius: 999px;
-  color: #92400e;
-  font-size: 0.68rem;
-  font-weight: 800;
-  letter-spacing: 0.03em;
-  white-space: nowrap;
-  z-index: 1;
+  text-align: center;
+  flex-shrink: 0;
 
-  mat-icon {
-    font-size: 0.75rem;
-    width: 0.75rem;
-    height: 0.75rem;
-    color: #b45309;
+  .role-name-hindi {
+    font-size: 0.72rem;
+    font-weight: 700;
+    color: #475569;
+    line-height: 1.25;
+    max-width: 100%;
+  }
+
+  .role-name-english {
+    font-size: 0.72rem;
+    font-weight: 700;
+    color: #1e293b;
+    line-height: 1.25;
+    max-width: 100%;
+  }
+
+  .winner-name {
+    font-size: 0.68rem;
+    font-weight: 800;
+    color: #92400e;
+    background: linear-gradient(135deg, #fef3c7, #fde68a);
+    border: 1px solid #f59e0b;
+    border-radius: 999px;
+    padding: 1px 6px;
+    white-space: nowrap;
+    line-height: 1.3;
   }
 }
 

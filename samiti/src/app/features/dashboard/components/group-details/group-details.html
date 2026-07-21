@@ -423,29 +423,26 @@
                @if (event.mappedVotingRoles && event.mappedVotingRoles.length) {
                  <div class="event-designation-placeholder">
                    @for (role of event.mappedVotingRoles; track role.roleId) {
-                     <span class="designation-avatar circle-shape empty designation-upload-slot"
-                       (click)="onDesignationPhotoSlotClicked(event.id, role.roleId, $event)">
-                       @if (getDesignationPhoto(event.id, role.roleId); as photoUrl) {
-                         <img [src]="photoUrl" [alt]="role.roleName" />
-                       } @else {
-                         <mat-icon class="photo-slot-icon">add_a_photo</mat-icon>
-                         <span class="photo-slot-label">
-                           <span class="role-name-hindi">{{ role.hindiName ? role.hindiName.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase()) : '' }}</span>
-                           <span class="role-name-english">{{ (role.englishName || role.roleName || '').replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase()) }}</span>
-                         </span>
-                       }
-                       @if (role.winnerUserId) {
-                       <span class="designation-winner-badge">
-                         <mat-icon>stars</mat-icon>
-                         <span>{{ role.winnerName ? (role.winnerName | titlecase) : 'Winner' }}</span>
-                       </span>
-                       }
-                       <span class="photo-edit-overlay" aria-hidden="true">
-                         <mat-icon>edit</mat-icon>
-                       </span>
-                       <input #designationPhotoInput type="file" hidden accept="image/*"
-                         (change)="onDesignationPhotoSelected(event.id, role.roleId, $event)" />
-                     </span>
+                      <div class="designation-item">
+                        <div class="designation-header">
+                          <span class="designation-avatar circle-shape">
+                            @if (getDesignationPhoto(event.id, role.roleId); as photoUrl) {
+                              <img [src]="photoUrl" [alt]="role.roleName" />
+                            } @else if (role.winnerPhoto) {
+                              <img [src]="role.winnerPhoto" [alt]="role.winnerName || role.roleName" />
+                            } @else {
+                              <span class="dummy-avatar-text">{{ (role.englishName || role.roleName || '?').charAt(0).toUpperCase() }}</span>
+                            }
+                          </span>
+                          <div class="designation-info">
+                            <span class="role-name-hindi">{{ role.hindiName ? role.hindiName.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase()) : '' }}</span>
+                            <span class="role-name-english">{{ (role.englishName || role.roleName || '').replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase()) }}</span>
+                            @if (role.winnerName) {
+                              <span class="winner-name">{{ role.winnerName | titlecase }}</span>
+                            }
+                          </div>
+                        </div>
+                      </div>
                    }
                  </div>
                } @else {
