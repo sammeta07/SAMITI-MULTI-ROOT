@@ -656,6 +656,10 @@
     gap: 6px;
     margin-left: auto;
     flex-shrink: 0;
+
+    .tooltip-wrapper {
+      display: inline-flex;
+    }
   }
 }
 
@@ -1134,6 +1138,38 @@
   .voting-closed-btn {
     border-color: rgba(220, 38, 38, 0.35) !important;
     color: #b91c1c !important;
+  }
+}
+
+.voting-disabled-hint-wrapper {
+  position: relative;
+  display: flex;
+  justify-content: flex-end;
+}
+
+.voting-disabled-hint {
+  position: absolute;
+  top: 8px;
+  right: 0;
+  z-index: 1000;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.68rem;
+  font-weight: 700;
+  color: #b91c1c;
+  background: #fef2f2;
+  border: 1px solid #fecaca;
+  padding: 6px 10px;
+  border-radius: 8px;
+  white-space: nowrap;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
+
+  mat-icon {
+    font-size: 0.82rem !important;
+    width: 0.82rem !important;
+    height: 0.82rem !important;
+    color: #dc2626;
   }
 }
 

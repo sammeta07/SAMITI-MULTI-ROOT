@@ -596,6 +596,8 @@ export class EventDetailsService {
         roleId
         userId
         status
+        autoRejectedOthers
+        previousDesignation
       }
     }`;
 

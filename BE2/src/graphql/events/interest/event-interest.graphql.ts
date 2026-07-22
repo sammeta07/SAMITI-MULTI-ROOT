@@ -430,12 +430,31 @@ export const eventInterestResolvers = {
         };
       }
 
+      // If the currently approved designation is being rejected, restore any
+      // previously auto-rejected requests for this user back to PENDING so
+      // the user remains eligible for at least one designation.
+      const wasApproved = await query<Array<RowDataPacket & { id: number }>>(
+        `SELECT id FROM event_interest_expressions
+          WHERE event_id = ? AND user_id = ? AND role_id = ? AND status = 'APPROVED'
+          LIMIT 1`,
+        [eventId, targetUserId, roleId]
+      );
+
       await query(
         `UPDATE event_interest_expressions
           SET status = ?, reviewed_by = ?, reviewed_at = CURRENT_TIMESTAMP, updated_at = CURRENT_TIMESTAMP
           WHERE id = ?`,
         [status, loggedInUserId, existingRows[0].id]
       );
+
+      if (wasApproved.length > 0) {
+        await query(
+          `UPDATE event_interest_expressions
+            SET status = 'PENDING', reviewed_by = NULL, reviewed_at = NULL, updated_at = CURRENT_TIMESTAMP
+            WHERE event_id = ? AND user_id = ? AND status = 'REJECTED' AND reviewed_by = ? AND role_id <> ?`,
+          [eventId, targetUserId, loggedInUserId, roleId]
+        );
+      }
 
       return {
         eventId,

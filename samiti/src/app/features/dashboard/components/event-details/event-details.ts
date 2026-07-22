@@ -112,7 +112,22 @@ export class EventDetailsComponent implements OnInit {
   }
 
   public get isStartVotingEnabled(): boolean {
-    return this.votingPhaseState === 3;
+    if (this.votingPhaseState !== 3) return false;
+    const mappedRoles = this.eventData()?.mappedVotingRoles ?? [];
+    const approvedPeople = this.eventData()?.interestApprovedPeople ?? [];
+    const approvedRoleIds = new Set(approvedPeople.filter((info) => (info.approvedPeople ?? []).length > 0).map((info) => Number(info.roleId)));
+    return mappedRoles.every((role) => approvedRoleIds.has(Number(role.roleId)));
+  }
+
+  public get startVotingDisabledReason(): string {
+    if (this.votingPhaseState !== 3) return '';
+    const mappedRoles = this.eventData()?.mappedVotingRoles ?? [];
+    const approvedPeople = this.eventData()?.interestApprovedPeople ?? [];
+    const approvedRoleIds = new Set(approvedPeople.filter((info) => (info.approvedPeople ?? []).length > 0).map((info) => Number(info.roleId)));
+    const missing = mappedRoles.filter((role) => !approvedRoleIds.has(Number(role.roleId)));
+    if (missing.length === 0) return '';
+    const names = missing.map((role) => ((role.englishName || role.roleName || '').split('_').join(' ')).replace(/\b\w/g, (c) => c.toUpperCase())).join(', ');
+    return `At least one approved candidate is required for: ${names}`;
   }
 
   public get isStopVotingEnabled(): boolean {
@@ -395,6 +410,12 @@ export class EventDetailsComponent implements OnInit {
     if (!roleResult?.candidates?.length) {
       return null;
     }
+
+    const winner = roleResult.candidates.find((c) => c.isWinner);
+    if (winner) {
+      return winner;
+    }
+
     const maxVotes = Math.max(...roleResult.candidates.map((c) => Number(c.voteCount || 0)));
     const hasSingleCandidate = roleResult.candidates.length === 1;
 
@@ -402,8 +423,7 @@ export class EventDetailsComponent implements OnInit {
       return null;
     }
 
-    const winner = roleResult.candidates.find((c) => c.isWinner || Number(c.voteCount || 0) === maxVotes);
-    return winner || null;
+    return roleResult.candidates.find((c) => Number(c.voteCount || 0) === maxVotes) || null;
   }
 
   public getVoteCountForRole(roleId: number): number {
@@ -811,6 +831,11 @@ export class EventDetailsComponent implements OnInit {
   }
 
   public onStartVoting(): void {
+    if (!this.isStartVotingEnabled) {
+      this.notifier.warn(this.startVotingDisabledReason || 'Cannot start voting at this time.');
+      return;
+    }
+
     const currentEvent = this.eventData();
     if (!currentEvent?.eventId) {
       this.notifier.error('No event available for starting voting');
@@ -1003,10 +1028,40 @@ export class EventDetailsComponent implements OnInit {
             status: String(item.status || 'PENDING').toUpperCase()
           }))
         );
+        this.refreshInterestApprovedPeopleFromReviewList();
       },
       error: () => {
         this.interestReviewList.set([]);
       }
+    });
+  }
+
+  private refreshInterestApprovedPeopleFromReviewList(): void {
+    this.eventData.update((prev) => {
+      if (!prev) return prev;
+      const approvedMap = new Map<number, Array<{ userId: number; name: string; email: string; photo?: string | null }>>();
+
+      for (const item of this.interestReviewList()) {
+        if (String(item.status).toUpperCase() === 'APPROVED') {
+          const roleId = Number(item.roleId);
+          if (!approvedMap.has(roleId)) {
+            approvedMap.set(roleId, []);
+          }
+          approvedMap.get(roleId)!.push({
+            userId: item.userId,
+            name: item.userName,
+            email: item.userEmail,
+            photo: item.userPhoto || null
+          });
+        }
+      }
+
+      const interestApprovedPeople = Array.from(approvedMap.entries()).map(([roleId, approvedPeople]) => ({
+        roleId,
+        approvedPeople
+      }));
+
+      return { ...prev, interestApprovedPeople };
     });
   }
 
@@ -1030,17 +1085,20 @@ export class EventDetailsComponent implements OnInit {
 
     this.eventDetailsService.reviewEventInterest(normalizedEventId, normalizedRoleId, normalizedUserId, status).subscribe({
       next: (payload) => {
-        if (status === 'APPROVED') {
-          const designation = this.getRoleDisplayName(normalizedRoleId);
-          if (payload?.autoRejectedOthers) {
-            this.notifier.success(`You approved **${item.userName}** for **${designation}**. Their remaining requests in other designations have been auto-rejected.`);
-          } else {
-            this.notifier.success(`You approved **${item.userName}** for **${designation}**.`);
-          }
-        } else {
-          this.notifier.success('Interest rejected.');
+        if (status === 'APPROVED' && payload?.autoRejectedOthers) {
+          this.interestReviewList.update((list) =>
+            list.map((entry) => {
+              if (entry.userId === normalizedUserId && entry.roleId === normalizedRoleId) {
+                return entry;
+              }
+              if (entry.userId === normalizedUserId) {
+                return { ...entry, status: 'REJECTED' };
+              }
+              return entry;
+            })
+          );
         }
-        this.loadPendingInterests();
+        this.refreshInterestApprovedPeopleFromReviewList();
       },
       error: (err: HttpErrorResponse) => {
         this.interestReviewList.set(previousList);
@@ -1058,6 +1116,47 @@ export class EventDetailsComponent implements OnInit {
       return 'pending-row-rejected';
     }
     return 'pending-row-pending';
+  }
+
+  public getInterestStatusDisplay(status: string): string {
+    const normalized = String(status || 'PENDING').toUpperCase();
+    if (normalized === 'APPROVED') {
+      return 'Approved';
+    }
+    if (normalized === 'REJECTED') {
+      return 'Rejected';
+    }
+    return 'Pending';
+  }
+
+  public getPendingInterestsGroupedForRole(roleId: number): Array<{
+    status: string;
+    items: Array<{
+      id: number;
+      eventId: number;
+      roleId: number;
+      userId: number;
+      userName: string;
+      userEmail: string;
+      userPhoto?: string | null;
+      status: string;
+    }>;
+  }> {
+    const list = this.pendingInterestForRole(roleId);
+    const groups = new Map<string, Array<any>>();
+    const statusOrder = ['APPROVED', 'PENDING', 'REJECTED'];
+
+    for (const item of list) {
+      const status = String(item.status || 'PENDING').toUpperCase();
+      if (!groups.has(status)) {
+        groups.set(status, []);
+      }
+      groups.get(status)!.push(item);
+    }
+
+    return statusOrder
+      .filter(s => groups.has(s))
+      .map(status => ({ status, items: groups.get(status)! }));
   }
 
   private populateEventPeople(data: EventDetailsPayload | null): void {
