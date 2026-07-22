@@ -129,18 +129,18 @@
                                   [class.voting-card-icon-wrap-president]="isPresidentRole(card.role)"
                                   [class.voting-card-icon-wrap-compact]="isCompactVotingCard"
                                   [class.voting-card-icon-wrap-winner]="votingPhaseState === 6 && getWinnerForRole(card.role.roleId)">
-                               @if (votingPhaseState === 6 && getWinnerForRole(card.role.roleId)) {
-                                 @if (getWinnerForRole(card.role.roleId)!.photo) {
-                                   <img [src]="getWinnerForRole(card.role.roleId)!.photo!"
-                                        [alt]="getWinnerForRole(card.role.roleId)!.name | titlecase"
-                                        class="voting-card-winner-photo" />
-                                 } @else {
-                                   <div class="voting-card-winner-fallback">
-                                     <mat-icon>emoji_events</mat-icon>
-                                     <span class="voting-card-winner-name">{{ getWinnerForRole(card.role.roleId)!.name | titlecase }}</span>
-                                   </div>
-                                 }
-                               } @else {
+                                @if (votingPhaseState === 6 && getWinnerForRole(card.role.roleId) && !isTieRole(card.role.roleId)) {
+                                  @if (getWinnerForRole(card.role.roleId)!.photo) {
+                                    <img [src]="getWinnerForRole(card.role.roleId)!.photo!"
+                                         [alt]="getWinnerForRole(card.role.roleId)!.name | titlecase"
+                                         class="voting-card-winner-photo" />
+                                  } @else {
+                                    <div class="voting-card-winner-fallback">
+                                      <mat-icon>emoji_events</mat-icon>
+                                      <span class="voting-card-winner-name">{{ getWinnerForRole(card.role.roleId)!.name | titlecase }}</span>
+                                    </div>
+                                  }
+                                } @else {
                                  <mat-icon>{{ getVotingRoleIcon(card.role) }}</mat-icon>
                                }
                              </div>
@@ -151,12 +151,12 @@
                          </div>
                     </div>
 
-                         @if (votingPhaseState === 6 && getWinnerForRole(card.role.roleId)) {
-                         <div class="voting-card-winner-badge">
-                           <mat-icon>stars</mat-icon>
-                           <span>{{ getWinnerForRole(card.role.roleId)!.name | titlecase }}</span>
-                         </div>
-                         }
+                         @if (votingPhaseState === 6 && getWinnerForRole(card.role.roleId) && !isTieRole(card.role.roleId)) {
+                          <div class="voting-card-winner-badge">
+                            <mat-icon>stars</mat-icon>
+                            <span>{{ getWinnerForRole(card.role.roleId)!.name | titlecase }}</span>
+                          </div>
+                          }
 
                          @if (votingPhaseState >= 5 && isTieRole(card.role.roleId)) {
                          <div class="voting-card-tie-breaker">
@@ -178,23 +178,23 @@
                          </div>
                          }
 
-                         @if (votingPhaseState === 6) {
-                         <div class="voting-card-footer">
-                           @for (candidate of getCandidatesForRole(card.role.roleId); track candidate.userId) {
-                           <div class="result-candidate-row">
-                             <div class="result-candidate-avatar">
-                               @if (candidate.photo) {
-                               <img [src]="candidate.photo" [alt]="candidate.name | titlecase" class="avatar-img" (error)="candidate.photo = null" />
-                               } @else {
-                               <span class="avatar-fallback">{{ candidate.name.charAt(0).toUpperCase() }}</span>
-                               }
-                             </div>
-                              <div class="result-candidate-name">{{ candidate.name | titlecase }}</div>
-                             <div class="result-vote-count">{{ candidate.voteCount }} votes</div>
-                           </div>
-                           }
-                         </div>
-                         }
+                          @if (votingPhaseState === 6 && getWinnerForRole(card.role.roleId) && !isTieRole(card.role.roleId)) {
+                          <div class="voting-card-footer">
+                            @for (candidate of getCandidatesForRole(card.role.roleId); track candidate.userId) {
+                            <div class="result-candidate-row">
+                              <div class="result-candidate-avatar">
+                                @if (candidate.photo) {
+                                <img [src]="candidate.photo" [alt]="candidate.name | titlecase" class="avatar-img" (error)="candidate.photo = null" />
+                                } @else {
+                                <span class="avatar-fallback">{{ candidate.name.charAt(0).toUpperCase() }}</span>
+                                }
+                              </div>
+                               <div class="result-candidate-name">{{ candidate.name | titlecase }}</div>
+                              <div class="result-vote-count">{{ candidate.voteCount }} votes</div>
+                            </div>
+                            }
+                          </div>
+                          }
 
                        @if (!isMasterAdmin && votingPhaseState === 1) {
                       <div class="voting-card-nominations-closed-note">

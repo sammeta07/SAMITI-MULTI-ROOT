@@ -389,6 +389,15 @@ export const eventVoteResolvers = {
         });
       }
 
+      const winnerRows = await query<Array<RowDataPacket & { roleId: number; winnerUserId: number }>>(
+        `SELECT role_id AS roleId, winner_user_id AS winnerUserId FROM event_winners WHERE event_id = ?`,
+        [eventId]
+      );
+      const winnerMap = new Map<number, number>();
+      winnerRows.forEach((row) => {
+        winnerMap.set(Number(row.roleId), Number(row.winnerUserId));
+      });
+
       const roles = roleIds.map((roleId) => {
         const candidateVotes = roleStats.get(roleId) || new Map<number, number>();
         const candidates = Array.from(candidateVotes.entries())
@@ -424,6 +433,11 @@ export const eventVoteResolvers = {
         const hasSingleCandidate = candidates.length === 1;
         const winners = candidates.filter((c) => c.voteCount === maxVotes && (maxVotes > 0 || hasSingleCandidate));
         winners.forEach((w) => (w.isWinner = true));
+
+        const declaredWinnerId = winnerMap.get(roleId) || 0;
+        if (declaredWinnerId > 0) {
+          candidates.forEach((c) => (c.isWinner = Number(c.userId) === declaredWinnerId));
+        }
 
         return {
           roleId,

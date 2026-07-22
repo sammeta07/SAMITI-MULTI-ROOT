@@ -1,5 +1,7 @@
 -- Migration 026: Reseed events_roles_master after dropping role_code/description
 -- Purpose: Ensure only approved five roles remain even after repeat migration runs.
+-- NOTE: After migration 049, DELETE on this table is blocked by a trigger.
+--       If re-running migrations, drop the trigger first or adjust accordingly.
 
 DELETE FROM events_roles_master;
 

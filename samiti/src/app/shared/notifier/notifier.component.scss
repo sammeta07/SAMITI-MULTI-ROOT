@@ -2,7 +2,7 @@
   .notifier-container {
     position: fixed !important;
     top: 1rem !important;
-    right: 1rem !important;
+    left: 1rem !important;
     width: min(520px, calc(100vw - 2rem)) !important;
     display: flex !important;
     flex-direction: column !important;

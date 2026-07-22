@@ -822,12 +822,26 @@ export const eventVotingResolvers = {
         }
       }
 
+      const roleVoteStats = new Map<number, { candidates: Array<{ candidateId: number; voteCount: number }>; maxVotes: number }>();
+      voteRows.forEach((row) => {
+        const roleId = Number(row.roleId);
+        const candidateId = Number(row.candidateId);
+        const voteCount = Number(row.voteCount || 0);
+        const roleStats = roleVoteStats.get(roleId) || { candidates: [], maxVotes: 0 };
+        roleStats.candidates.push({ candidateId, voteCount });
+        if (voteCount > roleStats.maxVotes) {
+          roleStats.maxVotes = voteCount;
+        }
+        roleVoteStats.set(roleId, roleStats);
+      });
+
       const winnerMap = new Map<number, {
         userId: number;
         name: string;
         photo: string | null;
         voteCount: number;
         isSingleCandidate: boolean;
+        isTie: boolean;
       }>();
 
       voteRows.forEach((row) => {
@@ -836,6 +850,9 @@ export const eventVotingResolvers = {
         const voteCount = Number(row.voteCount || 0);
         const approvedCount = approvedCandidateCount.get(roleId) || 0;
         const isSingleCandidate = approvedCount === 1;
+        const roleStats = roleVoteStats.get(roleId) || { candidates: [], maxVotes: 0 };
+        const tiedCandidates = roleStats.candidates.filter((c) => c.voteCount === roleStats.maxVotes);
+        const isTie = tiedCandidates.length > 1;
 
         if (!currentWinner || voteCount > currentWinner.voteCount) {
           winnerMap.set(roleId, {
@@ -843,7 +860,8 @@ export const eventVotingResolvers = {
             name: String(row.candidateName || ''),
             photo: row.candidatePhoto ? String(row.candidatePhoto) : null,
             voteCount,
-            isSingleCandidate
+            isSingleCandidate,
+            isTie
           });
         }
       });
@@ -855,7 +873,8 @@ export const eventVotingResolvers = {
             name: candidate.name,
             photo: candidate.photo,
             voteCount: 0,
-            isSingleCandidate: true
+            isSingleCandidate: true,
+            isTie: false
           });
         }
       });
@@ -877,7 +896,7 @@ export const eventVotingResolvers = {
           const winner = winnerMap.get(roleId);
           const approvedCount = approvedCandidateCount.get(roleId) || 0;
 
-          if (!winner || (!winner.isSingleCandidate && winner.voteCount <= 0)) {
+          if (!winner || winner.isTie || (!winner.isSingleCandidate && winner.voteCount <= 0)) {
             await connection.query(
               `DELETE FROM event_winners WHERE event_id = ? AND role_id = ?`,
               [eventId, roleId]
@@ -964,7 +983,7 @@ export const eventVotingResolvers = {
         [Number(event.committeeId), loggedInUserId]
       );
 
-      const committeeRole = String(membershipRows[0]?.committeeRole || '').toUpperCase();
+      const committeeRole = String(membershipRows[0]?.committee_role || '').toUpperCase();
       const isMasterAdmin = committeeRole === 'COMMITTEE_MASTER_ADMIN';
       if (!isMasterAdmin) {
         throwEventError('FORBIDDEN', 'Only master admin can resolve tie breaker');

@@ -437,7 +437,7 @@ export class EventDetailsComponent implements OnInit {
       return false;
     }
     const winners = roleResult.candidates.filter((c) => c.isWinner);
-    return winners.length === 2;
+    return winners.length >= 2;
   }
 
   public getTiedCandidatesForRole(roleId: number): EventResultCandidate[] {

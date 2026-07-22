@@ -1,5 +1,7 @@
 -- Migration 024: Reset events_roles_master to required 5 bilingual roles
 -- Purpose: Keep only the explicitly approved role set.
+-- NOTE: After migration 049, DELETE on this table is blocked by a trigger.
+--       If re-running migrations, drop the trigger first or adjust accordingly.
 
 DELETE FROM events_roles_master;
 

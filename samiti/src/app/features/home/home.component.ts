@@ -369,8 +369,10 @@ export class HomeComponent implements OnDestroy {
         next: (response: JoinCommitteeApiResponse | undefined) => {
           this.notifier.success('Join request sent successfully!');
           if (committee && this.isAuthItem(committee)) {
-            committee.pendingRequestRole = 'COMMITTEE_MEMBER';
-            this.cdr.detectChanges();
+            const updatedList = this.committeeList().map(c =>
+              c.id === id ? { ...c, pendingRequestRole: 'COMMITTEE_MEMBER', status: 'PENDING' } : c
+            );
+            this.committeeList.set(updatedList);
           }
         },
         error: (err) => {
@@ -408,10 +410,11 @@ export class HomeComponent implements OnDestroy {
         next: (response: CancelRequestApiResponse | undefined) => {
           this.notifier.success('Join request cancelled successfully!');
           if (committee && this.isAuthItem(committee)) {
-            committee.pendingRequestRole = null;
-            this.cdr.detectChanges();
+            const updatedList = this.committeeList().map(c =>
+              c.id === id ? { ...c, pendingRequestRole: null, status: null } : c
+            );
+            this.committeeList.set(updatedList);
           }
-          // Trigger refresh of committee list
           this.homeService.refreshCommitteeList.update(v => v + 1);
         },
         error: (err) => {
