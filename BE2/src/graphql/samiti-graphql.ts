@@ -21,7 +21,7 @@ import { uploadEventBannerImagesTypes, uploadEventBannerImagesMutationFields, up
 import { deleteEventTypes, deleteEventMutationFields, deleteEventResolvers } from './events/management/delete-event.graphql';
 import { eventVotingTypes, eventVotingMutationFields, eventVotingResolvers } from './events/voting/event-voting.graphql';
 import { eventVoteTypes, eventVoteQueryFields, eventVoteMutationFields, eventVoteResolvers } from './events/voting/event-vote.graphql';
-import { eventInterestTypes, eventInterestQueryFields, eventInterestMutationFields, eventInterestResolvers } from './events/interest/event-interest.graphql';
+import { eventInterestTypes, eventInterestQueryFields, eventInterestMutationFields, eventInterestResolvers } from './events/voting/event-interest.graphql';
 import { createProgramTypes, createProgramMutationFields, createProgramResolvers } from './programs/create-program.graphql';
 import { updateProgramTypes, updateProgramMutationFields, updateProgramResolvers } from './programs/update-program.graphql';
 import { uploadProgramBannerImagesTypes, uploadProgramBannerImagesMutationFields, uploadProgramBannerImagesResolvers } from './programs/upload-program-banner-images.graphql';

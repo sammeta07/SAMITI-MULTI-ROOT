@@ -1,6 +1,6 @@
 import { query } from '../../../config/db';
 import { RowDataPacket, ResultSetHeader } from 'mysql2/promise';
-import { throwEventError, getLoggedInUserId } from '../voting/event-voting.graphql';
+import { throwEventError, getLoggedInUserId } from './event-voting.graphql';
 
 export interface EventInterestPerson {
   userId: number;
