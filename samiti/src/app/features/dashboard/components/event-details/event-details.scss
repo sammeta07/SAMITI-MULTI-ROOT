@@ -1783,6 +1783,52 @@
   }
 }
 
+.assign-winner-btn {
+  width: 28px !important;
+  height: 28px !important;
+  line-height: 28px !important;
+  margin-left: 4px;
+  color: #b45309;
+
+  mat-icon {
+    font-size: 0.95rem !important;
+    width: 0.95rem !important;
+    height: 0.95rem !important;
+  }
+}
+
+.reassign-select-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 6px;
+  flex-wrap: wrap;
+}
+
+.reassign-select-field {
+  flex: 1 1 220px;
+  min-width: 180px;
+  font-size: 0.8rem;
+}
+
+.reassign-confirm-btn {
+  height: 32px !important;
+  padding: 0 10px !important;
+  font-size: 0.78rem !important;
+  font-weight: 700 !important;
+  color: #15803d !important;
+  border-color: #86efac !important;
+}
+
+.reassign-cancel-btn {
+  height: 32px !important;
+  padding: 0 10px !important;
+  font-size: 0.78rem !important;
+  font-weight: 700 !important;
+  color: #b91c1c !important;
+  border-color: #fca5a5 !important;
+}
+
 .voting-card-tie-breaker {
   display: flex;
   flex-direction: column;

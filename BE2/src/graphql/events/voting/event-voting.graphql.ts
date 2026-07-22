@@ -203,6 +203,16 @@ export const eventVotingTypes = `
     roleId: Int!
     success: Boolean!
   }
+
+  type AssignWinningRolePayload {
+    eventId: Int!
+    roleId: Int!
+    winnerUserId: Int!
+    winnerName: String!
+    winnerPhoto: String
+    winnerVoteCount: Int!
+    votingPhaseState: Int!
+  }
 `;
 
 export const eventVotingMutationFields = `
@@ -216,6 +226,7 @@ export const eventVotingMutationFields = `
   declareEventResults(eventId: Int!): DeclareEventResultsPayload!
   resolveTieBreaker(eventId: Int!, roleId: Int!, winnerCandidateId: Int!): ResolveTieBreakerPayload!
   vacateVotingRole(eventId: Int!, roleId: Int!): VacateVotingRolePayload!
+  assignWinningRole(eventId: Int!, roleId: Int!, newWinnerUserId: Int!, newWinnerName: String!, newWinnerPhoto: String): AssignWinningRolePayload!
 `;
 
 export const eventVotingResolvers = {
@@ -1140,6 +1151,123 @@ export const eventVotingResolvers = {
         eventId,
         roleId,
         success: true
+      };
+    },
+
+    async assignWinningRole(_: any, args: { eventId: number; roleId: number; newWinnerUserId: number; newWinnerName: string; newWinnerPhoto: string }, context: any) {
+      const eventId = Number(args?.eventId);
+      if (!Number.isInteger(eventId) || eventId <= 0) {
+        throwEventError('BAD_REQUEST', 'eventId must be a positive integer');
+      }
+
+      const roleId = Number(args?.roleId);
+      if (!Number.isInteger(roleId) || roleId <= 0) {
+        throwEventError('BAD_REQUEST', 'roleId must be a positive integer');
+      }
+
+      const newWinnerUserId = Number(args?.newWinnerUserId);
+      if (!Number.isInteger(newWinnerUserId) || newWinnerUserId <= 0) {
+        throwEventError('BAD_REQUEST', 'newWinnerUserId must be a positive integer');
+      }
+
+      const newWinnerName = String(args?.newWinnerName || '').trim();
+      if (!newWinnerName) {
+        throwEventError('BAD_REQUEST', 'newWinnerName is required');
+      }
+
+      const newWinnerPhoto = args?.newWinnerPhoto ? String(args.newWinnerPhoto) : null;
+      const supportsVotingPhaseState = await hasEventsVotingPhaseStateColumn();
+
+      const eventRows = await query<any[]>(
+        `SELECT
+           id,
+           committee_id AS committeeId,
+           ${supportsVotingPhaseState ? 'COALESCE(voting_phase_state, 0)' : '0'} AS votingPhaseState
+         FROM events
+         WHERE id = ?
+         LIMIT 1`,
+        [eventId]
+      );
+
+      if (!eventRows.length) {
+        throwEventError('NOT_FOUND', 'Event not found');
+      }
+
+      const event = eventRows[0];
+
+      const membershipRows = await query<any[]>(
+        `SELECT committee_role
+         FROM users_committees
+         WHERE committee_id = ? AND user_id = ?
+         LIMIT 1`,
+        [Number(event.committeeId), await getLoggedInUserId(context)]
+      );
+
+      const isCommitteeAdmin = Boolean(
+        membershipRows[0] && (
+          String(membershipRows[0].committee_role || '') === 'COMMITTEE_ADMIN' ||
+          String(membershipRows[0].committee_role || '') === 'COMMITTEE_MASTER_ADMIN'
+        )
+      );
+      if (!isCommitteeAdmin) {
+        throwEventError('FORBIDDEN', 'Only committee admin can assign winning role');
+      }
+
+      const roleRows = await query<Array<RowDataPacket & { roleId: number }>>(
+        `SELECT evr.role_id AS roleId
+         FROM event_voting_roles evr
+         WHERE evr.event_id = ? AND evr.role_id = ?
+         LIMIT 1`,
+        [eventId, roleId]
+      );
+
+      if (!roleRows.length) {
+        throwEventError('BAD_REQUEST', 'Role is not mapped for this event');
+      }
+
+      const approvedRows = await query<Array<RowDataPacket & { userId: number }>>(
+        `SELECT user_id AS userId
+         FROM event_interest_expressions
+         WHERE event_id = ? AND role_id = ? AND status = 'APPROVED'
+         LIMIT 1`,
+        [eventId, roleId, newWinnerUserId]
+      );
+
+      if (!approvedRows.length) {
+        throwEventError('BAD_REQUEST', 'Selected user is not an approved nominee for this role');
+      }
+
+      const voteCountRows = await query<Array<RowDataPacket & { voteCount: number }>>(
+        `SELECT COUNT(*) AS voteCount
+         FROM event_votes
+         WHERE event_id = ? AND role_id = ? AND candidate_id = ?`,
+        [eventId, roleId, newWinnerUserId]
+      );
+
+      const voteCount = Number(voteCountRows[0]?.voteCount || 0);
+
+      await query(
+        `INSERT INTO event_winners
+          (event_id, role_id, winner_user_id, winner_name, winner_photo, winner_vote_count, declared_at)
+         VALUES
+          (?, ?, ?, ?, ?, ?, NOW())
+         ON DUPLICATE KEY UPDATE
+          winner_user_id = VALUES(winner_user_id),
+          winner_name = VALUES(winner_name),
+          winner_photo = VALUES(winner_photo),
+          winner_vote_count = VALUES(winner_vote_count),
+          declared_at = NOW()`,
+        [eventId, roleId, newWinnerUserId, newWinnerName, newWinnerPhoto, voteCount]
+      );
+
+      return {
+        eventId,
+        roleId,
+        winnerUserId: newWinnerUserId,
+        winnerName: newWinnerName,
+        winnerPhoto: newWinnerPhoto,
+        winnerVoteCount: voteCount,
+        votingPhaseState: Number(event.votingPhaseState || 0)
       };
     }
   }

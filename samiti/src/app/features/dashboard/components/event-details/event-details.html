@@ -166,12 +166,35 @@
                          </div>
                     </div>
 
-                         @if (votingPhaseState === 6 && getWinnerForRole(card.role.roleId) && !isTieRole(card.role.roleId)) {
-                          <div class="voting-card-winner-badge">
-                            <mat-icon>stars</mat-icon>
-                            <span>{{ getWinnerForRole(card.role.roleId)!.name | titlecase }}</span>
-                          </div>
-                          }
+                          @if (votingPhaseState === 6 && getWinnerForRole(card.role.roleId) && !isTieRole(card.role.roleId)) {
+                            <div class="voting-card-winner-badge">
+                              <mat-icon>stars</mat-icon>
+                              <span>{{ getWinnerForRole(card.role.roleId)!.name | titlecase }}</span>
+                            </div>
+                            }
+
+                             @if (isMasterAdmin && votingPhaseState >= 4) {
+                             <button mat-icon-button class="assign-winner-btn" (click)="onAssignWinningRole(card.role.roleId)" matTooltip="Emergency reassign winner" matTooltipPosition="above">
+                               <mat-icon>swap_horiz</mat-icon>
+                             </button>
+                             }
+
+                             @if (openReassignForRoleId() === card.role.roleId) {
+                             <div class="reassign-select-row">
+                               <mat-form-field class="reassign-select-field" appearance="fill">
+                                 <mat-label>Select member</mat-label>
+                                 <mat-select [value]="selectedReassignMemberId()" (selectionChange)="onReassignSelectionChange($event.value)">
+                                   @for (person of reassignApprovedList(); track person.userId) {
+                                   <mat-option [value]="person.userId">
+                                     {{ person.name | titlecase }}
+                                   </mat-option>
+                                   }
+                                 </mat-select>
+                               </mat-form-field>
+                               <button mat-stroked-button class="action-btn reassign-confirm-btn" (click)="onConfirmReassign(card.role.roleId)" [disabled]="!selectedReassignMemberId()">Reassign</button>
+                               <button mat-stroked-button class="action-btn reassign-cancel-btn" (click)="cancelReassign()">Cancel</button>
+                             </div>
+                             }
 
                          @if (votingPhaseState >= 5 && isTieRole(card.role.roleId)) {
                          <div class="voting-card-tie-breaker">

@@ -86,6 +86,16 @@ export interface VacateVotingRolePayload {
   success: boolean;
 }
 
+export interface AssignWinningRolePayload {
+  eventId: number;
+  roleId: number;
+  winnerUserId: number;
+  winnerName: string;
+  winnerPhoto: string | null;
+  winnerVoteCount: number;
+  votingPhaseState: number;
+}
+
 export interface ExpressEventInterestPayload {
   eventId: number;
   roleId: number;
@@ -581,6 +591,31 @@ export class EventDetailsService {
       { withCredentials: true }
     ).pipe(
       map((res) => res.data.vacateVotingRole)
+    );
+  }
+
+  public assignWinningRole(eventId: number, roleId: number, newWinnerUserId: number, newWinnerName: string, newWinnerPhoto: string | null): Observable<AssignWinningRolePayload> {
+    const mutation = `mutation AssignWinningRole($eventId: Int!, $roleId: Int!, $newWinnerUserId: Int!, $newWinnerName: String!, $newWinnerPhoto: String) {
+      assignWinningRole(eventId: $eventId, roleId: $roleId, newWinnerUserId: $newWinnerUserId, newWinnerName: $newWinnerName, newWinnerPhoto: $newWinnerPhoto) {
+        eventId
+        roleId
+        winnerUserId
+        winnerName
+        winnerPhoto
+        winnerVoteCount
+        votingPhaseState
+      }
+    }`;
+
+    return this.http.post<{ data: { assignWinningRole: AssignWinningRolePayload } }>(
+      this.graphqlUrl,
+      {
+        query: mutation,
+        variables: { eventId, roleId, newWinnerUserId, newWinnerName, newWinnerPhoto }
+      },
+      { withCredentials: true }
+    ).pipe(
+      map((res) => res.data.assignWinningRole)
     );
   }
 

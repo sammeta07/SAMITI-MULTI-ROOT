@@ -10,7 +10,7 @@ import { MatTabsModule } from '@angular/material/tabs';
 import { HttpErrorResponse } from '@angular/common/http';
 import { firstValueFrom } from 'rxjs';
 import { EventDetailsService } from './event-details.service';
-import { EventVoteHistory, EventResultsPayload, EventResultCandidate, VacateVotingRolePayload } from './event-details.service';
+import { EventVoteHistory, EventResultsPayload, EventResultCandidate, VacateVotingRolePayload, AssignWinningRolePayload } from './event-details.service';
 import { EventDetailsPayload, EventMappedVotingRole, EventPerson } from './event-details.models';
 import { NotifierService } from '../../../../shared/notifier/notifier.service';
 import { ConfirmDialogService } from '../../../../components/dialog/confirm/confirm-dialog.service';
@@ -22,6 +22,8 @@ import { VoteHistoryDialogComponent } from '../../../../components/dialog/vote-h
 import { ImageAssetService } from '../../../../core/services/image-asset.service';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { MatCardModule } from '@angular/material/card';
+import { MatSelectModule } from '@angular/material/select';
+import { MatFormFieldModule } from '@angular/material/form-field';
 import { AuthService } from '../../../../core/services/auth.service';
 
 @Component({
@@ -35,7 +37,9 @@ import { AuthService } from '../../../../core/services/auth.service';
     MatSlideToggleModule,
     MatTabsModule,
     MatTooltipModule,
-    MatCardModule
+    MatCardModule,
+    MatSelectModule,
+    MatFormFieldModule
   ],
   templateUrl: './event-details.html',
   styleUrl: './event-details.scss'
@@ -79,8 +83,12 @@ export class EventDetailsComponent implements OnInit {
     userPhoto?: string | null;
     status: string;
   }>>([]);
-  public readonly myVotes = signal<Record<number, number>>({});
   public readonly eventResults = signal<EventResultsPayload | null>(null);
+  public readonly committeeMembers = signal<EventPerson[]>([]);
+  public readonly selectedReassignMemberId = signal<number | null>(null);
+  public readonly openReassignForRoleId = signal<number | null>(null);
+  public readonly reassignApprovedList = signal<Array<{ userId: number; name: string; email: string; photo?: string | null }>>([]);
+  public readonly myVotes = signal<Record<number, number>>({});
 
   public readonly MAX_BANNERS = 5;
 
@@ -521,6 +529,94 @@ export class EventDetailsComponent implements OnInit {
         }
       });
     });
+  }
+
+  public onAssignWinningRole(roleId: number): void {
+    const currentEvent = this.eventData();
+    if (!currentEvent?.eventId) {
+      this.notifier.error('No event available');
+      return;
+    }
+
+    const normalizedRoleId = Number(roleId);
+    if (!Number.isInteger(normalizedRoleId) || normalizedRoleId <= 0) {
+      this.notifier.error('Invalid role');
+      return;
+    }
+
+    const mappedRole = currentEvent.mappedVotingRoles.find((r) => r.roleId === normalizedRoleId);
+    if (!mappedRole) {
+      this.notifier.error('Role not mapped to this event');
+      return;
+    }
+
+    const approvedPeople = (currentEvent.interestApprovedPeople || []).find((entry) => entry.roleId === normalizedRoleId);
+    const approvedList = approvedPeople?.approvedPeople || [];
+    if (!approvedList.length) {
+      this.notifier.error('No approved nominees available for this role');
+      return;
+    }
+
+    this.openReassignForRoleId.set(normalizedRoleId);
+    this.selectedReassignMemberId.set(null);
+    this.reassignApprovedList.set(approvedList);
+  }
+
+  public onReassignSelectionChange(memberId: number): void {
+    this.selectedReassignMemberId.set(memberId);
+  }
+
+  public onConfirmReassign(roleId: number): void {
+    const currentEvent = this.eventData();
+    if (!currentEvent?.eventId) {
+      return;
+    }
+
+    const normalizedRoleId = Number(roleId);
+    const newWinnerUserId = this.selectedReassignMemberId();
+    if (!newWinnerUserId) {
+      return;
+    }
+
+    const approvedList = this.reassignApprovedList();
+    const selected = approvedList.find((p) => p.userId === newWinnerUserId);
+    if (!selected) {
+      return;
+    }
+
+    const dialogData: ConfirmDialogData = {
+      title: 'Emergency Reassign Winner',
+      message: `Are you sure you want to assign this role to ${selected.name}?`,
+      confirmText: 'Reassign',
+      cancelText: 'Cancel'
+    };
+
+    const dialogRef = this.confirmDialog.open(dialogData);
+    dialogRef.afterClosed().subscribe((result) => {
+      if (!result?.confirmed) {
+        return;
+      }
+
+      this.eventDetailsService.assignWinningRole(currentEvent.eventId, normalizedRoleId, newWinnerUserId, selected.name, selected.photo || null).subscribe({
+        next: () => {
+          this.notifier.success('Winner reassigned successfully');
+          this.openReassignForRoleId.set(null);
+          this.selectedReassignMemberId.set(null);
+          this.reassignApprovedList.set([]);
+          this.fetchEventDetails(String(currentEvent.eventId));
+          this.loadEventResults(Number(currentEvent.eventId));
+        },
+        error: (err: HttpErrorResponse) => {
+          this.notifier.error(err?.error?.message || 'Failed to reassign winner');
+        }
+      });
+    });
+  }
+
+  public cancelReassign(): void {
+    this.openReassignForRoleId.set(null);
+    this.selectedReassignMemberId.set(null);
+    this.reassignApprovedList.set([]);
   }
 
   public openVoteHistory(): void {
