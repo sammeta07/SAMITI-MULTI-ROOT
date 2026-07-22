@@ -3,6 +3,8 @@ export interface ConfirmDialogData {
   message: string;
   confirmText?: string;
   cancelText?: string;
+  iconType?: 'warning' | 'error' | 'info' | 'success';
+  highlightText?: string;
 }
 
 export interface ConfirmDialogResponse {

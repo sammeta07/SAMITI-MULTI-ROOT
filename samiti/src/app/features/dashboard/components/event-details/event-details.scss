@@ -554,6 +554,7 @@
     align-items: center;
     gap: 4px;
     height: 30px;
+    min-height: 30px;
     padding: 0 12px;
     border-radius: 999px;
     border: 1px solid #cbd5e1;
@@ -561,11 +562,12 @@
     color: #334155;
     font-size: 0.74rem;
     font-weight: 700;
+    box-sizing: border-box;
 
     mat-icon {
-      font-size: 1rem;
-      width: 1rem;
-      height: 1rem;
+      font-size: 0.95rem;
+      width: 0.95rem;
+      height: 0.95rem;
       color: #f97316;
     }
 
@@ -578,20 +580,22 @@
   .voting-phase-status-pill {
     display: inline-flex;
     align-items: center;
-    gap: 6px;
-    margin-left: auto;
-    padding: 4px 10px;
+    gap: 4px;
+    height: 30px;
+    min-height: 30px;
+    padding: 0 10px;
     border-radius: 999px;
     background: rgba(139, 92, 246, 0.12);
     color: #6d28d9;
-    font-size: 0.78rem;
+    font-size: 0.72rem;
     font-weight: 700;
     white-space: nowrap;
+    box-sizing: border-box;
 
     mat-icon {
-      font-size: 1.1rem;
-      width: 1.1rem;
-      height: 1.1rem;
+      font-size: 0.95rem;
+      width: 0.95rem;
+      height: 0.95rem;
     }
 
     &.voting-phase-status-0 { background: rgba(100, 116, 139, 0.14); color: #475569; }
@@ -644,6 +648,14 @@
     padding: 1px 5px;
     border-radius: 10px;
     margin-left: 4px;
+  }
+
+  .header-actions-right {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    margin-left: auto;
+    flex-shrink: 0;
   }
 }
 
@@ -839,7 +851,7 @@
   display: flex;
   flex-wrap: wrap;
   align-items: center;
-  gap: 8px;
+  gap: 6px;
 }
 
 .voting-stopped-pill {
@@ -881,19 +893,21 @@
 }
 
 .voting-phase-btn {
-  min-height: 38px !important;
-  padding: 0 16px !important;
-  border-radius: 999px !important;
-  font-size: 0.95rem !important;
-  font-weight: 800 !important;
-  display: inline-flex !important;
-  align-items: center !important;
-  gap: 6px;
+  height: 30px;
+  min-height: 30px;
+  padding: 0 12px;
+  border-radius: 999px;
+  font-size: 0.74rem;
+  font-weight: 700;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  box-sizing: border-box;
 
   mat-icon {
-    font-size: 1.2rem !important;
-    width: 1.2rem !important;
-    height: 1.2rem !important;
+    font-size: 0.95rem;
+    width: 0.95rem;
+    height: 0.95rem;
   }
 }
 
@@ -1435,21 +1449,23 @@
 
 .voting-card-header {
   width: 100%;
-  background: linear-gradient(180deg, #f8fafc 0%, #f1f5f9 100%);
-  border: 1px solid #e2e8f0;
+  background: #ffffff;
+  border: 3px dashed #cbd5e1;
   border-radius: 12px;
-  padding:5px;
+  padding: 10px;
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.06);
+  box-sizing: border-box;
 }
 
 .voting-card-head {
   width: 100%;
+  height: 100%;
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
   text-align: center;
-  gap: 4px;
+  gap: 10px;
 }
 
 /* Split layout: icon left-top, names right-top.
@@ -1480,18 +1496,20 @@
   width: 208px;
   height: 208px;
   border-radius: 999px;
-  background: linear-gradient(135deg, #dbeafe, #bfdbfe);
+  background: #ffffff;
+  border: 3px dashed #94a3b8;
   display: inline-flex;
   align-items: center;
   justify-content: center;
   overflow: hidden;
   padding: 0;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.06);
 
   mat-icon {
     font-size: 6.4rem;
     width: 6.4rem;
     height: 6.4rem;
-    color: #1d4ed8;
+    color: #475569;
   }
 
   .voting-card-winner-photo {
@@ -1509,12 +1527,16 @@
     gap: 6px;
     text-align: center;
     padding: 10px;
+    width: 100%;
+    height: 100%;
+    background: #ffffff;
+    border-radius: 999px;
 
     mat-icon {
       font-size: 3.4rem;
       width: 3.4rem;
       height: 3.4rem;
-      color: #f59e0b;
+      color: #475569;
     }
 
     .voting-card-winner-name {
@@ -1529,22 +1551,15 @@
 }
 
 .voting-card-icon-wrap-winner {
-  border: 3px solid #f59e0b;
+  border: 3px solid #f97316;
+  border-style: dashed;
   box-shadow:
-    0 0 0 4px rgba(245, 158, 11, 0.12),
-    0 8px 24px rgba(245, 158, 11, 0.18);
-  background: linear-gradient(135deg, #fffbeb, #fef3c7) !important;
+    0 0 0 4px rgba(249, 115, 22, 0.12),
+    0 8px 24px rgba(249, 115, 22, 0.18);
+  background: #fff7ed !important;
 
   mat-icon {
-    color: #b45309 !important;
-  }
-}
-
-.voting-card-icon-wrap-president {
-  background: linear-gradient(135deg, #fef3c7, #fde68a);
-
-  mat-icon {
-    color: #b45309;
+    color: #f97316 !important;
   }
 }
 
@@ -1608,12 +1623,12 @@
   margin-top: 2px;
   font-size: 0.88rem;
   font-weight: 800;
-  color: #065f46;
+  color: #1e293b;
   line-height: 1.25;
 }
 
 .voting-card-role-primary-president {
-  color: #92400e;
+  color: #1e293b;
 }
 
 .voting-card-status-chip {
@@ -1640,12 +1655,12 @@
   margin-top: 2px;
   font-size: 0.66rem;
   font-weight: 600;
-  color: #0f766e;
+  color: #64748b;
   line-height: 1.25;
 }
 
 .voting-card-role-secondary-president {
-  color: #b45309;
+  color: #64748b;
 }
 
 .voting-card-footer {

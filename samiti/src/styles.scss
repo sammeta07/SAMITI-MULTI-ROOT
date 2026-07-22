@@ -147,6 +147,7 @@ body {
 
 .cdk-overlay-backdrop.confirm-dialog-backdrop {
   z-index: 2600 !important;
+  background: rgba(0, 0, 0, 0.55) !important;
 }
 
 .cdk-overlay-pane.confirm-dialog-pane {

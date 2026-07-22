@@ -26,6 +26,7 @@
                   <span class="count-pill">{{ eventData()?.availableRoles?.length || 0 }}</span>
                 </div>
 
+                <div class="header-actions-right">
                 <div class="voting-controls-actions-row voting-controls-header-actions">
                   <button mat-stroked-button class="action-btn role-lock-btn voting-phase-btn"
                           [disabled]="!isLockControlEnabled"
@@ -33,6 +34,7 @@
                     <mat-icon>lock</mat-icon>
                     <span>Lock Roles 1</span>
                   </button>
+                </div>
                 </div>
               </div>
 
@@ -68,6 +70,7 @@
                     <span class="count-pill">{{ votingDisplayCards.length || 0 }}</span>
                   </div>
 
+                <div class="header-actions-right">
                 <div class="voting-controls-actions-row voting-controls-header-actions">
                   @if (isMasterAdmin) {
                   <button mat-stroked-button class="action-btn allow-voting-btn voting-phase-btn"
@@ -106,16 +109,17 @@
                   </button>
                   }
                  </div>
-                  <span class="voting-phase-status-pill" [class]="'voting-phase-status-' + votingPhaseState">
-                    <mat-icon>{{ votingPhaseIcon }}</mat-icon>
-                    <span class="voting-phase-status-text">{{ votingPhaseLabel || 'Not Started' }}</span>
-                  </span>
-                   @if (votingPhaseState >= 4) {
-                   <button mat-stroked-button class="history-btn" (click)="openVoteHistory()">
-                     <mat-icon>history</mat-icon>
-                     <span>History</span>
-                   </button>
-                   }
+                 <span class="voting-phase-status-pill" [class]="'voting-phase-status-' + votingPhaseState">
+                   <mat-icon>{{ votingPhaseIcon }}</mat-icon>
+                   <span class="voting-phase-status-text">{{ votingPhaseLabel || 'Not Started' }}</span>
+                 </span>
+                  @if (votingPhaseState >= 4) {
+                  <button mat-stroked-button class="history-btn" (click)="openVoteHistory()">
+                    <mat-icon>history</mat-icon>
+                    <span>History</span>
+                  </button>
+                  }
+                </div>
                 </div>
 
               <section class="voting-nomination-shell">
@@ -162,14 +166,15 @@
                          <div class="voting-card-tie-breaker">
                            <div class="tie-breaker-label">
                              <mat-icon>casino</mat-icon>
-                             <span>Tie Breaker</span>
+                             <span>Tie Breaker : </span>
+                             <span>Now committee will decide the winner</span>
                            </div>
-                           @if (isMasterAdmin && votingPhaseState >= 5) {
+                           @if (votingPhaseState >= 5) {
                            <div class="tie-breaker-actions">
                              <span class="tie-breaker-hint">Select winner:</span>
                              @for (candidate of getTiedCandidatesForRole(card.role.roleId); track candidate.userId) {
-                             <button mat-stroked-button class="tie-breaker-btn" (click)="onResolveTieBreaker(card.role.roleId, candidate.userId)">
-                               <span class="tie-breaker-candidate-name">{{ candidate.name | titlecase }}</span>
+                              <button mat-stroked-button class="tie-breaker-btn" (click)="onResolveTieBreaker(card.role.roleId, candidate.userId, candidate.name)" [disabled]="!isMasterAdmin">
+                               <span class="tie-breaker-candidate-name">{{ candidate.name + ' - ' | titlecase }} </span>
                                <span class="tie-breaker-vote-count">{{ candidate.voteCount }} votes</span>
                              </button>
                              }

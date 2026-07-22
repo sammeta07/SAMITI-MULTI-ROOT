@@ -1,8 +1,41 @@
-<h2 mat-dialog-title>{{ data.title }}</h2>
-<mat-dialog-content>
-  <p>{{ data.message }}</p>
+<mat-toolbar class="confirm-dialog-toolbar">
+  <span class="confirm-dialog-toolbar-icon-wrap">
+    <ng-container [ngSwitch]="data.iconType">
+      @if (data.iconType === 'error') {
+        <mat-icon class="confirm-dialog-toolbar-icon confirm-dialog-icon-error">error_outline</mat-icon>
+      } @else if (data.iconType === 'info') {
+        <mat-icon class="confirm-dialog-toolbar-icon confirm-dialog-icon-info">info_outline</mat-icon>
+      } @else if (data.iconType === 'success') {
+        <mat-icon class="confirm-dialog-toolbar-icon confirm-dialog-icon-success">check_circle_outline</mat-icon>
+      } @else {
+        <mat-icon class="confirm-dialog-toolbar-icon confirm-dialog-icon-warning">warning_amber</mat-icon>
+      }
+    </ng-container>
+  </span>
+
+  <span class="confirm-dialog-title">{{ data.title }}</span>
+
+  <button mat-icon-button type="button" class="confirm-dialog-close-btn" (click)="onCancel()" aria-label="Close dialog">
+    <mat-icon>close</mat-icon>
+  </button>
+</mat-toolbar>
+
+<mat-dialog-content class="confirm-dialog-content">
+  <p class="confirm-dialog-message">{{ data.message }}</p>
+  @if (data.highlightText) {
+    <p class="confirm-dialog-highlight">{{ data.highlightText }}</p>
+  }
 </mat-dialog-content>
-<mat-dialog-actions align="end">
-  <button mat-button (click)="onCancel()">{{ data.cancelText || 'Cancel' }}</button>
-  <button mat-raised-button color="primary" (click)="onConfirm()">{{ data.confirmText || 'Confirm' }}</button>
+
+<mat-dialog-actions class="confirm-dialog-actions">
+  <button mat-stroked-button type="button"
+          class="confirm-dialog-btn confirm-dialog-btn-cancel"
+          (click)="onCancel()">
+    {{ data.cancelText || 'Cancel' }}
+  </button>
+  <button mat-flat-button color="accent" type="button"
+          class="confirm-dialog-btn confirm-dialog-btn-confirm"
+          (click)="onConfirm()">
+    {{ data.confirmText || 'Confirm' }}
+  </button>
 </mat-dialog-actions>

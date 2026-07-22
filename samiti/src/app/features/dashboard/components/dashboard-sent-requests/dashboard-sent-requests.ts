@@ -70,9 +70,10 @@ export class DashboardSentRequestsComponent {
   cancelSentRequest(committeeId: string, committeeName: string): void {
     const dialogData: ConfirmDialogData = {
       title: "Cancel Request",
-      message: `Are you sure you want to cancel your request to join "${committeeName}"?`,
+      message: "Are you sure you want to cancel your request to join this committee?",
       confirmText: "Cancel Request",
       cancelText: "Keep Request",
+      highlightText: committeeName,
     };
 
     this.confirmDialog.open(dialogData).afterClosed().subscribe((result) => {

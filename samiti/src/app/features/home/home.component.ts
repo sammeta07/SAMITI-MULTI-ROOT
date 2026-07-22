@@ -323,6 +323,7 @@ export class HomeComponent implements OnDestroy {
         this.startupLoaderService.markCommitteesSettled();
         this.syncExpandedPanelState();
         this.applyDefaultPreviewExpansion();
+        this.applySmartDefaultTab();
         this.startCarouselAutoPlay();
         this.cdr.detectChanges();
       },
@@ -331,6 +332,7 @@ export class HomeComponent implements OnDestroy {
         this.committeeList.set([]);
         this.stopCarouselAutoPlay();
         this.startupLoaderService.markCommitteesFailed();
+        this.applySmartDefaultTab();
         this.cdr.detectChanges();
       }
     });
@@ -350,7 +352,8 @@ export class HomeComponent implements OnDestroy {
     // Open confirmation dialog using Material Dialog
     const dialogData: ConfirmDialogData = {
       title: 'Join Committee',
-        message: `Are you sure you want to join "${committee.committeeName}"?`,
+      message: 'Are you sure you want to join this committee?',
+      highlightText: committee.committeeName,
     };
 
     const dialogRef = this.confirmDialog.open(dialogData);
@@ -395,7 +398,8 @@ export class HomeComponent implements OnDestroy {
     // Open confirmation dialog using Material Dialog
     const dialogData: ConfirmDialogData = {
       title: 'Cancel Join Request',
-        message: `Are you sure you want to cancel your join request for "${committee.committeeName}"?`,
+      message: 'Are you sure you want to cancel your join request for this committee?',
+      highlightText: committee.committeeName,
     };
 
     const dialogRef = this.confirmDialog.open(dialogData);
@@ -482,6 +486,23 @@ export class HomeComponent implements OnDestroy {
 
     this.expandPreview();
     this.hasAppliedDefaultPreviewExpansion = true;
+  }
+
+  private applySmartDefaultTab(): void {
+    if (!this.isLoggedIn) return;
+    const nearbyCount = this.filteredNearbyGroups().length;
+    const favouriteCount = this.filteredFavouriteGroups().length;
+    const previewCount = this.filteredPreviewGroups().length;
+
+    if (nearbyCount > 0) {
+      this.selectedTabIndex = 0;
+    } else if (favouriteCount > 0) {
+      this.selectedTabIndex = 1;
+    } else if (previewCount > 0) {
+      this.selectedTabIndex = 2;
+    } else {
+      this.selectedTabIndex = 0;
+    }
   }
 
   collapsePreview() {

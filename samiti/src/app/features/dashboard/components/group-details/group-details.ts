@@ -491,9 +491,10 @@ export class GroupDetailsComponent implements OnInit {
     
     const dialogData: ConfirmDialogData = {
       title: 'Request Admin Role',
-      message: `Are you sure you want to request admin role for "${committee.committeeName}"?`,
+      message: 'Are you sure you want to request admin role for this committee?',
       confirmText: 'Send Request',
-      cancelText: 'Cancel'
+      cancelText: 'Cancel',
+      highlightText: committee.committeeName,
     };
 
     const dialogRef = this.confirmDialog.open(dialogData);
@@ -518,9 +519,10 @@ export class GroupDetailsComponent implements OnInit {
 
     const dialogData: ConfirmDialogData = {
       title: 'Cancel Admin Role Request',
-      message: `Are you sure you want to cancel your admin role request for "${committee.committeeName}"?`,
+      message: 'Are you sure you want to cancel your admin role request for this committee?',
       confirmText: 'Cancel Request',
-      cancelText: 'Keep Request'
+      cancelText: 'Keep Request',
+      highlightText: committee.committeeName,
     };
 
     const dialogRef = this.confirmDialog.open(dialogData);

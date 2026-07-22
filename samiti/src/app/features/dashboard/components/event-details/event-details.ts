@@ -452,7 +452,7 @@ export class EventDetailsComponent implements OnInit {
     return roleResult.candidates.filter((c) => c.isWinner);
   }
 
-  public onResolveTieBreaker(roleId: number, winnerCandidateId: number): void {
+  public onResolveTieBreaker(roleId: number, winnerCandidateId: number, winnerName?: string): void {
     const currentEvent = this.eventData();
     if (!currentEvent?.eventId) {
       this.notifier.error('No event available for resolving tie');
@@ -470,15 +470,31 @@ export class EventDetailsComponent implements OnInit {
       return;
     }
 
-    this.eventDetailsService.resolveTieBreaker(currentEvent.eventId, normalizedRoleId, normalizedWinnerId).subscribe({
-      next: () => {
-        this.notifier.success('Tie breaker resolved successfully');
-        this.loadEventResults(Number(currentEvent.eventId));
-        this.fetchEventDetails(String(currentEvent.eventId));
-      },
-      error: (err: HttpErrorResponse) => {
-        this.notifier.error(err?.error?.message || 'Failed to resolve tie breaker');
+    const dialogData: ConfirmDialogData = {
+      title: 'Resolve Tie Breaker',
+      message: 'Are you sure you want to declare this candidate as the winner?',
+      confirmText: 'Declare Winner',
+      cancelText: 'Cancel',
+      iconType: 'warning',
+      highlightText: winnerName ? String(winnerName) : '',
+    };
+
+    const dialogRef = this.confirmDialog.open(dialogData);
+    dialogRef.afterClosed().subscribe((result) => {
+      if (!result?.confirmed) {
+        return;
       }
+
+      this.eventDetailsService.resolveTieBreaker(currentEvent.eventId, normalizedRoleId, normalizedWinnerId).subscribe({
+        next: () => {
+          this.notifier.success('Tie breaker resolved successfully');
+          this.loadEventResults(Number(currentEvent.eventId));
+          this.fetchEventDetails(String(currentEvent.eventId));
+        },
+        error: (err: HttpErrorResponse) => {
+          this.notifier.error(err?.error?.message || 'Failed to resolve tie breaker');
+        }
+      });
     });
   }
 
@@ -572,14 +588,9 @@ export class EventDetailsComponent implements OnInit {
   }
 
   private fetchEventDetails(id: string): void {
-    // this.isLoading.set(true);
-    this.eventData.set(null);
     this.eventAdmins.set([]);
     this.eventMembers.set([]);
-    this.selectedVotingRoleIds.set([]);
     this.isUpdatingVotingPhase.set(false);
-    this.myVotes.set({});
-    this.eventResults.set(null);
 
     this.eventDetailsService.getEventDetails(id).subscribe({
       next: (data: EventDetailsPayload) => {
@@ -649,25 +660,7 @@ export class EventDetailsComponent implements OnInit {
   }
 
   public getVotingRoleIcon(role?: EventMappedVotingRole | null): string {
-    const normalizedRoleName = `${role?.roleName || ''} ${role?.englishName || ''} ${role?.hindiName || ''}`.toUpperCase();
-
-    if (normalizedRoleName.includes('ADHYAKSHA') || normalizedRoleName.includes('PRESIDENT')) {
-      return 'military_tech';
-    }
-
-    if (normalizedRoleName.includes('UPADHYAKSHA') || normalizedRoleName.includes('VICE')) {
-      return 'workspace_premium';
-    }
-
-    if (normalizedRoleName.includes('SECRETARY') || normalizedRoleName.includes('SACHIV')) {
-      return 'assignment_ind';
-    }
-
-    if (normalizedRoleName.includes('CASHIER') || normalizedRoleName.includes('TREASURER')) {
-      return 'account_balance_wallet';
-    }
-
-    return 'how_to_vote';
+    return 'person_outline';
   }
 
   public isRoleMapped(roleId?: number | null): boolean {
@@ -1298,9 +1291,10 @@ export class EventDetailsComponent implements OnInit {
 
     const dialogData: ConfirmDialogData = {
       title: 'Delete Event',
-      message: `Are you sure you want to delete "${currentEvent.eventName}"? This action will also remove linked members, media, programs, and tasks.`,
+      message: 'Are you sure you want to delete this event? This action will also remove linked members, media, programs, and tasks.',
       confirmText: 'Delete',
-      cancelText: 'Cancel'
+      cancelText: 'Cancel',
+      highlightText: currentEvent.eventName,
     };
 
     const dialogRef = this.confirmDialog.open(dialogData);
