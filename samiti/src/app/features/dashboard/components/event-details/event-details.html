@@ -345,12 +345,23 @@
                           </div>
                         </div>
                          }
-                        @else if (((isMasterAdmin && votingPhaseState >= 2 && votingPhaseState < 6) || (!isMasterAdmin && votingPhaseState >= 1 && votingPhaseState < 6)) && pendingInterestForRole(card.role.roleId).length === 0) {
-                        <div class="voting-interest-empty-state">
-                          <mat-icon>info</mat-icon>
-                          <span>No one has shown interest yet. Be the first to express interest!</span>
-                        </div>
-                        }
+                          @else if (((isMasterAdmin && votingPhaseState >= 2 && votingPhaseState < 6) || (!isMasterAdmin && votingPhaseState >= 1 && votingPhaseState < 6)) && pendingInterestForRole(card.role.roleId).length === 0) {
+                          <div class="voting-interest-empty-state">
+                            <mat-icon>info</mat-icon>
+                            <span>No one has shown interest yet. Be the first to express interest!</span>
+                          </div>
+                          }
+
+                         @if (isMasterAdmin && canVacateRole && approvedPeopleForRole(card.role.roleId).length === 0) {
+                         <div class="voting-card-vacate-action">
+                           <button mat-stroked-button class="vacate-role-btn"
+                                   (click)="onVacateRole(card.role.roleId)"
+                                   [disabled]="isVacatingVotingRole()">
+                             <mat-icon>delete_outline</mat-icon>
+                             <span>Vacate Role</span>
+                           </button>
+                         </div>
+                         }
                      </mat-card-content>
                    </mat-card>
                    } @empty {

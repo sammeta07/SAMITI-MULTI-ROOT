@@ -80,6 +80,12 @@ export interface ResolveTieBreakerPayload {
   winnerVoteCount: number;
 }
 
+export interface VacateVotingRolePayload {
+  eventId: number;
+  roleId: number;
+  success: boolean;
+}
+
 export interface ExpressEventInterestPayload {
   eventId: number;
   roleId: number;
@@ -557,6 +563,24 @@ export class EventDetailsService {
       { withCredentials: true }
     ).pipe(
       map((res) => res.data.resolveTieBreaker)
+    );
+  }
+
+  public vacateEventVotingRole(eventId: number, roleId: number): Observable<VacateVotingRolePayload> {
+    const mutation = `mutation VacateVotingRole($eventId: Int!, $roleId: Int!) {
+      vacateVotingRole(eventId: $eventId, roleId: $roleId) {
+        eventId
+        roleId
+        success
+      }
+    }`;
+
+    return this.http.post<{ data: { vacateVotingRole: VacateVotingRolePayload } }>(
+      this.graphqlUrl,
+      { query: mutation, variables: { eventId, roleId } },
+      { withCredentials: true }
+    ).pipe(
+      map((res) => res.data.vacateVotingRole)
     );
   }
 

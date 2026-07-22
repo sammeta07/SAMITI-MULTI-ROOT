@@ -197,6 +197,12 @@ export const eventVotingTypes = `
     winnerPhoto: String
     winnerVoteCount: Int!
   }
+
+  type VacateVotingRolePayload {
+    eventId: Int!
+    roleId: Int!
+    success: Boolean!
+  }
 `;
 
 export const eventVotingMutationFields = `
@@ -209,6 +215,7 @@ export const eventVotingMutationFields = `
   stopEventVoting(eventId: Int!): StopEventVotingPayload!
   declareEventResults(eventId: Int!): DeclareEventResultsPayload!
   resolveTieBreaker(eventId: Int!, roleId: Int!, winnerCandidateId: Int!): ResolveTieBreakerPayload!
+  vacateVotingRole(eventId: Int!, roleId: Int!): VacateVotingRolePayload!
 `;
 
 export const eventVotingResolvers = {
@@ -1056,6 +1063,83 @@ export const eventVotingResolvers = {
         winnerName: candidate.name,
         winnerPhoto: candidate.photo || null,
         winnerVoteCount: voteCount
+      };
+    },
+
+    async vacateVotingRole(_: any, args: { eventId: number; roleId: number }, context: any) {
+      const eventId = Number(args?.eventId);
+      if (!Number.isInteger(eventId) || eventId <= 0) {
+        throwEventError('BAD_REQUEST', 'eventId must be a positive integer');
+      }
+
+      const roleId = Number(args?.roleId);
+      if (!Number.isInteger(roleId) || roleId <= 0) {
+        throwEventError('BAD_REQUEST', 'roleId must be a positive integer');
+      }
+
+      const supportsVotingPhaseState = await hasEventsVotingPhaseStateColumn();
+
+      const eventRows = await query<any[]>(
+        `SELECT
+           id,
+           committee_id AS committeeId,
+           ${supportsVotingPhaseState ? 'COALESCE(voting_phase_state, 0)' : '0'} AS votingPhaseState
+         FROM events
+         WHERE id = ?
+         LIMIT 1`,
+        [eventId]
+      );
+
+      if (!eventRows.length) {
+        throwEventError('NOT_FOUND', 'Event not found');
+      }
+
+      const event = eventRows[0];
+
+      const membershipRows = await query<any[]>(
+        `SELECT committee_role
+         FROM users_committees
+         WHERE committee_id = ? AND user_id = ?
+         LIMIT 1`,
+        [Number(event.committeeId), await getLoggedInUserId(context)]
+      );
+
+      const isCommitteeAdmin = Boolean(
+        membershipRows[0] && (
+          String(membershipRows[0].committee_role || '') === 'COMMITTEE_ADMIN' ||
+          String(membershipRows[0].committee_role || '') === 'COMMITTEE_MASTER_ADMIN'
+        )
+      );
+      if (!isCommitteeAdmin) {
+        throwEventError('FORBIDDEN', 'Only committee admin can vacate a voting role');
+      }
+
+      const phase = Number(event.votingPhaseState || 0);
+      if (phase < 2 || phase > 3) {
+        throwEventError('BAD_REQUEST', 'Voting role can only be vacated during nominations');
+      }
+
+      const roleRows = await query<any[]>(
+        `SELECT evr.role_id AS roleId
+         FROM event_voting_roles evr
+         WHERE evr.event_id = ? AND evr.role_id = ?
+         LIMIT 1`,
+        [eventId, roleId]
+      );
+
+      if (!roleRows.length) {
+        throwEventError('NOT_FOUND', 'Role is not mapped for this event');
+      }
+
+      await query(
+        `DELETE FROM event_voting_roles WHERE event_id = ? AND role_id = ?`,
+        [eventId, roleId]
+      );
+
+      return {
+        eventId,
+        roleId,
+        success: true
       };
     }
   }

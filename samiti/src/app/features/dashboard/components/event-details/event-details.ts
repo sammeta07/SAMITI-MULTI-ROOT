@@ -10,7 +10,7 @@ import { MatTabsModule } from '@angular/material/tabs';
 import { HttpErrorResponse } from '@angular/common/http';
 import { firstValueFrom } from 'rxjs';
 import { EventDetailsService } from './event-details.service';
-import { EventVoteHistory, EventResultsPayload, EventResultCandidate } from './event-details.service';
+import { EventVoteHistory, EventResultsPayload, EventResultCandidate, VacateVotingRolePayload } from './event-details.service';
 import { EventDetailsPayload, EventMappedVotingRole, EventPerson } from './event-details.models';
 import { NotifierService } from '../../../../shared/notifier/notifier.service';
 import { ConfirmDialogService } from '../../../../components/dialog/confirm/confirm-dialog.service';
@@ -63,6 +63,7 @@ export class EventDetailsComponent implements OnInit {
   public readonly isSavingVotingRoles = signal<boolean>(false);
   public readonly isLockingVotingRoles = signal<boolean>(false);
   public readonly isUnlockingVotingRoles = signal<boolean>(false);
+  public readonly isVacatingVotingRole = signal<boolean>(false);
   public readonly isUpdatingVotingPhase = signal<boolean>(false);
   public readonly myInterestRoleIds = signal<number[]>([]);
   public readonly myInterestStatuses = signal<Array<{ roleId: number; status: string }>>([]);
@@ -179,6 +180,10 @@ export class EventDetailsComponent implements OnInit {
 
   public get canStopNominations(): boolean {
     return this.canManageVotingRoles && this.votingPhaseState === 1;
+  }
+
+  public get canVacateRole(): boolean {
+    return this.isMasterAdmin && (this.votingPhaseState === 2 || this.votingPhaseState === 3);
   }
 
   public get canStartVoting(): boolean {
@@ -761,6 +766,57 @@ export class EventDetailsComponent implements OnInit {
         error: (err: HttpErrorResponse) => {
           this.notifier.error(err?.error?.message || 'Failed to lock voting role selection.');
           this.isLockingVotingRoles.set(false);
+        }
+      });
+    });
+  }
+
+  public onVacateRole(roleId: number): void {
+    const currentEvent = this.eventData();
+    if (!currentEvent?.eventId) {
+      this.notifier.error('No event available for vacating role');
+      return;
+    }
+
+    const normalizedRoleId = Number(roleId);
+    if (!Number.isInteger(normalizedRoleId) || normalizedRoleId <= 0) {
+      return;
+    }
+
+    const approved = this.approvedPeopleForRole(normalizedRoleId);
+    if (approved.length > 0) {
+      this.notifier.warn('This role still has approved candidates and cannot be vacated.');
+      return;
+    }
+
+    const roleName = this.getRoleDisplayName(normalizedRoleId);
+    const dialogData: ConfirmDialogData = {
+      title: 'Vacate Role',
+      message: `Are you sure you want to remove "${roleName}" from voting? This will allow voting to proceed for the remaining roles.`,
+      confirmText: 'Vacate Role',
+      cancelText: 'Cancel'
+    };
+
+    const dialogRef = this.confirmDialog.open(dialogData);
+    dialogRef.afterClosed().subscribe((result) => {
+      if (!result?.confirmed) {
+        return;
+      }
+
+      this.isVacatingVotingRole.set(true);
+      this.eventDetailsService.vacateEventVotingRole(currentEvent.eventId, normalizedRoleId).subscribe({
+        next: (payload: VacateVotingRolePayload) => {
+          if (payload?.success) {
+            this.notifier.success(`Role "${roleName}" has been vacated and removed from voting.`);
+            this.fetchEventDetails(String(currentEvent.eventId));
+          } else {
+            this.notifier.error('Failed to vacate role.');
+          }
+          this.isVacatingVotingRole.set(false);
+        },
+        error: (err: HttpErrorResponse) => {
+          this.notifier.error(err?.error?.message || 'Failed to vacate role.');
+          this.isVacatingVotingRole.set(false);
         }
       });
     });
