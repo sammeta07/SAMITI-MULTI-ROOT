@@ -36,14 +36,14 @@ export class DashboardReceivedRequestsComponent {
 
   receivedAdminRequests = computed(() =>
     this.receivedRequests()
-      .filter((r) => r.requestType === "COMMITTEE_ADMIN")
+      .filter((r) => r.requestRole === "COMMITTEE_ADMIN")
       .sort((a, b) => new Date(b.requestSentTime).getTime() - new Date(a.requestSentTime).getTime())
   );
 
 
   receivedMemberRequests = computed(() =>
     this.receivedRequests()
-      .filter((r) => r.requestType === "COMMITTEE_MEMBER")
+      .filter((r) => r.requestRole === "COMMITTEE_MEMBER")
       .sort((a, b) => new Date(b.requestSentTime).getTime() - new Date(a.requestSentTime).getTime())
   );
 

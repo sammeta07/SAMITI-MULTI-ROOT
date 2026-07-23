@@ -21,10 +21,11 @@ export interface ReceivedCommitteeMembershipRequestItem {
   actionByUserId: number | null;
   resolvedByName: string | null;
   resolvedByPhoto: string | null;
-  requestType: CommitteeMembershipRequestType;
+  requestRole: string;
   requestSentTime: string;
   resolvedAtTime: string | null;
   status: string;
+  committeeRole: string | null;
   userDetails: CommitteeMembershipRequesterUserDetails;
 }
 

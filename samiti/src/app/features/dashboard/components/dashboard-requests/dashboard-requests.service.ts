@@ -48,10 +48,11 @@ export class DashboardRequestsService {
           actionByUserId
           resolvedByName
           resolvedByPhoto
-          requestType
+          requestRole
           requestSentTime
           resolvedAtTime
           status
+          committeeRole
           userDetails {
             userId
             name
