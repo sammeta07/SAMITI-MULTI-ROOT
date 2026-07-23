@@ -75,7 +75,7 @@ export interface CommitteeDetailsPayload {
   createdBy: number;
   createdAt: string;
   committeeRole: 'COMMITTEE_MEMBER' | 'COMMITTEE_ADMIN' | 'COMMITTEE_MASTER_ADMIN' | null;
-  userRequestStatus: 'PENDING' | 'ACCEPTED' | 'REJECTED' | null;
+  userRequestStatus: 'REQUESTED' | 'ACCEPTED' | 'REJECTED' | null;
   userRequestRole: 'COMMITTEE_MEMBER' | 'COMMITTEE_ADMIN' | null;
   members: CommitteeRosterMember[];
   events: CommitteeEventListItem[];
@@ -86,14 +86,14 @@ export interface SubmitCommitteeMembershipRequestPayload {
   requestedByUserId: number;
   requestedAtDateTime: string;
   requestedRole: CommitteeMembershipRequestRole;
-  membershipStatus: 'PENDING' | 'ACCEPTED' | 'REJECTED' | string;
+  membershipStatus: 'REQUESTED' | 'ACCEPTED' | 'REJECTED' | string;
 }
 
 export interface CancelCommitteeMembershipRequestPayload {
   committeeId: number;
   cancelledByUserId: number;
   cancelledAtDateTime: string;
-  membershipStatus: 'PENDING' | 'ACCEPTED' | 'REJECTED' | null | string;
+  membershipStatus: 'REQUESTED' | 'ACCEPTED' | 'REJECTED' | null | string;
 }
 
 export type CommitteeMembershipRequestRole = 'COMMITTEE_MEMBER' | 'COMMITTEE_ADMIN';

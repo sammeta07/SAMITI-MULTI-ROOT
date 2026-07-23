@@ -14,7 +14,7 @@ CREATE TABLE IF NOT EXISTS committee_role_requests (
   committee_id      INT NOT NULL,
   requester_user_id INT NOT NULL,
   request_role      ENUM('COMMITTEE_MEMBER', 'COMMITTEE_ADMIN') NOT NULL,
-  status            ENUM('PENDING', 'ACCEPTED', 'REJECTED', 'CANCELLED') NOT NULL DEFAULT 'PENDING',
+  status            ENUM('REQUESTED', 'ACCEPTED', 'REJECTED', 'CANCELLED') NOT NULL DEFAULT 'REQUESTED',
   requested_at      TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
   action_by_user_id INT NULL,
   action_at         TIMESTAMP NULL,
@@ -42,7 +42,7 @@ SELECT
   user_id,
   'COMMITTEE_MEMBER',
   CASE
-    WHEN UPPER(membership_status) IN ('ACCEPTED','REJECTED','PENDING','CANCELLED') THEN UPPER(membership_status)
+    WHEN UPPER(membership_status) IN ('ACCEPTED','REJECTED','REQUESTED','CANCELLED') THEN UPPER(membership_status)
     ELSE 'ACCEPTED'
   END,
   COALESCE(membership_request_created_at, NOW()),
@@ -63,7 +63,7 @@ SELECT
   user_id,
   'COMMITTEE_ADMIN',
   CASE
-    WHEN UPPER(admin_status) IN ('ACCEPTED','REJECTED','PENDING','CANCELLED') THEN UPPER(admin_status)
+    WHEN UPPER(admin_status) IN ('ACCEPTED','REJECTED','REQUESTED','CANCELLED') THEN UPPER(admin_status)
     ELSE 'ACCEPTED'
   END,
   COALESCE(admin_request_created_at, NOW()),

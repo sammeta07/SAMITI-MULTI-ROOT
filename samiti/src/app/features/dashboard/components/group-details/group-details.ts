@@ -70,7 +70,7 @@ export class GroupDetailsComponent implements OnInit {
   public readonly isUploadingEventLogo = signal<boolean>(false);
   
   // 🚀 ERROR 1 FIX: Expanded type allowance bracket including 'REJECTED' literals matches securely
-  public readonly userRequestStatus = signal<'ACCEPTED' | 'PENDING' | 'REJECTED' | null>(null);
+  public readonly userRequestStatus = signal<'ACCEPTED' | 'REQUESTED' | 'REJECTED' | null>(null);
   public readonly userRequestRole = signal<'COMMITTEE_MEMBER' | 'COMMITTEE_ADMIN' | 'COMMITTEE_MASTER_ADMIN' | null>(null);
   public readonly userCommitteeRole = signal<'COMMITTEE_MEMBER' | 'COMMITTEE_ADMIN' | 'COMMITTEE_MASTER_ADMIN' | null>(null);
   public readonly groupData = signal<CommitteeProfileMeta | null>(null);
@@ -101,7 +101,7 @@ export class GroupDetailsComponent implements OnInit {
   });
 
   public readonly isCurrentUserPending = computed(() => {
-    return this.userRequestStatus() === 'PENDING';
+    return this.userRequestStatus() === 'REQUESTED';
   });
 
   public readonly currentUserRoleLabel = computed(() => {

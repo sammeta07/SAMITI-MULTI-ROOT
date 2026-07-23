@@ -373,7 +373,7 @@ export class HomeComponent implements OnDestroy {
           this.notifier.success('Join request sent successfully!');
           if (committee && this.isAuthItem(committee)) {
             const updatedList = this.committeeList().map(c =>
-              c.id === id ? { ...c, pendingRequestRole: 'COMMITTEE_MEMBER', status: 'PENDING' } : c
+               c.id === id ? { ...c, pendingRequestRole: 'COMMITTEE_MEMBER', status: 'REQUESTED' } : c
             );
             this.committeeList.set(updatedList);
           }

@@ -71,7 +71,7 @@
             [class.panel-role-master-admin]="isAuth && committee.committeeRole === 'COMMITTEE_MASTER_ADMIN'"
             [class.panel-role-admin]="committee.committeeRole === 'COMMITTEE_ADMIN'"
             [class.panel-role-member]="committee.committeeRole === 'COMMITTEE_MEMBER'"
-            [class.panel-role-pending]="committee.status === 'PENDING' && !committee.committeeRole"
+            [class.panel-role-pending]="committee.status === 'REQUESTED' && !committee.committeeRole"
             [class.panel-role-none]="!isAuth">
 
             <mat-expansion-panel-header>
@@ -85,8 +85,8 @@
                       [class.fb-master-admin]="isAuth && committee.committeeRole === 'COMMITTEE_MASTER_ADMIN'"
                       [class.fb-admin]="isAuth && committee.committeeRole === 'COMMITTEE_ADMIN'"
                       [class.fb-member]="isAuth && committee.committeeRole === 'COMMITTEE_MEMBER'"
-                      [class.fb-pending]="isAuth && committee.status === 'PENDING' && !committee.committeeRole"
-                      [class.fb-none]="!isAuth || (!committee.committeeRole && committee.status !== 'PENDING')">
+                      [class.fb-pending]="isAuth && committee.status === 'REQUESTED' && !committee.committeeRole"
+                      [class.fb-none]="!isAuth || (!committee.committeeRole && committee.status !== 'REQUESTED')">
                       {{ committee.committeeName.charAt(0).toUpperCase() }}
                     </div>
                     }
@@ -154,7 +154,7 @@
                       </button>
                     </div>
                     @if (isAuth) {
-                      @if (committee.status === 'PENDING' && committee.pendingRequestRole) {
+                        @if (committee.status === 'REQUESTED' && committee.pendingRequestRole) {
                         <span class="user-role-badge badge-pending"
                           [matTooltip]="'Pending Approval For' +' ' + getPendingRoleLabel(committee.pendingRequestRole)"
                           matTooltipPosition="above">
@@ -181,14 +181,14 @@
 
                    <div class="directions-status-row">
                      @if (isAuth) {
-                       @if (committee.status === 'PENDING' && committee.pendingRequestRole) {
+                       @if (committee.status === 'REQUESTED' && committee.pendingRequestRole) {
                         <button mat-stroked-button type="button" class="action-btn delete-btn"
                           (click)="cancelRequest(committee.id, $event)">
                           <mat-icon>cancel</mat-icon>
                           <span>Cancel</span>
                         </button>
                        }
-                       @if (!committee.committeeRole && committee.status !== 'PENDING') {
+                        @if (!committee.committeeRole && committee.status !== 'REQUESTED') {
                          <button mat-flat-button type="button" class="join-committee-btn"
                            (click)="onRequestMemberRole(committee.id, $event)">
                            <mat-icon>group_add</mat-icon>

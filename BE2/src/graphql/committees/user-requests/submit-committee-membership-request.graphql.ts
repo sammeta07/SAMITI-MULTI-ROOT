@@ -84,7 +84,7 @@ export const submitCommitteeMembershipRequestResolvers = {
       // Check existing pending request for this role
       const existingPendingRows = await query<any[]>(
         `SELECT id FROM committee_role_requests
-         WHERE committee_id = ? AND requester_user_id = ? AND request_role = ? AND status = 'PENDING'
+         WHERE committee_id = ? AND requester_user_id = ? AND request_role = ? AND status = 'REQUESTED'
          LIMIT 1`,
         [committeeId, loggedInUserId, requestRole]
       );
@@ -126,7 +126,7 @@ export const submitCommitteeMembershipRequestResolvers = {
           requestedByUserId: loggedInUserId,
           requestedAtDateTime,
           requestedRole: requestRole,
-          membershipStatus: 'PENDING'
+            membershipStatus: 'REQUESTED'
         };
       }
 
@@ -134,7 +134,7 @@ export const submitCommitteeMembershipRequestResolvers = {
       await execute(
         `INSERT INTO committee_role_requests
            (committee_id, requester_user_id, request_role, status, requested_at)
-         VALUES (?, ?, ?, 'PENDING', NOW())`,
+          VALUES (?, ?, ?, 'REQUESTED', NOW())`,
         [committeeId, loggedInUserId, requestRole]
       );
 
@@ -151,7 +151,7 @@ export const submitCommitteeMembershipRequestResolvers = {
         requestedByUserId: loggedInUserId,
         requestedAtDateTime,
         requestedRole: requestRole,
-        membershipStatus: 'PENDING'
+        membershipStatus: 'REQUESTED'
       };
     }
   }
