@@ -8,6 +8,16 @@ export const committeeMembershipRequestsTypes = `
     REJECTED
   }
 
+  enum CommitteeMembershipRequestStatus {
+    PENDING
+    ACCEPTED
+    REJECTED
+    CANCELLED
+    PROMOTED
+    DEMOTED
+    REMOVED
+  }
+
   enum CommitteeMembershipRequestType {
     COMMITTEE_MEMBER
     COMMITTEE_ADMIN
@@ -114,7 +124,14 @@ export const committeeMembershipRequestsResolvers = {
       const loggedInUserId = await resolveLoggedInUserIdFromGraphQLContext(context);
 
       const rows = await query<any[]>(
-        `SELECT
+        `WITH latest_requests AS (
+          SELECT 
+            MAX(id) AS latest_id
+          FROM committee_role_requests
+          WHERE status IN ('PENDING', 'ACCEPTED', 'REJECTED')
+          GROUP BY committee_id, requester_user_id
+        )
+        SELECT
             c.id                                            AS committee_id,
             c.committee_name,
             c.logo                                          AS committee_logo,
@@ -134,6 +151,7 @@ export const committeeMembershipRequestsResolvers = {
             u.gender,
             u.profile_photo                                AS photo
          FROM committee_role_requests crr
+         INNER JOIN latest_requests lr ON lr.latest_id = crr.id
          INNER JOIN committees c ON c.id = crr.committee_id
          INNER JOIN users u ON u.id = crr.requester_user_id
          LEFT JOIN users action_user ON action_user.id = crr.action_by_user_id
@@ -141,8 +159,7 @@ export const committeeMembershipRequestsResolvers = {
             ON admin_uc.committee_id = crr.committee_id
             AND admin_uc.user_id = ?
             AND admin_uc.committee_role IN ('COMMITTEE_ADMIN', 'COMMITTEE_MASTER_ADMIN')
-         WHERE crr.status IN ('PENDING', 'ACCEPTED', 'REJECTED')
-           AND crr.requester_user_id <> ?
+         WHERE crr.requester_user_id <> ?
          ORDER BY crr.requested_at DESC`,
         [loggedInUserId, loggedInUserId]
       );
@@ -178,7 +195,14 @@ export const committeeMembershipRequestsResolvers = {
       const loggedInUserId = await resolveLoggedInUserIdFromGraphQLContext(context);
 
       const rows = await query<any[]>(
-        `SELECT
+        `WITH latest_requests AS (
+          SELECT 
+            MAX(id) AS latest_id
+          FROM committee_role_requests
+          WHERE requester_user_id = ?
+          GROUP BY committee_id, requester_user_id
+        )
+        SELECT
             c.id                                            AS committee_id,
             c.committee_name,
             c.logo                                          AS committee_logo,
@@ -197,6 +221,7 @@ export const committeeMembershipRequestsResolvers = {
             action_user.profile_photo                      AS resolved_by_photo,
             DATE_FORMAT(COALESCE(crr.action_at, crr.cancel_at), '%Y-%m-%d %H:%i:%s') AS resolved_at_time
          FROM committee_role_requests crr
+         INNER JOIN latest_requests lr ON lr.latest_id = crr.id
          INNER JOIN committees c ON c.id = crr.committee_id
          INNER JOIN users requester_user ON requester_user.id = crr.requester_user_id
          LEFT JOIN users action_user ON action_user.id = COALESCE(crr.action_by_user_id, crr.cancel_by_user_id)
@@ -207,7 +232,7 @@ export const committeeMembershipRequestsResolvers = {
              OR crr.action_by_user_id <> crr.requester_user_id
            )
          ORDER BY crr.requested_at DESC`,
-        [loggedInUserId]
+        [loggedInUserId, loggedInUserId]
       );
 
       return {
@@ -272,6 +297,58 @@ export const committeeMembershipRequestsResolvers = {
       }
 
       const { id: requestId, request_role: requestRole } = pendingRows[0];
+
+      const currentRoleRows = await query<any[]>(
+        `SELECT committee_role FROM users_committees WHERE committee_id = ? AND user_id = ? LIMIT 1`,
+        [committeeId, targetUserId]
+      );
+      const currentRole = String(currentRoleRows[0]?.committee_role || '').toUpperCase();
+
+      const roleHierarchy: Record<string, number> = {
+        'COMMITTEE_MASTER_ADMIN': 3,
+        'COMMITTEE_ADMIN': 2,
+        'COMMITTEE_MEMBER': 1
+      };
+
+      const requestedLevel = roleHierarchy[String(requestRole).toUpperCase()] || 0;
+      const currentLevel = roleHierarchy[currentRole] || 0;
+
+      if (requestedLevel < currentLevel) {
+        await execute(
+          `UPDATE committee_role_requests
+           SET status = 'REJECTED', action_by_user_id = ?, action_at = NOW()
+           WHERE id = ?`,
+          [loggedInUserId, requestId]
+        );
+        await execute(
+          `INSERT INTO committee_role_requests
+             (committee_id, requester_user_id, request_role, status, requested_at, action_by_user_id, action_at)
+           VALUES (?, ?, ?, 'REJECTED', NOW(), ?, NOW())`,
+          [committeeId, targetUserId, requestRole, loggedInUserId]
+        );
+        throw new Error('Role downgrade requests are not allowed');
+      }
+
+      if (requestedLevel === currentLevel) {
+        await execute(
+          `UPDATE committee_role_requests
+           SET status = 'ACCEPTED', action_by_user_id = ?, action_at = NOW()
+           WHERE id = ?`,
+          [loggedInUserId, requestId]
+        );
+        await execute(
+          `INSERT INTO committee_role_requests
+             (committee_id, requester_user_id, request_role, status, requested_at, action_by_user_id, action_at)
+           VALUES (?, ?, ?, 'ACCEPTED', NOW(), ?, NOW())`,
+          [committeeId, targetUserId, requestRole, loggedInUserId]
+        );
+        return {
+          committeeId,
+          targetUserId,
+          actionAtTime: new Date().toISOString(),
+          updatedMembershipStatus: 'ACCEPTED'
+        };
+      }
 
       // Resolve the original PENDING request row (so list queries stay correct)
       await execute(

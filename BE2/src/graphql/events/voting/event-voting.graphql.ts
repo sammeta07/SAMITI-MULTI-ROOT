@@ -229,6 +229,52 @@ export const eventVotingMutationFields = `
   assignWinningRole(eventId: Int!, roleId: Int!, newWinnerUserId: Int!, newWinnerName: String!, newWinnerPhoto: String): AssignWinningRolePayload!
 `;
 
+async function syncWinnersToUsersEvents(eventId: number): Promise<void> {
+  const winners = await query<Array<RowDataPacket & { winnerUserId: number; roleId: number }>>(
+    `SELECT winner_user_id AS winnerUserId, role_id AS roleId FROM event_winners WHERE event_id = ?`,
+    [eventId]
+  );
+
+  if (!winners.length) {
+    return;
+  }
+
+  const roleIds = Array.from(new Set(winners.map((w) => Number(w.roleId)))).filter((id) => Number.isInteger(id) && id > 0);
+  if (!roleIds.length) {
+    return;
+  }
+
+  const placeholders = roleIds.map(() => '?').join(',');
+  const roleRows = await query<Array<RowDataPacket & { roleId: number; roleName: string; hindiName: string; englishName: string; sortOrder: number }>>(
+    `SELECT role_id AS roleId, role_name AS roleName, hindi_name AS hindiName, english_name AS englishName, sort_order AS sortOrder FROM events_roles_master WHERE role_id IN (${placeholders}) AND is_active = 1`,
+    roleIds
+  );
+
+  const roleMap = new Map<number, { name: string; sortOrder: number }>();
+  roleRows.forEach((row) => {
+    roleMap.set(Number(row.roleId), {
+      name: String(row.hindiName || row.englishName || row.roleName || 'MEMBER'),
+      sortOrder: Number(row.sortOrder || 0)
+    });
+  });
+
+  for (const w of winners) {
+    const roleId = Number(w.roleId);
+    const roleInfo = roleMap.get(roleId);
+    if (!roleInfo) {
+      continue;
+    }
+    const userId = Number(w.winnerUserId);
+    const designation = String(roleInfo.name || 'MEMBER').toUpperCase();
+    await query(
+      `INSERT INTO users_events (event_id, user_id, designation, status, created_at, updated_at)
+       VALUES (?, ?, ?, 'ACTIVE', NOW(), NOW())
+       ON DUPLICATE KEY UPDATE designation = VALUES(designation), updated_at = NOW()`,
+      [eventId, userId, designation]
+    );
+  }
+}
+
 export const eventVotingResolvers = {
   Mutation: {
     async toggleEventVotingRole(_: any, args: { eventId: number; roleId: number; enabled: boolean }, context: any) {
@@ -945,6 +991,7 @@ export const eventVotingResolvers = {
         }
 
         await connection.commit();
+        await syncWinnersToUsersEvents(eventId);
       } catch (error) {
         await connection.rollback();
         throw error;
@@ -1060,6 +1107,7 @@ export const eventVotingResolvers = {
         );
 
         await connection.commit();
+        await syncWinnersToUsersEvents(eventId);
       } catch (error) {
         await connection.rollback();
         throw error;
@@ -1259,6 +1307,8 @@ export const eventVotingResolvers = {
           declared_at = NOW()`,
         [eventId, roleId, newWinnerUserId, newWinnerName, newWinnerPhoto, voteCount]
       );
+
+      await syncWinnersToUsersEvents(eventId);
 
       return {
         eventId,

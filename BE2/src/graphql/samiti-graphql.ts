@@ -6,7 +6,7 @@ import { imageAssetUploadTypes, imageAssetUploadMutationFields, imageAssetUpload
 import { createCommitteeTypes, createCommitteeMutationFields, createCommitteeResolvers } from './committees/creation/create-committee.graphql';
 import { updateCommitteeTypes, updateCommitteeMutationFields, updateCommitteeResolvers } from './committees/profile/update-committee.graphql';
 import { updateCommitteeLogoTypes, updateCommitteeLogoMutationFields, updateCommitteeLogoResolvers } from './committees/profile/update-committee-logo.graphql';
-import { committeeMembershipRequestsTypes, committeeMembershipRequestsQueryFields, committeeMembershipRequestsMutationFields, committeeMembershipRequestsResolvers } from './committees/membership/committee-membership-requests.graphql';
+import { committeeMembershipRequestsTypes, committeeMembershipRequestsQueryFields, committeeMembershipRequestsMutationFields, committeeMembershipRequestsResolvers } from './committees/requests/committee-membership-requests.graphql';
 import { promoteCommitteeMemberTypes, promoteCommitteeMemberMutationFields, promoteCommitteeMemberResolvers } from './committees/members/promote-committee-member.graphql';
 import { demoteCommitteeAdminTypes, demoteCommitteeAdminMutationFields, demoteCommitteeAdminResolvers } from './committees/members/demote-committee-admin.graphql';
 import { removeCommitteeMemberTypes, removeCommitteeMemberMutationFields, removeCommitteeMemberResolvers } from './committees/members/remove-committee-member.graphql';

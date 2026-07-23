@@ -308,9 +308,17 @@ export const eventInterestResolvers = {
       } else {
         await query(
           `INSERT INTO event_interest_expressions (event_id, role_id, user_id, status)
-            VALUES (?, ?, ?, 'PENDING')`,
+             VALUES (?, ?, ?, 'PENDING')`,
           [eventId, roleId, loggedInUserId]
         );
+
+        await query(
+          `INSERT INTO users_events (event_id, user_id, designation, status, created_at, updated_at)
+           VALUES (?, ?, 'MEMBER', 'ACTIVE', NOW(), NOW())
+           ON DUPLICATE KEY UPDATE updated_at = NOW()`,
+          [eventId, loggedInUserId]
+        );
+
         expressed = true;
       }
 
@@ -378,33 +386,42 @@ export const eventInterestResolvers = {
       }
 
       if (status === 'APPROVED') {
-        // If the user is already approved for a different designation, the
-        // master admin is allowed to change it: auto-reject the previously
-        // approved role (and any other pending roles) so the member ends up
-        // approved for exactly one designation.
+        const roleDisplayRow = await query<Array<RowDataPacket & { hindiName: string; englishName: string; roleName: string }>>(
+          `SELECT hindi_name AS hindiName, english_name AS englishName, role_name AS roleName FROM events_roles_master WHERE role_id = ? AND is_active = 1 LIMIT 1`,
+          [roleId]
+        );
+        const newDesignation = String(roleDisplayRow[0]?.hindiName || roleDisplayRow[0]?.englishName || roleDisplayRow[0]?.roleName || 'MEMBER').toUpperCase();
+
+        await query(
+          `INSERT INTO users_events (event_id, user_id, designation, status, created_at, updated_at)
+           VALUES (?, ?, ?, 'ACTIVE', NOW(), NOW())
+           ON DUPLICATE KEY UPDATE designation = VALUES(designation), updated_at = NOW()`,
+          [eventId, targetUserId, newDesignation]
+        );
+
         const previousApproved = await query<Array<RowDataPacket & {
           roleId: number;
           roleName: string | null;
         }>>(
           `SELECT eie.role_id AS roleId, erm.role_name AS roleName
-            FROM event_interest_expressions eie
-            LEFT JOIN events_roles_master erm ON erm.role_id = eie.role_id
-            WHERE eie.event_id = ? AND eie.user_id = ? AND eie.status = 'APPROVED' AND eie.role_id <> ?
-            LIMIT 1`,
+             FROM event_interest_expressions eie
+             LEFT JOIN events_roles_master erm ON erm.role_id = eie.role_id
+             WHERE eie.event_id = ? AND eie.user_id = ? AND eie.status = 'APPROVED' AND eie.role_id <> ?
+             LIMIT 1`,
           [eventId, targetUserId, roleId]
         );
 
         await query(
           `UPDATE event_interest_expressions
-            SET status = ?, reviewed_by = ?, reviewed_at = CURRENT_TIMESTAMP, updated_at = CURRENT_TIMESTAMP
-            WHERE id = ?`,
+             SET status = ?, reviewed_by = ?, reviewed_at = CURRENT_TIMESTAMP, updated_at = CURRENT_TIMESTAMP
+             WHERE id = ?`,
           [status, loggedInUserId, existingRows[0].id]
         );
 
         const rejectResult = await query(
           `UPDATE event_interest_expressions
-            SET status = 'REJECTED', reviewed_by = ?, reviewed_at = CURRENT_TIMESTAMP, updated_at = CURRENT_TIMESTAMP
-            WHERE event_id = ? AND user_id = ? AND role_id <> ? AND (status = 'PENDING' OR status = 'APPROVED')`,
+             SET status = 'REJECTED', reviewed_by = ?, reviewed_at = CURRENT_TIMESTAMP, updated_at = CURRENT_TIMESTAMP
+             WHERE event_id = ? AND user_id = ? AND role_id <> ? AND (status = 'PENDING' OR status = 'APPROVED')`,
           [loggedInUserId, eventId, targetUserId, roleId]
         ) as unknown as ResultSetHeader;
 

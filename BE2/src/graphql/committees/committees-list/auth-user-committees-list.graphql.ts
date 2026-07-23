@@ -71,6 +71,7 @@ export const authCommitteesResolvers = {
             SELECT id
             FROM committee_role_requests crr2
             WHERE crr2.committee_id = c.id AND crr2.requester_user_id = ?
+              AND crr2.status = 'PENDING'
             ORDER BY crr2.requested_at DESC
             LIMIT 1
           )
