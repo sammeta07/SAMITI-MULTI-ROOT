@@ -5,7 +5,7 @@ import { MatButtonModule } from "@angular/material/button";
 import { MatIconModule } from "@angular/material/icon";
 import { MatProgressSpinnerModule } from "@angular/material/progress-spinner";
 import { MatSortModule, Sort } from "@angular/material/sort";
-import { DashboardRequestsService } from "../dashboard-requests/dashboard-requests.service";
+import { DashboardSentRequestsService, SentCommitteeMembershipRequestItem } from "./dashboard-sent-requests.service";
 import { MatTabsModule } from "@angular/material/tabs";
 import { ConfirmDialogService } from "../../../../components/dialog/confirm/confirm-dialog.service";
 import { ConfirmDialogData } from "../../../../components/dialog/confirm/confirm-dialog.models";
@@ -26,12 +26,12 @@ import { ConfirmDialogData } from "../../../../components/dialog/confirm/confirm
   styleUrls: ["./dashboard-sent-requests.scss"],
 })
 export class DashboardSentRequestsComponent {
-  private service = inject(DashboardRequestsService);
-  private confirmDialog = inject(ConfirmDialogService);
+  private readonly service = inject(DashboardSentRequestsService);
+  private readonly confirmDialog = inject(ConfirmDialogService);
 
   isLoading = signal(false);
 
-  sentRequests = signal<any[]>([]);
+  sentRequests = signal<SentCommitteeMembershipRequestItem[]>([]);
 
   sentAdminRequests = computed(() =>
     this.sentRequests()

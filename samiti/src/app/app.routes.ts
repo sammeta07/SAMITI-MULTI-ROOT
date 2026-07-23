@@ -25,7 +25,26 @@ export const routes: Routes = [
           },
           {
             path: 'received',
-            loadComponent: () => import('./features/dashboard/components/dashboard-received-requests/dashboard-received-requests').then(m => m.DashboardReceivedRequestsComponent)
+            loadComponent: () => import('./features/dashboard/components/dashboard-received-requests/dashboard-received-requests').then(m => m.DashboardReceivedRequestsComponent),
+            children: [
+              {
+                path: 'committee-admin-requests',
+                loadComponent: () => import('./features/dashboard/components/dashboard-received-requests/committee-admin-requests/committee-admin-requests.component').then(m => m.CommitteeAdminRequestsComponent)
+              },
+              {
+                path: 'committee-member-requests',
+                loadComponent: () => import('./features/dashboard/components/dashboard-received-requests/committee-member-requests/committee-member-requests.component').then(m => m.CommitteeMemberRequestsComponent)
+              },
+              {
+                path: 'membership-requests-history',
+                loadComponent: () => import('./features/dashboard/components/dashboard-received-requests/membership-requests-history/membership-requests-history.component').then(m => m.MembershipRequestsHistoryComponent)
+              },
+              {
+                path: '',
+                redirectTo: 'committee-admin-requests',
+                pathMatch: 'full'
+              }
+            ]
           },
           {
             path: '',

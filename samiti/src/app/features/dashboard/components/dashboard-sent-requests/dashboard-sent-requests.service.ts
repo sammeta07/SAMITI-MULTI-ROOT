@@ -3,13 +3,6 @@ import { inject, Injectable } from '@angular/core';
 import { map } from 'rxjs/operators';
 import { Observable } from 'rxjs';
 import { environment } from '../../../../../environments/environment';
-import { 
-  TakeActionOnCommitteeMembershipRequestResponse,
-  CancelSubmittedCommitteeMembershipRequestResponse,
-  ReceivedCommitteeMembershipRequestItem,
-  SentCommitteeMembershipRequestItem,
-  TakeActionOnCommitteeMembershipRequestBody
-} from './dashboard-requests.models';
 import { sanitizeCloudinaryLogoUrl } from '../../../../shared/services/cloudinary-logo.util';
 
 interface GraphQLErrorPayload {
@@ -21,8 +14,45 @@ interface GraphQLResponseEnvelope<TData> {
   errors?: GraphQLErrorPayload[];
 }
 
+export interface CommitteeMembershipRequesterUserDetails {
+  userId: number;
+  name: string;
+  email: string;
+  mobile: string;
+  dateOfBirth: string;
+  gender: string;
+  photo: string | null;
+}
+
+export interface SentCommitteeMembershipRequestItem {
+  committeeId: number;
+  committeeName: string;
+  committeeLogo: string | null;
+  requesterUserId: number;
+  requesterName: string | null;
+  requesterEmail: string | null;
+  requesterPhoto: string | null;
+  actionByUserId: number | null;
+  requestType: string;
+  address: string;
+  establishYear: number | null;
+  status: string;
+  requestSentTime: string;
+  resolvedByName: string | null;
+  resolvedByEmail: string | null;
+  resolvedByPhoto: string | null;
+  resolvedAtTime: string | null;
+}
+
+export interface CancelSubmittedCommitteeMembershipRequestResponse {
+  committeeId: number;
+  cancelledByUserId: number;
+  cancelledAtDateTime: string;
+  membershipStatus: string;
+}
+
 @Injectable({ providedIn: 'root' })
-export class DashboardRequestsService {
+export class DashboardSentRequestsService {
   private readonly http = inject(HttpClient);
   private readonly graphqlUrl = environment.graphqlUrl;
 
@@ -33,53 +63,7 @@ export class DashboardRequestsService {
     if (response.errors?.length) {
       throw new Error(response.errors[0].message || fallbackErrorMessage);
     }
-
     return response.data?.data ?? [];
-  }
-
-  getReceivedCommitteeMembershipRequestsForAdminCommittees(): Observable<ReceivedCommitteeMembershipRequestItem[]> {
-    const query = `query ReceivedCommitteeMembershipRequestsForAdminCommittees {
-      receivedCommitteeMembershipRequestsForAdminCommittees {
-        data {
-          committeeId
-          committeeName
-          committeeLogo
-          address
-          actionByUserId
-          resolvedByName
-          resolvedByPhoto
-          requestRole
-          requestSentTime
-          resolvedAtTime
-          status
-          committeeRole
-          userDetails {
-            userId
-            name
-            email
-            mobile
-            dateOfBirth
-            gender
-            photo
-          }
-        }
-      }
-    }`;
-
-    return this.http.post<GraphQLResponseEnvelope<{ receivedCommitteeMembershipRequestsForAdminCommittees: { data: ReceivedCommitteeMembershipRequestItem[] } }>>(this.graphqlUrl, { query }).pipe(
-      map((response) => {
-        return this.unwrapDataArray(
-          {
-            data: response.data?.receivedCommitteeMembershipRequestsForAdminCommittees,
-            errors: response.errors
-          },
-          'Failed to fetch received membership requests'
-        ).map((item) => ({
-          ...item,
-          committeeLogo: sanitizeCloudinaryLogoUrl(item.committeeLogo)
-        }));
-      })
-    );
   }
 
   getSentCommitteeMembershipRequestsByLoggedInUser(): Observable<SentCommitteeMembershipRequestItem[]> {
@@ -123,33 +107,6 @@ export class DashboardRequestsService {
     );
   }
 
-  takeActionOnCommitteeMembershipRequest(body: TakeActionOnCommitteeMembershipRequestBody) {
-    const query = `mutation TakeActionOnCommitteeMembershipRequest($committeeId: Int!, $targetUserId: Int!, $decisionAction: CommitteeMembershipDecisionAction!) {
-      takeActionOnCommitteeMembershipRequest(committeeId: $committeeId, targetUserId: $targetUserId, decisionAction: $decisionAction) {
-        committeeId
-        targetUserId
-        actionAtTime
-      }
-    }`;
-
-    return this.http.post<GraphQLResponseEnvelope<{ takeActionOnCommitteeMembershipRequest: TakeActionOnCommitteeMembershipRequestResponse }>>(this.graphqlUrl, {
-      query,
-      variables: {
-        committeeId: body.committeeId,
-        targetUserId: body.targetUserId,
-        decisionAction: body.decisionAction
-      }
-    }).pipe(
-      map((response) => {
-        if (response.errors?.length) {
-          throw new Error(response.errors[0].message || 'Failed to process membership request action');
-        }
-
-        return response.data?.takeActionOnCommitteeMembershipRequest;
-      })
-    );
-  }
-
   cancelSubmittedCommitteeMembershipRequest(committeeId: number) {
     const query = `mutation CancelCommitteeMembershipRequest($committeeId: Int!) {
       cancelCommitteeMembershipRequest(committeeId: $committeeId) {
@@ -170,10 +127,8 @@ export class DashboardRequestsService {
         if (response.errors?.length) {
           throw new Error(response.errors[0].message || 'Failed to cancel submitted request');
         }
-
         return response.data?.cancelCommitteeMembershipRequest;
       })
     );
   }
-
 }

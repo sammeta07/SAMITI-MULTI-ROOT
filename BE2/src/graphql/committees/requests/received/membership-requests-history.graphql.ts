@@ -1,4 +1,4 @@
-import { query } from '../../../config/db';
+import { query } from '../../../../config/db';
 
 export const receivedRequestsHistoryTypes = `
   type CommitteeMembershipRequestHistoryItem {
@@ -87,7 +87,7 @@ export const receivedRequestsHistoryResolvers = {
       );
 
       return {
-        data: rows.map((row) => ({
+        data: rows.map((row: any) => ({
           committeeId: Number(row.committee_id),
           committeeName: row.committee_name,
           committeeLogo: row.committee_logo || null,
