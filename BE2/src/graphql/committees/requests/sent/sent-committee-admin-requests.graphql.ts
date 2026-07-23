@@ -90,14 +90,10 @@ export const sentCommitteeAdminRequestsResolvers = {
          INNER JOIN committees c ON c.id = crr.committee_id
          INNER JOIN users requester_user ON requester_user.id = crr.requester_user_id
          LEFT JOIN users action_user ON action_user.id = COALESCE(crr.action_by_user_id, crr.cancel_by_user_id)
-         WHERE crr.requester_user_id = ?
-           AND crr.request_role = 'COMMITTEE_ADMIN'
-           AND (
-             crr.status = 'CANCELLED'
-             OR crr.action_by_user_id IS NULL
-             OR crr.action_by_user_id <> crr.requester_user_id
-           )
-         ORDER BY crr.requested_at DESC`,
+          WHERE crr.requester_user_id = ?
+            AND crr.request_role = 'COMMITTEE_ADMIN'
+            AND crr.status = 'PENDING'
+          ORDER BY crr.requested_at DESC`,
         [loggedInUserId, loggedInUserId]
       );
 

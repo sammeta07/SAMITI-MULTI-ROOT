@@ -325,12 +325,6 @@ export const committeeMembershipRequestsResolvers = {
 
       if (requestedLevel < currentLevel) {
         await execute(
-          `UPDATE committee_role_requests
-           SET status = 'REJECTED', action_by_user_id = ?, action_at = NOW()
-           WHERE id = ?`,
-          [loggedInUserId, requestId]
-        );
-        await execute(
           `INSERT INTO committee_role_requests
              (committee_id, requester_user_id, request_role, status, requested_at, action_by_user_id, action_at)
            VALUES (?, ?, ?, 'REJECTED', NOW(), ?, NOW())`,
@@ -340,12 +334,6 @@ export const committeeMembershipRequestsResolvers = {
       }
 
       if (requestedLevel === currentLevel) {
-        await execute(
-          `UPDATE committee_role_requests
-           SET status = 'ACCEPTED', action_by_user_id = ?, action_at = NOW()
-           WHERE id = ?`,
-          [loggedInUserId, requestId]
-        );
         await execute(
           `INSERT INTO committee_role_requests
              (committee_id, requester_user_id, request_role, status, requested_at, action_by_user_id, action_at)
@@ -359,14 +347,6 @@ export const committeeMembershipRequestsResolvers = {
           updatedMembershipStatus: 'ACCEPTED'
         };
       }
-
-      // Resolve the original PENDING request row (so list queries stay correct)
-      await execute(
-        `UPDATE committee_role_requests
-         SET status = ?, action_by_user_id = ?, action_at = NOW()
-         WHERE id = ?`,
-        [resolvedDecisionStatus, loggedInUserId, requestId]
-      );
 
       // Insert a NEW audit record for this action (every action = new record)
       await execute(

@@ -70,14 +70,10 @@ export const cancelCommitteeMembershipRequestResolvers = {
       const pendingRequestId = pendingRows[0].id;
 
       await execute(
-        `UPDATE committee_role_requests
-         SET status = 'CANCELLED',
-             cancel_by_user_id = ?,
-             cancel_at = NOW(),
-             action_by_user_id = ?,
-             action_at = NOW()
-         WHERE id = ?`,
-        [loggedInUserId, loggedInUserId, pendingRequestId]
+        `INSERT INTO committee_role_requests
+           (committee_id, requester_user_id, request_role, status, requested_at, action_by_user_id, action_at, cancel_by_user_id, cancel_at)
+         VALUES (?, ?, ?, 'CANCELLED', NOW(), ?, NOW(), ?, NOW())`,
+        [committeeId, loggedInUserId, pendingRows[0].request_role, loggedInUserId, loggedInUserId]
       );
 
       return {

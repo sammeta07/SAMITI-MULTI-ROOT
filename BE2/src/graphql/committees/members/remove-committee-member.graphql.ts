@@ -105,10 +105,12 @@ export const removeCommitteeMemberResolvers = {
         [committeeId, targetUserId, targetRole, loggedInUserId, loggedInUserId]
       );
 
-      // 3) Resolve any lingering PENDING requests so nothing is orphaned
+      // 3) Record any lingering PENDING requests as REJECTED audit records
       await execute(
-        `UPDATE committee_role_requests
-         SET status = 'REJECTED', action_by_user_id = ?, action_at = NOW()
+        `INSERT INTO committee_role_requests
+           (committee_id, requester_user_id, request_role, status, requested_at, action_by_user_id, action_at)
+         SELECT committee_id, requester_user_id, request_role, 'REJECTED', NOW(), ?, NOW()
+         FROM committee_role_requests
          WHERE committee_id = ? AND requester_user_id = ? AND status = 'PENDING'`,
         [loggedInUserId, committeeId, targetUserId]
       );
