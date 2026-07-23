@@ -10,6 +10,9 @@ import { committeeMembershipRequestsTypes, committeeMembershipRequestsQueryField
 import { receivedCommitteeAdminRequestsTypes, receivedCommitteeAdminRequestsQueryFields, receivedCommitteeAdminRequestsResolvers } from './committees/requests/received/committee-admin-requests.graphql';
 import { receivedCommitteeMemberRequestsTypes, receivedCommitteeMemberRequestsQueryFields, receivedCommitteeMemberRequestsResolvers } from './committees/requests/received/committee-member-requests.graphql';
 import { receivedRequestsHistoryTypes, receivedRequestsHistoryQueryFields, receivedRequestsHistoryResolvers } from './committees/requests/received/membership-requests-history.graphql';
+import { sentCommitteeAdminRequestsTypes, sentCommitteeAdminRequestsQueryFields, sentCommitteeAdminRequestsResolvers } from './committees/requests/received/sent-committee-admin-requests.graphql';
+import { sentCommitteeMemberRequestsTypes, sentCommitteeMemberRequestsQueryFields, sentCommitteeMemberRequestsResolvers } from './committees/requests/received/sent-committee-member-requests.graphql';
+import { sentRequestsHistoryTypes, sentRequestsHistoryQueryFields, sentRequestsHistoryResolvers } from './committees/requests/received/sent-requests-history.graphql';
 import { promoteCommitteeMemberTypes, promoteCommitteeMemberMutationFields, promoteCommitteeMemberResolvers } from './committees/members/promote-committee-member.graphql';
 import { demoteCommitteeAdminTypes, demoteCommitteeAdminMutationFields, demoteCommitteeAdminResolvers } from './committees/members/demote-committee-admin.graphql';
 import { removeCommitteeMemberTypes, removeCommitteeMemberMutationFields, removeCommitteeMemberResolvers } from './committees/members/remove-committee-member.graphql';
@@ -44,7 +47,10 @@ export const typeDefs = `
   ${committeeMembershipRequestsTypes}
   ${receivedCommitteeAdminRequestsTypes}
   ${receivedCommitteeMemberRequestsTypes}
-  ${receivedRequestsHistoryTypes}
+   ${receivedRequestsHistoryTypes}
+   ${sentCommitteeAdminRequestsTypes}
+   ${sentCommitteeMemberRequestsTypes}
+   ${sentRequestsHistoryTypes}
   ${promoteCommitteeMemberTypes}
   ${demoteCommitteeAdminTypes}
   ${removeCommitteeMemberTypes}
@@ -79,6 +85,9 @@ export const typeDefs = `
     ${receivedCommitteeAdminRequestsQueryFields}
     ${receivedCommitteeMemberRequestsQueryFields}
     ${receivedRequestsHistoryQueryFields}
+    ${sentCommitteeAdminRequestsQueryFields}
+    ${sentCommitteeMemberRequestsQueryFields}
+    ${sentRequestsHistoryQueryFields}
     ${accountQueryFields}
     ${userRelationalAnalyticsQueryFields}
     ${hierarchyTreeQueryFields}
@@ -126,6 +135,9 @@ export const resolvers = {
     ...receivedCommitteeAdminRequestsResolvers.Query,
     ...receivedCommitteeMemberRequestsResolvers.Query,
     ...receivedRequestsHistoryResolvers.Query,
+    ...sentCommitteeAdminRequestsResolvers.Query,
+    ...sentCommitteeMemberRequestsResolvers.Query,
+    ...sentRequestsHistoryResolvers.Query,
     ...accountResolvers.Query,
     ...userRelationalAnalyticsResolvers.Query,
     ...hierarchyTreeResolvers.Query,

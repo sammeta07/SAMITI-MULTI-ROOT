@@ -21,27 +21,46 @@ export const routes: Routes = [
         children: [
           {
             path: 'sent',
-            loadComponent: () => import('./features/dashboard/components/dashboard-sent-requests/dashboard-sent-requests').then(m => m.DashboardSentRequestsComponent)
+            loadComponent: () => import('./features/dashboard/components/dashboard-sent-requests/dashboard-sent-requests').then(m => m.DashboardSentRequestsComponent),
+            children: [
+              {
+                path: 'admin-requests',
+                loadComponent: () => import('./features/dashboard/components/dashboard-sent-requests/sent-committee-admin-requests/sent-committee-admin-requests.component').then(m => m.SentCommitteeAdminRequestsComponent)
+              },
+              {
+                path: 'member-requests',
+                loadComponent: () => import('./features/dashboard/components/dashboard-sent-requests/sent-committee-member-requests/sent-committee-member-requests.component').then(m => m.SentCommitteeMemberRequestsComponent)
+              },
+              {
+                path: 'history',
+                loadComponent: () => import('./features/dashboard/components/dashboard-sent-requests/sent-requests-history/sent-requests-history.component').then(m => m.SentRequestsHistoryComponent)
+              },
+              {
+                path: '',
+                redirectTo: 'admin-requests',
+                pathMatch: 'full'
+              }
+            ]
           },
           {
             path: 'received',
             loadComponent: () => import('./features/dashboard/components/dashboard-received-requests/dashboard-received-requests').then(m => m.DashboardReceivedRequestsComponent),
             children: [
               {
-                path: 'committee-admin-requests',
+                path: 'admin-requests',
                 loadComponent: () => import('./features/dashboard/components/dashboard-received-requests/committee-admin-requests/committee-admin-requests.component').then(m => m.CommitteeAdminRequestsComponent)
               },
               {
-                path: 'committee-member-requests',
+                path: 'member-requests',
                 loadComponent: () => import('./features/dashboard/components/dashboard-received-requests/committee-member-requests/committee-member-requests.component').then(m => m.CommitteeMemberRequestsComponent)
               },
               {
-                path: 'membership-requests-history',
+                path: 'history',
                 loadComponent: () => import('./features/dashboard/components/dashboard-received-requests/membership-requests-history/membership-requests-history.component').then(m => m.MembershipRequestsHistoryComponent)
               },
               {
                 path: '',
-                redirectTo: 'committee-admin-requests',
+                redirectTo: 'admin-requests',
                 pathMatch: 'full'
               }
             ]

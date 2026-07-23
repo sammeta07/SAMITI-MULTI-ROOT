@@ -23,9 +23,9 @@ export class DashboardReceivedRequestsComponent implements OnInit {
   selectedTab = signal(0);
 
   readonly tabRoutes = [
-    'committee-admin-requests',
-    'committee-member-requests',
-    'membership-requests-history'
+    'admin-requests',
+    'member-requests',
+    'history'
   ];
 
   ngOnInit(): void {

@@ -2,8 +2,8 @@ import { HttpClient } from '@angular/common/http';
 import { inject, Injectable } from '@angular/core';
 import { map } from 'rxjs/operators';
 import { Observable } from 'rxjs';
-import { environment } from '../../../../../environments/environment';
-import { sanitizeCloudinaryLogoUrl } from '../../../../shared/services/cloudinary-logo.util';
+import { environment } from '../../../../../../environments/environment';
+import { sanitizeCloudinaryLogoUrl } from '../../../../../shared/services/cloudinary-logo.util';
 
 interface GraphQLErrorPayload {
   message: string;
@@ -14,17 +14,7 @@ interface GraphQLResponseEnvelope<TData> {
   errors?: GraphQLErrorPayload[];
 }
 
-export interface CommitteeMembershipRequesterUserDetails {
-  userId: number;
-  name: string;
-  email: string;
-  mobile: string;
-  dateOfBirth: string;
-  gender: string;
-  photo: string | null;
-}
-
-export interface SentCommitteeMembershipRequestItem {
+export interface SentCommitteeAdminRequestItem {
   committeeId: number;
   committeeName: string;
   committeeLogo: string | null;
@@ -44,15 +34,8 @@ export interface SentCommitteeMembershipRequestItem {
   resolvedAtTime: string | null;
 }
 
-export interface CancelSubmittedCommitteeMembershipRequestResponse {
-  committeeId: number;
-  cancelledByUserId: number;
-  cancelledAtDateTime: string;
-  membershipStatus: string;
-}
-
 @Injectable({ providedIn: 'root' })
-export class DashboardSentRequestsService {
+export class SentCommitteeAdminRequestsService {
   private readonly http = inject(HttpClient);
   private readonly graphqlUrl = environment.graphqlUrl;
 
@@ -66,9 +49,9 @@ export class DashboardSentRequestsService {
     return response.data?.data ?? [];
   }
 
-  getSentCommitteeMembershipRequestsByLoggedInUser(): Observable<SentCommitteeMembershipRequestItem[]> {
-    const query = `query SentCommitteeMembershipRequestsByLoggedInUser {
-      sentCommitteeMembershipRequestsByLoggedInUser {
+  getSentCommitteeAdminRequests(): Observable<SentCommitteeAdminRequestItem[]> {
+    const query = `query SentCommitteeAdminRequests {
+      sentCommitteeAdminRequests {
         data {
           committeeId
           committeeName
@@ -91,14 +74,14 @@ export class DashboardSentRequestsService {
       }
     }`;
 
-    return this.http.post<GraphQLResponseEnvelope<{ sentCommitteeMembershipRequestsByLoggedInUser: { data: SentCommitteeMembershipRequestItem[] } }>>(this.graphqlUrl, { query }).pipe(
+    return this.http.post<GraphQLResponseEnvelope<{ sentCommitteeAdminRequests: { data: SentCommitteeAdminRequestItem[] } }>>(this.graphqlUrl, { query }).pipe(
       map((response) => {
         return this.unwrapDataArray(
           {
-            data: response.data?.sentCommitteeMembershipRequestsByLoggedInUser,
+            data: response.data?.sentCommitteeAdminRequests,
             errors: response.errors
           },
-          'Failed to fetch sent membership requests'
+          'Failed to fetch sent admin requests'
         ).map((item) => ({
           ...item,
           committeeLogo: sanitizeCloudinaryLogoUrl(item.committeeLogo)
@@ -117,11 +100,9 @@ export class DashboardSentRequestsService {
       }
     }`;
 
-    return this.http.post<GraphQLResponseEnvelope<{ cancelCommitteeMembershipRequest: CancelSubmittedCommitteeMembershipRequestResponse }>>(this.graphqlUrl, {
+    return this.http.post<GraphQLResponseEnvelope<{ cancelCommitteeMembershipRequest: { committeeId: number; cancelledByUserId: number; cancelledAtDateTime: string; membershipStatus: string } }>>(this.graphqlUrl, {
       query,
-      variables: {
-        committeeId
-      }
+      variables: { committeeId }
     }).pipe(
       map((response) => {
         if (response.errors?.length) {

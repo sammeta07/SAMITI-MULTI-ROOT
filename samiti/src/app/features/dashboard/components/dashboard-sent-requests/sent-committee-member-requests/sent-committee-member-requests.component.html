@@ -25,25 +25,9 @@
         </td>
       </ng-container>
 
-      <ng-container matColumnDef="user">
-        <th mat-header-cell *matHeaderCellDef mat-sort-header>Requested By</th>
-        <td mat-cell *matCellDef="let element">
-          <div class="table-person-cell">
-            <span *ngIf="element.userDetails.photo" class="table-avatar table-avatar--photo">
-              <img [src]="element.userDetails.photo" [alt]="element.userDetails.name">
-            </span>
-            <span *ngIf="!element.userDetails.photo" class="table-avatar table-avatar--photo table-avatar--fallback">{{ getInitials(element.userDetails.name) }}</span>
-            <div class="committee-info">
-              <span class="committee-name">{{ element.userDetails.name | titlecase }}</span>
-              <span class="committee-address">{{ element.userDetails.email }}</span>
-            </div>
-          </div>
-        </td>
-      </ng-container>
-
-      <ng-container matColumnDef="mobile">
-        <th mat-header-cell *matHeaderCellDef>Mobile</th>
-        <td mat-cell *matCellDef="let element" class="font-mono font-semibold text-dark">{{ element.userDetails.mobile || "—" }}</td>
+      <ng-container matColumnDef="year">
+        <th mat-header-cell *matHeaderCellDef mat-sort-header>Year</th>
+        <td mat-cell *matCellDef="let element" class="text-sm text-dark">{{ element.establishYear || "—" }}</td>
       </ng-container>
 
       <ng-container matColumnDef="sentOn">
@@ -75,14 +59,9 @@
         <td mat-cell *matCellDef="let element" class="col-actions">
           <div class="action-cell">
             @if (element.status === 'PENDING') {
-              <div class="action-btn-group">
-                <button mat-stroked-button class="btn-labeled btn-reject" (click)="rejectRequest(element.committeeId, element.userDetails.userId)">
-                  <mat-icon>close</mat-icon> Reject
-                </button>
-                <button mat-stroked-button class="btn-labeled btn-approve" (click)="approveRequest(element.committeeId, element.userDetails.userId)">
-                  <mat-icon>check</mat-icon> Accept
-                </button>
-              </div>
+              <button mat-stroked-button class="btn-labeled btn-cancel" (click)="cancelRequest(element.committeeId, element.committeeName)">
+                <mat-icon>close</mat-icon> Cancel
+              </button>
             } @else {
               <span [ngClass]="'status-chip status-' + element.status.toLowerCase()">{{ element.status }}</span>
             }
@@ -91,7 +70,7 @@
       </ng-container>
 
       <tr mat-header-row *matHeaderRowDef="columns"></tr>
-      <tr mat-row *matRowDef="let row; columns: columns;" [ngClass]="{'row-accepted': row.status === 'ACCEPTED', 'row-rejected': row.status === 'REJECTED'}"></tr>
+      <tr mat-row *matRowDef="let row; columns: columns;"></tr>
     </table>
   } @else {
     <div class="empty-state-container">
