@@ -80,7 +80,7 @@
           <th mat-header-cell *matHeaderCellDef class="col-actions">Actions</th>
           <td mat-cell *matCellDef="let element" class="col-actions">
             <div class="action-cell">
-              @if (element.status === 'REQUESTED') {
+              @if (element.status === 'PENDING') {
                 <div class="action-btn-group">
                   <button mat-stroked-button class="btn-labeled btn-reject" (click)="rejectRequest(element.committeeId, element.userDetails.userId)">
                     <mat-icon>close</mat-icon> Reject

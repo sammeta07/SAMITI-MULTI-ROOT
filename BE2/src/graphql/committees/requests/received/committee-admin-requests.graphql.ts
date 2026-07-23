@@ -54,7 +54,7 @@ export const receivedCommitteeAdminRequestsResolvers = {
           SELECT 
             MAX(id) AS latest_id
           FROM committee_role_requests
-          WHERE status = 'REQUESTED'
+           WHERE status = 'PENDING'
             AND request_role = 'COMMITTEE_ADMIN'
           GROUP BY committee_id, requester_user_id
         )

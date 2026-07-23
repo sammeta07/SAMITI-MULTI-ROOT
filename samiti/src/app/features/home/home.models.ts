@@ -37,7 +37,7 @@ export interface CommitteeAuthItem extends CommitteeGuestItem {
   committeeRole: 'COMMITTEE_MEMBER' | 'COMMITTEE_ADMIN' | 'COMMITTEE_MASTER_ADMIN' | null;
   // null = no pending request; 'COMMITTEE_MEMBER' | 'COMMITTEE_ADMIN' = pending
   pendingRequestRole: 'COMMITTEE_MEMBER' | 'COMMITTEE_ADMIN' | null;
-  status: 'REQUESTED' | 'ACCEPTED' | 'REJECTED' | string | null;
+  status: 'PENDING' | 'ACCEPTED' | 'REJECTED' | string | null;
   isFavourite: number;
 }
 

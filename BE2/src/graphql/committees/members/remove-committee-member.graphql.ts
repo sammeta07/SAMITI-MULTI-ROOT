@@ -109,7 +109,7 @@ export const removeCommitteeMemberResolvers = {
       await execute(
         `UPDATE committee_role_requests
          SET status = 'REJECTED', action_by_user_id = ?, action_at = NOW()
-         WHERE committee_id = ? AND requester_user_id = ? AND status = 'REQUESTED'`,
+         WHERE committee_id = ? AND requester_user_id = ? AND status = 'PENDING'`,
         [loggedInUserId, committeeId, targetUserId]
       );
 
