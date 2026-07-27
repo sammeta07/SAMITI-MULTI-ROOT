@@ -22,7 +22,7 @@ import { ConfirmDialogData } from "../../../../../components/dialog/confirm/conf
     MatSortModule,
   ],
   templateUrl: "./committee-admin-requests.component.html",
-  styleUrls: ["../../dashboard-received-requests/dashboard-received-requests.scss"],
+  styleUrls: ["./committee-admin-requests.component.scss", "../../dashboard-received-requests/dashboard-received-requests.scss"],
 })
 export class CommitteeAdminRequestsComponent {
   private readonly service = inject(CommitteeAdminRequestsService);

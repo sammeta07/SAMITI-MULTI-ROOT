@@ -81,10 +81,11 @@ export const submitCommitteeMembershipRequestResolvers = {
         )
       );
 
-      // Check existing pending request for this role
-      const existingPendingRows = await query<any[]>(
-        `SELECT id FROM committee_role_requests
-         WHERE committee_id = ? AND requester_user_id = ? AND request_role = ? AND status = 'PENDING'
+      // Check latest request for this role
+      const existingRequestRows = await query<any[]>(
+        `SELECT status FROM committee_role_requests
+         WHERE committee_id = ? AND requester_user_id = ? AND request_role = ?
+         ORDER BY requested_at DESC
          LIMIT 1`,
         [committeeId, loggedInUserId, requestRole]
       );
@@ -120,7 +121,7 @@ export const submitCommitteeMembershipRequestResolvers = {
       }
 
       // Already has a pending request for this role
-      if (existingPendingRows.length > 0) {
+      if (existingRequestRows.length > 0 && String(existingRequestRows[0].status) === 'PENDING') {
         return {
           committeeId,
           requestedByUserId: loggedInUserId,

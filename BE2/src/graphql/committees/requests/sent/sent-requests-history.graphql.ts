@@ -28,6 +28,7 @@ export const sentRequestsHistoryTypes = `
 
 export const sentRequestsHistoryQueryFields = `
   sentRequestsHistory: SentRequestsHistoryResponse!
+  sentRequestsHistoryAll(userId: Int!, committeeId: Int!): SentRequestsHistoryResponse!
 `;
 
 async function resolveLoggedInUserIdFromGraphQLContext(context: any): Promise<number> {
@@ -60,6 +61,70 @@ export const sentRequestsHistoryResolvers = {
       const loggedInUserId = await resolveLoggedInUserIdFromGraphQLContext(context);
 
       const rows = await query<any[]>(
+        `WITH latest_requests AS (
+          SELECT 
+            MAX(id) AS latest_id
+          FROM committee_role_requests
+          WHERE requester_user_id = ?
+          GROUP BY committee_id, requester_user_id
+        )
+        SELECT
+            c.id                                            AS committee_id,
+            c.committee_name,
+            c.logo                                          AS committee_logo,
+            crr.requester_user_id,
+            requester_user.name                              AS requester_name,
+            requester_user.email                            AS requester_email,
+            requester_user.profile_photo                    AS requester_photo,
+            COALESCE(crr.action_by_user_id, crr.cancel_by_user_id) AS action_by_user_id,
+            crr.request_role                               AS request_type,
+            c.address,
+            c.establish_year,
+            crr.status,
+            DATE_FORMAT(crr.requested_at, '%Y-%m-%d %H:%i:%s') AS request_sent_time,
+            action_user.name                               AS resolved_by_name,
+            action_user.email                              AS resolved_by_email,
+            action_user.profile_photo                      AS resolved_by_photo,
+            DATE_FORMAT(COALESCE(crr.action_at, crr.cancel_at), '%Y-%m-%d %H:%i:%s') AS resolved_at_time
+         FROM committee_role_requests crr
+         INNER JOIN latest_requests lr ON lr.latest_id = crr.id
+         INNER JOIN committees c ON c.id = crr.committee_id
+         INNER JOIN users requester_user ON requester_user.id = crr.requester_user_id
+         LEFT JOIN users action_user ON action_user.id = COALESCE(crr.action_by_user_id, crr.cancel_by_user_id)
+         WHERE crr.requester_user_id = ?
+         ORDER BY crr.requested_at DESC`,
+         [loggedInUserId, loggedInUserId]
+      );
+
+      return {
+        data: rows.map((row: any) => ({
+          committeeId: Number(row.committee_id),
+          committeeName: row.committee_name,
+          committeeLogo: row.committee_logo || null,
+          requesterUserId: Number(row.requester_user_id),
+          requesterName: row.requester_name,
+          requesterEmail: row.requester_email || null,
+          requesterPhoto: row.requester_photo,
+          actionByUserId: row.action_by_user_id ? Number(row.action_by_user_id) : null,
+          requestType: row.request_type as 'COMMITTEE_MEMBER' | 'COMMITTEE_ADMIN',
+          address: row.address,
+          establishYear: row.establish_year ? Number(row.establish_year) : null,
+          status: String(row.status),
+          requestSentTime: row.request_sent_time,
+          resolvedByName: row.resolved_by_name,
+          resolvedByEmail: row.resolved_by_email,
+          resolvedByPhoto: row.resolved_by_photo,
+          resolvedAtTime: row.resolved_at_time
+        }))
+      };
+    },
+
+    async sentRequestsHistoryAll(_: any, args: { userId: number; committeeId: number }, context: any) {
+      const loggedInUserId = await resolveLoggedInUserIdFromGraphQLContext(context);
+      const targetUserId = Number(args.userId);
+      const targetCommitteeId = Number(args.committeeId);
+
+      const rows = await query<any[]>(
         `SELECT
             c.id                                            AS committee_id,
             c.committee_name,
@@ -83,8 +148,9 @@ export const sentRequestsHistoryResolvers = {
          INNER JOIN users requester_user ON requester_user.id = crr.requester_user_id
          LEFT JOIN users action_user ON action_user.id = COALESCE(crr.action_by_user_id, crr.cancel_by_user_id)
          WHERE crr.requester_user_id = ?
+           AND crr.committee_id = ?
          ORDER BY crr.requested_at DESC`,
-        [loggedInUserId]
+         [targetUserId, targetCommitteeId]
       );
 
       return {

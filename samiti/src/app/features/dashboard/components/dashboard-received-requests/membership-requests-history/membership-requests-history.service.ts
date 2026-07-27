@@ -99,4 +99,49 @@ export class MembershipRequestsHistoryService {
       })
     );
   }
+
+  getReceivedRequestsHistoryByUserId(userId: number, committeeId: number): Observable<CommitteeMembershipRequestHistoryItem[]> {
+    const query = `query ReceivedRequestsHistoryByUserId($userId: Int!, $committeeId: Int!) {
+      receivedRequestsHistoryByUserId(userId: $userId, committeeId: $committeeId) {
+        data {
+          committeeId
+          committeeName
+          committeeLogo
+          address
+          actionByUserId
+          resolvedByName
+          resolvedByPhoto
+          requestRole
+          requestSentTime
+          resolvedAtTime
+          status
+          committeeRole
+          userDetails {
+            userId
+            name
+            email
+            mobile
+            dateOfBirth
+            gender
+            photo
+          }
+        }
+      }
+    }`;
+
+    return this.http.post<GraphQLResponseEnvelope<{ receivedRequestsHistoryByUserId: { data: CommitteeMembershipRequestHistoryItem[] } }>>(this.graphqlUrl, { query, variables: { userId, committeeId } }).pipe(
+      map((response) => {
+        return this.unwrapDataArray(
+          {
+            data: response.data?.receivedRequestsHistoryByUserId,
+            errors: response.errors
+          },
+          'Failed to fetch user requests history'
+        ).map((item) => ({
+          ...item,
+          committeeLogo: sanitizeCloudinaryLogoUrl(item.committeeLogo)
+        }));
+      })
+    );
+  }
 }

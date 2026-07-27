@@ -1,77 +1,63 @@
-<div class="table-responsive">
-  @if (requests().length > 0) {
-    <table mat-table matSort [dataSource]="sortedRequests()" (matSortChange)="sort.set($event)" class="modern-table">
-      <ng-container matColumnDef="index">
-        <th mat-header-cell *matHeaderCellDef class="col-index">#</th>
-        <td mat-cell *matCellDef="let element; let i = index" class="col-index font-medium">{{ i + 1 }}</td>
-      </ng-container>
-
-      <ng-container matColumnDef="committee">
-         <th mat-header-cell *matHeaderCellDef mat-sort-header>Group Name</th>
-        <td mat-cell *matCellDef="let element">
-          <div class="table-person-cell">
-            @if (element.committeeLogo) {
-              <span class="table-avatar table-avatar--photo"><img [src]="element.committeeLogo" [alt]="element.committeeName" (error)="element.committeeLogo = null"></span>
-            } @else {
-              <span class="table-avatar table-avatar--committee">{{ (element.committeeName || '?').charAt(0).toUpperCase() }}</span>
-            }
-            <div class="committee-info">
-              <span class="committee-name">{{ element.committeeName }}</span>
-              @if (element.address) {
-                <span class="committee-address">{{ element.address }}</span>
+<div class="cards-container">
+  @if (sortedRequests().length > 0) {
+    @for (request of sortedRequests(); track request.committeeId) {
+      <div class="request-card">
+        <div class="request-card-header">
+          <div class="request-card-committee">
+            <span class="table-avatar table-avatar--photo">
+              @if (request.committeeLogo) {
+                <img [src]="request.committeeLogo" [alt]="request.committeeName" (error)="request.committeeLogo = null">
+              } @else {
+                <span class="avatar-fallback">{{ getInitials(request.committeeName) }}</span>
               }
+            </span>
+            <div class="committee-info">
+              <span class="committee-name">{{ request.committeeName }}</span>
+              <span class="committee-address">{{ request.address }}</span>
             </div>
           </div>
-        </td>
-      </ng-container>
+          <span [ngClass]="'status-chip status-' + request.status.toLowerCase()">{{ request.status }}</span>
+        </div>
 
-      <ng-container matColumnDef="year">
-        <th mat-header-cell *matHeaderCellDef mat-sort-header>Year</th>
-        <td mat-cell *matCellDef="let element" class="text-sm text-dark">{{ element.establishYear || "—" }}</td>
-      </ng-container>
-
-      <ng-container matColumnDef="sentOn">
-        <th mat-header-cell *matHeaderCellDef mat-sort-header>Requested On</th>
-        <td mat-cell *matCellDef="let element" class="text-muted text-sm">{{ element.requestSentTime | date: "d MMM y, h:mm a" }}</td>
-      </ng-container>
-
-      <ng-container matColumnDef="resolvedOn">
-        <th mat-header-cell *matHeaderCellDef mat-sort-header>Resolved On</th>
-        <td mat-cell *matCellDef="let element" class="text-sm text-dark">{{ element.resolvedAtTime ? (element.resolvedAtTime | date: "d MMM y, h:mm a") : "—" }}</td>
-      </ng-container>
-
-      <ng-container matColumnDef="resolvedBy">
-        <th mat-header-cell *matHeaderCellDef mat-sort-header>Resolved By</th>
-        <td mat-cell *matCellDef="let element">
-          <div *ngIf="element.resolvedByName" class="table-person-cell">
-            <span *ngIf="element.resolvedByPhoto" class="table-avatar table-avatar--photo">
-              <img [src]="element.resolvedByPhoto" [alt]="element.resolvedByName">
-            </span>
-            <span *ngIf="!element.resolvedByPhoto" class="table-avatar table-avatar--photo table-avatar--fallback">{{ getInitials(element.resolvedByName) }}</span>
-            <span class="text-dark resolved-by-name">{{ element.resolvedByName | titlecase }}</span>
+        <div class="request-card-body">
+          <div class="request-card-meta">
+            <div class="meta-item">
+              <span class="meta-label">Est. Year</span>
+              <span class="meta-value text-sm text-dark">{{ request.establishYear || "—" }}</span>
+            </div>
+            <div class="meta-item">
+              <span class="meta-label">Requested On</span>
+              <span class="meta-value text-muted text-sm">{{ request.requestSentTime | date: "d MMM y, h:mm a" }}</span>
+            </div>
+            <div class="meta-item">
+              <span class="meta-label">Resolved On</span>
+              <span class="meta-value text-sm text-dark">{{ request.resolvedAtTime ? (request.resolvedAtTime | date: "d MMM y, h:mm a") : "—" }}</span>
+            </div>
           </div>
-          <span *ngIf="!element.resolvedByName" class="text-muted">—</span>
-        </td>
-      </ng-container>
 
-      <ng-container matColumnDef="actions">
-        <th mat-header-cell *matHeaderCellDef class="col-actions">Actions</th>
-        <td mat-cell *matCellDef="let element" class="col-actions">
-          <div class="action-cell">
-            @if (element.status === 'PENDING') {
-              <button mat-stroked-button class="btn-labeled btn-cancel" (click)="cancelRequest(element.committeeId, element.committeeName)">
-                <mat-icon>close</mat-icon> Cancel
-              </button>
-            } @else {
-              <span [ngClass]="'status-chip status-' + element.status.toLowerCase()">{{ element.status }}</span>
-            }
+          @if (request.resolvedByName) {
+            <div class="request-card-resolved">
+              <span class="meta-label">Resolved By</span>
+              <div class="table-person-cell">
+                <span *ngIf="request.resolvedByPhoto" class="table-avatar table-avatar--photo">
+                  <img [src]="request.resolvedByPhoto" [alt]="request.resolvedByName">
+                </span>
+                <span *ngIf="!request.resolvedByPhoto" class="table-avatar table-avatar--photo table-avatar--fallback">{{ getInitials(request.resolvedByName) }}</span>
+                <span class="text-dark resolved-by-name">{{ request.resolvedByName | titlecase }}</span>
+              </div>
+            </div>
+          }
+        </div>
+
+        @if (request.status === 'PENDING') {
+          <div class="request-card-actions">
+            <button mat-stroked-button class="btn-labeled btn-cancel" (click)="cancelRequest(request.committeeId, request.committeeName)">
+              <mat-icon>close</mat-icon> Cancel
+            </button>
           </div>
-        </td>
-      </ng-container>
-
-      <tr mat-header-row *matHeaderRowDef="columns"></tr>
-      <tr mat-row *matRowDef="let row; columns: columns;"></tr>
-    </table>
+        }
+      </div>
+    }
   } @else {
     <div class="empty-state-container">
       <div class="empty-icon-wrapper"><mat-icon class="empty-icon">admin_panel_settings</mat-icon></div>

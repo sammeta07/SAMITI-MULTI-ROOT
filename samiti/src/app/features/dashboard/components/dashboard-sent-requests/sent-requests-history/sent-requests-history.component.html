@@ -1,59 +1,96 @@
 <div class="table-responsive">
   @if (history().length > 0) {
-    <table mat-table matSort [dataSource]="sortedHistory()" (matSortChange)="sort.set($event)" class="modern-table">
-      <ng-container matColumnDef="index">
-        <th mat-header-cell *matHeaderCellDef class="col-index">#</th>
-        <td mat-cell *matCellDef="let element; let i = index" class="col-index font-medium">{{ i + 1 }}</td>
-      </ng-container>
-
-      <ng-container matColumnDef="committee">
-         <th mat-header-cell *matHeaderCellDef mat-sort-header>Group Name</th>
-        <td mat-cell *matCellDef="let element">
-          <div class="table-person-cell">
-            @if (element.committeeLogo) {
-              <span class="table-avatar table-avatar--photo"><img [src]="element.committeeLogo" [alt]="element.committeeName" (error)="element.committeeLogo = null"></span>
-            } @else {
-              <span class="table-avatar table-avatar--committee">{{ (element.committeeName || '?').charAt(0).toUpperCase() }}</span>
-            }
-            <div class="committee-info">
-              <span class="committee-name">{{ element.committeeName }}</span>
-              @if (element.address) {
-                <span class="committee-address">{{ element.address }}</span>
-              }
-            </div>
-          </div>
-        </td>
-      </ng-container>
-
-      <ng-container matColumnDef="year">
-        <th mat-header-cell *matHeaderCellDef mat-sort-header>Year</th>
-        <td mat-cell *matCellDef="let element" class="text-sm text-dark">{{ element.establishYear || "—" }}</td>
-      </ng-container>
-
-      <ng-container matColumnDef="type">
-        <th mat-header-cell *matHeaderCellDef mat-sort-header>Request Type</th>
-        <td mat-cell *matCellDef="let element" class="text-sm text-dark">{{ element.requestType }}</td>
-      </ng-container>
-
-      <ng-container matColumnDef="sentOn">
-        <th mat-header-cell *matHeaderCellDef mat-sort-header>Requested On</th>
-        <td mat-cell *matCellDef="let element" class="text-muted text-sm">{{ element.requestSentTime | date: "d MMM y, h:mm a" }}</td>
-      </ng-container>
-
-      <ng-container matColumnDef="resolvedOn">
-        <th mat-header-cell *matHeaderCellDef mat-sort-header>Resolved On</th>
-        <td mat-cell *matCellDef="let element" class="text-sm text-dark">{{ element.resolvedAtTime ? (element.resolvedAtTime | date: "d MMM y, h:mm a") : "—" }}</td>
-      </ng-container>
-
-      <ng-container matColumnDef="status">
-        <th mat-header-cell *matHeaderCellDef mat-sort-header>Status</th>
-        <td mat-cell *matCellDef="let element">
-          <span [ngClass]="'status-chip status-' + element.status.toLowerCase()">{{ element.status }}</span>
-        </td>
-      </ng-container>
-
-      <tr mat-header-row *matHeaderRowDef="columns"></tr>
-      <tr mat-row *matRowDef="let row; columns: columns;"></tr>
+    <table class="modern-table">
+      <thead>
+        <tr>
+          <th class="col-index">#</th>
+          <th (click)="setSort('committee')" class="sortable-th">Group Name</th>
+          <th (click)="setSort('year')" class="sortable-th">Year</th>
+          <th (click)="setSort('type')" class="sortable-th">Request Type</th>
+          <th (click)="setSort('sentOn')" class="sortable-th">Requested On</th>
+          <th (click)="setSort('resolvedOn')" class="sortable-th">Resolved On</th>
+          <th (click)="setSort('status')" class="sortable-th">Status</th>
+          <th class="col-expand"></th>
+        </tr>
+      </thead>
+      <tbody>
+        @for (item of sortedHistory(); track $index) {
+          <tr class="expanded-main-row" [class.expanded-main-row--active]="isExpanded($index)" (click)="toggleExpand($index)">
+            <td class="col-index font-medium">{{ $index + 1 }}</td>
+            <td>
+              <div class="table-person-cell">
+                @if (item.committeeLogo) {
+                  <span class="table-avatar table-avatar--photo"><img [src]="item.committeeLogo" [alt]="item.committeeName" (error)="item.committeeLogo = null"></span>
+                } @else {
+                  <span class="table-avatar table-avatar--committee">{{ (item.committeeName || '?').charAt(0).toUpperCase() }}</span>
+                }
+                <div class="committee-info">
+                  <span class="committee-name">{{ item.committeeName }}</span>
+                  @if (item.address) {
+                    <span class="committee-address">{{ item.address }}</span>
+                  }
+                </div>
+              </div>
+            </td>
+            <td class="text-sm text-dark">{{ item.establishYear || "—" }}</td>
+            <td class="text-sm text-dark">{{ item.requestType }}</td>
+            <td class="text-muted text-sm">{{ item.requestSentTime | date: "d MMM y, h:mm a" }}</td>
+            <td class="text-sm text-dark">{{ item.resolvedAtTime ? (item.resolvedAtTime | date: "d MMM y, h:mm a") : "—" }}</td>
+            <td><span [ngClass]="'status-chip status-' + item.status.toLowerCase()">{{ item.status }}</span></td>
+            <td class="col-expand">
+              <button class="expand-btn" type="button" (click)="toggleExpand($index); $event.stopPropagation()" aria-label="Toggle details">
+                <mat-icon [class.expand-icon--open]="isExpanded($index)">expand_more</mat-icon>
+              </button>
+            </td>
+          </tr>
+          @if (isExpanded($index)) {
+            <tr class="expanded-detail-row">
+              <td [attr.colspan]="8">
+                @if (getExpandedState(item.requesterUserId, item.committeeId).loading) {
+                  <div class="history-detail-container">
+                    <div class="history-expanded-loading">
+                      <mat-spinner diameter="24"></mat-spinner>
+                      <span>Loading history...</span>
+                    </div>
+                  </div>
+                } @else if (getExpandedState(item.requesterUserId, item.committeeId).history.length > 0) {
+                  <div class="history-detail-container">
+                    <h5 class="history-detail-title">Request History</h5>
+                    <table class="history-expanded-table">
+                      <thead>
+                        <tr>
+                          <th>Group Name</th>
+                          <th>Request Type</th>
+                          <th>Requested On</th>
+                          <th>Resolved On</th>
+                          <th>Status</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        @for (historyItem of getExpandedState(item.requesterUserId, item.committeeId).history; track historyItem.requestSentTime) {
+                          <tr>
+                            <td class="text-sm text-dark">{{ historyItem.committeeName }}</td>
+                            <td class="text-sm text-dark">{{ historyItem.requestType }}</td>
+                            <td class="text-muted text-sm">{{ historyItem.requestSentTime | date: "d MMM y, h:mm a" }}</td>
+                            <td class="text-sm text-dark">{{ historyItem.resolvedAtTime ? (historyItem.resolvedAtTime | date: "d MMM y, h:mm a") : "—" }}</td>
+                            <td><span [ngClass]="'status-chip status-' + historyItem.status.toLowerCase()">{{ historyItem.status }}</span></td>
+                          </tr>
+                        }
+                      </tbody>
+                    </table>
+                  </div>
+                } @else {
+                  <div class="history-detail-container">
+                    <div class="history-empty-state">
+                      <span>No history found</span>
+                    </div>
+                  </div>
+                }
+              </td>
+            </tr>
+          }
+        }
+      </tbody>
     </table>
   } @else {
     <div class="empty-state-container">

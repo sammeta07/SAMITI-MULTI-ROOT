@@ -2,7 +2,8 @@ import { Component, inject, signal, OnInit } from "@angular/core";
 import { CommonModule } from "@angular/common";
 import { MatIconModule } from "@angular/material/icon";
 import { RouterModule, RouterOutlet } from "@angular/router";
-import { Router, ActivatedRoute } from "@angular/router";
+import { Router, ActivatedRoute, NavigationEnd } from "@angular/router";
+import { filter } from "rxjs/operators";
 
 @Component({
   selector: "app-dashboard-received-requests",
@@ -29,13 +30,33 @@ export class DashboardReceivedRequestsComponent implements OnInit {
   ];
 
   ngOnInit(): void {
-    this.route.url.subscribe((segments) => {
-      const path = segments[0]?.path || '';
-      const index = this.tabRoutes.indexOf(path);
-      if (index >= 0) {
-        this.selectedTab.set(index);
-      }
+    this.syncTabFromUrl();
+
+    this.router.events.pipe(
+      filter(event => event instanceof NavigationEnd)
+    ).subscribe(() => {
+      this.syncTabFromUrl();
     });
+  }
+
+  private syncTabFromUrl(): void {
+    const root = this.route.root;
+    let current: ActivatedRoute | null = root;
+    while (current) {
+      if (current.firstChild) {
+        current = current.firstChild;
+      } else {
+        break;
+      }
+    }
+
+    const path = current?.snapshot.url.map(s => s.path).join('/') || '';
+    const segments = current?.snapshot.url || [];
+    const segmentPath = segments[0]?.path || '';
+    const index = this.tabRoutes.indexOf(segmentPath);
+    if (index >= 0) {
+      this.selectedTab.set(index);
+    }
   }
 
   onTabClick(index: number): void {

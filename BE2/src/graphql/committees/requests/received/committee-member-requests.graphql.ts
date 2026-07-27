@@ -54,9 +54,8 @@ export const receivedCommitteeMemberRequestsResolvers = {
           SELECT 
             MAX(id) AS latest_id
           FROM committee_role_requests
-           WHERE status = 'PENDING'
-            AND request_role = 'COMMITTEE_MEMBER'
-          GROUP BY committee_id, requester_user_id
+          WHERE request_role = 'COMMITTEE_MEMBER'
+          GROUP BY committee_id, requester_user_id, request_role
         )
         SELECT
             c.id                                            AS committee_id,
@@ -91,6 +90,7 @@ export const receivedCommitteeMemberRequestsResolvers = {
             ON requester_uc.committee_id = crr.committee_id
             AND requester_uc.user_id = crr.requester_user_id
          WHERE crr.requester_user_id <> ?
+           AND crr.status = 'PENDING'
          ORDER BY crr.requested_at DESC`,
         [loggedInUserId, loggedInUserId]
       );

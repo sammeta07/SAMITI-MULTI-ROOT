@@ -89,4 +89,45 @@ export class SentRequestsHistoryService {
       })
     );
   }
+
+  getSentRequestsHistoryAll(userId: number, committeeId: number): Observable<SentRequestsHistoryItem[]> {
+    const query = `query SentRequestsHistoryAll($userId: Int!, $committeeId: Int!) {
+      sentRequestsHistoryAll(userId: $userId, committeeId: $committeeId) {
+        data {
+          committeeId
+          committeeName
+          committeeLogo
+          requesterUserId
+          requesterName
+          requesterEmail
+          requesterPhoto
+          actionByUserId
+          requestType
+          address
+          establishYear
+          status
+          requestSentTime
+          resolvedByName
+          resolvedByEmail
+          resolvedByPhoto
+          resolvedAtTime
+        }
+      }
+    }`;
+
+    return this.http.post<GraphQLResponseEnvelope<{ sentRequestsHistoryAll: { data: SentRequestsHistoryItem[] } }>>(this.graphqlUrl, { query, variables: { userId, committeeId } }).pipe(
+      map((response) => {
+        return this.unwrapDataArray(
+          {
+            data: response.data?.sentRequestsHistoryAll,
+            errors: response.errors
+          },
+          'Failed to fetch all sent requests history'
+        ).map((item) => ({
+          ...item,
+          committeeLogo: sanitizeCloudinaryLogoUrl(item.committeeLogo)
+        }));
+      })
+    );
+  }
 }
