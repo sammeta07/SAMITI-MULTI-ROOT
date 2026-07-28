@@ -101,4 +101,5 @@ export interface EventDetailsPayload {
   committeeMemberCount: number;
   committeeAdminCount: number;
   votingPhaseState: number;
+  votingMode?: 'VOTING' | 'DIRECT_ASSIGN';
 }

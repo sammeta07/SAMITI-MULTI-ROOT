@@ -1,0 +1,5 @@
+SET @col_exists = (SELECT COUNT(*) FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'events' AND COLUMN_NAME = 'voting_mode');
+SET @sql = IF(@col_exists = 0, 'ALTER TABLE events ADD COLUMN voting_mode ENUM(''VOTING'', ''DIRECT_ASSIGN'') NOT NULL DEFAULT ''VOTING'' AFTER voting_phase_state', 'SELECT 1');
+PREPARE stmt FROM @sql;
+EXECUTE stmt;
+DEALLOCATE PREPARE stmt;

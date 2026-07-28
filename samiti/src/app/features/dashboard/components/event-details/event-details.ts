@@ -89,6 +89,8 @@ export class EventDetailsComponent implements OnInit {
   public readonly openReassignForRoleId = signal<number | null>(null);
   public readonly reassignApprovedList = signal<Array<{ userId: number; name: string; email: string; photo?: string | null }>>([]);
   public readonly myVotes = signal<Record<number, number>>({});
+  public readonly votingMode = signal<'VOTING' | 'DIRECT_ASSIGN' | null>(null);
+  public readonly isUpdatingVotingMode = signal<boolean>(false);
 
   public readonly MAX_BANNERS = 5;
 
@@ -98,6 +100,14 @@ export class EventDetailsComponent implements OnInit {
 
   public get canManageVotingRoles(): boolean {
     return this.eventData()?.canManageVotingRoles ?? false;
+  }
+
+  public get isVotingMode(): boolean {
+    return this.votingMode() === 'VOTING';
+  }
+
+  public get currentVotingMode(): 'VOTING' | 'DIRECT_ASSIGN' | null {
+    return this.votingMode();
   }
 
   public get isVotingRolesLocked(): boolean {
@@ -716,6 +726,7 @@ export class EventDetailsComponent implements OnInit {
     this.eventDetailsService.getEventDetails(id).subscribe({
       next: (data: EventDetailsPayload) => {
         this.eventData.set(data ?? null);
+        this.votingMode.set((data?.votingMode as 'VOTING' | 'DIRECT_ASSIGN' | undefined) || 'VOTING');
         this.populateEventPeople(data ?? null);
         this.selectedVotingRoleIds.set(
           (data?.mappedVotingRoles || [])
@@ -1529,6 +1540,26 @@ export class EventDetailsComponent implements OnInit {
         this.eventData.update((prev) => (prev ? { ...prev, visibility: previousVisibility } : prev));
         this.notifier.error(err?.error?.message || 'Failed to update event visibility.');
         this.isVisibilityUpdating.set(false);
+      }
+    });
+  }
+
+  public onVotingModeChange(mode: 'VOTING' | 'DIRECT_ASSIGN'): void {
+    const currentEvent = this.eventData();
+    if (!currentEvent?.eventId || !mode) {
+      return;
+    }
+
+    this.isUpdatingVotingMode.set(true);
+    this.eventDetailsService.updateEventVotingMode(currentEvent.eventId, mode).subscribe({
+      next: () => {
+        this.votingMode.set(mode);
+        this.notifier.success(`Mode changed to ${mode === 'VOTING' ? 'Voting' : 'Direct Assign'} successfully.`);
+        this.isUpdatingVotingMode.set(false);
+      },
+      error: (err: HttpErrorResponse) => {
+        this.notifier.error(err?.error?.message || 'Failed to update voting mode.');
+        this.isUpdatingVotingMode.set(false);
       }
     });
   }

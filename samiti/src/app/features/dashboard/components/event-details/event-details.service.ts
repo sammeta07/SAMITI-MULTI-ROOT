@@ -23,6 +23,11 @@ export interface UpdatedEventVisibilityPayload {
   updatedBy: number;
 }
 
+export interface UpdateEventVotingModePayload {
+  eventId: number;
+  votingMode: string;
+}
+
 export interface ToggleEventVotingRolePayload {
   eventId: number;
   roleId: number;
@@ -278,6 +283,7 @@ export class EventDetailsService {
         committeeMemberCount
         committeeAdminCount
         votingPhaseState
+        votingMode
       }
     }`;
 
@@ -820,6 +826,23 @@ export class EventDetailsService {
       { withCredentials: true }
     ).pipe(
       map((res) => res.data.eventResults)
+    );
+  }
+
+  public updateEventVotingMode(eventId: number, mode: 'VOTING' | 'DIRECT_ASSIGN'): Observable<UpdateEventVotingModePayload> {
+    const mutation = `mutation UpdateEventVotingMode($eventId: Int!, $mode: String!) {
+      updateEventVotingMode(eventId: $eventId, mode: $mode) {
+        eventId
+        votingMode
+      }
+    }`;
+
+    return this.http.post<{ data: { updateEventVotingMode: UpdateEventVotingModePayload } }>(
+      this.graphqlUrl,
+      { query: mutation, variables: { eventId, mode } },
+      { withCredentials: true }
+    ).pipe(
+      map((res) => res.data.updateEventVotingMode)
     );
   }
 }

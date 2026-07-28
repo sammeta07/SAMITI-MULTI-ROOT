@@ -9,8 +9,9 @@
     </div>
     } @else if (eventData()) {
   
-    <div class="workspace-body scrollable-container">
-      <mat-tab-group class="event-details-tabs" animationDuration="200ms">
+     <div class="workspace-body scrollable-container">
+      <div class="tabs-header-wrapper">
+        <mat-tab-group class="event-details-tabs" animationDuration="200ms">
         <mat-tab>
           <ng-template mat-tab-label>
             <mat-icon class="event-tab-icon">how_to_vote</mat-icon>
@@ -67,10 +68,11 @@
                   <div class="header-title-left">
                     <mat-icon class="icon-accent-designation">badge</mat-icon>
                     <span class="title-text">Selected Designations</span>
-                    <span class="count-pill">{{ votingDisplayCards.length || 0 }}</span>
-                  </div>
+                     <span class="count-pill">{{ votingDisplayCards.length || 0 }}</span>
+                   </div>
 
-                 <div class="header-actions-right">
+                    @if (isVotingMode) {
+                    <div class="header-actions-right">
                  <div class="voting-controls-actions-row voting-controls-header-actions">
                    @if (isMasterAdmin) {
                    <button mat-stroked-button class="action-btn allow-voting-btn voting-phase-btn"
@@ -109,9 +111,11 @@
                      <mat-icon>emoji_events</mat-icon>
                      <span>Declare Results 6</span>
                    </button>
-                   }
-                  </div>
-                  <span class="voting-phase-status-pill" [class]="'voting-phase-status-' + votingPhaseState">
+                    }
+                   </div>
+                 </div>
+
+                   <span class="voting-phase-status-pill" [class]="'voting-phase-status-' + votingPhaseState">
                     <mat-icon>{{ votingPhaseIcon }}</mat-icon>
                     <span class="voting-phase-status-text">{{ votingPhaseLabel || 'Not Started' }}</span>
                   </span>
@@ -120,20 +124,21 @@
                      <mat-icon>history</mat-icon>
                      <span>History</span>
                    </button>
-                   }
-                </div>
-                </div>
+                    }
+                 }
+               </div>
 
-                @if (!isStartVotingEnabled && startVotingDisabledReason) {
-                <div class="voting-disabled-hint-wrapper">
-                  <div class="voting-disabled-hint">
-                    <mat-icon>info</mat-icon>
-                    <span>{{ startVotingDisabledReason }}</span>
-                  </div>
-                </div>
-                }
+                @if (isVotingMode) {
+                 @if (!isStartVotingEnabled && startVotingDisabledReason) {
+                 <div class="voting-disabled-hint-wrapper">
+                   <div class="voting-disabled-hint">
+                     <mat-icon>info</mat-icon>
+                     <span>{{ startVotingDisabledReason }}</span>
+                   </div>
+                 </div>
+                 }
 
-              <section class="voting-nomination-shell">
+                <section class="voting-nomination-shell">
                 <div class="voting-nomination-grid" [class]="'voting-nomination-grid ' + votingGridLayoutClass">
                   @for (card of votingDisplayCards; track card.slot) {
                   <mat-card class="voting-nomination-card">
@@ -393,9 +398,10 @@
                      <span>No voting roles mapped for this event yet.</span>
                    </div>
                    }
-                </div>
-              </section>
-            </section>
+                 </div>
+               </section>
+             }
+             </section>
           </div>
         </mat-tab>
 
@@ -655,9 +661,20 @@
           </div>
         </mat-tab>
   
-      </mat-tab-group>
-  
-      <input
+       </mat-tab-group>
+       
+          @if (isMasterAdmin) {
+          <div class="mode-selector-row">
+            <span class="mode-label">Mode</span>
+            <mat-select [value]="currentVotingMode" (selectionChange)="onVotingModeChange($event.value)" class="mode-select" appearance="outline" hideRequiredMarker>
+              <mat-option value="VOTING">Voting</mat-option>
+              <mat-option value="DIRECT_ASSIGN">Direct Assign</mat-option>
+            </mat-select>
+          </div>
+          }
+       </div>
+   
+       <input
         #bannerFileInput
         type="file"
         accept="image/*"

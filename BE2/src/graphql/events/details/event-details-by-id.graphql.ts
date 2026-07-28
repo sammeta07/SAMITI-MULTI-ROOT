@@ -2,6 +2,7 @@ import { query } from '../../../config/db';
 import { RowDataPacket } from 'mysql2/promise';
 import { hasEventsDisplayNameColumn } from './event-display-name-support';
 import { hasEventsVotingPhaseStateColumn } from '../voting/event-voting-phase-support';
+import { hasEventsVotingModeColumn } from '../voting/event-voting-mode-support';
 import { getEventVotingPhaseState, getMappedVotingRoles, throwEventError, getLoggedInUserId } from '../voting/event-voting.graphql';
 import { getEventInterestApprovedPeople, getMyEventInterestRoleIds, getMyEventInterestStatuses } from '../voting/event-interest.graphql';
 
@@ -184,6 +185,7 @@ export const eventDetailsTypes = `
     committeeMemberCount: Int!
     committeeAdminCount: Int!
     votingPhaseState: Int!
+    votingMode: String
   }
 `;
 
@@ -202,6 +204,7 @@ export const eventDetailsResolvers = {
       const loggedInUserId = await getLoggedInUserId(context);
       const supportsEventDisplayName = await hasEventsDisplayNameColumn();
       const supportsVotingPhaseState = await hasEventsVotingPhaseStateColumn();
+      const supportsVotingMode = await hasEventsVotingModeColumn();
 
       const eventResult = await query<any[]>(`
         SELECT
@@ -223,8 +226,9 @@ export const eventDetailsResolvers = {
           e.created_by AS createdBy,
           e.updated_by AS updatedBy,
           e.created_at AS createdAt
-          ${supportsVotingPhaseState ? ', COALESCE(e.voting_phase_state, 0) AS votingPhaseState' : ', 0 AS votingPhaseState'}
-        FROM events e
+           ${supportsVotingPhaseState ? ', COALESCE(e.voting_phase_state, 0) AS votingPhaseState' : ', 0 AS votingPhaseState'}
+           ${supportsVotingMode ? ', e.voting_mode AS votingMode' : ", 'VOTING' AS votingMode"}
+         FROM events e
         LEFT JOIN committees c ON c.id = e.committee_id
         WHERE e.id = ?
         LIMIT 1
@@ -418,7 +422,8 @@ export const eventDetailsResolvers = {
         currentCommitteeRole,
         committeeMemberCount,
         committeeAdminCount,
-        votingPhaseState: getEventVotingPhaseState(event, supportsVotingPhaseState)
+        votingPhaseState: getEventVotingPhaseState(event, supportsVotingPhaseState),
+        votingMode: supportsVotingMode ? event?.votingMode || 'VOTING' : 'VOTING'
       };
     }
   }
