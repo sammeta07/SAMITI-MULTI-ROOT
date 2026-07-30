@@ -1,0 +1,42 @@
+<div class="programs-tab-content">
+  <section class="horizontal-full-card programs-section-style">
+    <div class="panel-card-header">
+      <div class="header-title-left">
+        <mat-icon class="icon-accent-program">event_note</mat-icon>
+        <span class="title-text">Programs</span>
+        <span class="count-pill">{{ programsCount }}</span>
+      </div>
+      <button mat-stroked-button class="action-btn create-program-btn" (click)="onCreateProgram()">
+        <mat-icon>add</mat-icon>Program
+      </button>
+    </div>
+    <div class="horizontal-list-container">
+      @for (program of eventData!.programs; track program.programId) {
+      <article class="event-program-row" (click)="onOpenProgram(program.programId)">
+        <div class="program-row-left">
+          @if (program.programBanner) {
+          <img [src]="program.programBanner" [alt]="program.programName" class="program-row-banner" />
+          } @else {
+          <div class="program-row-banner-fallback">{{ program.programName.charAt(0).toUpperCase() }}</div>
+          }
+          <div class="program-row-info">
+            <div class="main-title">{{ program.programName }}</div>
+            <div class="secondary-sub-lbl">
+              {{ program.startDate ? (program.startDate | date:'dd MMM yyyy') : 'Date TBD' }}
+            </div>
+          </div>
+        </div>
+        <div class="program-row-right">
+          <span class="status-tag tag-{{ program.status.toLowerCase() }}">{{ program.status }}</span>
+          <button mat-icon-button class="circle-btn view-btn" type="button" title="Open program"
+                  (click)="onOpenProgram(program.programId); $event.stopPropagation()">
+            <mat-icon>open_in_new</mat-icon>
+          </button>
+        </div>
+      </article>
+      } @empty {
+      <div class="mini-empty-state">No programs available</div>
+      }
+    </div>
+  </section>
+</div>

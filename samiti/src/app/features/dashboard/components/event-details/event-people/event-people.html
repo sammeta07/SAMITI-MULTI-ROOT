@@ -1,0 +1,69 @@
+<div class="people-tab-content">
+  <main class="dashboard-split-grid">
+    <section class="mesh-card admins-card-style">
+      <div class="panel-card-header admins-header-bg">
+        <div class="header-title-left">
+          <mat-icon class="icon-accent-admin">admin_panel_settings</mat-icon>
+          <span class="title-text">Admins</span>
+          <span class="count-pill">{{ eventAdmins.length }}</span>
+        </div>
+      </div>
+      <div class="mesh-list-scroll-box">
+        @for (admin of eventAdmins; track admin.id) {
+        <div class="item-density-row">
+          <div class="row-avatar circle-shape admin-bg">
+            @if (admin.photo) {
+            <img [src]="admin.photo" [alt]="admin.name | titlecase" class="avatar-img" (error)="admin.photo = null" />
+            } @else {
+            {{ admin.name.charAt(0).toUpperCase() }}
+            }
+          </div>
+          <div class="row-info-core">
+            <div class="main-title">{{ admin.name | titlecase }}</div>
+            <div class="secondary-sub-lbl">{{ admin.email }}</div>
+          </div>
+          <div class="row-action-deck">
+            <button mat-icon-button class="circle-btn view-btn" title="View"><mat-icon>visibility</mat-icon></button>
+            <button mat-icon-button class="circle-btn delete-btn" title="Remove"><mat-icon>person_remove</mat-icon></button>
+          </div>
+        </div>
+        } @empty {
+        <div class="mini-empty-state">No administrators</div>
+        }
+      </div>
+    </section>
+
+    <section class="mesh-card members-card-style">
+      <div class="panel-card-header members-header-bg">
+        <div class="header-title-left">
+          <mat-icon class="icon-accent-member">group</mat-icon>
+          <span class="title-text">Members</span>
+          <span class="count-pill">{{ eventMembers.length }}</span>
+        </div>
+      </div>
+      <div class="mesh-list-scroll-box">
+        @for (member of eventMembers; track member.id) {
+        <div class="item-density-row">
+          <div class="row-avatar circle-shape member-bg">
+            @if (member.photo) {
+            <img [src]="member.photo" [alt]="member.name | titlecase" class="avatar-img" (error)="member.photo = null" />
+            } @else {
+            {{ member.name.charAt(0).toUpperCase() }}
+            }
+          </div>
+          <div class="row-info-core">
+            <div class="main-title">{{ member.name }}</div>
+            <div class="secondary-sub-lbl">{{ member.email }}</div>
+          </div>
+          <div class="row-action-deck">
+            <button mat-icon-button class="circle-btn view-btn" title="View"><mat-icon>visibility</mat-icon></button>
+            <button mat-icon-button class="circle-btn delete-btn" title="Remove"><mat-icon>person_remove</mat-icon></button>
+          </div>
+        </div>
+        } @empty {
+        <div class="mini-empty-state">No members</div>
+        }
+      </div>
+    </section>
+  </main>
+</div>

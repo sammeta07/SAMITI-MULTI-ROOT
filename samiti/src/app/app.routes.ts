@@ -78,7 +78,30 @@ export const routes: Routes = [
       },
       {
         path: 'event/:id',
-        loadComponent: () => import('./features/dashboard/components/event-details/event-details').then(m => m.EventDetailsComponent)
+        loadComponent: () => import('./features/dashboard/components/event-details/event-details').then(m => m.EventDetailsComponent),
+        children: [
+          {
+            path: 'voting',
+            loadComponent: () => import('./features/dashboard/components/event-details/event-voting/event-voting').then(m => m.EventVotingComponent)
+          },
+          {
+            path: 'overview',
+            loadComponent: () => import('./features/dashboard/components/event-details/event-overview/event-overview').then(m => m.EventOverviewComponent)
+          },
+          {
+            path: 'programs',
+            loadComponent: () => import('./features/dashboard/components/event-details/event-programs/event-programs').then(m => m.EventProgramsComponent)
+          },
+          {
+            path: 'people',
+            loadComponent: () => import('./features/dashboard/components/event-details/event-people/event-people').then(m => m.EventPeopleComponent)
+          },
+          {
+            path: '',
+            redirectTo: 'voting',
+            pathMatch: 'full'
+          }
+        ]
       },
       {
         path: 'program/:id',
