@@ -3,157 +3,15 @@ import { RowDataPacket } from 'mysql2/promise';
 import { hasEventsDisplayNameColumn } from './event-display-name-support';
 import { hasEventsVotingPhaseStateColumn } from '../voting/event-voting-phase-support';
 import { hasEventsVotingModeColumn } from '../voting/event-voting-mode-support';
-import { getEventVotingPhaseState, getMappedVotingRoles, throwEventError, getLoggedInUserId } from '../voting/event-voting.graphql';
+import { throwEventError, getLoggedInUserId, getEventVotingPhaseState, getMappedVotingRoles } from '../voting/event-voting.graphql';
 import { getEventInterestApprovedPeople, getMyEventInterestRoleIds, getMyEventInterestStatuses } from '../voting/event-interest.graphql';
+import { getEventMasterRoles } from './event-details-by-id.graphql';
 
-export async function getEventMasterRoles(): Promise<Array<{ roleId: number | null; roleName: string; roleCode: string | null; hindiName: string | null; englishName: string | null; isActive: boolean }>> {
-  const candidateTables = ['events_roles_master', 'event_roles_master'];
-
-  for (const tableName of candidateTables) {
-    const tableRows = await query<Array<RowDataPacket & { tableName: string }>>(
-      `SELECT TABLE_NAME AS tableName
-       FROM INFORMATION_SCHEMA.TABLES
-       WHERE TABLE_SCHEMA = DATABASE()
-         AND TABLE_NAME = ?
-       LIMIT 1`,
-      [tableName]
-    );
-
-    if (!tableRows.length) {
-      continue;
-    }
-
-    const columnRows = await query<Array<RowDataPacket & { columnName: string }>>(
-      `SELECT COLUMN_NAME AS columnName
-       FROM INFORMATION_SCHEMA.COLUMNS
-       WHERE TABLE_SCHEMA = DATABASE()
-         AND TABLE_NAME = ?`,
-      [tableName]
-    );
-
-    const availableColumns = new Set(columnRows.map((row) => String(row.columnName || '').toLowerCase()));
-
-    const roleIdExpr = availableColumns.has('role_id')
-      ? 'role_id'
-      : availableColumns.has('id')
-        ? 'id'
-        : 'NULL';
-
-    const roleNameExpr = availableColumns.has('role_name')
-      ? 'role_name'
-      : availableColumns.has('name')
-        ? 'name'
-        : availableColumns.has('designation')
-          ? 'designation'
-          : availableColumns.has('title')
-            ? 'title'
-            : 'NULL';
-
-    const roleCodeExpr = availableColumns.has('role_code')
-      ? 'role_code'
-      : availableColumns.has('code')
-        ? 'code'
-        : availableColumns.has('slug')
-          ? 'slug'
-          : 'NULL';
-
-    const hindiNameExpr = availableColumns.has('hindi_name')
-      ? 'hindi_name'
-      : 'NULL';
-
-    const englishNameExpr = availableColumns.has('english_name')
-      ? 'english_name'
-      : 'NULL';
-
-    const isActiveExpr = availableColumns.has('is_active')
-      ? 'is_active'
-      : availableColumns.has('active')
-        ? 'active'
-        : '1';
-
-    const orderByExpr = availableColumns.has('sort_order')
-      ? 'sort_order ASC, roleName ASC'
-      : 'roleName ASC';
-
-    const roleRows = await query<Array<RowDataPacket & {
-      roleId: number | null;
-      roleName: string | null;
-      roleCode: string | null;
-      hindiName: string | null;
-      englishName: string | null;
-      isActive: number | string | null;
-    }>>(
-      `SELECT
-         ${roleIdExpr} AS roleId,
-         ${roleNameExpr} AS roleName,
-         ${roleCodeExpr} AS roleCode,
-         ${hindiNameExpr} AS hindiName,
-         ${englishNameExpr} AS englishName,
-         ${isActiveExpr} AS isActive
-       FROM ${tableName}
-       ORDER BY ${orderByExpr}`
-    );
-
-    return roleRows
-      .map((row) => {
-        const normalizedRoleName = String(row.roleName || '').trim();
-        const activeToken = String(row.isActive ?? '1').trim().toUpperCase();
-        const isActive = ['1', 'TRUE', 'ACTIVE', 'YES', 'Y'].includes(activeToken);
-
-        return {
-          roleId: row.roleId !== null && row.roleId !== undefined ? Number(row.roleId) : null,
-          roleName: normalizedRoleName,
-          roleCode: row.roleCode ? String(row.roleCode).trim() : null,
-          hindiName: row.hindiName ? String(row.hindiName).trim() : null,
-          englishName: row.englishName ? String(row.englishName).trim() : null,
-          isActive
-        };
-      })
-      .filter((row) => row.roleName.length > 0 && row.isActive);
-  }
-
-  return [];
-}
-
-export const eventDetailsTypes = `
-  type EventAvailableRole {
-    roleId: Int
-    roleName: String!
-    roleCode: String
-    hindiName: String
-    englishName: String
-  }
-
-  type EventParticipant {
-    userId: Int!
-    name: String!
-    email: String!
-    photo: String
-    designation: String!
-    membershipStatus: String!
-  }
-
-  type EventDesignationSummary {
-    designation: String!
-    memberCount: Int!
-  }
-
-  type EventProgramSummary {
-    id: Int!
-    programId: Int!
-    programName: String!
-    status: String!
-    visibility: String!
-    startDate: String
-    endDate: String
-    programBanner: String
-  }
-
-  type EventDetails {
+export const eventVotingDetailsTypes = `
+  type EventVotingDetailsPayload {
     id: Int!
     eventId: Int!
     committeeId: Int
-    committeeAddress: String
     eventName: String!
     eventDisplayName: String!
     eventBanner: String
@@ -164,7 +22,6 @@ export const eventDetailsTypes = `
     type: String
     startDate: String
     endDate: String
-    address: String
     latitude: Float
     longitude: Float
     createdBy: Int!
@@ -189,13 +46,13 @@ export const eventDetailsTypes = `
   }
 `;
 
-export const eventDetailsQueryFields = `
-    eventDetails(id: Int!): EventDetails!
+export const eventVotingDetailsQueryFields = `
+  eventVotingDetails(id: Int!): EventVotingDetailsPayload!
 `;
 
-export const eventDetailsResolvers = {
+export const eventVotingDetailsResolvers = {
   Query: {
-    async eventDetails(_: any, args: { id: number }, context: any) {
+    async eventVotingDetails(_: any, args: { id: number }, context: any) {
       const eventId = Number(args?.id);
       if (!Number.isInteger(eventId) || eventId <= 0) {
         throwEventError('BAD_REQUEST', 'id must be a positive integer');
@@ -228,7 +85,7 @@ export const eventDetailsResolvers = {
           e.created_at AS createdAt
            ${supportsVotingPhaseState ? ', COALESCE(e.voting_phase_state, 0) AS votingPhaseState' : ', 0 AS votingPhaseState'}
            ${supportsVotingMode ? ', e.voting_mode AS votingMode' : ", 'VOTING' AS votingMode"}
-         FROM events e
+        FROM events e
         LEFT JOIN committees c ON c.id = e.committee_id
         WHERE e.id = ?
         LIMIT 1
@@ -366,10 +223,8 @@ export const eventDetailsResolvers = {
       );
 
       const availableRoles = await getEventMasterRoles();
-
       const mappedVotingRoleRows = await getMappedVotingRoles(eventId);
 
-      const isMasterAdmin = String(membership?.committee_role || '').toUpperCase() === 'COMMITTEE_MASTER_ADMIN';
       const myInterestRoleIds = await getMyEventInterestRoleIds(eventId, loggedInUserId);
       const myInterestStatuses = await getMyEventInterestStatuses(eventId, loggedInUserId);
 
@@ -380,9 +235,24 @@ export const eventDetailsResolvers = {
       }
 
       return {
-        ...event,
+        id: Number(event.id),
+        eventId: Number(event.eventId),
+        committeeId: event.committeeId || null,
+        eventName: String(event.eventName || ''),
+        eventDisplayName: String(event.eventDisplayName || ''),
         eventBanner: bannerImageRows[0]?.mediaUrl || null,
         bannerImages: bannerImageRows.map((row) => row.mediaUrl),
+        status: String(event.status || ''),
+        category: event.category || null,
+        visibility: String(event.visibility || ''),
+        type: event.type || null,
+        startDate: event.startDate || null,
+        endDate: event.endDate || null,
+        latitude: event.latitude ? Number(event.latitude) : null,
+        longitude: event.longitude ? Number(event.longitude) : null,
+        createdBy: Number(event.createdBy),
+        updatedBy: event.updatedBy ? Number(event.updatedBy) : null,
+        createdAt: event.createdAt || null,
         programs: programRows.map((programRow) => ({
           id: Number(programRow.id),
           programId: Number(programRow.programId),
@@ -417,7 +287,7 @@ export const eventDetailsResolvers = {
         myInterestRoleIds: Array.from(myInterestRoleIds),
         myInterestStatuses,
         interestApprovedPeople,
-        canReviewInterest: isMasterAdmin,
+        canReviewInterest: isCurrentUserMasterAdmin,
         canManageVotingRoles,
         currentCommitteeRole,
         committeeMemberCount,
@@ -428,4 +298,3 @@ export const eventDetailsResolvers = {
     }
   }
 };
-

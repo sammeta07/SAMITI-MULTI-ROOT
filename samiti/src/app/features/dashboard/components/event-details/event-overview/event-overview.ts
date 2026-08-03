@@ -1,6 +1,6 @@
-import { Component, ElementRef, inject, ViewChild } from '@angular/core';
+import { Component, ElementRef, inject, ViewChild, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { Router } from '@angular/router';
+import { Router, ActivatedRoute } from '@angular/router';
 import { MatDialog } from '@angular/material/dialog';
 import { MatIconModule } from '@angular/material/icon';
 import { MatButtonModule } from '@angular/material/button';
@@ -9,15 +9,14 @@ import { MatSlideToggleModule } from '@angular/material/slide-toggle';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { HttpErrorResponse } from '@angular/common/http';
 import { firstValueFrom } from 'rxjs';
-import { EventDetailsService } from '../event-details.service';
+import { EventOverviewService } from './event-overview.service';
+import { EventOverviewPayload } from './event-overview.models';
 import { NotifierService } from '../../../../../shared/notifier/notifier.service';
 import { ConfirmDialogService } from '../../../../../components/dialog/confirm/confirm-dialog.service';
 import { ConfirmDialogData } from '../../../../../components/dialog/confirm/confirm-dialog.models';
 import { DashboardHierarchyTreeService } from '../../dashboard-hierarchy-tree/dashboard-hierarchy-tree.service';
 import { CreateEventDialogComponent } from '../../../../../components/dialog/create-event/create-event.component';
 import { ImageAssetService } from '../../../../../core/services/image-asset.service';
-import { EventDetailsStateService } from '../event-details-state.service';
-import { EventDetailsPayload } from '../event-details.models';
 
 @Component({
   selector: 'app-event-overview',
@@ -33,21 +32,19 @@ import { EventDetailsPayload } from '../event-details.models';
   templateUrl: './event-overview.html',
   styleUrl: './event-overview.scss'
 })
-export class EventOverviewComponent {
+export class EventOverviewComponent implements OnInit {
   @ViewChild('bannerFileInput') private readonly bannerFileInput?: ElementRef<HTMLInputElement>;
 
   private readonly router = inject(Router);
+  private readonly route = inject(ActivatedRoute);
   private readonly dialog = inject(MatDialog);
   private readonly notifier = inject(NotifierService);
-  private readonly eventDetailsService = inject(EventDetailsService);
+  private readonly overviewService = inject(EventOverviewService);
   private readonly imageAssetService = inject(ImageAssetService);
   private readonly confirmDialog = inject(ConfirmDialogService);
   private readonly hierarchyTreeService = inject(DashboardHierarchyTreeService);
-  private readonly stateService = inject(EventDetailsStateService);
 
-  public get eventData(): EventDetailsPayload | null {
-    return this.stateService.eventData();
-  }
+  public eventData: EventOverviewPayload | null = null;
 
   public get bannerCount(): number {
     return this.eventData?.bannerImages?.length ?? 0;
@@ -59,6 +56,32 @@ export class EventOverviewComponent {
 
   public get canUploadMoreBanners(): boolean {
     return this.bannerCount < this.MAX_BANNERS;
+  }
+
+  ngOnInit(): void {
+    const parentParams$ = this.route.parent?.params;
+    if (!parentParams$) {
+      this.notifier.error('Failed to resolve event route.');
+      return;
+    }
+    parentParams$.subscribe(params => {
+      const eventId = params['id'];
+      if (eventId) {
+        this.loadEventOverview(eventId);
+      }
+    });
+  }
+
+  private loadEventOverview(id: string): void {
+    this.overviewService.getEventOverview(id).subscribe({
+      next: (data) => {
+        this.eventData = data ?? null;
+      },
+      error: (err: HttpErrorResponse) => {
+        this.notifier.error(err?.error?.message || 'Failed to load event overview.');
+        this.eventData = null;
+      }
+    });
   }
 
   public onEditEvent(): void {
@@ -84,7 +107,7 @@ export class EventOverviewComponent {
       document.body.classList.remove('dialog-open');
       if (!result) return;
       this.hierarchyTreeService.triggerHierarchyTreeRefresh();
-      this.refreshParent();
+      this.refreshOverview();
     });
   }
 
@@ -98,7 +121,7 @@ export class EventOverviewComponent {
     const dialogRef = this.confirmDialog.open(dialogData);
     dialogRef.afterClosed().subscribe((result) => {
       if (!result?.confirmed) return;
-      this.eventDetailsService.deleteEvent(currentEvent.eventId).subscribe({
+      this.overviewService.deleteEvent(currentEvent.eventId).subscribe({
         next: () => {
           this.hierarchyTreeService.triggerHierarchyTreeRefresh();
           this.notifier.success(`**${this.toTitleCase(currentEvent.eventName)}** has been deleted successfully`);
@@ -116,14 +139,14 @@ export class EventOverviewComponent {
     const visibility: 'VISIBLE' | 'HIDDEN' = isVisible ? 'VISIBLE' : 'HIDDEN';
     if (currentEvent.visibility === visibility) return;
     const previousVisibility = currentEvent.visibility;
-    this.stateService.eventData.update((prev) => (prev ? { ...prev, visibility } : prev));
-    this.eventDetailsService.updateEventVisibility(currentEvent.eventId, visibility).subscribe({
+    this.eventData = { ...currentEvent, visibility };
+    this.overviewService.updateEventVisibility(currentEvent.eventId, visibility).subscribe({
       next: () => {
         const formattedEventName = this.toTitleCase(currentEvent.eventName || 'Event');
         this.notifier.success(visibility === 'VISIBLE' ? `**${formattedEventName}** is now visible to all the public` : `**${formattedEventName}** is now hidden to all the public`);
       },
       error: (err: HttpErrorResponse) => {
-        this.stateService.eventData.update((prev) => (prev ? { ...prev, visibility: previousVisibility } : prev));
+        this.eventData = { ...currentEvent, visibility: previousVisibility };
         this.notifier.error(err?.error?.message || 'Failed to update event visibility.');
       }
     });
@@ -135,8 +158,8 @@ export class EventOverviewComponent {
     this.bannerFileInput.nativeElement.click();
   }
 
-  public async onBannerFilesSelected(event: Event): Promise<void> {
-    const input = event.target as HTMLInputElement;
+  public async onBannerFilesSelected(e: Event): Promise<void> {
+    const input = e.target as HTMLInputElement;
     const selectedFiles = Array.from(input.files || []);
     if (!selectedFiles.length) return;
     const currentEvent = this.eventData;
@@ -148,8 +171,8 @@ export class EventOverviewComponent {
     try {
       const uploadedAssets = await firstValueFrom(this.imageAssetService.uploadMultipleImagesForEventBanners(filesToUpload));
       const urls = uploadedAssets.map((a) => (a as any).publicAbsoluteUrl);
-      const result = await firstValueFrom(this.eventDetailsService.uploadEventBannerImages(currentEvent.eventId, urls));
-      this.stateService.eventData.update((prev) => prev ? { ...prev, bannerImages: (result as any).bannerImages, eventBanner: (result as any).bannerImages[0] || prev.eventBanner } : prev);
+      const result = await firstValueFrom(this.overviewService.uploadEventBannerImages(currentEvent.eventId, urls));
+      this.eventData = { ...currentEvent, bannerImages: (result as any).bannerImages, eventBanner: (result as any).bannerImages[0] || currentEvent.eventBanner };
       this.notifier.success(`${urls.length} banner image${urls.length > 1 ? 's' : ''} uploaded successfully.`);
     } catch (err: any) {
       this.notifier.error(err?.error?.message || err?.message || 'Failed to upload banner images.');
@@ -163,9 +186,9 @@ export class EventOverviewComponent {
     const dialogRef = this.confirmDialog.open(dialogData);
     dialogRef.afterClosed().subscribe((result) => {
       if (!result?.confirmed) return;
-      this.eventDetailsService.deleteEventBannerImage(currentEvent.eventId, imageUrl).subscribe({
+      this.overviewService.deleteEventBannerImage(currentEvent.eventId, imageUrl).subscribe({
         next: (payload: any) => {
-          this.stateService.eventData.update((prev) => prev ? { ...prev, bannerImages: payload.bannerImages, eventBanner: payload.bannerImages[0] || null } : prev);
+          this.eventData = { ...currentEvent, bannerImages: payload.bannerImages, eventBanner: payload.bannerImages[0] || null };
           this.notifier.success('Banner image deleted successfully.');
         },
         error: (err: HttpErrorResponse) => { this.notifier.error(err?.error?.message || 'Failed to delete banner image.'); }
@@ -173,11 +196,11 @@ export class EventOverviewComponent {
     });
   }
 
-  private refreshParent(): void {
+  private refreshOverview(): void {
     const currentEvent = this.eventData;
     if (currentEvent?.eventId) {
-      this.eventDetailsService.getEventDetails(String(currentEvent.eventId)).subscribe({
-        next: (data) => this.stateService.eventData.set(data ?? null)
+      this.overviewService.getEventOverview(String(currentEvent.eventId)).subscribe({
+        next: (data) => this.eventData = data ?? null
       });
     }
   }

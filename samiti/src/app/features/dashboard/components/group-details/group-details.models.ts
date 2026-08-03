@@ -1,4 +1,4 @@
-import { EventMappedVotingRole } from '../event-details/event-details.models';
+import { EventMappedVotingRole } from '../event-details/event-voting/event-voting.models';
 
 export interface CommitteeProfileMeta {
   id?: number;

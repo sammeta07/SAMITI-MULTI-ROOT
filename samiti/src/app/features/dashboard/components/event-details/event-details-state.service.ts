@@ -1,10 +1,9 @@
 import { Injectable, signal } from '@angular/core';
-import { EventDetailsPayload } from './event-details.models';
+import { EventVotingPayload } from './event-voting/event-voting.models';
 
 @Injectable({
   providedIn: 'root'
 })
 export class EventDetailsStateService {
-  public readonly eventData = signal<EventDetailsPayload | null>(null);
-  public readonly eventId = signal<number | null>(null);
+  public readonly eventData = signal<EventVotingPayload | null>(null);
 }

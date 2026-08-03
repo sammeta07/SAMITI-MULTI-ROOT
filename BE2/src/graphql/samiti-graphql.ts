@@ -22,6 +22,10 @@ import { committeeDetailsTypes, committeeDetailsQueryFields, committeeDetailsRes
 import { createEventTypes, createEventMutationFields, createEventResolvers } from './events/creation/create-event.graphql';
 import { updateEventTypes, updateEventMutationFields, updateEventResolvers } from './events/management/update-event.graphql';
 import { eventDetailsTypes, eventDetailsQueryFields, eventDetailsResolvers } from './events/details/event-details-by-id.graphql';
+import { eventOverviewTypes, eventOverviewQueryFields, eventOverviewResolvers } from './events/details/event-overview.graphql';
+import { eventPeopleTypes, eventPeopleQueryFields, eventPeopleResolvers } from './events/details/event-people.graphql';
+import { eventProgramsTypes, eventProgramsQueryFields, eventProgramsResolvers } from './events/details/event-programs.graphql';
+import { eventVotingDetailsTypes, eventVotingDetailsQueryFields, eventVotingDetailsResolvers } from './events/details/event-voting.graphql';
 import { updateEventVisibilityTypes, updateEventVisibilityMutationFields, updateEventVisibilityResolvers } from './events/management/update-event-visibility.graphql';
 import { uploadEventBannerImagesTypes, uploadEventBannerImagesMutationFields, uploadEventBannerImagesResolvers } from './events/media/upload-event-banner-images.graphql';
 import { deleteEventTypes, deleteEventMutationFields, deleteEventResolvers } from './events/management/delete-event.graphql';
@@ -76,7 +80,11 @@ export const typeDefs = `
    ${eventInterestTypes}
    ${updateEventVotingModeTypes}
    ${eventDetailsTypes}
-   ${updateEventVisibilityTypes}
+   ${eventOverviewTypes}
+   ${eventPeopleTypes}
+   ${eventProgramsTypes}
+   ${eventVotingDetailsTypes}
+    ${updateEventVisibilityTypes}
    ${uploadEventBannerImagesTypes}
    ${deleteEventTypes}
 
@@ -96,6 +104,10 @@ export const typeDefs = `
     ${committeeDetailsQueryFields}
     ${programDetailsQueryFields}
     ${eventDetailsQueryFields}
+    ${eventOverviewQueryFields}
+    ${eventPeopleQueryFields}
+    ${eventProgramsQueryFields}
+    ${eventVotingDetailsQueryFields}
     ${eventInterestQueryFields}
     ${eventVoteQueryFields}
   }
@@ -147,6 +159,10 @@ export const resolvers = {
     ...committeeDetailsResolvers.Query,
     ...programDetailsResolvers.Query,
     ...eventDetailsResolvers.Query,
+    ...eventOverviewResolvers.Query,
+    ...eventPeopleResolvers.Query,
+    ...eventProgramsResolvers.Query,
+    ...eventVotingDetailsResolvers.Query,
     ...eventInterestResolvers.Query,
     ...eventVoteResolvers.Query,
   },

@@ -1,9 +1,10 @@
-import { Component, inject } from '@angular/core';
+import { Component, inject, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
+import { ActivatedRoute } from '@angular/router';
 import { MatIconModule } from '@angular/material/icon';
 import { MatButtonModule } from '@angular/material/button';
-import { EventDetailsStateService } from '../event-details-state.service';
-import { EventDetailsPayload, EventPerson } from '../event-details.models';
+import { EventPeopleService } from './event-people.service';
+import { EventPeoplePayload, EventPerson } from './event-people.models';
 
 @Component({
   selector: 'app-event-people',
@@ -16,12 +17,11 @@ import { EventDetailsPayload, EventPerson } from '../event-details.models';
   templateUrl: './event-people.html',
   styleUrl: './event-people.scss'
 })
-export class EventPeopleComponent {
-  private readonly stateService = inject(EventDetailsStateService);
+export class EventPeopleComponent implements OnInit {
+  private readonly route = inject(ActivatedRoute);
+  private readonly peopleService = inject(EventPeopleService);
 
-  public get eventData(): EventDetailsPayload | null {
-    return this.stateService.eventData();
-  }
+  public eventData: EventPeoplePayload | null = null;
 
   public get eventAdmins(): EventPerson[] {
     const participants = this.eventData?.eventParticipants ?? [];
@@ -41,5 +41,29 @@ export class EventPeopleComponent {
       email: p.email,
       photo: p.photo || null
     }));
+  }
+
+  ngOnInit(): void {
+    const parentParams$ = this.route.parent?.params;
+    if (!parentParams$) {
+      return;
+    }
+    parentParams$.subscribe(params => {
+      const eventId = params['id'];
+      if (eventId) {
+        this.loadEventPeople(eventId);
+      }
+    });
+  }
+
+  private loadEventPeople(eventId: string): void {
+    this.peopleService.getEventPeople(eventId).subscribe({
+      next: (data) => {
+        this.eventData = data ?? null;
+      },
+      error: (err: any) => {
+        this.eventData = null;
+      }
+    });
   }
 }

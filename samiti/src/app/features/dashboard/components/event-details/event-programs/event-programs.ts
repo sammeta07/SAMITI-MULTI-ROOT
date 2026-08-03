@@ -1,13 +1,13 @@
-import { Component, inject } from '@angular/core';
+import { Component, inject, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { Router } from '@angular/router';
+import { Router, ActivatedRoute } from '@angular/router';
 import { MatDialog } from '@angular/material/dialog';
 import { MatIconModule } from '@angular/material/icon';
 import { MatButtonModule } from '@angular/material/button';
 import { NotifierService } from '../../../../../shared/notifier/notifier.service';
 import { CreateProgramDialogComponent } from '../../../../../components/dialog/create-program/create-program.component';
-import { EventDetailsStateService } from '../event-details-state.service';
-import { EventDetailsPayload } from '../event-details.models';
+import { EventProgramsService } from './event-programs.service';
+import { EventProgramsPayload } from './event-programs.models';
 
 @Component({
   selector: 'app-event-programs',
@@ -20,18 +20,41 @@ import { EventDetailsPayload } from '../event-details.models';
   templateUrl: './event-programs.html',
   styleUrl: './event-programs.scss'
 })
-export class EventProgramsComponent {
+export class EventProgramsComponent implements OnInit {
   private readonly router = inject(Router);
+  private readonly route = inject(ActivatedRoute);
   private readonly dialog = inject(MatDialog);
   private readonly notifier = inject(NotifierService);
-  private readonly stateService = inject(EventDetailsStateService);
+  private readonly programsService = inject(EventProgramsService);
 
-  public get eventData(): EventDetailsPayload | null {
-    return this.stateService.eventData();
-  }
+  public eventData: EventProgramsPayload | null = null;
 
   public get programsCount(): number {
     return this.eventData?.programs?.length ?? 0;
+  }
+
+  ngOnInit(): void {
+    const parentParams$ = this.route.parent?.params;
+    if (!parentParams$) {
+      return;
+    }
+    parentParams$.subscribe(params => {
+      const eventId = params['id'];
+      if (eventId) {
+        this.loadEventPrograms(eventId);
+      }
+    });
+  }
+
+  private loadEventPrograms(eventId: string): void {
+    this.programsService.getEventPrograms(eventId).subscribe({
+      next: (data) => {
+        this.eventData = data ?? null;
+      },
+      error: (err: any) => {
+        this.eventData = null;
+      }
+    });
   }
 
   public onCreateProgram(): void {
@@ -41,7 +64,7 @@ export class EventProgramsComponent {
     const dialogRef = this.dialog.open(CreateProgramDialogComponent, {
       position: { right: '0', top: '0' }, height: '100%', width: '50%',
       autoFocus: true, disableClose: true, hasBackdrop: true, panelClass: 'slide-in-dialog',
-      data: { eventId: currentEvent.eventId, address: currentEvent.committeeAddress || '' }
+      data: { eventId: currentEvent.eventId, address: '' }
     });
     dialogRef.afterClosed().subscribe((result) => {
       document.body.classList.remove('dialog-open');

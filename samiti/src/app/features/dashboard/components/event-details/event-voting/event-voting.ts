@@ -10,8 +10,8 @@ import { MatSelectModule } from '@angular/material/select';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { HttpErrorResponse } from '@angular/common/http';
-import { EventDetailsService, EventVoteHistory, EventResultsPayload, EventResultCandidate, VacateVotingRolePayload, AssignWinningRolePayload } from '../event-details.service';
-import { EventDetailsPayload, EventMappedVotingRole } from '../event-details.models';
+import { EventVotingService } from './event-voting.service';
+import { EventVotingPayload, EventMappedVotingRole, EventVoteHistory, EventResultsPayload, EventResultCandidate, VacateVotingRolePayload, AssignWinningRolePayload } from './event-voting.models';
 import { NotifierService } from '../../../../../shared/notifier/notifier.service';
 import { ConfirmDialogService } from '../../../../../components/dialog/confirm/confirm-dialog.service';
 import { ConfirmDialogData } from '../../../../../components/dialog/confirm/confirm-dialog.models';
@@ -40,7 +40,7 @@ export class EventVotingComponent implements OnInit {
   private readonly router = inject(Router);
   private readonly dialog = inject(MatDialog);
   private readonly notifier = inject(NotifierService);
-  private readonly eventDetailsService = inject(EventDetailsService);
+  private readonly votingService = inject(EventVotingService);
   private readonly authService = inject(AuthService);
   private readonly confirmDialog = inject(ConfirmDialogService);
   private readonly stateService = inject(EventDetailsStateService);
@@ -76,7 +76,7 @@ export class EventVotingComponent implements OnInit {
   public readonly votingMode = signal<'VOTING' | 'DIRECT_ASSIGN' | null>(null);
   public readonly isUpdatingVotingMode = signal<boolean>(false);
 
-  public get eventData(): EventDetailsPayload | null {
+  public get eventData(): EventVotingPayload | null {
     return this.stateService.eventData();
   }
 
@@ -260,36 +260,46 @@ export class EventVotingComponent implements OnInit {
   }
 
   constructor() {
-    // Initial load is handled in ngOnInit
+    // Data is loaded by parent via EventDetailsStateService
   }
 
   ngOnInit(): void {
-    // Load voting data on initial component load
-    const data = this.stateService.eventData();
-    if (data?.eventId) {
-      this.loadVotingData(Number(data.eventId));
+    const parentParams$ = this.route.parent?.params;
+    if (!parentParams$) {
+      return;
     }
+    parentParams$.subscribe(params => {
+      const eventId = params['id'];
+      if (!eventId) return;
+
+      const currentData = this.stateService.eventData();
+      if (currentData) {
+        this.initializeVotingState(Number(eventId));
+      }
+    });
   }
 
-  private loadVotingData(eventId: number): void {
+  private initializeVotingState(eventId: number): void {
+    const data = this.stateService.eventData();
+    if (!data) return;
     this.selectedVotingRoleIds.set(
-      (this.eventData?.mappedVotingRoles || []).map((role) => Number(role.roleId)).filter((roleId) => Number.isInteger(roleId) && roleId > 0)
+      (data.mappedVotingRoles || []).map((role) => Number(role.roleId)).filter((roleId) => Number.isInteger(roleId) && roleId > 0)
     );
-    this.myInterestRoleIds.set((this.eventData?.myInterestRoleIds || []).map((id) => Number(id)));
+    this.myInterestRoleIds.set((data.myInterestRoleIds || []).map((id) => Number(id)));
     this.myInterestStatuses.set(
-      (this.eventData?.myInterestStatuses || []).map((item) => ({ roleId: Number(item.roleId), status: String(item.status || 'PENDING') }))
+      (data.myInterestStatuses || []).map((item) => ({ roleId: Number(item.roleId), status: String(item.status || 'PENDING') }))
     );
-    this.votingMode.set((this.eventData?.votingMode as 'VOTING' | 'DIRECT_ASSIGN' | undefined) || 'VOTING');
+    this.votingMode.set((data.votingMode as 'VOTING' | 'DIRECT_ASSIGN' | undefined) || 'VOTING');
     this.interestReviewList.set([]);
     this.loadPendingInterests();
     this.loadMyVotes(eventId);
-    if (Number(this.eventData?.votingPhaseState || 0) === 6) {
+    if (Number(data.votingPhaseState || 0) === 6) {
       this.loadEventResults(eventId);
     }
   }
 
   private loadMyVotes(eventId: number): void {
-    this.eventDetailsService.getMyEventVotes(eventId).subscribe({
+    this.votingService.getMyEventVotes(eventId).subscribe({
       next: (payload) => {
         const votes: Record<number, number> = {};
         (payload?.votes || []).forEach((vote) => { votes[Number(vote.roleId)] = Number(vote.candidateId); });
@@ -300,7 +310,7 @@ export class EventVotingComponent implements OnInit {
   }
 
   private loadEventResults(eventId: number): void {
-    this.eventDetailsService.getEventResults(eventId).subscribe({
+    this.votingService.getEventResults(eventId).subscribe({
       next: (payload) => this.eventResults.set(payload ?? null),
       error: () => this.eventResults.set(null)
     });
@@ -332,8 +342,8 @@ export class EventVotingComponent implements OnInit {
       ? (currentIds.includes(normalizedRoleId) ? currentIds : [...currentIds, normalizedRoleId])
       : currentIds.filter((id) => id !== normalizedRoleId);
     this.selectedVotingRoleIds.set(optimisticIds);
-    this.eventDetailsService.toggleEventVotingRole(currentEvent.eventId, normalizedRoleId, checked).subscribe({
-      next: () => { this.notifier.success(checked ? 'Role added for voting.' : 'Role removed from voting.'); this.refreshParent(); },
+    this.votingService.toggleEventVotingRole(currentEvent.eventId, normalizedRoleId, checked).subscribe({
+      next: () => { this.notifier.success(checked ? 'Role added for voting.' : 'Role removed from voting.'); this.refreshVoting(); },
       error: (err: HttpErrorResponse) => { this.selectedVotingRoleIds.set(currentIds); this.notifier.error(err?.error?.message || 'Failed to update voting role.'); }
     });
   }
@@ -347,8 +357,8 @@ export class EventVotingComponent implements OnInit {
     dialogRef.afterClosed().subscribe((result) => {
       if (!result?.confirmed) return;
       this.isLockingVotingRoles.set(true);
-      this.eventDetailsService.lockEventVotingRoles(currentEvent.eventId).subscribe({
-        next: () => { this.notifier.success('Voting role selection has been locked and the voting lifecycle has started.'); this.isLockingVotingRoles.set(false); this.refreshParent(); },
+      this.votingService.lockEventVotingRoles(currentEvent.eventId).subscribe({
+        next: () => { this.notifier.success('Voting role selection has been locked and the voting lifecycle has started.'); this.isLockingVotingRoles.set(false); this.refreshVoting(); },
         error: (err: HttpErrorResponse) => { this.notifier.error(err?.error?.message || 'Failed to lock voting role selection.'); this.isLockingVotingRoles.set(false); }
       });
     });
@@ -367,9 +377,9 @@ export class EventVotingComponent implements OnInit {
     dialogRef.afterClosed().subscribe((result) => {
       if (!result?.confirmed) return;
       this.isVacatingVotingRole.set(true);
-      this.eventDetailsService.vacateEventVotingRole(currentEvent.eventId, normalizedRoleId).subscribe({
+      this.votingService.vacateEventVotingRole(currentEvent.eventId, normalizedRoleId).subscribe({
         next: (payload: VacateVotingRolePayload) => {
-          if (payload?.success) { this.notifier.success(`Role "${roleName}" has been vacated and removed from voting.`); this.refreshParent(); }
+          if (payload?.success) { this.notifier.success(`Role "${roleName}" has been vacated and removed from voting.`); this.refreshVoting(); }
           else { this.notifier.error('Failed to vacate role.'); }
           this.isVacatingVotingRole.set(false);
         },
@@ -385,8 +395,8 @@ export class EventVotingComponent implements OnInit {
     const dialogRef = this.confirmDialog.open(dialogData);
     dialogRef.afterClosed().subscribe((result) => {
       if (!result?.confirmed) return;
-      this.eventDetailsService.startEventNominations(currentEvent.eventId).subscribe({
-        next: () => { this.notifier.success('Nominations have been started successfully.'); this.refreshParent(); },
+      this.votingService.startEventNominations(currentEvent.eventId).subscribe({
+        next: () => { this.notifier.success('Nominations have been started successfully.'); this.refreshVoting(); },
         error: (err: HttpErrorResponse) => { this.notifier.error(err?.error?.message || 'Failed to start nominations.'); }
       });
     });
@@ -399,8 +409,8 @@ export class EventVotingComponent implements OnInit {
     const dialogRef = this.confirmDialog.open(dialogData);
     dialogRef.afterClosed().subscribe((result) => {
       if (!result?.confirmed) return;
-      this.eventDetailsService.stopEventNominations(currentEvent.eventId).subscribe({
-        next: () => { this.notifier.success('Nominations have been stopped successfully.'); this.refreshParent(); },
+      this.votingService.stopEventNominations(currentEvent.eventId).subscribe({
+        next: () => { this.notifier.success('Nominations have been stopped successfully.'); this.refreshVoting(); },
         error: (err: HttpErrorResponse) => { this.notifier.error(err?.error?.message || 'Failed to stop nominations.'); }
       });
     });
@@ -414,8 +424,8 @@ export class EventVotingComponent implements OnInit {
     const dialogRef = this.confirmDialog.open(dialogData);
     dialogRef.afterClosed().subscribe((result) => {
       if (!result?.confirmed) return;
-      this.eventDetailsService.allowEventVoting(currentEvent.eventId).subscribe({
-        next: () => { this.notifier.success('Voting has been started successfully.'); this.refreshParent(); },
+      this.votingService.allowEventVoting(currentEvent.eventId).subscribe({
+        next: () => { this.notifier.success('Voting has been started successfully.'); this.refreshVoting(); },
         error: (err: HttpErrorResponse) => { this.notifier.error(err?.error?.message || 'Failed to start voting.'); }
       });
     });
@@ -428,8 +438,8 @@ export class EventVotingComponent implements OnInit {
     const dialogRef = this.confirmDialog.open(dialogData);
     dialogRef.afterClosed().subscribe((result) => {
       if (!result?.confirmed) return;
-      this.eventDetailsService.stopEventVoting(currentEvent.eventId).subscribe({
-        next: () => { this.notifier.success('Voting has been stopped successfully.'); this.refreshParent(); },
+      this.votingService.stopEventVoting(currentEvent.eventId).subscribe({
+        next: () => { this.notifier.success('Voting has been stopped successfully.'); this.refreshVoting(); },
         error: (err: HttpErrorResponse) => { this.notifier.error(err?.error?.message || 'Failed to stop voting.'); }
       });
     });
@@ -442,8 +452,8 @@ export class EventVotingComponent implements OnInit {
     const dialogRef = this.confirmDialog.open(dialogData);
     dialogRef.afterClosed().subscribe((result) => {
       if (!result?.confirmed) return;
-      this.eventDetailsService.declareEventResults(currentEvent.eventId).subscribe({
-        next: () => { this.notifier.success('Results have been declared successfully.'); this.refreshParent(); this.loadEventResults(Number(currentEvent.eventId)); },
+      this.votingService.declareEventResults(currentEvent.eventId).subscribe({
+        next: () => { this.notifier.success('Results have been declared successfully.'); this.refreshVoting(); this.loadEventResults(Number(currentEvent.eventId)); },
         error: (err: HttpErrorResponse) => { this.notifier.error(err?.error?.message || 'Failed to declare results.'); }
       });
     });
@@ -472,7 +482,7 @@ export class EventVotingComponent implements OnInit {
     this.interestReviewList.set(optimisticReviewList);
     this.isExpressingInterest.set(true);
     const roleLabel = this.getRoleDisplayName(normalizedRoleId);
-    this.eventDetailsService.expressEventInterest(currentEvent.eventId, normalizedRoleId).subscribe({
+    this.votingService.expressEventInterest(currentEvent.eventId, normalizedRoleId).subscribe({
       next: (payload) => {
         this.myInterestRoleIds.set((payload.myInterestRoleIds || []).map((id) => Number(id)));
         this.myInterestStatuses.set((payload.myInterestStatuses || []).map((item) => ({ roleId: Number(item.roleId), status: String(item.status || 'PENDING') })));
@@ -487,7 +497,7 @@ export class EventVotingComponent implements OnInit {
   private loadPendingInterests(): void {
     const currentEvent = this.eventData;
     if (!currentEvent?.eventId) return;
-    this.eventDetailsService.getPendingInterests(currentEvent.eventId).subscribe({
+    this.votingService.getPendingInterests(currentEvent.eventId).subscribe({
       next: (summary) => {
         this.interestReviewList.set((summary?.pending || []).map((item) => ({ id: Number(item.id), eventId: Number(item.eventId), roleId: Number(item.roleId), roleName: item.roleName, userId: Number(item.userId), userName: item.userName, userEmail: item.userEmail, userPhoto: item.userPhoto, status: String(item.status || 'PENDING').toUpperCase() })));
         this.refreshInterestApprovedPeopleFromReviewList();
@@ -518,7 +528,7 @@ export class EventVotingComponent implements OnInit {
     const normalizedEventId = Number(item.eventId);
     const previousList = this.interestReviewList();
     this.interestReviewList.update((list) => list.map((entry) => entry.roleId === normalizedRoleId && entry.userId === normalizedUserId ? { ...entry, status } : entry));
-    this.eventDetailsService.reviewEventInterest(normalizedEventId, normalizedRoleId, normalizedUserId, status).subscribe({
+    this.votingService.reviewEventInterest(normalizedEventId, normalizedRoleId, normalizedUserId, status).subscribe({
       next: (payload) => {
         if (status === 'APPROVED' && payload?.autoRejectedOthers) {
           this.interestReviewList.update((list) => list.map((entry) => {
@@ -595,7 +605,7 @@ export class EventVotingComponent implements OnInit {
     const event = this.eventData;
     if (!this.isVotingEnabled || !event?.eventId || !candidate) return;
     const roleName = this.getRoleDisplayName(roleId);
-    this.eventDetailsService.castEventVote(Number(event.eventId), Number(roleId), Number(candidate.userId)).subscribe({
+    this.votingService.castEventVote(Number(event.eventId), Number(roleId), Number(candidate.userId)).subscribe({
       next: (payload) => {
         if (payload?.voted) { this.myVotes.update(current => ({ ...current, [Number(roleId)]: Number(candidate.userId) })); this.notifier.success(`Your vote for **${candidate.userName}** (${roleName}) has been recorded.`); }
         else { this.notifier.error('Failed to record your vote.'); }
@@ -662,8 +672,8 @@ export class EventVotingComponent implements OnInit {
     const dialogRef = this.confirmDialog.open(dialogData);
     dialogRef.afterClosed().subscribe((result) => {
       if (!result?.confirmed) return;
-      this.eventDetailsService.resolveTieBreaker(currentEvent.eventId, normalizedRoleId, normalizedWinnerId).subscribe({
-        next: () => { this.notifier.success('Tie breaker resolved successfully'); this.loadEventResults(Number(currentEvent.eventId)); this.refreshParent(); },
+      this.votingService.resolveTieBreaker(currentEvent.eventId, normalizedRoleId, normalizedWinnerId).subscribe({
+        next: () => { this.notifier.success('Tie breaker resolved successfully'); this.loadEventResults(Number(currentEvent.eventId)); this.refreshVoting(); },
         error: (err: HttpErrorResponse) => { this.notifier.error(err?.error?.message || 'Failed to resolve tie breaker'); }
       });
     });
@@ -699,8 +709,8 @@ export class EventVotingComponent implements OnInit {
     const dialogRef = this.confirmDialog.open(dialogData);
     dialogRef.afterClosed().subscribe((result) => {
       if (!result?.confirmed) return;
-      this.eventDetailsService.assignWinningRole(currentEvent.eventId, normalizedRoleId, newWinnerUserId, selected.name, selected.photo || null).subscribe({
-        next: () => { this.notifier.success('Winner reassigned successfully'); this.openReassignForRoleId.set(null); this.selectedReassignMemberId.set(null); this.reassignApprovedList.set([]); this.refreshParent(); this.loadEventResults(Number(currentEvent.eventId)); },
+      this.votingService.assignWinningRole(currentEvent.eventId, normalizedRoleId, newWinnerUserId, selected.name, selected.photo || null).subscribe({
+        next: () => { this.notifier.success('Winner reassigned successfully'); this.openReassignForRoleId.set(null); this.selectedReassignMemberId.set(null); this.reassignApprovedList.set([]); this.refreshVoting(); this.loadEventResults(Number(currentEvent.eventId)); },
         error: (err: HttpErrorResponse) => { this.notifier.error(err?.error?.message || 'Failed to reassign winner'); }
       });
     });
@@ -716,7 +726,7 @@ export class EventVotingComponent implements OnInit {
     const event = this.eventData;
     if (!event?.eventId) return;
     const eventId = Number(event.eventId);
-    this.eventDetailsService.getEventVoteHistory(eventId).subscribe({
+    this.votingService.getEventVoteHistory(eventId).subscribe({
       next: (history) => this.openVoteHistoryDialog(history),
       error: (err: HttpErrorResponse) => { this.notifier.error(err?.error?.message || 'Failed to load vote history.'); }
     });
@@ -736,19 +746,19 @@ export class EventVotingComponent implements OnInit {
     const currentEvent = this.eventData;
     if (!currentEvent?.eventId || !mode) return;
     this.isUpdatingVotingMode.set(true);
-    this.eventDetailsService.updateEventVotingMode(currentEvent.eventId, mode).subscribe({
+    this.votingService.updateEventVotingMode(currentEvent.eventId, mode).subscribe({
       next: () => { this.votingMode.set(mode); this.notifier.success(`Mode changed to ${mode === 'VOTING' ? 'Voting' : 'Direct Assign'} successfully.`); this.isUpdatingVotingMode.set(false); },
       error: (err: HttpErrorResponse) => { this.notifier.error(err?.error?.message || 'Failed to update voting mode.'); this.isUpdatingVotingMode.set(false); }
     });
   }
 
-  private refreshParent(): void {
-    const currentEvent = this.eventData;
+  private refreshVoting(): void {
+    const currentEvent = this.stateService.eventData();
     if (currentEvent?.eventId) {
-      this.eventDetailsService.getEventDetails(String(currentEvent.eventId)).subscribe({
+      this.votingService.getEventVotingDetails(String(currentEvent.eventId)).subscribe({
         next: (data) => {
           this.stateService.eventData.set(data ?? null);
-          this.loadVotingData(Number(currentEvent.eventId));
+          this.initializeVotingState(Number(currentEvent.eventId));
         }
       });
     }

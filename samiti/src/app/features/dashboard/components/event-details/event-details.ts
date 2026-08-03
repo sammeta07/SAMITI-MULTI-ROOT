@@ -6,8 +6,8 @@ import { MatButtonModule } from '@angular/material/button';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatSelectModule } from '@angular/material/select';
 import { HttpErrorResponse } from '@angular/common/http';
-import { EventDetailsService } from './event-details.service';
-import { EventDetailsPayload } from './event-details.models';
+import { EventVotingService } from './event-voting/event-voting.service';
+import { EventVotingPayload } from './event-voting/event-voting.models';
 import { NotifierService } from '../../../../shared/notifier/notifier.service';
 import { EventDetailsStateService } from './event-details-state.service';
 import { MatFormFieldModule } from '@angular/material/form-field';
@@ -34,12 +34,10 @@ export class EventDetailsComponent implements OnInit {
   private readonly route = inject(ActivatedRoute);
   private readonly router = inject(Router);
   private readonly notifier = inject(NotifierService);
-  private readonly eventDetailsService = inject(EventDetailsService);
+  private readonly votingService = inject(EventVotingService);
   private readonly stateService = inject(EventDetailsStateService);
 
-  public readonly isUpdatingVotingPhase = this.stateService.eventData;
-
-  public get eventData(): EventDetailsPayload | null {
+  public get eventData(): EventVotingPayload | null {
     return this.stateService.eventData();
   }
 
@@ -90,27 +88,25 @@ export class EventDetailsComponent implements OnInit {
     this.route.params.subscribe(params => {
       const eventId = params['id'];
       if (eventId) {
-        this.fetchEventDetails(eventId);
+        this.loadVotingMetadata(eventId);
       }
     });
   }
 
-  private fetchEventDetails(id: string): void {
-    this.eventDetailsService.getEventDetails(id).subscribe({
-      next: (data: EventDetailsPayload) => {
+  private loadVotingMetadata(id: string): void {
+    this.votingService.getEventVotingDetails(id).subscribe({
+      next: (data) => {
         this.stateService.eventData.set(data ?? null);
-        this.stateService.eventId.set(data?.eventId ?? null);
       },
       error: (err: HttpErrorResponse) => {
         this.notifier.error(err?.error?.message || 'Failed to load event details.');
         this.stateService.eventData.set(null);
-        this.stateService.eventId.set(null);
       }
     });
   }
 
   public navigateToTab(tab: string): void {
-    const eventId = this.eventData?.eventId;
+    const eventId = this.eventData?.eventId ?? this.route.snapshot.params['id'];
     if (eventId) {
       this.router.navigate(['/dashboard', 'event', eventId, tab]);
     }
@@ -119,7 +115,7 @@ export class EventDetailsComponent implements OnInit {
   public onVotingModeChange(mode: 'VOTING' | 'DIRECT_ASSIGN'): void {
     const currentEvent = this.eventData;
     if (!currentEvent?.eventId || !mode) return;
-    this.eventDetailsService.updateEventVotingMode(currentEvent.eventId, mode).subscribe({
+    this.votingService.updateEventVotingMode(currentEvent.eventId, mode).subscribe({
       next: () => {
         this.stateService.eventData.update((prev) => prev ? { ...prev, votingMode: mode } : prev);
         this.notifier.success(`Mode changed to ${mode === 'VOTING' ? 'Voting' : 'Direct Assign'} successfully.`);

@@ -1,5 +1,4 @@
 <div class="event-details-workspace drawer-layout-shell">
-  @if (eventData) {
   <div class="workspace-body scrollable-container">
     <!-- Navigation Menu styled like dashboard-sent-requests tabs -->
     <nav class="inner-tabs">
@@ -38,11 +37,4 @@
       <router-outlet />
     </div>
   </div>
-  } @else {
-  <div class="empty-layout-shell">
-    <mat-icon class="icon-off">event_busy</mat-icon>
-    <h3>No Event Selected</h3>
-    <p>Select an event from the navigation tree to view its details.</p>
-  </div>
-  }
 </div>
