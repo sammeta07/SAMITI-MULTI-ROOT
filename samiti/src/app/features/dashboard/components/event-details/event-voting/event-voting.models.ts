@@ -106,6 +106,10 @@ export interface ToggleEventVotingRolePayload {
     hindiName?: string | null;
     englishName?: string | null;
     sortOrder: number;
+    winnerUserId?: number | null;
+    winnerName?: string | null;
+    winnerPhoto?: string | null;
+    winnerVoteCount?: number | null;
   }>;
 }
 
@@ -239,4 +243,31 @@ export interface EventVotingPayload {
   committeeAdminCount: number;
   votingPhaseState: number;
   votingMode?: 'VOTING' | 'DIRECT_ASSIGN';
+}
+
+export interface EventCommitteeMember {
+  userId: number;
+  name: string;
+  email: string;
+  photo?: string | null;
+  committeeRole: string;
+}
+
+export interface EventDirectAssignMember {
+  userId: number;
+  name: string;
+  email: string;
+  photo?: string | null;
+  committeeRole: string;
+  isWinner: boolean;
+}
+
+export interface DirectAssignWinnerPayload {
+  eventId: number;
+  roleId: number;
+  winnerUserId: number;
+  winnerName: string;
+  winnerPhoto?: string | null;
+  winnerVoteCount: number;
+  votingPhaseState: number;
 }

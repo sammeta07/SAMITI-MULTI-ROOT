@@ -22,7 +22,7 @@
         <span class="tab-label-text">People</span>
       </button>
 
-      @if (isMasterAdmin) {
+      @if (isMasterAdmin && currentTab === 'voting') {
       <div class="tab-mode-selector">
         <mat-select [(value)]="currentVotingMode" (selectionChange)="onVotingModeChange($event.value)" class="mode-dropdown" appearance="outline" hideRequiredMarker>
           <mat-option value="VOTING">Voting</mat-option>

@@ -8,10 +8,13 @@ import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatCardModule } from '@angular/material/card';
 import { MatSelectModule } from '@angular/material/select';
 import { MatFormFieldModule } from '@angular/material/form-field';
+import { MatInputModule } from '@angular/material/input';
 import { MatTooltipModule } from '@angular/material/tooltip';
+import { FormsModule } from '@angular/forms';
+import { NgSelectModule } from '@ng-select/ng-select';
 import { HttpErrorResponse } from '@angular/common/http';
 import { EventVotingService } from './event-voting.service';
-import { EventVotingPayload, EventMappedVotingRole, EventVoteHistory, EventResultsPayload, EventResultCandidate, VacateVotingRolePayload, AssignWinningRolePayload } from './event-voting.models';
+import { EventVotingPayload, EventMappedVotingRole, EventVoteHistory, EventResultsPayload, EventResultCandidate, VacateVotingRolePayload, AssignWinningRolePayload, EventDirectAssignMember } from './event-voting.models';
 import { NotifierService } from '../../../../../shared/notifier/notifier.service';
 import { ConfirmDialogService } from '../../../../../components/dialog/confirm/confirm-dialog.service';
 import { ConfirmDialogData } from '../../../../../components/dialog/confirm/confirm-dialog.models';
@@ -30,7 +33,10 @@ import { EventDetailsStateService } from '../event-details-state.service';
     MatCardModule,
     MatSelectModule,
     MatFormFieldModule,
-    MatTooltipModule
+    MatInputModule,
+    MatTooltipModule,
+    FormsModule,
+    NgSelectModule
   ],
   templateUrl: './event-voting.html',
   styleUrl: './event-voting.scss'
@@ -68,16 +74,22 @@ export class EventVotingComponent implements OnInit {
     status: string;
   }>>([]);
   public readonly eventResults = signal<EventResultsPayload | null>(null);
-  public readonly committeeMembers = signal<Array<{ id: number; name: string; email: string; photo?: string | null }>>([]);
+  public readonly directAssignMembers = signal<EventDirectAssignMember[]>([]);
   public readonly selectedReassignMemberId = signal<number | null>(null);
   public readonly openReassignForRoleId = signal<number | null>(null);
   public readonly reassignApprovedList = signal<Array<{ userId: number; name: string; email: string; photo?: string | null }>>([]);
   public readonly myVotes = signal<Record<number, number>>({});
-  public readonly votingMode = signal<'VOTING' | 'DIRECT_ASSIGN' | null>(null);
   public readonly isUpdatingVotingMode = signal<boolean>(false);
+  public readonly memberSearchQuery = signal<string>('');
+  public readonly directAssignSelected = signal<Record<number, number | null>>({});
+  public readonly isDirectAssignLoading = signal<Record<number, boolean>>({});
 
   public get eventData(): EventVotingPayload | null {
     return this.stateService.eventData();
+  }
+
+  public get votingMode(): 'VOTING' | 'DIRECT_ASSIGN' | null {
+    return (this.eventData?.votingMode as 'VOTING' | 'DIRECT_ASSIGN' | undefined) || 'VOTING';
   }
 
   public get programsCount(): number {
@@ -89,11 +101,11 @@ export class EventVotingComponent implements OnInit {
   }
 
   public get isVotingMode(): boolean {
-    return this.votingMode() === 'VOTING';
+    return this.votingMode === 'VOTING';
   }
 
   public get currentVotingMode(): 'VOTING' | 'DIRECT_ASSIGN' | null {
-    return this.votingMode();
+    return this.votingMode;
   }
 
   public get isVotingRolesLocked(): boolean {
@@ -289,8 +301,28 @@ export class EventVotingComponent implements OnInit {
     this.myInterestStatuses.set(
       (data.myInterestStatuses || []).map((item) => ({ roleId: Number(item.roleId), status: String(item.status || 'PENDING') }))
     );
-    this.votingMode.set((data.votingMode as 'VOTING' | 'DIRECT_ASSIGN' | undefined) || 'VOTING');
     this.interestReviewList.set([]);
+    this.directAssignSelected.set(
+      (data.mappedVotingRoles || []).reduce((acc: Record<number, number | null>, role: EventMappedVotingRole) => {
+        const rid = Number(role.roleId);
+        if (Number.isInteger(rid) && rid > 0) {
+          acc[rid] = role.winnerUserId ?? null;
+        }
+        return acc;
+      }, {} as Record<number, number | null>)
+    );
+    const initialMembers: EventDirectAssignMember[] = (data.mappedVotingRoles || [])
+      .filter((role) => role.winnerUserId)
+      .map((role) => ({
+        userId: role.winnerUserId as number,
+        name: role.winnerName || `User ${role.winnerUserId}`,
+        email: '',
+        photo: role.winnerPhoto || null,
+        committeeRole: '',
+        isWinner: true,
+      }));
+    this.directAssignMembers.set(initialMembers);
+    this.loadDirectAssignMembers(eventId);
     this.loadPendingInterests();
     this.loadMyVotes(eventId);
     if (Number(data.votingPhaseState || 0) === 6) {
@@ -637,6 +669,16 @@ export class EventVotingComponent implements OnInit {
     return roleResult.candidates.find((c) => Number(c.voteCount || 0) === maxVotes) || null;
   }
 
+  public getMappedRoleWinner(roleId: number): { userId: number; name: string; photo: string | null } | null {
+    const mappedRole = this.eventData?.mappedVotingRoles?.find((r) => Number(r.roleId) === Number(roleId));
+    if (!mappedRole?.winnerUserId) return null;
+    return {
+      userId: mappedRole.winnerUserId,
+      name: mappedRole.winnerName || `User ${mappedRole.winnerUserId}`,
+      photo: mappedRole.winnerPhoto || null,
+    };
+  }
+
   public getCandidatesForRole(roleId: number): EventResultCandidate[] {
     const results = this.eventResults();
     if (!results?.roles?.length) return [];
@@ -747,8 +789,128 @@ export class EventVotingComponent implements OnInit {
     if (!currentEvent?.eventId || !mode) return;
     this.isUpdatingVotingMode.set(true);
     this.votingService.updateEventVotingMode(currentEvent.eventId, mode).subscribe({
-      next: () => { this.votingMode.set(mode); this.notifier.success(`Mode changed to ${mode === 'VOTING' ? 'Voting' : 'Direct Assign'} successfully.`); this.isUpdatingVotingMode.set(false); },
+      next: () => { this.notifier.success(`Mode changed to ${mode === 'VOTING' ? 'Voting' : 'Direct Assign'} successfully.`); this.isUpdatingVotingMode.set(false); },
       error: (err: HttpErrorResponse) => { this.notifier.error(err?.error?.message || 'Failed to update voting mode.'); this.isUpdatingVotingMode.set(false); }
+    });
+  }
+
+  public getParticipantById(userId: number): { name: string; photo?: string | null } | undefined {
+    return this.eventData?.eventParticipants?.find((p) => p.userId === userId);
+  }
+
+  public onDirectAssignWinner(roleId: number, userId: number | null): void {
+    const currentEvent = this.eventData;
+    if (!currentEvent?.eventId) return;
+
+    if (userId !== null) {
+      const member = this.directAssignMembers().find((m) => m.userId === userId);
+      if (member?.committeeRole === 'COMMITTEE_MASTER_ADMIN') {
+        this.notifier.warn('Master admin cannot be assigned to a role.');
+        return;
+      }
+    }
+
+    const previous = this.directAssignSelected()[roleId] 
+      ?? currentEvent.mappedVotingRoles?.find((r: EventMappedVotingRole) => r.roleId === roleId)?.winnerUserId 
+      ?? null;
+    
+    if (userId !== null) {
+      this.directAssignSelected.update((s) => ({ ...s, [roleId]: userId }));
+    }
+    this.isDirectAssignLoading.update((s) => ({ ...s, [roleId]: true }));
+
+    if (userId === null) {
+      this.votingService.vacateEventVotingRole(currentEvent.eventId, roleId).subscribe({
+        next: (payload) => {
+          if (payload?.success) {
+            this.notifier.success('Winner removed successfully');
+            this.refreshVoting();
+          } else {
+            this.directAssignSelected.update((s) => ({ ...s, [roleId]: previous }));
+            this.notifier.error('Failed to remove winner.');
+          }
+        },
+        error: (err: HttpErrorResponse) => {
+          this.directAssignSelected.update((s) => ({ ...s, [roleId]: previous }));
+          this.notifier.error(err?.error?.message || 'Failed to remove winner.');
+        },
+        complete: () => {
+          this.isDirectAssignLoading.update((s) => ({ ...s, [roleId]: false }));
+        }
+      });
+      return;
+    }
+
+    this.votingService.directAssignWinner(currentEvent.eventId, roleId, userId).subscribe({
+      next: () => {
+        this.notifier.success('Role assigned successfully');
+        this.refreshVoting();
+      },
+      error: (err: HttpErrorResponse) => {
+        this.directAssignSelected.update((s) => ({ ...s, [roleId]: previous }));
+        this.notifier.error(err?.error?.message || 'Failed to assign role.');
+      },
+      complete: () => {
+        this.isDirectAssignLoading.update((s) => ({ ...s, [roleId]: false }));
+      }
+    });
+  }
+
+  public onDropdownOpen(): void {
+    const currentEvent = this.eventData;
+    if (!currentEvent?.eventId) return;
+    this.memberSearchQuery.set('');
+    this.loadDirectAssignMembers(currentEvent.eventId);
+  }
+
+  public onMemberSearchInput(query: string): void {
+    this.memberSearchQuery.set(query || '');
+  }
+
+  public get filteredDirectAssignMembers(): EventDirectAssignMember[] {
+    const query = this.memberSearchQuery().toLowerCase().trim();
+    const members = this.directAssignMembers();
+    const filtered = query
+      ? members.filter((m) => m.name.toLowerCase().includes(query) || m.email.toLowerCase().includes(query))
+      : members;
+    const rolePriority = (role: string): number => {
+      if (role === 'COMMITTEE_MASTER_ADMIN') return 0;
+      if (role === 'COMMITTEE_ADMIN') return 1;
+      if (role === 'COMMITTEE_MEMBER') return 2;
+      return 3;
+    };
+    return [...filtered].sort((a, b) => {
+      const diff = rolePriority(a.committeeRole) - rolePriority(b.committeeRole);
+      if (diff !== 0) return diff;
+      return a.name.localeCompare(b.name);
+    });
+  }
+
+  private loadDirectAssignMembers(eventId: number): void {
+    this.votingService.getDirectAssignMembers(eventId).subscribe({
+      next: (members) => {
+        const currentEvent = this.eventData;
+        const mappedRoles = currentEvent?.mappedVotingRoles || [];
+        const winnerRoleIds = new Set(mappedRoles.filter(r => r.winnerUserId).map(r => r.winnerUserId as number));
+        const merged = members.map((m) => ({ ...m, isWinner: winnerRoleIds.has(m.userId) }));
+        mappedRoles.forEach((role) => {
+          const winnerId = role.winnerUserId;
+          if (winnerId && !merged.some((m) => m.userId === winnerId)) {
+            merged.push({
+              userId: winnerId,
+              name: role.winnerName || `User ${winnerId}`,
+              email: '',
+              photo: role.winnerPhoto || null,
+              committeeRole: '',
+              isWinner: true,
+            });
+          }
+        });
+        this.directAssignMembers.set(merged);
+      },
+      error: (err: HttpErrorResponse) => {
+        this.notifier.error(err?.error?.message || 'Failed to load committee members.');
+      }
     });
   }
 

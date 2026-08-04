@@ -29,7 +29,7 @@ import { eventVotingDetailsTypes, eventVotingDetailsQueryFields, eventVotingDeta
 import { updateEventVisibilityTypes, updateEventVisibilityMutationFields, updateEventVisibilityResolvers } from './events/management/update-event-visibility.graphql';
 import { uploadEventBannerImagesTypes, uploadEventBannerImagesMutationFields, uploadEventBannerImagesResolvers } from './events/media/upload-event-banner-images.graphql';
 import { deleteEventTypes, deleteEventMutationFields, deleteEventResolvers } from './events/management/delete-event.graphql';
-import { eventVotingTypes, eventVotingMutationFields, eventVotingResolvers } from './events/voting/event-voting.graphql';
+import { eventVotingTypes, eventVotingQueryFields, eventVotingMutationFields, eventVotingResolvers } from './events/voting/event-voting.graphql';
 import { eventVoteTypes, eventVoteQueryFields, eventVoteMutationFields, eventVoteResolvers } from './events/voting/event-vote.graphql';
 import { eventInterestTypes, eventInterestQueryFields, eventInterestMutationFields, eventInterestResolvers } from './events/voting/event-interest.graphql';
 import { updateEventVotingModeTypes, updateEventVotingModeMutationFields, updateEventVotingModeResolvers } from './events/voting/update-event-voting-mode.graphql';
@@ -108,6 +108,7 @@ export const typeDefs = `
     ${eventPeopleQueryFields}
     ${eventProgramsQueryFields}
     ${eventVotingDetailsQueryFields}
+    ${eventVotingQueryFields}
     ${eventInterestQueryFields}
     ${eventVoteQueryFields}
   }
@@ -165,6 +166,7 @@ export const resolvers = {
     ...eventVotingDetailsResolvers.Query,
     ...eventInterestResolvers.Query,
     ...eventVoteResolvers.Query,
+    ...eventVotingResolvers.Query,
   },
   Mutation: {
     ...loginResolvers.Mutation,

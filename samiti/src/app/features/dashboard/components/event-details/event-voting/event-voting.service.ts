@@ -16,13 +16,16 @@ import {
   ResolveTieBreakerPayload,
   VacateVotingRolePayload,
   AssignWinningRolePayload,
+  DirectAssignWinnerPayload,
   ExpressEventInterestPayload,
   ReviewEventInterestPayload,
   EventInterestSummary,
   EventVoteHistory,
   CastEventVotePayload,
   MyEventVotesPayload,
-  EventResultsPayload
+  EventResultsPayload,
+  EventCommitteeMember,
+  EventDirectAssignMember
 } from './event-voting.models';
 
 @Injectable({
@@ -89,6 +92,10 @@ export class EventVotingService {
           hindiName
           englishName
           sortOrder
+          winnerUserId
+          winnerName
+          winnerPhoto
+          winnerVoteCount
         }
         myInterestRoleIds
         myInterestStatuses {
@@ -135,6 +142,10 @@ export class EventVotingService {
           hindiName
           englishName
           sortOrder
+          winnerUserId
+          winnerName
+          winnerPhoto
+          winnerVoteCount
         }
       }
     }`;
@@ -548,6 +559,69 @@ export class EventVotingService {
       { withCredentials: true }
     ).pipe(
       map(res => res.data.updateEventVotingMode)
+    );
+  }
+
+  public getCommitteeMembers(eventId: number): Observable<EventCommitteeMember[]> {
+    const query = `query {
+      eventCommitteeMembers(eventId: ${eventId}) {
+        userId
+        name
+        email
+        photo
+        committeeRole
+      }
+    }`;
+
+    return this.http.post<{ data: { eventCommitteeMembers: EventCommitteeMember[] } }>(
+      this.graphqlUrl,
+      { query },
+      { withCredentials: true }
+    ).pipe(
+      map(res => res.data.eventCommitteeMembers)
+    );
+  }
+
+  public getDirectAssignMembers(eventId: number): Observable<EventDirectAssignMember[]> {
+    const query = `query {
+      eventDirectAssignMembers(eventId: ${eventId}) {
+        userId
+        name
+        email
+        photo
+        committeeRole
+        isWinner
+      }
+    }`;
+
+    return this.http.post<{ data: { eventDirectAssignMembers: EventDirectAssignMember[] } }>(
+      this.graphqlUrl,
+      { query },
+      { withCredentials: true }
+    ).pipe(
+      map(res => res.data.eventDirectAssignMembers)
+    );
+  }
+
+  public directAssignWinner(eventId: number, roleId: number, userId: number): Observable<DirectAssignWinnerPayload> {
+    const mutation = `mutation DirectAssignWinner($eventId: Int!, $roleId: Int!, $userId: Int!) {
+      directAssignWinner(eventId: $eventId, roleId: $roleId, userId: $userId) {
+        eventId
+        roleId
+        winnerUserId
+        winnerName
+        winnerPhoto
+        winnerVoteCount
+        votingPhaseState
+      }
+    }`;
+
+    return this.http.post<{ data: { directAssignWinner: DirectAssignWinnerPayload } }>(
+      this.graphqlUrl,
+      { query: mutation, variables: { eventId, roleId, userId } },
+      { withCredentials: true }
+    ).pipe(
+      map(res => res.data.directAssignWinner)
     );
   }
 }
