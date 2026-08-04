@@ -376,7 +376,7 @@
         <mat-card class="voting-nomination-card da-circle-card">
           <mat-card-content>
             <div class="da-avatar-section">
-              <div class="da-avatar" [class.da-avatar-assigned]="getAssignedMember(card.role.roleId)">
+              <div class="da-avatar" [class.da-avatar-assigned]="getAssignedMember(card.role.roleId)" [ngClass]="getAssignedRoleClass(card.role.roleId)">
                 @if (getAssignedMember(card.role.roleId); as assigned) {
                   @if (assigned.photo && !avatarLoadFailed().has(assigned.userId)) {
                     <img [src]="assigned.photo" [alt]="assigned.name | titlecase" class="da-avatar-img" (error)="onAvatarError(assigned.userId)" />
@@ -399,13 +399,23 @@
                 <mat-label>Assign member</mat-label>
                 <input type="text" matInput
                        [matAutocomplete]="autoAssign"
-                       [value]="getDirectAssignDisplayName(card.role.roleId)"
+                       [value]="getDirectAssignDisplayName(card.role.roleId) | titlecase"
                        (input)="onDirectAssignSearch(card.role.roleId, $any($event.target).value)"
                        (focus)="onDropdownOpen()"
                        placeholder="Search member by name..." />
                 <mat-autocomplete #autoAssign="matAutocomplete" (optionSelected)="onDirectAssignSelect(card.role.roleId, $event)">
-                  @for (member of filteredDirectAssignMembers; track member.userId) {
-                    <mat-option [value]="member.userId">{{ member.name | titlecase }}</mat-option>
+                  @for (member of getDirectAssignOptions(card.role.roleId); track member.userId) {
+                    <mat-option [value]="member.userId"
+                                [disabled]="member.committeeRole === 'COMMITTEE_MASTER_ADMIN' || getAssignedMember(card.role.roleId)?.userId === member.userId">
+                      <span class="da-opt-avatar" [ngClass]="getRoleColorClass(member.committeeRole)">
+                        @if (member.photo) {
+                          <img [src]="member.photo" [alt]="member.name" class="da-opt-img" />
+                        } @else {
+                          <span class="da-opt-initials">{{ getInitials(member.name) }}</span>
+                        }
+                      </span>
+                      <span class="da-opt-name">{{ member.name | titlecase }}</span>
+                    </mat-option>
                   } @empty {
                     <mat-option disabled>No members found</mat-option>
                   }

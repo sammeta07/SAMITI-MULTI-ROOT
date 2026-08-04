@@ -249,13 +249,26 @@
 .da-circle-card mat-card-content { align-items: stretch; padding: 16px 14px 6px; }
 .da-avatar-section { display: flex; flex-direction: column; align-items: center; gap: 10px; padding: 6px 0 4px; }
 .da-avatar { width: 208px; height: 208px; border-radius: 50%; display: flex; align-items: center; justify-content: center; overflow: hidden; background: linear-gradient(135deg, #e2e8f0, #cbd5e1); box-shadow: 0 4px 14px rgba(15, 23, 42, 0.12); border: 3px solid #ffffff; }
-.da-avatar-assigned { background: linear-gradient(135deg, #6366f1, #4f46e5); border-color: #eef2ff; box-shadow: 0 6px 18px rgba(79, 70, 229, 0.35); }
+.da-avatar-assigned { border-color: #eef2ff; box-shadow: 0 6px 18px rgba(79, 70, 229, 0.35); }
 .da-avatar-img { width: 100%; height: 100%; object-fit: cover; }
 .da-avatar-initials { font-size: 4rem; font-weight: 800; color: #ffffff; letter-spacing: 2px; }
 .da-avatar-placeholder { font-size: 5rem; width: 5rem; height: 5rem; color: rgba(255, 255, 255, 0.9); }
 .da-role-names { display: flex; flex-direction: column; align-items: center; text-align: center; }
 .da-role-primary { font-size: 0.9rem; font-weight: 800; color: #1e293b; line-height: 1.25; }
 .da-role-secondary { margin-top: 2px; font-size: 0.66rem; font-weight: 600; color: #64748b; line-height: 1.25; text-transform: uppercase; }
+
+.da-opt-avatar { width: 38px; height: 38px; border-radius: 50%; overflow: hidden; flex-shrink: 0; display: inline-flex; align-items: center; justify-content: center; background: linear-gradient(135deg, #e2e8f0, #cbd5e1); }
+.da-opt-img { width: 100%; height: 100%; object-fit: cover; }
+.da-opt-initials { font-size: 0.72rem; font-weight: 800; line-height: 1; }
+.da-opt-text { display: flex; flex-direction: column; margin-left: 10px; min-width: 0; }
+.da-opt-name { font-size: 0.85rem; font-weight: 600; color: #0f172a; line-height: 1.2; }
+.da-opt-email { font-size: 0.7rem; color: #64748b; line-height: 1.2; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.da-opt-cup { margin-left: auto; color: #f59e0b; font-size: 1.2rem; width: 1.2rem; height: 1.2rem; }
+
+.role-master { background: #fef2f2; color: #dc2626; }
+.role-admin { background: #f0fdf4; color: #16a34a; }
+.role-member { background: #eff6ff; color: #1d4ed8; }
+.role-default { background: linear-gradient(135deg, #e2e8f0, #cbd5e1); color: #475569; }
 
 .reassign-select-row { display: flex; align-items: center; gap: 6px; margin-top: 6px; flex-wrap: wrap; }
 .reassign-select-field { flex: 1 1 220px; min-width: 180px; font-size: 0.8rem; }

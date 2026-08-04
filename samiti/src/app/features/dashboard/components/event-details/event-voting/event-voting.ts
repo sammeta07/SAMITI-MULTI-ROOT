@@ -886,15 +886,28 @@ export class EventVotingComponent implements OnInit {
     this.onDirectAssignWinner(roleId, userId);
   }
 
-  public getAssignedMember(roleId: number): { userId: number; name: string; photo: string | null } | null {
+  public getAssignedMember(roleId: number): { userId: number; name: string; photo: string | null; committeeRole?: string | null } | null {
     const selectedId = this.directAssignSelected()[roleId] ?? null;
     const winner = this.getMappedRoleWinner(roleId);
     const id = selectedId ?? winner?.userId ?? null;
     if (!id) return null;
     const member = this.directAssignMembers().find((m) => m.userId === id);
-    if (member) return { userId: member.userId, name: member.name, photo: member.photo ?? null };
-    if (winner && winner.userId === id) return { userId: winner.userId, name: winner.name, photo: winner.photo };
+    if (member) return { userId: member.userId, name: member.name, photo: member.photo ?? null, committeeRole: member.committeeRole ?? null };
+    if (winner && winner.userId === id) return { userId: winner.userId, name: winner.name, photo: winner.photo, committeeRole: null };
     return null;
+  }
+
+  public getRoleColorClass(role?: string | null): string {
+    switch ((role || '').toUpperCase()) {
+      case 'COMMITTEE_MASTER_ADMIN': return 'role-master';
+      case 'COMMITTEE_ADMIN': return 'role-admin';
+      case 'COMMITTEE_MEMBER': return 'role-member';
+      default: return 'role-default';
+    }
+  }
+
+  public getAssignedRoleClass(roleId: number): string {
+    return this.getRoleColorClass(this.getAssignedMember(roleId)?.committeeRole);
   }
 
   public getInitials(name: string | null | undefined): string {
@@ -911,6 +924,15 @@ export class EventVotingComponent implements OnInit {
 
   public onAvatarError(userId: number): void {
     this.avatarLoadFailed.update((current) => new Set(current).add(userId));
+  }
+
+  public getDirectAssignOptions(roleId: number): EventDirectAssignMember[] {
+    const list = this.filteredDirectAssignMembers;
+    const assignedId = this.directAssignSelected()[roleId] ?? this.getMappedRoleWinner(roleId)?.userId ?? null;
+    if (!assignedId) return list;
+    const assigned = list.find((m) => m.userId === assignedId);
+    if (!assigned) return list;
+    return [assigned, ...list.filter((m) => m.userId !== assignedId)];
   }
 
   public get filteredDirectAssignMembers(): EventDirectAssignMember[] {
