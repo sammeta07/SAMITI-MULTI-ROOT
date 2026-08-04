@@ -79,6 +79,7 @@
             <mat-icon>event_busy</mat-icon>
             <span>Stop Voting 5</span>
           </button>
+          @if (votingPhaseState < 6) {
           <button mat-stroked-button class="action-btn voting-declare-btn voting-phase-btn"
                   [disabled]="!isDeclareResultsEnabled"
                   (click)="onDeclareResults()">
@@ -86,9 +87,10 @@
             <span>Declare Results 6</span>
           </button>
           }
+          }
         </div>
       </div>
-      } @else if (!isVotingMode && isMasterAdmin) {
+      } @else if (!isVotingMode && isMasterAdmin && votingPhaseState < 6) {
       <div class="header-actions-right">
         <div class="voting-controls-actions-row voting-controls-header-actions">
           <button mat-stroked-button class="action-btn voting-declare-btn voting-phase-btn"
@@ -103,10 +105,10 @@
       @if (isVotingRolesLocked || !isVotingMode) {
       <span class="voting-phase-status-pill" [class]="'voting-phase-status-' + votingPhaseState">
         <mat-icon>{{ votingPhaseIcon }}</mat-icon>
-        <span class="voting-phase-status-text">{{ !isVotingMode && isVotingRolesLocked ? 'Roles Locked' : (votingPhaseLabel || 'Not Started') }}</span>
+        <span class="voting-phase-status-text">{{ !isVotingMode && votingPhaseState === 1 ? 'Roles Locked' : (votingPhaseLabel || 'Not Started') }}</span>
       </span>
       }
-      @if (votingPhaseState >= 4) {
+      @if (isVotingMode && votingPhaseState >= 4) {
       <button mat-stroked-button class="history-btn" (click)="openVoteHistory()">
         <mat-icon>history</mat-icon>
         <span>History</span>
@@ -388,6 +390,33 @@
         @for (card of votingDisplayCards; track card.slot) {
         <mat-card class="voting-nomination-card da-circle-card">
           <mat-card-content>
+            @if (votingPhaseState === 6 && getWinnerForRole(card.role.roleId) && !isTieRole(card.role.roleId)) {
+            <div class="voting-card-header">
+              <div class="voting-card-head">
+                <div class="voting-card-icon-wrap voting-card-icon-wrap-winner">
+                  @if (getWinnerForRole(card.role.roleId)!.photo) {
+                  <img [src]="getWinnerForRole(card.role.roleId)!.photo!"
+                       [alt]="getWinnerForRole(card.role.roleId)!.name | titlecase"
+                       class="voting-card-winner-photo" />
+                  } @else {
+                  <div class="voting-card-winner-fallback">
+                    <mat-icon>emoji_events</mat-icon>
+                    <span class="voting-card-winner-name">{{ getWinnerForRole(card.role.roleId)!.name | titlecase }}</span>
+                  </div>
+                  }
+                </div>
+                <div class="voting-card-names">
+                  <div class="voting-card-role-primary">{{ ((card.role.englishName || card.role.roleName || '').split('_').join(' ')) | titlecase }}</div>
+                  <div class="voting-card-role-secondary">{{ (card.role.hindiName || card.role.roleName) | uppercase }}</div>
+                </div>
+              </div>
+            </div>
+
+            <div class="voting-card-winner-badge">
+              <mat-icon>stars</mat-icon>
+              <span>{{ getWinnerForRole(card.role.roleId)!.name | titlecase }}</span>
+            </div>
+            } @else {
             <div class="da-avatar-section">
               <div class="da-avatar" [class.da-avatar-assigned]="getAssignedMember(card.role.roleId)" [ngClass]="getAssignedRoleClass(card.role.roleId)">
                 @if (getAssignedMember(card.role.roleId); as assigned) {
@@ -406,7 +435,7 @@
               </div>
             </div>
 
-            @if (isMasterAdmin) {
+            @if (isMasterAdmin && votingPhaseState < 6) {
             <div class="direct-assign-body">
               <mat-form-field class="direct-assign-select-field" appearance="fill" subscriptSizing="dynamic">
                 <mat-label>Assign member</mat-label>
@@ -442,6 +471,7 @@
                 <mat-icon>stars</mat-icon>
                 <span>{{ getMappedRoleWinner(card.role.roleId)!.name | titlecase }}</span>
               </div>
+            }
             }
           </mat-card-content>
         </mat-card>

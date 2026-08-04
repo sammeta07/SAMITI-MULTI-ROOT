@@ -389,10 +389,11 @@ export const eventVotingResolvers = {
            u.email,
            u.profile_photo AS photo,
            UPPER(COALESCE(NULLIF(TRIM(uc.committee_role), ''), 'COMMITTEE_MEMBER')) AS committeeRole
-         FROM users_committees uc
-         INNER JOIN users u ON u.id = uc.user_id
-         WHERE uc.committee_id = ?
-         ORDER BY u.name ASC`,
+            FROM users_committees uc
+            INNER JOIN users u ON u.id = uc.user_id
+            WHERE uc.committee_id = ?
+              AND uc.committee_role IN ('COMMITTEE_MEMBER', 'COMMITTEE_ADMIN', 'COMMITTEE_MASTER_ADMIN')
+            ORDER BY u.name ASC`,
         [Number(event.committeeId)]
       );
 

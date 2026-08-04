@@ -152,7 +152,7 @@ export class EventVotingComponent implements OnInit {
   }
 
   public get isDeclareResultsEnabled(): boolean {
-    return this.votingPhaseState === 5 || !this.isVotingMode;
+    return (this.votingPhaseState === 5 || !this.isVotingMode) && this.votingPhaseState < 6;
   }
 
   public get canEditVotingRoles(): boolean {
