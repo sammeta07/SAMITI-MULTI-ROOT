@@ -265,6 +265,12 @@
 .da-opt-email { font-size: 0.7rem; color: #64748b; line-height: 1.2; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .da-opt-cup { margin-left: auto; color: #f59e0b; font-size: 1.2rem; width: 1.2rem; height: 1.2rem; }
 
+.da-opt-row { border-left: 3px solid transparent; }
+.da-opt-row.role-master { border-left-color: #dc2626; }
+.da-opt-row.role-admin { border-left-color: #16a34a; }
+.da-opt-row.role-member { border-left-color: #1d4ed8; }
+.da-opt-row.role-default { border-left-color: #94a3b8; }
+
 .role-master { background: #fef2f2; color: #dc2626; }
 .role-admin { background: #f0fdf4; color: #16a34a; }
 .role-member { background: #eff6ff; color: #1d4ed8; }

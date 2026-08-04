@@ -419,7 +419,9 @@
                 <mat-autocomplete #autoAssign="matAutocomplete" (optionSelected)="onDirectAssignSelect(card.role.roleId, $event)">
                   @for (member of getDirectAssignOptions(card.role.roleId); track member.userId) {
                     <mat-option [value]="member.userId"
-                                [disabled]="member.committeeRole === 'COMMITTEE_MASTER_ADMIN' || getAssignedMember(card.role.roleId)?.userId === member.userId">
+                                class="da-opt-row"
+                                [ngClass]="getRoleColorClass(member.committeeRole)"
+                                [disabled]="member.committeeRole === 'COMMITTEE_MASTER_ADMIN' || getAssignedMember(card.role.roleId)?.userId === member.userId || isUserAssignedToOtherRole(member.userId, card.role.roleId)">
                       <span class="da-opt-avatar" [ngClass]="getRoleColorClass(member.committeeRole)">
                         @if (member.photo) {
                           <img [src]="member.photo" [alt]="member.name" class="da-opt-img" />

@@ -926,13 +926,74 @@ export class EventVotingComponent implements OnInit {
     this.avatarLoadFailed.update((current) => new Set(current).add(userId));
   }
 
+  public isUserAssignedToOtherRole(userId: number, currentRoleId: number): boolean {
+    const normalizedUserId = Number(userId);
+    if (!Number.isInteger(normalizedUserId) || normalizedUserId <= 0) return false;
+    const normalizedCurrentRoleId = Number(currentRoleId);
+    if (!Number.isInteger(normalizedCurrentRoleId) || normalizedCurrentRoleId <= 0) return false;
+
+    for (const [roleId, assignedUserId] of Object.entries(this.directAssignSelected())) {
+      if (Number(roleId) !== normalizedCurrentRoleId && Number(assignedUserId) === normalizedUserId) {
+        return true;
+      }
+    }
+
+    const currentEvent = this.eventData;
+    if (currentEvent?.mappedVotingRoles) {
+      for (const role of currentEvent.mappedVotingRoles) {
+        if (Number(role.roleId) !== normalizedCurrentRoleId && Number(role.winnerUserId) === normalizedUserId) {
+          return true;
+        }
+      }
+    }
+
+    return false;
+  }
+
   public getDirectAssignOptions(roleId: number): EventDirectAssignMember[] {
     const list = this.filteredDirectAssignMembers;
-    const assignedId = this.directAssignSelected()[roleId] ?? this.getMappedRoleWinner(roleId)?.userId ?? null;
-    if (!assignedId) return list;
-    const assigned = list.find((m) => m.userId === assignedId);
-    if (!assigned) return list;
-    return [assigned, ...list.filter((m) => m.userId !== assignedId)];
+    const currentAssignedId = this.directAssignSelected()[roleId] ?? this.getMappedRoleWinner(roleId)?.userId ?? null;
+
+    const assignedUserIds = new Set<number>();
+    for (const [rid, assignedUserId] of Object.entries(this.directAssignSelected())) {
+      const userId = Number(assignedUserId);
+      if (Number.isInteger(userId) && userId > 0) {
+        assignedUserIds.add(userId);
+      }
+    }
+
+    const currentEvent = this.eventData;
+    if (currentEvent?.mappedVotingRoles) {
+      for (const role of currentEvent.mappedVotingRoles) {
+        const winnerId = Number(role.winnerUserId);
+        if (Number.isInteger(winnerId) && winnerId > 0) {
+          assignedUserIds.add(winnerId);
+        }
+      }
+    }
+
+    if (assignedUserIds.size === 0) return list;
+
+    const assignedMembers: EventDirectAssignMember[] = [];
+    const unassignedMembers: EventDirectAssignMember[] = [];
+
+    for (const member of list) {
+      if (assignedUserIds.has(member.userId)) {
+        assignedMembers.push(member);
+      } else {
+        unassignedMembers.push(member);
+      }
+    }
+
+    if (currentAssignedId) {
+      const currentAssignedIndex = assignedMembers.findIndex((m) => m.userId === currentAssignedId);
+      if (currentAssignedIndex > 0) {
+        const [currentAssigned] = assignedMembers.splice(currentAssignedIndex, 1);
+        assignedMembers.unshift(currentAssigned);
+      }
+    }
+
+    return [...assignedMembers, ...unassignedMembers];
   }
 
   public get filteredDirectAssignMembers(): EventDirectAssignMember[] {

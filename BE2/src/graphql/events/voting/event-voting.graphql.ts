@@ -1000,15 +1000,19 @@ export const eventVotingResolvers = {
 
       const loggedInUserId = await getLoggedInUserId(context);
 
+      const supportsVotingMode = await hasEventsVotingModeColumn();
+
       const eventRows = await query<Array<RowDataPacket & {
         id: number;
         committeeId: number;
         votingPhaseState: number;
+        votingMode?: string;
       }>>(
         `SELECT
            id,
            committee_id AS committeeId,
            COALESCE(voting_phase_state, 0) AS votingPhaseState
+           ${supportsVotingMode ? ', voting_mode AS votingMode' : ", 'VOTING' AS votingMode"}
          FROM events
          WHERE id = ?
          LIMIT 1`,
@@ -1020,18 +1024,94 @@ export const eventVotingResolvers = {
       }
 
       const event = eventRows[0];
+      const votingMode = String(event.votingMode || 'VOTING').toUpperCase();
 
       const membershipRows = await query<Array<RowDataPacket & { isCommitteeAdmin: number }>>(
         `SELECT CASE WHEN committee_role IN ('COMMITTEE_ADMIN', 'COMMITTEE_MASTER_ADMIN') THEN 1 ELSE 0 END AS isCommitteeAdmin
-          FROM users_committees
-          WHERE committee_id = ? AND user_id = ?
-          LIMIT 1`,
+           FROM users_committees
+           WHERE committee_id = ? AND user_id = ?
+           LIMIT 1`,
         [Number(event.committeeId), loggedInUserId]
       );
 
       const isCommitteeAdmin = Boolean(membershipRows[0] && Number(membershipRows[0].isCommitteeAdmin) === 1);
       if (!isCommitteeAdmin) {
         throwEventError('FORBIDDEN', 'Only committee admin can declare results');
+      }
+
+      if (votingMode === 'DIRECT_ASSIGN') {
+        const mappedVotingRoleRows = await getMappedVotingRoles(eventId);
+        const roleIds = mappedVotingRoleRows.map((role) => Number(role.roleId)).filter((id) => Number.isInteger(id) && id > 0);
+
+        const connection = await getConnection();
+        try {
+          await connection.beginTransaction();
+
+          await connection.query(
+            `UPDATE events
+             SET voting_phase_state = 6,
+                 updated_by = ?
+             WHERE id = ?`,
+            [loggedInUserId, eventId]
+          );
+
+          for (const role of mappedVotingRoleRows) {
+            const roleId = Number(role.roleId);
+            const winnerUserId = role.winnerUserId;
+
+            if (!winnerUserId) {
+              await connection.query(
+                `DELETE FROM event_winners WHERE event_id = ? AND role_id = ?`,
+                [eventId, roleId]
+              );
+              continue;
+            }
+
+            const userRows = await query<Array<RowDataPacket & { name: string; profilePhoto: string | null }>>(
+              `SELECT name, profile_photo AS profilePhoto FROM users WHERE id = ? LIMIT 1`,
+              [winnerUserId]
+            );
+
+            const winnerName = String(userRows[0]?.name || role.winnerName || '').trim();
+            const winnerPhoto = userRows[0]?.profilePhoto || role.winnerPhoto || null;
+
+            const voteCountRows = await query<Array<RowDataPacket & { voteCount: number }>>(
+              `SELECT COUNT(*) AS voteCount
+                FROM event_votes
+                WHERE event_id = ? AND role_id = ? AND candidate_id = ?`,
+              [eventId, roleId, winnerUserId]
+            );
+
+            const voteCount = Number(voteCountRows[0]?.voteCount || 0);
+
+            await connection.query(
+              `INSERT INTO event_winners
+                (event_id, role_id, winner_user_id, winner_name, winner_photo, winner_vote_count, declared_at)
+               VALUES
+                (?, ?, ?, ?, ?, ?, NOW())
+               ON DUPLICATE KEY UPDATE
+                winner_user_id = VALUES(winner_user_id),
+                winner_name = VALUES(winner_name),
+                winner_photo = VALUES(winner_photo),
+                winner_vote_count = VALUES(winner_vote_count),
+                declared_at = NOW()`,
+              [eventId, roleId, winnerUserId, winnerName, winnerPhoto, voteCount]
+            );
+          }
+
+          await connection.commit();
+          await syncWinnersToUsersEvents(eventId);
+        } catch (error) {
+          await connection.rollback();
+          throw error;
+        } finally {
+          connection.release();
+        }
+
+        return {
+          eventId,
+          votingPhaseState: 6
+        };
       }
 
       if (Number(event.votingPhaseState || 0) !== 5) {
