@@ -886,6 +886,33 @@ export class EventVotingComponent implements OnInit {
     this.onDirectAssignWinner(roleId, userId);
   }
 
+  public getAssignedMember(roleId: number): { userId: number; name: string; photo: string | null } | null {
+    const selectedId = this.directAssignSelected()[roleId] ?? null;
+    const winner = this.getMappedRoleWinner(roleId);
+    const id = selectedId ?? winner?.userId ?? null;
+    if (!id) return null;
+    const member = this.directAssignMembers().find((m) => m.userId === id);
+    if (member) return { userId: member.userId, name: member.name, photo: member.photo ?? null };
+    if (winner && winner.userId === id) return { userId: winner.userId, name: winner.name, photo: winner.photo };
+    return null;
+  }
+
+  public getInitials(name: string | null | undefined): string {
+    const trimmed = (name || '').trim();
+    if (!trimmed) return '';
+    const parts = trimmed.split(/\s+/).filter(Boolean);
+    if (parts.length >= 2) {
+      return (parts[0][0] + parts[1][0]).toUpperCase();
+    }
+    return trimmed.slice(0, 2).toUpperCase();
+  }
+
+  public readonly avatarLoadFailed = signal<Set<number>>(new Set<number>());
+
+  public onAvatarError(userId: number): void {
+    this.avatarLoadFailed.update((current) => new Set(current).add(userId));
+  }
+
   public get filteredDirectAssignMembers(): EventDirectAssignMember[] {
     const query = this.memberSearchQuery().toLowerCase().trim();
     const members = this.directAssignMembers();
