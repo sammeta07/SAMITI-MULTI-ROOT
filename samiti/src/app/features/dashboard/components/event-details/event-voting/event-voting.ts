@@ -9,9 +9,9 @@ import { MatCardModule } from '@angular/material/card';
 import { MatSelectModule } from '@angular/material/select';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
+import { MatAutocompleteModule } from '@angular/material/autocomplete';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { FormsModule } from '@angular/forms';
-import { NgSelectModule } from '@ng-select/ng-select';
 import { HttpErrorResponse } from '@angular/common/http';
 import { EventVotingService } from './event-voting.service';
 import { EventVotingPayload, EventMappedVotingRole, EventVoteHistory, EventResultsPayload, EventResultCandidate, VacateVotingRolePayload, AssignWinningRolePayload, EventDirectAssignMember } from './event-voting.models';
@@ -34,9 +34,9 @@ import { EventDetailsStateService } from '../event-details-state.service';
     MatSelectModule,
     MatFormFieldModule,
     MatInputModule,
+    MatAutocompleteModule,
     MatTooltipModule,
-    FormsModule,
-    NgSelectModule
+    FormsModule
   ],
   templateUrl: './event-voting.html',
   styleUrl: './event-voting.scss'
@@ -799,6 +799,7 @@ export class EventVotingComponent implements OnInit {
   }
 
   public onDirectAssignWinner(roleId: number, userId: number | null): void {
+    console.log("*****");
     const currentEvent = this.eventData;
     if (!currentEvent?.eventId) return;
 
@@ -865,6 +866,24 @@ export class EventVotingComponent implements OnInit {
 
   public onMemberSearchInput(query: string): void {
     this.memberSearchQuery.set(query || '');
+  }
+
+  public getDirectAssignDisplayName(roleId: number): string {
+    const selectedId = this.directAssignSelected()[roleId] ?? this.getMappedRoleWinner(roleId)?.userId ?? null;
+    if (!selectedId) return '';
+    const member = this.directAssignMembers().find((m) => m.userId === selectedId);
+    if (member) return member.name;
+    return this.getMappedRoleWinner(roleId)?.name ?? '';
+  }
+
+  public onDirectAssignSearch(roleId: number, query: string): void {
+    this.memberSearchQuery.set(query || '');
+  }
+
+  public onDirectAssignSelect(roleId: number, event: { option: { value: number | string } }): void {
+    const userId = Number(event.option.value);
+    this.memberSearchQuery.set('');
+    this.onDirectAssignWinner(roleId, userId);
   }
 
   public get filteredDirectAssignMembers(): EventDirectAssignMember[] {
