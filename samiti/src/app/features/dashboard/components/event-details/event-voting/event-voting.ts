@@ -1,4 +1,4 @@
-import { Component, inject, OnInit, signal } from '@angular/core';
+import { Component, inject, OnInit, signal, effect } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ActivatedRoute, Router } from '@angular/router';
 import { MatDialog } from '@angular/material/dialog';
@@ -83,6 +83,7 @@ export class EventVotingComponent implements OnInit {
   public readonly memberSearchQuery = signal<string>('');
   public readonly directAssignSelected = signal<Record<number, number | null>>({});
   public readonly isDirectAssignLoading = signal<Record<number, boolean>>({});
+  public directAssignInputText: Record<number, string> = {};
 
   public get eventData(): EventVotingPayload | null {
     return this.stateService.eventData();
@@ -152,7 +153,18 @@ export class EventVotingComponent implements OnInit {
   }
 
   public get isDeclareResultsEnabled(): boolean {
-    return (this.votingPhaseState === 5 || !this.isVotingMode) && this.votingPhaseState < 6;
+    if (this.votingPhaseState >= 6) return false;
+    if (this.isVotingMode) return this.votingPhaseState === 5;
+    const mappedRoles = this.eventData?.mappedVotingRoles || [];
+    if (!mappedRoles.length) return false;
+    return mappedRoles.every((role) => {
+      const rid = Number(role.roleId);
+      if (!Number.isInteger(rid) || rid <= 0) return false;
+      const selected = this.directAssignSelected()[rid];
+      if (selected && Number.isInteger(selected) && selected > 0) return true;
+      const winnerId = Number(role.winnerUserId);
+      return Number.isInteger(winnerId) && winnerId > 0;
+    });
   }
 
   public get canEditVotingRoles(): boolean {
@@ -196,7 +208,7 @@ export class EventVotingComponent implements OnInit {
   }
 
   public get canVacateRole(): boolean {
-    return this.isMasterAdmin && (this.votingPhaseState === 2 || this.votingPhaseState === 3);
+    return this.isMasterAdmin && this.votingPhaseState >= 1 && this.votingPhaseState <= 5;
   }
 
   public get canStartVoting(): boolean {
@@ -272,7 +284,31 @@ export class EventVotingComponent implements OnInit {
   }
 
   constructor() {
-    // Data is loaded by parent via EventDetailsStateService
+    effect(() => {
+      const data = this.stateService.eventData();
+      if (!data?.eventId) return;
+      const mapped = data.mappedVotingRoles || [];
+      this.selectedVotingRoleIds.set(
+        mapped.map((role) => Number(role.roleId)).filter((roleId) => Number.isInteger(roleId) && roleId > 0)
+      );
+      this.directAssignSelected.set(
+        mapped.reduce((acc: Record<number, number | null>, role: EventMappedVotingRole) => {
+          const rid = Number(role.roleId);
+          if (Number.isInteger(rid) && rid > 0) {
+            acc[rid] = role.winnerUserId ?? null;
+          }
+          return acc;
+        }, {} as Record<number, number | null>)
+      );
+      this.directAssignInputText = mapped.reduce((acc: Record<number, string>, role: EventMappedVotingRole) => {
+        const rid = Number(role.roleId);
+        if (Number.isInteger(rid) && rid > 0) {
+          const raw = role.winnerName || '';
+          acc[rid] = raw.toLowerCase().replace(/\b\w/g, (c) => c.toUpperCase());
+        }
+        return acc;
+      }, {} as Record<number, string>);
+    });
   }
 
   ngOnInit(): void {
@@ -311,6 +347,14 @@ export class EventVotingComponent implements OnInit {
         return acc;
       }, {} as Record<number, number | null>)
     );
+    this.directAssignInputText = (data.mappedVotingRoles || []).reduce((acc: Record<number, string>, role: EventMappedVotingRole) => {
+      const rid = Number(role.roleId);
+      if (Number.isInteger(rid) && rid > 0) {
+        const member = (role.winnerUserId ? this.directAssignMembers().find((m) => m.userId === role.winnerUserId) : null);
+        acc[rid] = member ? member.name : (role.winnerName || '');
+      }
+      return acc;
+    }, {} as Record<number, string>);
     const initialMembers: EventDirectAssignMember[] = (data.mappedVotingRoles || [])
       .filter((role) => role.winnerUserId)
       .map((role) => ({
@@ -821,6 +865,7 @@ export class EventVotingComponent implements OnInit {
     this.isDirectAssignLoading.update((s) => ({ ...s, [roleId]: true }));
 
     if (userId === null) {
+      this.directAssignInputText[roleId] = '';
       this.votingService.vacateEventVotingRole(currentEvent.eventId, roleId).subscribe({
         next: (payload) => {
           if (payload?.success) {
@@ -872,8 +917,8 @@ export class EventVotingComponent implements OnInit {
     const selectedId = this.directAssignSelected()[roleId] ?? this.getMappedRoleWinner(roleId)?.userId ?? null;
     if (!selectedId) return '';
     const member = this.directAssignMembers().find((m) => m.userId === selectedId);
-    if (member) return member.name;
-    return this.getMappedRoleWinner(roleId)?.name ?? '';
+    const raw = member ? member.name : (this.getMappedRoleWinner(roleId)?.name ?? '');
+    return raw.toLowerCase().replace(/\b\w/g, (c) => c.toUpperCase());
   }
 
   public onDirectAssignSearch(roleId: number, query: string): void {
@@ -883,6 +928,8 @@ export class EventVotingComponent implements OnInit {
   public onDirectAssignSelect(roleId: number, event: { option: { value: number | string } }): void {
     const userId = Number(event.option.value);
     this.memberSearchQuery.set('');
+    const member = this.directAssignMembers().find((m) => m.userId === userId);
+    this.directAssignInputText[roleId] = member ? (member.name.toLowerCase().replace(/\b\w/g, (c) => c.toUpperCase())) : '';
     this.onDirectAssignWinner(roleId, userId);
   }
 
@@ -1036,6 +1083,18 @@ export class EventVotingComponent implements OnInit {
           }
         });
         this.directAssignMembers.set(merged);
+        const selected = this.directAssignSelected();
+        const nextText: Record<number, string> = {};
+        for (const [rid, userId] of Object.entries(selected)) {
+          const roleId = Number(rid);
+          const id = Number(userId);
+          if (Number.isInteger(roleId) && roleId > 0 && Number.isInteger(id) && id > 0) {
+            const member = merged.find((m) => m.userId === id);
+            const raw = member ? member.name : '';
+            nextText[roleId] = raw.toLowerCase().replace(/\b\w/g, (c) => c.toUpperCase());
+          }
+        }
+        this.directAssignInputText = { ...this.directAssignInputText, ...nextText };
       },
       error: (err: HttpErrorResponse) => {
         this.notifier.error(err?.error?.message || 'Failed to load committee members.');

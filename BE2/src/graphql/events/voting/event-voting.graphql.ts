@@ -301,10 +301,10 @@ async function syncWinnersToUsersEvents(eventId: number): Promise<void> {
     const userId = Number(w.winnerUserId);
     const designation = String(roleInfo.name || 'MEMBER').toUpperCase();
     await query(
-      `INSERT INTO users_events (event_id, user_id, designation, status, created_at, updated_at)
-       VALUES (?, ?, ?, 'ACTIVE', NOW(), NOW())
-       ON DUPLICATE KEY UPDATE designation = VALUES(designation), updated_at = NOW()`,
-      [eventId, userId, designation]
+      `INSERT INTO users_events (event_id, user_id, role_id, designation, status, created_at, updated_at)
+       VALUES (?, ?, ?, ?, 'ACTIVE', NOW(), NOW())
+       ON DUPLICATE KEY UPDATE role_id = VALUES(role_id), designation = VALUES(designation), updated_at = NOW()`,
+      [eventId, userId, roleId, designation]
     );
   }
 }
@@ -1450,12 +1450,14 @@ export const eventVotingResolvers = {
       }
 
       const supportsVotingPhaseState = await hasEventsVotingPhaseStateColumn();
+      const supportsVotingMode = await hasEventsVotingModeColumn();
 
       const eventRows = await query<any[]>(
         `SELECT
            id,
            committee_id AS committeeId,
-           ${supportsVotingPhaseState ? 'COALESCE(voting_phase_state, 0)' : '0'} AS votingPhaseState
+           COALESCE(voting_phase_state, 0) AS votingPhaseState
+           ${supportsVotingMode ? ', voting_mode AS votingMode' : ", 'VOTING' AS votingMode"}
          FROM events
          WHERE id = ?
          LIMIT 1`,
@@ -1467,12 +1469,13 @@ export const eventVotingResolvers = {
       }
 
       const event = eventRows[0];
+      const votingMode = String(event.votingMode || 'VOTING').toUpperCase();
 
       const membershipRows = await query<any[]>(
         `SELECT committee_role
-         FROM users_committees
-         WHERE committee_id = ? AND user_id = ?
-         LIMIT 1`,
+          FROM users_committees
+          WHERE committee_id = ? AND user_id = ?
+          LIMIT 1`,
         [Number(event.committeeId), await getLoggedInUserId(context)]
       );
 
@@ -1487,24 +1490,23 @@ export const eventVotingResolvers = {
       }
 
       const phase = Number(event.votingPhaseState || 0);
-      if (phase < 2 || phase > 3) {
-        throwEventError('BAD_REQUEST', 'Voting role can only be vacated during nominations');
-      }
-
-      const roleRows = await query<any[]>(
-        `SELECT evr.role_id AS roleId
-         FROM event_voting_roles evr
-         WHERE evr.event_id = ? AND evr.role_id = ?
-         LIMIT 1`,
-        [eventId, roleId]
-      );
-
-      if (!roleRows.length) {
-        throwEventError('NOT_FOUND', 'Role is not mapped for this event');
+      if (votingMode === 'DIRECT_ASSIGN') {
+        if (phase < 1 || phase > 5) {
+          throwEventError('BAD_REQUEST', 'Voting role can only be vacated before results are declared');
+        }
+      } else {
+        if (phase < 1 || phase > 5) {
+          throwEventError('BAD_REQUEST', 'Voting role can only be vacated before results are declared');
+        }
       }
 
       await query(
         `DELETE FROM event_voting_roles WHERE event_id = ? AND role_id = ?`,
+        [eventId, roleId]
+      );
+
+      await query(
+        `UPDATE users_events SET role_id = NULL WHERE event_id = ? AND role_id = ?`,
         [eventId, roleId]
       );
 

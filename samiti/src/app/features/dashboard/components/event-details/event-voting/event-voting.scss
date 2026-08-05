@@ -242,20 +242,9 @@
 
 .assign-winner-btn { width: 28px !important; height: 28px !important; line-height: 28px !important; margin-left: 4px; color: #b45309; mat-icon { font-size: 0.95rem !important; width: 0.95rem !important; height: 0.95rem !important; } }
 
-.direct-assign-body { display: flex; align-items: flex-end; gap: 8px; margin-top: 10px; padding: 10px 12px; border-top: 1px solid #e2e8f0; background: #f8fafc; border-radius: 0 0 8px 8px; }
-.direct-assign-select-field { flex: 1 1 auto; min-width: 160px; font-size: 0.8rem; }
-
-.da-circle-card { padding: 0; }
-.da-circle-card mat-card-content { align-items: stretch; padding: 16px 14px 6px; }
-.da-avatar-section { display: flex; flex-direction: column; align-items: center; gap: 10px; padding: 6px 0 4px; }
-.da-avatar { width: 208px; height: 208px; border-radius: 50%; display: flex; align-items: center; justify-content: center; overflow: hidden; background: linear-gradient(135deg, #e2e8f0, #cbd5e1); box-shadow: 0 4px 14px rgba(15, 23, 42, 0.12); border: 3px solid #ffffff; }
-.da-avatar-assigned { border-color: #eef2ff; box-shadow: 0 6px 18px rgba(79, 70, 229, 0.35); }
-.da-avatar-img { width: 100%; height: 100%; object-fit: cover; }
-.da-avatar-initials { font-size: 4rem; font-weight: 800; color: #ffffff; letter-spacing: 2px; }
-.da-avatar-placeholder { font-size: 5rem; width: 5rem; height: 5rem; color: rgba(255, 255, 255, 0.9); }
-.da-role-names { display: flex; flex-direction: column; align-items: center; text-align: center; }
-.da-role-primary { font-size: 0.9rem; font-weight: 800; color: #1e293b; line-height: 1.25; }
-.da-role-secondary { margin-top: 2px; font-size: 0.66rem; font-weight: 600; color: #64748b; line-height: 1.25; text-transform: uppercase; }
+.direct-assign-body { display: flex; align-items: stretch; gap: 8px; margin-top: 10px; padding: 10px 12px; border-top: 1px solid #e2e8f0; background: #f8fafc; border-radius: 0 0 8px 8px; align-self: stretch; width: 100%; }
+.direct-assign-select-field { flex: 1 1 auto; min-width: 0; width: 100%; font-size: 0.8rem; }
+.da-input-icon { display: inline-flex; align-items: center; justify-content: center; color: #64748b; mat-icon { font-size: 1.1rem; width: 1.1rem; height: 1.1rem; } }
 
 .da-opt-avatar { width: 38px; height: 38px; border-radius: 50%; overflow: hidden; flex-shrink: 0; display: inline-flex; align-items: center; justify-content: center; background: linear-gradient(135deg, #e2e8f0, #cbd5e1); }
 .da-opt-img { width: 100%; height: 100%; object-fit: cover; }
@@ -338,4 +327,60 @@
 
 .mode-selector-row { display: flex; align-items: center; gap: 6px; }
 .mode-label { font-size: 0.72rem; font-weight: 700; color: #64748b; text-transform: uppercase; letter-spacing: 0.03em; white-space: nowrap; user-select: none; }
+.mode-label-value { font-size: 0.78rem; font-weight: 700; color: #0f172a; white-space: nowrap; }
 .mode-select { --mdc-outlined-text-field-container-shape: 4px; --mdc-outlined-text-field-outline-width: 1px; --mdc-outlined-text-field-focus-outline-width: 1.5px; --mdc-outlined-text-field-height: 26px; --mdc-outlined-text-field-top-space: -8px; font-size: 0.72rem; line-height: 1; font-weight: 600; color: #334155; min-width: 136px; }
+::ng-deep .mat-mdc-autocomplete-panel {
+  /* Projected content lives inside .mdc-list-item__primary-text; make it full width
+     so the cup can be pushed to the right end via margin-left:auto */
+  .da-opt-row .mdc-list-item__primary-text {
+    width: 100%;
+    margin-right: 0;
+  }
+
+  .mat-auto-options {
+    display: flex;
+    align-items: center; /* Vertically center avatar, text block, and icon */
+    gap: 12px;           /* Avatar aur Text ke beech structured spacing */
+    width: 100%;
+
+    /* Name aur Email ko vertically stack karne ke liye */
+    .mat-auto-options-name-email {
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      line-height: 1.2;
+
+      .da-opt-name {
+        font-weight: 500;
+        color: #1f2937; /* Clean dark text */
+      }
+
+      span:not(.da-opt-name) {
+        font-size: 0.825rem;
+        color: #6b7280; /* Subtle gray email text */
+      }
+    }
+
+    /* Cup Icon ko bilkul right end par push karne ke liye */
+    .mat-auto-options-cup {
+      margin-left: auto;
+      display: flex;
+      align-items: center;
+      color: #f59e0b;
+    }
+  }
+
+  /* Master admin / winner / assigned member disabled rahe (click nahi hoga),
+     par clear dikhaye — Material ka 0.38 opacity blur hata do */
+  .da-opt-row.mdc-list-item--disabled {
+    opacity: 1 !important;
+    pointer-events: auto; /* hover register karne do taaki cursor change ho */
+    cursor: not-allowed;  /* blocked cursor */
+
+    .mdc-list-item__primary-text,
+    .mat-mdc-option-pseudo-checkbox,
+    > mat-icon {
+      opacity: 1 !important;
+    }
+  }
+}
