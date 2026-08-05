@@ -1,24 +1,24 @@
-import { query } from '../../../config/db';
+import { query } from '../../../../config/db';
 import { RowDataPacket } from 'mysql2/promise';
-import { hasEventsDisplayNameColumn } from './event-display-name-support';
+import { hasEventsDisplayNameColumn } from '../event-display-name-support';
 import { hasEventsVotingPhaseStateColumn } from '../voting/event-voting-phase-support';
 import { hasEventsVotingModeColumn } from '../voting/event-voting-mode-support';
-import { throwEventError, getLoggedInUserId, getEventVotingPhaseState } from '../voting/event-voting.graphql';
+import { throwEventError, getLoggedInUserId, getEventVotingPhaseState } from '../voting/event-voting-core.graphql';
 
-export const eventProgramsTypes = `
-  type EventProgramsPayload {
+export const eventPeopleTypes = `
+  type EventPeoplePayload {
     eventId: Int!
-    programs: [EventProgramSummary!]!
+    eventParticipants: [EventParticipant!]!
   }
 `;
 
-export const eventProgramsQueryFields = `
-  eventPrograms(id: Int!): EventProgramsPayload!
+export const eventPeopleQueryFields = `
+  eventPeople(id: Int!): EventPeoplePayload!
 `;
 
-export const eventProgramsResolvers = {
+export const eventPeopleResolvers = {
   Query: {
-    async eventPrograms(_: any, args: { id: number }, context: any) {
+    async eventPeople(_: any, args: { id: number }, context: any) {
       const eventId = Number(args?.id);
       if (!Number.isInteger(eventId) || eventId <= 0) {
         throwEventError('BAD_REQUEST', 'id must be a positive integer');
@@ -86,48 +86,37 @@ export const eventProgramsResolvers = {
         throwEventError('FORBIDDEN', 'You are not allowed to access this event');
       }
 
-      const programRows = await query<Array<RowDataPacket & {
-        id: number;
-        programId: number;
-        programName: string;
-        status: string;
-        visibility: string;
-        startDate: string | null;
-        endDate: string | null;
-        programBanner: string | null;
+      const eventParticipantRows = await query<Array<RowDataPacket & {
+        userId: number;
+        name: string;
+        email: string;
+        photo: string | null;
+        designation: string;
+        membershipStatus: string;
       }>>(
         `SELECT
-           p.id,
-           p.id AS programId,
-           p.name AS programName,
-           p.status,
-           p.visibility,
-           DATE_FORMAT(p.start_date_time, '%Y-%m-%d %H:%i:%s') AS startDate,
-           DATE_FORMAT(p.end_date_time, '%Y-%m-%d %H:%i:%s') AS endDate,
-           (
-             SELECT pma.media_url
-             FROM program_media_assets pma
-             WHERE pma.program_id = p.id
-             ORDER BY pma.sort_order ASC, pma.id ASC
-             LIMIT 1
-           ) AS programBanner
-         FROM programs p
-         WHERE p.event_id = ?
-         ORDER BY p.name ASC`,
+           ue.user_id AS userId,
+           u.name,
+           u.email,
+           u.profile_photo AS photo,
+           UPPER(COALESCE(NULLIF(TRIM(ue.designation), ''), 'MEMBER')) AS designation,
+           UPPER(COALESCE(NULLIF(TRIM(ue.status), ''), 'ACTIVE')) AS membershipStatus
+         FROM users_events ue
+         INNER JOIN users u ON u.id = ue.user_id
+         WHERE ue.event_id = ?
+         ORDER BY designation ASC, u.name ASC`,
         [eventId]
       );
 
       return {
         eventId: Number(event.eventId),
-        programs: programRows.map((programRow) => ({
-          id: Number(programRow.id),
-          programId: Number(programRow.programId),
-          programName: String(programRow.programName || ''),
-          status: String(programRow.status || ''),
-          visibility: String(programRow.visibility || ''),
-          startDate: programRow.startDate,
-          endDate: programRow.endDate,
-          programBanner: programRow.programBanner || null
+        eventParticipants: eventParticipantRows.map((participantRow) => ({
+          userId: Number(participantRow.userId),
+          name: String(participantRow.name || ''),
+          email: String(participantRow.email || ''),
+          photo: participantRow.photo || null,
+          designation: String(participantRow.designation || 'MEMBER'),
+          membershipStatus: String(participantRow.membershipStatus || 'ACTIVE')
         }))
       };
     }

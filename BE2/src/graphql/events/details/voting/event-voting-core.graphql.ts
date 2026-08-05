@@ -1,4 +1,4 @@
-import { query, getConnection } from '../../../config/db';
+import { query, getConnection } from '../../../../config/db';
 import { RowDataPacket } from 'mysql2/promise';
 import { hasEventsVotingPhaseStateColumn } from './event-voting-phase-support';
 import { hasEventsVotingModeColumn } from './event-voting-mode-support';

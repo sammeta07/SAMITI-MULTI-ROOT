@@ -1,8 +1,8 @@
 import { query } from '../../../config/db';
 import { RowDataPacket } from 'mysql2/promise';
 import { hasEventsDisplayNameColumn } from '../../events/details/event-display-name-support';
-import { hasEventsVotingPhaseStateColumn } from '../../events/voting/event-voting-phase-support';
-import { getMappedVotingRoles } from '../../events/voting/event-voting.graphql';
+import { hasEventsVotingPhaseStateColumn } from '../../events/details/voting/event-voting-phase-support';
+import { getMappedVotingRoles } from '../../events/details/voting/event-voting-core.graphql';
 
 const normalizeContactNumbers = (rawContactNumbers: unknown): string[] => {
   if (Array.isArray(rawContactNumbers)) {

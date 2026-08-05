@@ -1,4 +1,4 @@
-import { execute, query } from '../../../config/db';
+import { execute, query } from '../../../../config/db';
 import { hasEventsVotingModeColumn } from './event-voting-mode-support';
 
 const ALLOWED_VOTING_MODES = new Set(['VOTING', 'DIRECT_ASSIGN']);

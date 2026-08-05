@@ -1,10 +1,10 @@
 import { query } from '../../../config/db';
 import { RowDataPacket } from 'mysql2/promise';
 import { hasEventsDisplayNameColumn } from './event-display-name-support';
-import { hasEventsVotingPhaseStateColumn } from '../voting/event-voting-phase-support';
-import { hasEventsVotingModeColumn } from '../voting/event-voting-mode-support';
-import { getEventVotingPhaseState, getMappedVotingRoles, throwEventError, getLoggedInUserId } from '../voting/event-voting.graphql';
-import { getEventInterestApprovedPeople, getMyEventInterestRoleIds, getMyEventInterestStatuses } from '../voting/event-interest.graphql';
+import { hasEventsVotingPhaseStateColumn } from './voting/event-voting-phase-support';
+import { hasEventsVotingModeColumn } from './voting/event-voting-mode-support';
+import { getEventVotingPhaseState, getMappedVotingRoles, throwEventError, getLoggedInUserId } from './voting/event-voting-core.graphql';
+import { getEventInterestApprovedPeople, getMyEventInterestRoleIds, getMyEventInterestStatuses } from './voting/event-interest.graphql';
 
 export async function getEventMasterRoles(): Promise<Array<{ roleId: number | null; roleName: string; roleCode: string | null; hindiName: string | null; englishName: string | null; isActive: boolean }>> {
   const candidateTables = ['events_roles_master', 'event_roles_master'];

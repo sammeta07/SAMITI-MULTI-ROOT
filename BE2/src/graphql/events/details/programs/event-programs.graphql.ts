@@ -1,41 +1,24 @@
-import { query } from '../../../config/db';
+import { query } from '../../../../config/db';
 import { RowDataPacket } from 'mysql2/promise';
-import { hasEventsDisplayNameColumn } from './event-display-name-support';
+import { hasEventsDisplayNameColumn } from '../event-display-name-support';
 import { hasEventsVotingPhaseStateColumn } from '../voting/event-voting-phase-support';
 import { hasEventsVotingModeColumn } from '../voting/event-voting-mode-support';
-import { throwEventError, getLoggedInUserId, getEventVotingPhaseState } from '../voting/event-voting.graphql';
+import { throwEventError, getLoggedInUserId, getEventVotingPhaseState } from '../voting/event-voting-core.graphql';
 
-export const eventOverviewTypes = `
-  type EventOverview {
-    id: Int!
+export const eventProgramsTypes = `
+  type EventProgramsPayload {
     eventId: Int!
-    committeeId: Int
-    committeeAddress: String
-    eventName: String!
-    eventDisplayName: String!
-    eventBanner: String
-    bannerImages: [String!]!
-    status: String!
-    category: String
-    visibility: String!
-    type: String
-    startDate: String
-    endDate: String
-    latitude: Float
-    longitude: Float
-    createdBy: Int!
-    updatedBy: Int
-    createdAt: String
+    programs: [EventProgramSummary!]!
   }
 `;
 
-export const eventOverviewQueryFields = `
-  eventOverview(id: Int!): EventOverview!
+export const eventProgramsQueryFields = `
+  eventPrograms(id: Int!): EventProgramsPayload!
 `;
 
-export const eventOverviewResolvers = {
+export const eventProgramsResolvers = {
   Query: {
-    async eventOverview(_: any, args: { id: number }, context: any) {
+    async eventPrograms(_: any, args: { id: number }, context: any) {
       const eventId = Number(args?.id);
       if (!Number.isInteger(eventId) || eventId <= 0) {
         throwEventError('BAD_REQUEST', 'id must be a positive integer');
@@ -103,34 +86,49 @@ export const eventOverviewResolvers = {
         throwEventError('FORBIDDEN', 'You are not allowed to access this event');
       }
 
-      const bannerImageRows = await query<Array<RowDataPacket & { mediaUrl: string }>>(
-        `SELECT media_url AS mediaUrl
-         FROM event_media_assets
-         WHERE event_id = ?
-         ORDER BY sort_order ASC, id ASC`,
+      const programRows = await query<Array<RowDataPacket & {
+        id: number;
+        programId: number;
+        programName: string;
+        status: string;
+        visibility: string;
+        startDate: string | null;
+        endDate: string | null;
+        programBanner: string | null;
+      }>>(
+        `SELECT
+           p.id,
+           p.id AS programId,
+           p.name AS programName,
+           p.status,
+           p.visibility,
+           DATE_FORMAT(p.start_date_time, '%Y-%m-%d %H:%i:%s') AS startDate,
+           DATE_FORMAT(p.end_date_time, '%Y-%m-%d %H:%i:%s') AS endDate,
+           (
+             SELECT pma.media_url
+             FROM program_media_assets pma
+             WHERE pma.program_id = p.id
+             ORDER BY pma.sort_order ASC, pma.id ASC
+             LIMIT 1
+           ) AS programBanner
+         FROM programs p
+         WHERE p.event_id = ?
+         ORDER BY p.name ASC`,
         [eventId]
       );
 
       return {
-        id: Number(event.id),
         eventId: Number(event.eventId),
-        committeeId: event.committeeId || null,
-        committeeAddress: event.committeeAddress || null,
-        eventName: String(event.eventName || ''),
-        eventDisplayName: String(event.eventDisplayName || ''),
-        eventBanner: bannerImageRows[0]?.mediaUrl || null,
-        bannerImages: bannerImageRows.map((row) => row.mediaUrl),
-        status: String(event.status || ''),
-        category: event.category || null,
-        visibility: String(event.visibility || ''),
-        type: event.type || null,
-        startDate: event.startDate || null,
-        endDate: event.endDate || null,
-        latitude: event.latitude ? Number(event.latitude) : null,
-        longitude: event.longitude ? Number(event.longitude) : null,
-        createdBy: Number(event.createdBy),
-        updatedBy: event.updatedBy ? Number(event.updatedBy) : null,
-        createdAt: event.createdAt || null
+        programs: programRows.map((programRow) => ({
+          id: Number(programRow.id),
+          programId: Number(programRow.programId),
+          programName: String(programRow.programName || ''),
+          status: String(programRow.status || ''),
+          visibility: String(programRow.visibility || ''),
+          startDate: programRow.startDate,
+          endDate: programRow.endDate,
+          programBanner: programRow.programBanner || null
+        }))
       };
     }
   }

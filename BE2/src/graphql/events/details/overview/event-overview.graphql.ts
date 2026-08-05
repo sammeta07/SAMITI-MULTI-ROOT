@@ -1,24 +1,41 @@
-import { query } from '../../../config/db';
+import { query } from '../../../../config/db';
 import { RowDataPacket } from 'mysql2/promise';
-import { hasEventsDisplayNameColumn } from './event-display-name-support';
+import { hasEventsDisplayNameColumn } from '../event-display-name-support';
 import { hasEventsVotingPhaseStateColumn } from '../voting/event-voting-phase-support';
 import { hasEventsVotingModeColumn } from '../voting/event-voting-mode-support';
-import { throwEventError, getLoggedInUserId, getEventVotingPhaseState } from '../voting/event-voting.graphql';
+import { throwEventError, getLoggedInUserId, getEventVotingPhaseState } from '../voting/event-voting-core.graphql';
 
-export const eventPeopleTypes = `
-  type EventPeoplePayload {
+export const eventOverviewTypes = `
+  type EventOverview {
+    id: Int!
     eventId: Int!
-    eventParticipants: [EventParticipant!]!
+    committeeId: Int
+    committeeAddress: String
+    eventName: String!
+    eventDisplayName: String!
+    eventBanner: String
+    bannerImages: [String!]!
+    status: String!
+    category: String
+    visibility: String!
+    type: String
+    startDate: String
+    endDate: String
+    latitude: Float
+    longitude: Float
+    createdBy: Int!
+    updatedBy: Int
+    createdAt: String
   }
 `;
 
-export const eventPeopleQueryFields = `
-  eventPeople(id: Int!): EventPeoplePayload!
+export const eventOverviewQueryFields = `
+  eventOverview(id: Int!): EventOverview!
 `;
 
-export const eventPeopleResolvers = {
+export const eventOverviewResolvers = {
   Query: {
-    async eventPeople(_: any, args: { id: number }, context: any) {
+    async eventOverview(_: any, args: { id: number }, context: any) {
       const eventId = Number(args?.id);
       if (!Number.isInteger(eventId) || eventId <= 0) {
         throwEventError('BAD_REQUEST', 'id must be a positive integer');
@@ -86,38 +103,34 @@ export const eventPeopleResolvers = {
         throwEventError('FORBIDDEN', 'You are not allowed to access this event');
       }
 
-      const eventParticipantRows = await query<Array<RowDataPacket & {
-        userId: number;
-        name: string;
-        email: string;
-        photo: string | null;
-        designation: string;
-        membershipStatus: string;
-      }>>(
-        `SELECT
-           ue.user_id AS userId,
-           u.name,
-           u.email,
-           u.profile_photo AS photo,
-           UPPER(COALESCE(NULLIF(TRIM(ue.designation), ''), 'MEMBER')) AS designation,
-           UPPER(COALESCE(NULLIF(TRIM(ue.status), ''), 'ACTIVE')) AS membershipStatus
-         FROM users_events ue
-         INNER JOIN users u ON u.id = ue.user_id
-         WHERE ue.event_id = ?
-         ORDER BY designation ASC, u.name ASC`,
+      const bannerImageRows = await query<Array<RowDataPacket & { mediaUrl: string }>>(
+        `SELECT media_url AS mediaUrl
+         FROM event_media_assets
+         WHERE event_id = ?
+         ORDER BY sort_order ASC, id ASC`,
         [eventId]
       );
 
       return {
+        id: Number(event.id),
         eventId: Number(event.eventId),
-        eventParticipants: eventParticipantRows.map((participantRow) => ({
-          userId: Number(participantRow.userId),
-          name: String(participantRow.name || ''),
-          email: String(participantRow.email || ''),
-          photo: participantRow.photo || null,
-          designation: String(participantRow.designation || 'MEMBER'),
-          membershipStatus: String(participantRow.membershipStatus || 'ACTIVE')
-        }))
+        committeeId: event.committeeId || null,
+        committeeAddress: event.committeeAddress || null,
+        eventName: String(event.eventName || ''),
+        eventDisplayName: String(event.eventDisplayName || ''),
+        eventBanner: bannerImageRows[0]?.mediaUrl || null,
+        bannerImages: bannerImageRows.map((row) => row.mediaUrl),
+        status: String(event.status || ''),
+        category: event.category || null,
+        visibility: String(event.visibility || ''),
+        type: event.type || null,
+        startDate: event.startDate || null,
+        endDate: event.endDate || null,
+        latitude: event.latitude ? Number(event.latitude) : null,
+        longitude: event.longitude ? Number(event.longitude) : null,
+        createdBy: Number(event.createdBy),
+        updatedBy: event.updatedBy ? Number(event.updatedBy) : null,
+        createdAt: event.createdAt || null
       };
     }
   }

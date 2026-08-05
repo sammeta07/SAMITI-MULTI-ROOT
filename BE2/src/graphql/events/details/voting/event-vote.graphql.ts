@@ -1,7 +1,7 @@
-import { query } from '../../../config/db';
+import { query } from '../../../../config/db';
 import { RowDataPacket } from 'mysql2/promise';
 import { hasEventsVotingPhaseStateColumn } from './event-voting-phase-support';
-import { throwEventError, getLoggedInUserId, getMappedVotingRoles } from './event-voting.graphql';
+import { throwEventError, getLoggedInUserId, getMappedVotingRoles } from './event-voting-core.graphql';
 
 function getAccessToken(context: any): string {
   const authHeader = context.headers?.authorization;

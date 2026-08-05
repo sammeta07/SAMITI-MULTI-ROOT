@@ -1,11 +1,11 @@
-import { query } from '../../../config/db';
+import { query } from '../../../../config/db';
 import { RowDataPacket } from 'mysql2/promise';
-import { hasEventsDisplayNameColumn } from './event-display-name-support';
-import { hasEventsVotingPhaseStateColumn } from '../voting/event-voting-phase-support';
-import { hasEventsVotingModeColumn } from '../voting/event-voting-mode-support';
-import { throwEventError, getLoggedInUserId, getEventVotingPhaseState, getMappedVotingRoles } from '../voting/event-voting.graphql';
-import { getEventInterestApprovedPeople, getMyEventInterestRoleIds, getMyEventInterestStatuses } from '../voting/event-interest.graphql';
-import { getEventMasterRoles } from './event-details-by-id.graphql';
+import { hasEventsDisplayNameColumn } from '../event-display-name-support';
+import { hasEventsVotingPhaseStateColumn } from './event-voting-phase-support';
+import { hasEventsVotingModeColumn } from './event-voting-mode-support';
+import { throwEventError, getLoggedInUserId, getEventVotingPhaseState, getMappedVotingRoles } from './event-voting-core.graphql';
+import { getEventInterestApprovedPeople, getMyEventInterestRoleIds, getMyEventInterestStatuses } from './event-interest.graphql';
+import { getEventMasterRoles } from '../event-details-by-id.graphql';
 
 export const eventVotingDetailsTypes = `
   type EventVotingDetailsPayload {
