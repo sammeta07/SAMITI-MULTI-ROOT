@@ -21,7 +21,7 @@ export const authInterceptor: HttpInterceptorFn = (
       }
     });
     
-    console.log(`[HTTP Interceptor] Token attached cleanly to: ${req.url}`);
+    // console.log(`[HTTP Interceptor] Token attached cleanly to: ${req.url}`);
     return next(clonedRequest);
   }
 

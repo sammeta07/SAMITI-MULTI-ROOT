@@ -127,7 +127,7 @@ export class DashboardHierarchyTreeComponent implements OnInit {
 
   private mapAdminNodeToTreeNode(
     node: AdminHierarchyTreeNode,
-    roleScope: 'admin' | 'member' | null
+    roleScope: 'master_admin' | 'admin' | 'member' | null
   ): TreeNode | null {
     const mappedType = this.mapBackendTypeToTreeType(node.type, node.id);
     if (!mappedType) {
@@ -148,8 +148,12 @@ export class DashboardHierarchyTreeComponent implements OnInit {
     };
   }
 
-  private resolveRoleScope(roleName: string | undefined): 'admin' | 'member' | null {
+  private resolveRoleScope(roleName: string | undefined): 'master_admin' | 'admin' | 'member' | null {
     const normalizedRoleName = (roleName || '').trim().toLowerCase();
+
+    if (normalizedRoleName.includes('master')) {
+      return 'master_admin';
+    }
 
     if (normalizedRoleName.includes('admin')) {
       return 'admin';
@@ -420,7 +424,6 @@ export class DashboardHierarchyTreeComponent implements OnInit {
   }
 
   public onNodeClick(node: TreeNode): void {
-    console.log('node',node);
     if (node.type === 'role') {
       // this.treeNodeSelected.emit(node);
       return;
@@ -430,7 +433,7 @@ export class DashboardHierarchyTreeComponent implements OnInit {
     this.selectedNode.set(node);
     this.triggerNodeHighlight(node);
 
-    if (node.type === 'group' || node.type === 'event' || node.type === 'program') {
+    if (node.type === 'group' || node.type === 'event' || node.type === 'program' || node.type === 'task') {
       if (!node.id) {
         this.notifier.warn(`Unable to open ${node.type} details.`);
         this.treeNodeSelected.emit(node);

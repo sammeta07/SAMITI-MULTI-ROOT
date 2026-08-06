@@ -1,4 +1,4 @@
-import { Component, inject, OnInit } from '@angular/core';
+import { Component, inject, OnInit, OnDestroy } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { Router, ActivatedRoute } from '@angular/router';
 import { MatDialog } from '@angular/material/dialog';
@@ -8,6 +8,7 @@ import { NotifierService } from '../../../../../shared/notifier/notifier.service
 import { CreateProgramDialogComponent } from '../../../../../components/dialog/create-program/create-program.component';
 import { EventProgramsService } from './event-programs.service';
 import { EventProgramsPayload } from './event-programs.models';
+import { Subscription } from 'rxjs';
 
 @Component({
   selector: 'app-event-programs',
@@ -20,12 +21,13 @@ import { EventProgramsPayload } from './event-programs.models';
   templateUrl: './event-programs.html',
   styleUrl: './event-programs.scss'
 })
-export class EventProgramsComponent implements OnInit {
+export class EventProgramsComponent implements OnInit, OnDestroy{
   private readonly router = inject(Router);
   private readonly route = inject(ActivatedRoute);
   private readonly dialog = inject(MatDialog);
   private readonly notifier = inject(NotifierService);
   private readonly programsService = inject(EventProgramsService);
+  private parentParamsSub?: Subscription;
 
   public eventData: EventProgramsPayload | null = null;
 
@@ -35,10 +37,9 @@ export class EventProgramsComponent implements OnInit {
 
   ngOnInit(): void {
     const parentParams$ = this.route.parent?.params;
-    if (!parentParams$) {
-      return;
-    }
-    parentParams$.subscribe(params => {
+    if (!parentParams$) return;
+
+    this.parentParamsSub = parentParams$.subscribe(params => {
       const eventId = params['id'];
       if (eventId) {
         this.loadEventPrograms(eventId);
@@ -78,5 +79,9 @@ export class EventProgramsComponent implements OnInit {
   public onOpenProgram(programId: number): void {
     if (!Number.isInteger(programId) || programId <= 0) return;
     this.router.navigate(['/dashboard', 'program', programId]);
+  }
+
+  ngOnDestroy(): void {
+    this.parentParamsSub?.unsubscribe();
   }
 }

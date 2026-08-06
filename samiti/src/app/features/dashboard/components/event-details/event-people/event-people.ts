@@ -1,10 +1,11 @@
-import { Component, inject, OnInit } from '@angular/core';
+import { Component, inject, OnInit, OnDestroy } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ActivatedRoute } from '@angular/router';
 import { MatIconModule } from '@angular/material/icon';
 import { MatButtonModule } from '@angular/material/button';
 import { EventPeopleService } from './event-people.service';
 import { EventPeoplePayload, EventPerson } from './event-people.models';
+import { Subscription } from 'rxjs';
 
 @Component({
   selector: 'app-event-people',
@@ -17,10 +18,10 @@ import { EventPeoplePayload, EventPerson } from './event-people.models';
   templateUrl: './event-people.html',
   styleUrl: './event-people.scss'
 })
-export class EventPeopleComponent implements OnInit {
+export class EventPeopleComponent implements OnInit, OnDestroy {
   private readonly route = inject(ActivatedRoute);
   private readonly peopleService = inject(EventPeopleService);
-
+private parentParamsSub?: Subscription;
   public eventData: EventPeoplePayload | null = null;
 
   public get eventAdmins(): EventPerson[] {
@@ -43,12 +44,11 @@ export class EventPeopleComponent implements OnInit {
     }));
   }
 
-  ngOnInit(): void {
+ngOnInit(): void {
     const parentParams$ = this.route.parent?.params;
-    if (!parentParams$) {
-      return;
-    }
-    parentParams$.subscribe(params => {
+    if (!parentParams$) return;
+
+    this.parentParamsSub = parentParams$.subscribe(params => {
       const eventId = params['id'];
       if (eventId) {
         this.loadEventPeople(eventId);
@@ -65,5 +65,10 @@ export class EventPeopleComponent implements OnInit {
         this.eventData = null;
       }
     });
+  }
+
+
+  ngOnDestroy(): void {
+    this.parentParamsSub?.unsubscribe();
   }
 }

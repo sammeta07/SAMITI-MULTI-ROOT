@@ -1,4 +1,4 @@
-import { Component, inject, OnInit, signal, effect } from '@angular/core';
+import { Component, inject, OnInit, signal, effect, OnDestroy } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ActivatedRoute, Router } from '@angular/router';
 import { MatDialog } from '@angular/material/dialog';
@@ -21,6 +21,7 @@ import { ConfirmDialogData } from '../../../../../components/dialog/confirm/conf
 import { AuthService } from '../../../../../core/services/auth.service';
 import { VoteHistoryDialogComponent } from '../../../../../components/dialog/vote-history/vote-history.component';
 import { EventDetailsStateService } from '../event-details-state.service';
+import { Subscription } from 'rxjs';
 
 @Component({
   selector: 'app-event-voting',
@@ -41,7 +42,7 @@ import { EventDetailsStateService } from '../event-details-state.service';
   templateUrl: './event-voting.html',
   styleUrl: './event-voting.scss'
 })
-export class EventVotingComponent implements OnInit {
+export class EventVotingComponent implements OnInit, OnDestroy{
   private readonly route = inject(ActivatedRoute);
   private readonly router = inject(Router);
   private readonly dialog = inject(MatDialog);
@@ -51,6 +52,7 @@ export class EventVotingComponent implements OnInit {
   private readonly confirmDialog = inject(ConfirmDialogService);
   private readonly stateService = inject(EventDetailsStateService);
 
+  private paramSub?: Subscription;
   public readonly isBannerUploading = signal<boolean>(false);
   public readonly isVisibilityUpdating = signal<boolean>(false);
   public readonly selectedVotingRoleIds = signal<number[]>([]);
@@ -313,15 +315,16 @@ export class EventVotingComponent implements OnInit {
 
   ngOnInit(): void {
     const parentParams$ = this.route.parent?.params;
-    if (!parentParams$) {
-      return;
-    }
-    parentParams$.subscribe(params => {
+    if (!parentParams$) return;
+
+    // Purani subscription clean karke naye ko assign karein
+    this.paramSub = parentParams$.subscribe(params => {
       const eventId = params['id'];
       if (!eventId) return;
 
       const currentData = this.stateService.eventData();
       if (currentData) {
+        console.log("initializeVotingState 1");
         this.initializeVotingState(Number(eventId));
       }
     });
@@ -367,7 +370,7 @@ export class EventVotingComponent implements OnInit {
       }));
     this.directAssignMembers.set(initialMembers);
     this.loadDirectAssignMembers(eventId);
-    this.loadPendingInterests();
+    this.loadPendingInterests(eventId);
     this.loadMyVotes(eventId);
     if (Number(data.votingPhaseState || 0) === 6) {
       this.loadEventResults(eventId);
@@ -562,7 +565,7 @@ export class EventVotingComponent implements OnInit {
       next: (payload) => {
         this.myInterestRoleIds.set((payload.myInterestRoleIds || []).map((id) => Number(id)));
         this.myInterestStatuses.set((payload.myInterestStatuses || []).map((item) => ({ roleId: Number(item.roleId), status: String(item.status || 'PENDING') })));
-        this.loadPendingInterests();
+        this.loadPendingInterests(currentEvent.eventId);
         this.isExpressingInterest.set(false);
         this.notifier.success(payload.expressed ? `Your interest has been submitted for **${roleLabel}**.` : `Interest withdrawn for **${roleLabel}**.`);
       },
@@ -570,10 +573,10 @@ export class EventVotingComponent implements OnInit {
     });
   }
 
-  private loadPendingInterests(): void {
-    const currentEvent = this.eventData;
-    if (!currentEvent?.eventId) return;
-    this.votingService.getPendingInterests(currentEvent.eventId).subscribe({
+  private loadPendingInterests(eventId: number): void {
+    // const currentEvent = this.eventData;
+    // if (!currentEvent?.eventId) return;
+    this.votingService.getPendingInterests(eventId).subscribe({
       next: (summary) => {
         this.interestReviewList.set((summary?.pending || []).map((item) => ({ id: Number(item.id), eventId: Number(item.eventId), roleId: Number(item.roleId), roleName: item.roleName, userId: Number(item.userId), userName: item.userName, userEmail: item.userEmail, userPhoto: item.userPhoto, status: String(item.status || 'PENDING').toUpperCase() })));
         this.refreshInterestApprovedPeopleFromReviewList();
@@ -1112,5 +1115,9 @@ export class EventVotingComponent implements OnInit {
         }
       });
     }
+  }
+
+  ngOnDestroy(): void {
+    this.paramSub?.unsubscribe();
   }
 }

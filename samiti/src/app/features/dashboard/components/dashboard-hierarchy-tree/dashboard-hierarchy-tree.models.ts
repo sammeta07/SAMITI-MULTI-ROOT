@@ -42,5 +42,5 @@ export interface TreeNode {
   children?: TreeNode[];
   status?: string;
   logo?: string | null;
-  roleScope?: 'admin' | 'member';
+  roleScope?: 'master_admin' | 'admin' | 'member';
 }

@@ -1,4 +1,4 @@
-import { Component, ElementRef, inject, ViewChild, OnInit } from '@angular/core';
+import { Component, ElementRef, inject, ViewChild, OnInit, OnDestroy } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { Router, ActivatedRoute } from '@angular/router';
 import { MatDialog } from '@angular/material/dialog';
@@ -17,6 +17,7 @@ import { ConfirmDialogData } from '../../../../../components/dialog/confirm/conf
 import { DashboardHierarchyTreeService } from '../../dashboard-hierarchy-tree/dashboard-hierarchy-tree.service';
 import { CreateEventDialogComponent } from '../../../../../components/dialog/create-event/create-event.component';
 import { ImageAssetService } from '../../../../../core/services/image-asset.service';
+import { Subscription } from 'rxjs';
 
 @Component({
   selector: 'app-event-overview',
@@ -32,7 +33,7 @@ import { ImageAssetService } from '../../../../../core/services/image-asset.serv
   templateUrl: './event-overview.html',
   styleUrl: './event-overview.scss'
 })
-export class EventOverviewComponent implements OnInit {
+export class EventOverviewComponent implements OnInit, OnDestroy {
   @ViewChild('bannerFileInput') private readonly bannerFileInput?: ElementRef<HTMLInputElement>;
 
   private readonly router = inject(Router);
@@ -43,7 +44,7 @@ export class EventOverviewComponent implements OnInit {
   private readonly imageAssetService = inject(ImageAssetService);
   private readonly confirmDialog = inject(ConfirmDialogService);
   private readonly hierarchyTreeService = inject(DashboardHierarchyTreeService);
-
+  private routeSub?: Subscription;
   public eventData: EventOverviewPayload | null = null;
 
   public get bannerCount(): number {
@@ -58,13 +59,14 @@ export class EventOverviewComponent implements OnInit {
     return this.bannerCount < this.MAX_BANNERS;
   }
 
-  ngOnInit(): void {
+ngOnInit(): void {
     const parentParams$ = this.route.parent?.params;
     if (!parentParams$) {
       this.notifier.error('Failed to resolve event route.');
       return;
     }
-    parentParams$.subscribe(params => {
+
+    this.routeSub = parentParams$.subscribe(params => {
       const eventId = params['id'];
       if (eventId) {
         this.loadEventOverview(eventId);
@@ -207,5 +209,9 @@ export class EventOverviewComponent implements OnInit {
 
   private toTitleCase(value: string): string {
     return value.toLowerCase().replace(/\s+/g, ' ').trim().replace(/\b\w/g, (char) => char.toUpperCase());
+  }
+
+  ngOnDestroy(): void {
+    this.routeSub?.unsubscribe();
   }
 }
