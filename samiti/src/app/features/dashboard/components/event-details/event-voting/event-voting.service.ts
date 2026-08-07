@@ -38,37 +38,6 @@ export class EventVotingService {
       eventVotingDetails(id: ${id}) {
         id
         eventId
-        committeeId
-        eventName
-        eventDisplayName
-        eventBanner
-        bannerImages
-        status
-        category
-        visibility
-        type
-        startDate
-        endDate
-        latitude
-        longitude
-        programs {
-          id
-          programId
-          programName
-          status
-          visibility
-          startDate
-          endDate
-          programBanner
-        }
-        eventParticipants {
-          userId
-          name
-          email
-          photo
-          designation
-          membershipStatus
-        }
         availableRoles {
           roleId
           roleName

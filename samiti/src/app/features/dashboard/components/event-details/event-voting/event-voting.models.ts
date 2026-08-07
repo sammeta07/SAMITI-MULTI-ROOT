@@ -206,21 +206,6 @@ export interface EventInterestSummary {
 export interface EventVotingPayload {
   id: number;
   eventId: number;
-  committeeId?: number | null;
-  eventName: string;
-  eventDisplayName: string;
-  eventBanner?: string | null;
-  bannerImages: string[];
-  status: string;
-  category?: string | null;
-  visibility: string;
-  type?: 'PUBLIC' | 'PRIVATE' | string;
-  startDate?: string | null;
-  endDate?: string | null;
-  latitude?: number | null;
-  longitude?: number | null;
-  programs: any[];
-  eventParticipants: any[];
   availableRoles: EventAvailableRole[];
   mappedVotingRoles: EventMappedVotingRole[];
   myInterestRoleIds: number[];

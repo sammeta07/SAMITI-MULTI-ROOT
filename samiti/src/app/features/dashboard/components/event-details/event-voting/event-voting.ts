@@ -95,10 +95,6 @@ export class EventVotingComponent implements OnInit, OnDestroy{
     return (this.eventData?.votingMode as 'VOTING' | 'DIRECT_ASSIGN' | undefined) || 'VOTING';
   }
 
-  public get programsCount(): number {
-    return this.eventData?.programs?.length ?? 0;
-  }
-
   public get canManageVotingRoles(): boolean {
     return this.eventData?.canManageVotingRoles ?? false;
   }
@@ -826,7 +822,7 @@ export class EventVotingComponent implements OnInit, OnDestroy{
     document.body.classList.add('dialog-open');
     const dialogRef = this.dialog.open(VoteHistoryDialogComponent, {
       position: { right: '0', top: '0' }, height: '100%', width: '50%', autoFocus: true, disableClose: true, hasBackdrop: true, panelClass: 'slide-in-dialog',
-      data: { history, eventLogo: event?.eventBanner || event?.bannerImages?.[0] || null }
+      data: { history, eventLogo: null }
     });
     dialogRef.afterClosed().subscribe(() => document.body.classList.remove('dialog-open'));
   }
@@ -839,10 +835,6 @@ export class EventVotingComponent implements OnInit, OnDestroy{
       next: () => { this.notifier.success(`Mode changed to ${mode === 'VOTING' ? 'Voting' : 'Direct Assign'} successfully.`); this.isUpdatingVotingMode.set(false); },
       error: (err: HttpErrorResponse) => { this.notifier.error(err?.error?.message || 'Failed to update voting mode.'); this.isUpdatingVotingMode.set(false); }
     });
-  }
-
-  public getParticipantById(userId: number): { name: string; photo?: string | null } | undefined {
-    return this.eventData?.eventParticipants?.find((p) => p.userId === userId);
   }
 
   public onDirectAssignWinner(roleId: number, userId: number | null): void {
