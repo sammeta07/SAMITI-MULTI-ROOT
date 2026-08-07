@@ -1058,6 +1058,11 @@ export class EventVotingComponent implements OnInit, OnDestroy{
   }
 
   private loadDirectAssignMembers(eventId: number): void {
+    const currentEvent = this.eventData;
+    if (!currentEvent) return;
+    if (String(currentEvent.votingMode).toUpperCase() !== 'DIRECT_ASSIGN') return;
+    const phase = Number(currentEvent.votingPhaseState || 0);
+    if (phase < 1 || phase >= 6) return;
     this.votingService.getDirectAssignMembers(eventId).subscribe({
       next: (members) => {
         const currentEvent = this.eventData;
