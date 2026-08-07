@@ -67,11 +67,6 @@ export interface MyEventVote {
   votedAt: string;
 }
 
-export interface MyEventVotesPayload {
-  eventId: number;
-  votes: MyEventVote[];
-}
-
 export interface EventResultCandidate {
   userId: number;
   name: string;
@@ -224,23 +219,18 @@ export interface EventVotingPayload {
   endDate?: string | null;
   latitude?: number | null;
   longitude?: number | null;
-  createdBy: number;
-  updatedBy?: number | null;
-  createdAt?: string | null;
   programs: any[];
   eventParticipants: any[];
-  designationSummary: any[];
-  eligibleVoterCount: number;
   availableRoles: EventAvailableRole[];
   mappedVotingRoles: EventMappedVotingRole[];
   myInterestRoleIds: number[];
   myInterestStatuses: EventInterestStatus[];
   interestApprovedPeople: EventInterestInfo[];
+  pendingEventInterests?: EventInterestSummary;
+  myVotes?: MyEventVote[];
   canReviewInterest: boolean;
   canManageVotingRoles: boolean;
   currentCommitteeRole: string;
-  committeeMemberCount: number;
-  committeeAdminCount: number;
   votingPhaseState: number;
   votingMode?: 'VOTING' | 'DIRECT_ASSIGN';
 }

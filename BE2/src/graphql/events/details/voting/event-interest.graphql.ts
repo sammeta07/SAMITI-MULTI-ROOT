@@ -97,36 +97,17 @@ export const eventInterestTypes = `
     autoRejectedOthers: Boolean
     previousDesignation: String
   }
-
-  type PendingEventInterest {
-    id: Int!
-    eventId: Int!
-    roleId: Int!
-    roleName: String
-    userId: Int!
-    userName: String!
-    userEmail: String!
-    userPhoto: String
-    status: String!
-    createdAt: String
-  }
-
-  type EventInterestSummary {
-    eventId: Int!
-    pending: [PendingEventInterest!]!
-  }
 `;
 
-export const eventInterestQueryFields = `
-  pendingEventInterests(eventId: Int!): EventInterestSummary!
-`;
+
+export const eventInterestQueryFields = ``;
 
 export const eventInterestMutationFields = `
   expressEventInterest(eventId: Int!, roleId: Int!): ExpressEventInterestPayload!
   reviewEventInterest(eventId: Int!, roleId: Int!, userId: Int!, status: String!): ReviewEventInterestPayload!
 `;
 
-interface EventAccessContext {
+export interface EventAccessContext {
   eventExists: boolean;
   isCommitteeMember: boolean;
   committeeRole: string;
@@ -134,7 +115,7 @@ interface EventAccessContext {
   votingPhaseState: number;
 }
 
-async function getEventAccessContext(eventId: number, userId: number): Promise<EventAccessContext> {
+export async function getEventAccessContext(eventId: number, userId: number): Promise<EventAccessContext> {
   const rows = await query<Array<RowDataPacket & {
     committeeRole: string | null;
     votingPhaseState: number;
@@ -185,78 +166,7 @@ async function requireMappedRole(eventId: number, roleId: number): Promise<void>
 }
 
 export const eventInterestResolvers = {
-  Query: {
-    async pendingEventInterests(_: any, args: { eventId: number }, context: any) {
-      const eventId = Number(args?.eventId);
-      if (!Number.isInteger(eventId) || eventId <= 0) {
-        throwEventError('BAD_REQUEST', 'eventId must be a positive integer');
-      }
-
-      let loggedInUserId = 0;
-      try {
-        loggedInUserId = await getLoggedInUserId(context);
-      } catch {
-        return { eventId, pending: [] };
-      }
-
-      const access = await getEventAccessContext(eventId, loggedInUserId);
-      // Master admin can always view pending interests.
-      // Other committee members (ADMIN / MEMBER) can view once roles are locked (votingPhaseState >= 1).
-      const canViewPending =
-        access.isMasterAdmin ||
-        (access.isCommitteeMember && access.votingPhaseState >= 1);
-      if (!canViewPending) {
-        return { eventId, pending: [] };
-      }
-
-      const pendingRows = await query<Array<RowDataPacket & {
-        id: number;
-        eventId: number;
-        roleId: number;
-        roleName: string | null;
-        userId: number;
-        userName: string;
-        userEmail: string;
-        userPhoto: string | null;
-        status: string;
-        createdAt: string;
-      }>>(
-        `SELECT
-            eie.id AS id,
-            eie.event_id AS eventId,
-            eie.role_id AS roleId,
-            erm.role_name AS roleName,
-            eie.user_id AS userId,
-            u.name AS userName,
-            u.email AS userEmail,
-            u.profile_photo AS userPhoto,
-            eie.status AS status,
-            DATE_FORMAT(eie.created_at, '%Y-%m-%d %H:%i:%s') AS createdAt
-           FROM event_interest_expressions eie
-           INNER JOIN users u ON u.id = eie.user_id
-           LEFT JOIN events_roles_master erm ON erm.role_id = eie.role_id
-           WHERE eie.event_id = ?
-           ORDER BY eie.created_at ASC`,
-         [eventId]
-      );
-
-      return {
-        eventId,
-        pending: pendingRows.map((row) => ({
-          id: Number(row.id),
-          eventId: Number(row.eventId),
-          roleId: Number(row.roleId),
-          roleName: row.roleName ? String(row.roleName) : null,
-          userId: Number(row.userId),
-          userName: String(row.userName || ''),
-          userEmail: String(row.userEmail || ''),
-          userPhoto: row.userPhoto ? String(row.userPhoto) : null,
-          status: String(row.status || 'PENDING'),
-          createdAt: row.createdAt || null
-        }))
-      };
-    }
-  },
+  Query: {},
   Mutation: {
     async expressEventInterest(_: any, args: { eventId: number; roleId: number }, context: any) {
       const eventId = Number(args?.eventId);

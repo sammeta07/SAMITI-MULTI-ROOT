@@ -19,10 +19,8 @@ import {
   DirectAssignWinnerPayload,
   ExpressEventInterestPayload,
   ReviewEventInterestPayload,
-  EventInterestSummary,
   EventVoteHistory,
   CastEventVotePayload,
-  MyEventVotesPayload,
   EventResultsPayload,
   EventCommitteeMember,
   EventDirectAssignMember
@@ -53,9 +51,6 @@ export class EventVotingService {
         endDate
         latitude
         longitude
-        createdBy
-        updatedBy
-        createdAt
         programs {
           id
           programId
@@ -74,11 +69,6 @@ export class EventVotingService {
           designation
           membershipStatus
         }
-        designationSummary {
-          designation
-          memberCount
-        }
-        eligibleVoterCount
         availableRoles {
           roleId
           roleName
@@ -111,11 +101,29 @@ export class EventVotingService {
             photo
           }
         }
+        pendingEventInterests {
+          eventId
+          pending {
+            id
+            eventId
+            roleId
+            roleName
+            userId
+            userName
+            userEmail
+            userPhoto
+            status
+            createdAt
+          }
+        }
+        myVotes {
+          roleId
+          candidateId
+          votedAt
+        }
         canReviewInterest
         canManageVotingRoles
         currentCommitteeRole
-        committeeMemberCount
-        committeeAdminCount
         votingPhaseState
         votingMode
       }
@@ -340,37 +348,6 @@ export class EventVotingService {
     );
   }
 
-  public getPendingInterests(eventId: number): Observable<EventInterestSummary> {
-    const query = `query GetPendingInterests($eventId: Int!) {
-      pendingEventInterests(eventId: $eventId) {
-        eventId
-        pending {
-          id
-          eventId
-          roleId
-          roleName
-          userId
-          userName
-          userEmail
-          userPhoto
-          status
-          createdAt
-        }
-      }
-    }`;
-
-    return this.http.post<{ data: { pendingEventInterests: EventInterestSummary } }>(
-      this.graphqlUrl,
-      {
-        query,
-        variables: { eventId }
-      },
-      { withCredentials: true }
-    ).pipe(
-      map(res => res.data.pendingEventInterests)
-    );
-  }
-
   public castEventVote(eventId: number, roleId: number, candidateId: number): Observable<CastEventVotePayload> {
     const mutation = `mutation CastEventVote($eventId: Int!, $roleId: Int!, $candidateId: Int!) {
       castEventVote(eventId: $eventId, roleId: $roleId, candidateId: $candidateId) {
@@ -391,27 +368,6 @@ export class EventVotingService {
       { withCredentials: true }
     ).pipe(
       map(res => res.data.castEventVote)
-    );
-  }
-
-  public getMyEventVotes(eventId: number): Observable<MyEventVotesPayload> {
-    const query = `query MyEventVotes($eventId: Int!) {
-      myEventVotes(eventId: $eventId) {
-        eventId
-        votes {
-          roleId
-          candidateId
-          votedAt
-        }
-      }
-    }`;
-
-    return this.http.post<{ data: { myEventVotes: MyEventVotesPayload } }>(
-      this.graphqlUrl,
-      { query, variables: { eventId } },
-      { withCredentials: true }
-    ).pipe(
-      map(res => res.data.myEventVotes)
     );
   }
 

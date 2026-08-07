@@ -4,7 +4,8 @@ import { hasEventsDisplayNameColumn } from '../event-display-name-support';
 import { hasEventsVotingPhaseStateColumn } from './event-voting-phase-support';
 import { hasEventsVotingModeColumn } from './event-voting-mode-support';
 import { throwEventError, getLoggedInUserId, getEventVotingPhaseState, getMappedVotingRoles } from './event-voting-core.graphql';
-import { getEventInterestApprovedPeople, getMyEventInterestRoleIds, getMyEventInterestStatuses } from './event-interest.graphql';
+import { getEventInterestApprovedPeople, getMyEventInterestRoleIds, getMyEventInterestStatuses, getEventAccessContext } from './event-interest.graphql';
+import { getEventAccess } from './event-vote.graphql';
 import { getEventMasterRoles } from '../event-details-by-id.graphql';
 
 export const eventVotingDetailsTypes = `
@@ -24,25 +25,44 @@ export const eventVotingDetailsTypes = `
     endDate: String
     latitude: Float
     longitude: Float
-    createdBy: Int!
-    updatedBy: Int
-    createdAt: String
     programs: [EventProgramSummary!]!
     eventParticipants: [EventParticipant!]!
-    designationSummary: [EventDesignationSummary!]!
-    eligibleVoterCount: Int!
     availableRoles: [EventAvailableRole!]!
     mappedVotingRoles: [EventMappedVotingRole!]!
     myInterestRoleIds: [Int!]!
     myInterestStatuses: [EventInterestStatus!]!
     interestApprovedPeople: [EventInterestInfo!]!
+    pendingEventInterests: EventVotingPendingInterests
+    myVotes: [MyEventVote!]
     canReviewInterest: Boolean!
     canManageVotingRoles: Boolean!
     currentCommitteeRole: String!
-    committeeMemberCount: Int!
-    committeeAdminCount: Int!
     votingPhaseState: Int!
     votingMode: String
+  }
+
+  type PendingEventInterest {
+    id: Int!
+    eventId: Int!
+    roleId: Int!
+    roleName: String
+    userId: Int!
+    userName: String!
+    userEmail: String!
+    userPhoto: String
+    status: String!
+    createdAt: String
+  }
+
+  type EventVotingPendingInterests {
+    eventId: Int!
+    pending: [PendingEventInterest!]!
+  }
+
+  type MyEventVote {
+    roleId: Int!
+    candidateId: Int!
+    votedAt: String!
   }
 `;
 
@@ -136,17 +156,6 @@ export const eventVotingDetailsResolvers = {
             ? 'COMMITTEE_MEMBER'
             : 'NONE';
 
-      const committeeCountRows = await query<Array<RowDataPacket & { memberCount: number; adminCount: number }>>(
-        `SELECT
-           SUM(CASE WHEN committee_role = 'COMMITTEE_MEMBER' THEN 1 ELSE 0 END) AS memberCount,
-           SUM(CASE WHEN committee_role IN ('COMMITTEE_ADMIN', 'COMMITTEE_MASTER_ADMIN') THEN 1 ELSE 0 END) AS adminCount
-         FROM users_committees
-         WHERE committee_id = ?`,
-        [Number(event.committeeId)]
-      );
-      const committeeMemberCount = Number(committeeCountRows[0]?.memberCount || 0);
-      const committeeAdminCount = Number(committeeCountRows[0]?.adminCount || 0);
-
       const bannerImageRows = await query<Array<RowDataPacket & { mediaUrl: string }>>(
         `SELECT media_url AS mediaUrl
          FROM event_media_assets
@@ -208,20 +217,6 @@ export const eventVotingDetailsResolvers = {
         [eventId]
       );
 
-      const designationSummaryRows = await query<Array<RowDataPacket & {
-        designation: string;
-        memberCount: number;
-      }>>(
-        `SELECT
-           UPPER(COALESCE(NULLIF(TRIM(designation), ''), 'MEMBER')) AS designation,
-           COUNT(*) AS memberCount
-         FROM users_events
-         WHERE event_id = ?
-         GROUP BY UPPER(COALESCE(NULLIF(TRIM(designation), ''), 'MEMBER'))
-         ORDER BY memberCount DESC, designation ASC`,
-        [eventId]
-      );
-
       const availableRoles = await getEventMasterRoles();
       const mappedVotingRoleRows = await getMappedVotingRoles(eventId);
 
@@ -250,9 +245,6 @@ export const eventVotingDetailsResolvers = {
         endDate: event.endDate || null,
         latitude: event.latitude ? Number(event.latitude) : null,
         longitude: event.longitude ? Number(event.longitude) : null,
-        createdBy: Number(event.createdBy),
-        updatedBy: event.updatedBy ? Number(event.updatedBy) : null,
-        createdAt: event.createdAt || null,
         programs: programRows.map((programRow) => ({
           id: Number(programRow.id),
           programId: Number(programRow.programId),
@@ -271,11 +263,6 @@ export const eventVotingDetailsResolvers = {
           designation: String(participantRow.designation || 'MEMBER'),
           membershipStatus: String(participantRow.membershipStatus || 'ACTIVE')
         })),
-        designationSummary: designationSummaryRows.map((summaryRow) => ({
-          designation: String(summaryRow.designation || 'MEMBER'),
-          memberCount: Number(summaryRow.memberCount || 0)
-        })),
-        eligibleVoterCount: eventParticipantRows.length,
         availableRoles: availableRoles.map((roleRow) => ({
           roleId: roleRow.roleId,
           roleName: roleRow.roleName,
@@ -287,14 +274,138 @@ export const eventVotingDetailsResolvers = {
         myInterestRoleIds: Array.from(myInterestRoleIds),
         myInterestStatuses,
         interestApprovedPeople,
+        pendingEventInterests: await getEventVotingPendingInterests(eventId, context),
+        myVotes: await getEventVotingMyVotes(eventId, context),
         canReviewInterest: isCurrentUserMasterAdmin,
         canManageVotingRoles,
         currentCommitteeRole,
-        committeeMemberCount,
-        committeeAdminCount,
         votingPhaseState: getEventVotingPhaseState(event, supportsVotingPhaseState),
         votingMode: supportsVotingMode ? event?.votingMode || 'VOTING' : 'VOTING'
       };
     }
   }
 };
+
+async function getEventVotingPendingInterests(eventId: number, context: any): Promise<{
+  eventId: number;
+  pending: Array<{
+    id: number;
+    eventId: number;
+    roleId: number;
+    roleName: string | null;
+    userId: number;
+    userName: string;
+    userEmail: string;
+    userPhoto: string | null;
+    status: string;
+    createdAt: string | null;
+  }>;
+}> {
+  const normalizedEventId = Number(eventId);
+  if (!Number.isInteger(normalizedEventId) || normalizedEventId <= 0) {
+    return { eventId: normalizedEventId, pending: [] };
+  }
+
+  let loggedInUserId = 0;
+  try {
+    loggedInUserId = await getLoggedInUserId(context);
+  } catch {
+    return { eventId: normalizedEventId, pending: [] };
+  }
+
+  const access = await getEventAccessContext(normalizedEventId, loggedInUserId);
+  const canViewPending =
+    access.isMasterAdmin ||
+    (access.isCommitteeMember && access.votingPhaseState >= 1);
+  if (!canViewPending) {
+    return { eventId: normalizedEventId, pending: [] };
+  }
+
+  const pendingRows = await query<Array<RowDataPacket & {
+    id: number;
+    eventId: number;
+    roleId: number;
+    roleName: string | null;
+    userId: number;
+    userName: string;
+    userEmail: string;
+    userPhoto: string | null;
+    status: string;
+    createdAt: string;
+  }>>(
+    `SELECT
+        eie.id AS id,
+        eie.event_id AS eventId,
+        eie.role_id AS roleId,
+        erm.role_name AS roleName,
+        eie.user_id AS userId,
+        u.name AS userName,
+        u.email AS userEmail,
+        u.profile_photo AS userPhoto,
+        eie.status AS status,
+        DATE_FORMAT(eie.created_at, '%Y-%m-%d %H:%i:%s') AS createdAt
+       FROM event_interest_expressions eie
+       INNER JOIN users u ON u.id = eie.user_id
+       LEFT JOIN events_roles_master erm ON erm.role_id = eie.role_id
+       WHERE eie.event_id = ?
+       ORDER BY eie.created_at ASC`,
+     [normalizedEventId]
+  );
+
+  return {
+    eventId: normalizedEventId,
+    pending: pendingRows.map((row) => ({
+      id: Number(row.id),
+      eventId: Number(row.eventId),
+      roleId: Number(row.roleId),
+      roleName: row.roleName ? String(row.roleName) : null,
+      userId: Number(row.userId),
+      userName: String(row.userName || ''),
+      userEmail: String(row.userEmail || ''),
+      userPhoto: row.userPhoto ? String(row.userPhoto) : null,
+      status: String(row.status || 'PENDING'),
+      createdAt: row.createdAt || null
+    }))
+  };
+}
+
+async function getEventVotingMyVotes(eventId: number, context: any): Promise<Array<{
+  roleId: number;
+  candidateId: number;
+  votedAt: string;
+}>> {
+  const normalizedEventId = Number(eventId);
+  if (!Number.isInteger(normalizedEventId) || normalizedEventId <= 0) {
+    return [];
+  }
+
+  let loggedInUserId = 0;
+  try {
+    loggedInUserId = await getLoggedInUserId(context);
+  } catch {
+    return [];
+  }
+
+  const access = await getEventAccess(normalizedEventId, loggedInUserId);
+  if (!access.eventExists || !access.isCommitteeMember) {
+    return [];
+  }
+
+  const voteRows = await query<Array<RowDataPacket & {
+    roleId: number;
+    candidateId: number;
+    votedAt: string;
+  }>>(
+    `SELECT role_id AS roleId, candidate_id AS candidateId, created_at AS votedAt
+       FROM event_votes
+       WHERE event_id = ? AND voter_id = ?
+       ORDER BY created_at ASC`,
+    [normalizedEventId, loggedInUserId]
+  );
+
+  return voteRows.map((row) => ({
+    roleId: Number(row.roleId),
+    candidateId: Number(row.candidateId),
+    votedAt: String(row.votedAt || '')
+  }));
+}

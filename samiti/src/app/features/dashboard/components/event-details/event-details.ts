@@ -1,4 +1,4 @@
-import { Component, inject, OnInit } from '@angular/core';
+import { Component, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ActivatedRoute, Router, RouterModule, RouterOutlet } from '@angular/router';
 import { MatIconModule } from '@angular/material/icon';
@@ -30,7 +30,7 @@ import { FormsModule } from '@angular/forms';
   templateUrl: './event-details.html',
   styleUrl: './event-details.scss'
 })
-export class EventDetailsComponent implements OnInit {
+export class EventDetailsComponent {
   private readonly route = inject(ActivatedRoute);
   private readonly router = inject(Router);
   private readonly notifier = inject(NotifierService);
@@ -82,27 +82,6 @@ export class EventDetailsComponent implements OnInit {
     if (this.votingPhaseState >= 2) return 'schedule';
     if (this.votingPhaseState >= 1) return 'hourglass_top';
     return 'hourglass_bottom';
-  }
-
-  ngOnInit(): void {
-    this.route.params.subscribe(params => {
-      const eventId = params['id'];
-      if (eventId) {
-        this.loadVotingMetadata(eventId);
-      }
-    });
-  }
-
-  private loadVotingMetadata(id: string): void {
-    this.votingService.getEventVotingDetails(id).subscribe({
-      next: (data) => {
-        this.stateService.eventData.set(data ?? null);
-      },
-      error: (err: HttpErrorResponse) => {
-        this.notifier.error(err?.error?.message || 'Failed to load event details.');
-        this.stateService.eventData.set(null);
-      }
-    });
   }
 
   public navigateToTab(tab: string): void {

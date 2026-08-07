@@ -321,11 +321,37 @@ export class EventVotingComponent implements OnInit, OnDestroy{
     this.paramSub = parentParams$.subscribe(params => {
       const eventId = params['id'];
       if (!eventId) return;
+      this.loadEventVotingDetails(String(eventId));
+    });
+  }
 
-      const currentData = this.stateService.eventData();
-      if (currentData) {
-        console.log("initializeVotingState 1");
-        this.initializeVotingState(Number(eventId));
+  private loadEventVotingDetails(id: string): void {
+    this.votingService.getEventVotingDetails(id).subscribe({
+      next: (data) => {
+        this.stateService.eventData.set(data ?? null);
+        if (data?.eventId) {
+          this.initializeVotingState(Number(data.eventId));
+          const pending = data.pendingEventInterests?.pending || [];
+          this.interestReviewList.set(pending.map((item) => ({
+            id: Number(item.id),
+            eventId: Number(item.eventId),
+            roleId: Number(item.roleId),
+            roleName: item.roleName,
+            userId: Number(item.userId),
+            userName: item.userName,
+            userEmail: item.userEmail,
+            userPhoto: item.userPhoto,
+            status: String(item.status || 'PENDING').toUpperCase()
+          })));
+          this.refreshInterestApprovedPeopleFromReviewList();
+          const myVotes: Record<number, number> = {};
+          (data.myVotes || []).forEach((vote) => { myVotes[Number(vote.roleId)] = Number(vote.candidateId); });
+          this.myVotes.set(myVotes);
+        }
+      },
+      error: (err: HttpErrorResponse) => {
+        this.notifier.error(err?.error?.message || 'Failed to load event details.');
+        this.stateService.eventData.set(null);
       }
     });
   }
@@ -370,22 +396,9 @@ export class EventVotingComponent implements OnInit, OnDestroy{
       }));
     this.directAssignMembers.set(initialMembers);
     this.loadDirectAssignMembers(eventId);
-    this.loadPendingInterests(eventId);
-    this.loadMyVotes(eventId);
     if (Number(data.votingPhaseState || 0) === 6) {
       this.loadEventResults(eventId);
     }
-  }
-
-  private loadMyVotes(eventId: number): void {
-    this.votingService.getMyEventVotes(eventId).subscribe({
-      next: (payload) => {
-        const votes: Record<number, number> = {};
-        (payload?.votes || []).forEach((vote) => { votes[Number(vote.roleId)] = Number(vote.candidateId); });
-        this.myVotes.set(votes);
-      },
-      error: () => this.myVotes.set({})
-    });
   }
 
   private loadEventResults(eventId: number): void {
@@ -565,23 +578,10 @@ export class EventVotingComponent implements OnInit, OnDestroy{
       next: (payload) => {
         this.myInterestRoleIds.set((payload.myInterestRoleIds || []).map((id) => Number(id)));
         this.myInterestStatuses.set((payload.myInterestStatuses || []).map((item) => ({ roleId: Number(item.roleId), status: String(item.status || 'PENDING') })));
-        this.loadPendingInterests(currentEvent.eventId);
         this.isExpressingInterest.set(false);
         this.notifier.success(payload.expressed ? `Your interest has been submitted for **${roleLabel}**.` : `Interest withdrawn for **${roleLabel}**.`);
       },
       error: (err: HttpErrorResponse) => { this.myInterestRoleIds.set(optimisticIds); this.myInterestStatuses.set(optimisticStatuses); this.interestReviewList.set(previousReviewList); this.isExpressingInterest.set(false); this.notifier.error(err?.error?.message || 'Failed to update interest.'); }
-    });
-  }
-
-  private loadPendingInterests(eventId: number): void {
-    // const currentEvent = this.eventData;
-    // if (!currentEvent?.eventId) return;
-    this.votingService.getPendingInterests(eventId).subscribe({
-      next: (summary) => {
-        this.interestReviewList.set((summary?.pending || []).map((item) => ({ id: Number(item.id), eventId: Number(item.eventId), roleId: Number(item.roleId), roleName: item.roleName, userId: Number(item.userId), userName: item.userName, userEmail: item.userEmail, userPhoto: item.userPhoto, status: String(item.status || 'PENDING').toUpperCase() })));
-        this.refreshInterestApprovedPeopleFromReviewList();
-      },
-      error: () => this.interestReviewList.set([])
     });
   }
 
@@ -1112,6 +1112,23 @@ export class EventVotingComponent implements OnInit, OnDestroy{
         next: (data) => {
           this.stateService.eventData.set(data ?? null);
           this.initializeVotingState(Number(currentEvent.eventId));
+          if (data?.pendingEventInterests?.pending) {
+            this.interestReviewList.set(data.pendingEventInterests.pending.map((item) => ({
+              id: Number(item.id),
+              eventId: Number(item.eventId),
+              roleId: Number(item.roleId),
+              roleName: item.roleName,
+              userId: Number(item.userId),
+              userName: item.userName,
+              userEmail: item.userEmail,
+              userPhoto: item.userPhoto,
+              status: String(item.status || 'PENDING').toUpperCase()
+            })));
+            this.refreshInterestApprovedPeopleFromReviewList();
+          }
+          const myVotes: Record<number, number> = {};
+          (data.myVotes || []).forEach((vote) => { myVotes[Number(vote.roleId)] = Number(vote.candidateId); });
+          this.myVotes.set(myVotes);
         }
       });
     }
