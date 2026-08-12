@@ -17,26 +17,3 @@ export interface AccountUpdateResponse {
   mobile: string;
   photo?: string;
 }
-
-// ============================================================================
-// 3. Account Roles Response Interfaces
-// ============================================================================
-export interface MyAccountCommitteeRoleItem {
-  committeeId: number;
-  committeeName: string;
-  committeeLogo: string | null;
-  committeeRole: string;
-  roleLabel: string;
-}
-
-export interface MyAccountEventRoleItem {
-  eventId: number;
-  eventName: string;
-  committeeId: number;
-  committeeName: string;
-  committeeLogo: string | null;
-  designation: string;
-  membershipStatus: string;
-  eventStatus: string | null;
-  eventVisibility: string | null;
-}

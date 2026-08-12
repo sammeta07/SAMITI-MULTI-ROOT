@@ -213,26 +213,12 @@
                 </div>
                 <div class="result-vote-count">{{ candidate.voteCount }}</div>
                 @if (candidate.userId === getWinnerForRole(card.role.roleId)!.userId && isMasterAdmin) {
-                <button mat-icon-button class="assign-winner-btn" (click)="onAssignWinningRole(card.role.roleId)" matTooltip="Emergency reassign winner" matTooltipPosition="above">
-                  <mat-icon>swap_horiz</mat-icon>
+                <button type="button" class="assign-winner-btn" (click)="onAssignWinningRole(card.role.roleId)" matTooltip="Emergency reassign winner" matTooltipPosition="above">
+                  <span class="assign-winner-icon" aria-hidden="true">⇄</span>
                 </button>
                 }
               </div>
               }
-            </div>
-            }
-
-            @if (!isMasterAdmin && votingPhaseState === 1) {
-            <div class="voting-card-nominations-closed-note">
-              <mat-icon>info</mat-icon>
-              <span>Roles locked. Nomination will start soon</span>
-            </div>
-            }
-
-            @if (!isMasterAdmin && votingPhaseState === 3) {
-            <div class="voting-card-nominations-closed-note">
-              <mat-icon>info</mat-icon>
-              <span>Nominations closed, Voting will be enabled soon</span>
             </div>
             }
 

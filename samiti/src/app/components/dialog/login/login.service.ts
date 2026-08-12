@@ -39,17 +39,17 @@ export class LoginService {
               committeeLogo
               committeeRole
               roleLabel
-            }
-            events {
-              eventId
-              eventName
-              committeeId
-              committeeName
-              committeeLogo
-              designation
-              membershipStatus
-              eventStatus
-              eventVisibility
+              events {
+                eventId
+                eventName
+                committeeId
+                committeeName
+                committeeLogo
+                designation
+                membershipStatus
+                eventStatus
+                eventVisibility
+              }
             }
           }
         }

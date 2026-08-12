@@ -24,17 +24,17 @@ export interface LoginUserData {
       committeeLogo: string | null;
       committeeRole: string;
       roleLabel: string;
-    }>;
-    events: Array<{
-      eventId: number;
-      eventName: string;
-      committeeId: number;
-      committeeName: string;
-      committeeLogo: string | null;
-      designation: string;
-      membershipStatus: string;
-      eventStatus: string | null;
-      eventVisibility: string | null;
+      events: Array<{
+        eventId: number;
+        eventName: string;
+        committeeId: number;
+        committeeName: string;
+        committeeLogo: string | null;
+        designation: string;
+        membershipStatus: string;
+        eventStatus: string | null;
+        eventVisibility: string | null;
+      }>;
     }>;
   };
 }

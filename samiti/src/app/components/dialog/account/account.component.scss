@@ -298,188 +298,19 @@
   .info-value { font-size: 0.88rem; color: #0f172a; font-weight: 700; margin-top: 1px; }
 }
 
-.roles-dialog-body {
+.register-form {
   display: flex;
   flex-direction: column;
   gap: 16px;
 }
 
-.roles-panel-section {
-  background: #ffffff;
-  border: 1px solid #e2e8f0;
-  border-radius: 14px;
-  padding: 14px;
+.form-row-full {
+  width: 100%;
 }
 
-.roles-section-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-  margin-bottom: 12px;
-
-  h3 {
-    margin: 0;
-    font-size: 0.92rem;
-    color: #0f172a;
-  }
-}
-
-.roles-count-pill {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  min-width: 24px;
-  height: 24px;
-  padding: 0 8px;
-  border-radius: 999px;
-  background: #fff7ed;
-  color: #ea580c;
-  border: 1px solid #fed7aa;
-  font-size: 0.72rem;
-  font-weight: 800;
-}
-
-.roles-card-list {
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-}
-
-.role-card {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  padding: 12px;
-  border-radius: 12px;
-  border: 1px solid #e2e8f0;
-  background: #f8fafc;
-}
-
-.role-card-event {
-  background: #f8fffd;
-}
-
-.role-card-media {
-  flex: 0 0 auto;
-}
-
-.role-avatar-image,
-.role-avatar-fallback {
-  width: 48px;
-  height: 48px;
-  border-radius: 12px;
-  object-fit: cover;
-}
-
-.role-avatar-fallback {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  background: linear-gradient(135deg, #f97316, #ea580c);
-  color: #ffffff;
-  font-size: 1.15rem;
-  font-weight: 800;
-}
-
-.role-avatar-fallback-event {
-  background: linear-gradient(135deg, #0ea5e9, #0369a1);
-}
-
-.role-card-content {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-  min-width: 0;
-
-  h4 {
-    margin: 0;
-    font-size: 0.92rem;
-    color: #0f172a;
-  }
-
-  p {
-    margin: 0;
-    color: #475569;
-    font-size: 0.78rem;
-  }
-}
-
-.role-card-title-row {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 10px;
-}
-
-.role-meta-line {
-  display: flex;
-  gap: 12px;
-  flex-wrap: wrap;
-  font-size: 0.72rem;
-  color: #64748b;
-}
-
-.role-badge {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  padding: 0 8px;
-  height: 22px;
-  border-radius: 999px;
-  font-size: 0.68rem;
-  font-weight: 800;
-  white-space: nowrap;
-}
-
-.role-badge-admin {
-  background: rgba(59, 130, 246, 0.1);
-  color: #2563eb;
-}
-
-.role-badge-member {
-  background: rgba(16, 185, 129, 0.1);
-  color: #059669;
-}
-
-.role-badge-master {
-  background: rgba(220, 38, 38, 0.1);
-  color: #dc2626;
-}
-
-.role-badge-auth {
-  background: rgba(249, 115, 22, 0.1);
-  color: #ea580c;
-}
-
-.roles-loading-state,
-.roles-empty-state {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  text-align: center;
-  min-height: 220px;
-  gap: 12px;
-  color: #64748b;
-
-  h3,
-  p {
-    margin: 0;
-  }
-
-  mat-icon {
-    width: 2.6rem;
-    height: 2.6rem;
-    font-size: 2.6rem;
-    color: #f97316;
-  }
-}
-
-/* 🛠️ APPARATUS OUTLINE DESIGN SYSTEMS CONFIG */
 .samiti-custom-field {
   width: 100%;
-  
+   
   ::ng-deep {
     .mat-mdc-text-field-wrapper {
       background: #ffffff !important;

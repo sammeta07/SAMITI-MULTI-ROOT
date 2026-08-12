@@ -14,6 +14,7 @@ export interface AuthCommitteeRoleItem {
   committeeLogo: string | null;
   committeeRole: string;
   roleLabel: string;
+  events: AuthEventRoleItem[];
 }
 
 export interface AuthEventRoleItem {
@@ -30,7 +31,6 @@ export interface AuthEventRoleItem {
 
 export interface AuthAccountRoles {
   committees: AuthCommitteeRoleItem[];
-  events: AuthEventRoleItem[];
 }
 
 export interface AuthUserData {

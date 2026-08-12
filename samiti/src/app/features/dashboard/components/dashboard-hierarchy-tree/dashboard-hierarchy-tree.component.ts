@@ -144,6 +144,7 @@ export class DashboardHierarchyTreeComponent implements OnInit {
       id: this.extractNumericId(node.id),
       logo: mappedType === 'group' ? sanitizeCloudinaryLogoUrl(node.logo || null) : null,
       roleScope: roleScope ?? undefined,
+      roles: node.roles || undefined,
       children: mappedChildren.length > 0 ? mappedChildren : undefined
     };
   }

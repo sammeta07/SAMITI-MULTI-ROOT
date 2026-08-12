@@ -40,6 +40,11 @@ type LoginEventRoleRow = RowDataPacket & {
   event_visibility: string | null;
 };
 
+type LoginEventWinnerRow = RowDataPacket & {
+  event_id: number;
+  winner_name: string;
+};
+
 type CountRow = RowDataPacket & {
   total_count: number;
 };
@@ -70,6 +75,7 @@ export const loginTypes = `
     committeeLogo: String
     committeeRole: String!
     roleLabel: String!
+    events: [LoginEventRoleSnapshot!]!
   }
 
   type LoginEventRoleSnapshot {
@@ -86,7 +92,6 @@ export const loginTypes = `
 
   type AccountRolesSnapshot {
     committees: [LoginCommitteeRoleSnapshot!]!
-    events: [LoginEventRoleSnapshot!]!
   }
 
   type LoginPayload {
@@ -212,7 +217,6 @@ export const loginResolvers = {
           c.id AS committee_id,
           c.committee_name,
           c.logo AS committee_logo,
-          UPPER(COALESCE(NULLIF(TRIM(ue.designation), ''), 'MEMBER')) AS designation,
           UPPER(COALESCE(NULLIF(TRIM(ue.status), ''), 'ACTIVE')) AS membership_status,
           e.status AS event_status,
           e.visibility AS event_visibility
@@ -224,29 +228,64 @@ export const loginResolvers = {
         [user.id]
       ).catch(() => []);
 
+      const winnerRows = await query<LoginEventWinnerRow[]>(
+        `SELECT event_id, winner_name
+         FROM event_winners
+         WHERE winner_user_id = ?
+         ORDER BY event_id ASC`,
+        [user.id]
+      ).catch(() => []);
+
+      const winnerByEventId = new Map<number, string>();
+      for (const row of winnerRows) {
+        const eid = Number(row.event_id);
+        const name = String(row.winner_name || '').trim();
+        if (name) {
+          winnerByEventId.set(eid, name.toUpperCase());
+        }
+      }
+
+      const eventsByCommitteeId = new Map<number, LoginEventRoleRow[]>();
+      for (const row of eventRoleRows) {
+        const cid = Number(row.committee_id);
+        const list = eventsByCommitteeId.get(cid) || [];
+        list.push(row);
+        eventsByCommitteeId.set(cid, list);
+      }
+
       const accountRoles = {
-        committees: committeeRoleRows.map((row) => ({
-          committeeId: Number(row.committee_id),
-          committeeName: row.committee_name,
-          committeeLogo: row.committee_logo || null,
-          committeeRole: row.committee_role || 'COMMITTEE_MEMBER',
-          roleLabel: String(row.committee_role || 'COMMITTEE_MEMBER')
-            .replace(/^COMMITTEE_/, '')
-            .replace(/_/g, ' ')
-            .toLowerCase()
-            .replace(/\b\w/g, (ch) => ch.toUpperCase())
-        })),
-        events: eventRoleRows.map((row) => ({
-          eventId: Number(row.event_id),
-          eventName: row.event_name,
-          committeeId: Number(row.committee_id),
-          committeeName: row.committee_name,
-          committeeLogo: row.committee_logo || null,
-          designation: row.designation || 'MEMBER',
-          membershipStatus: row.membership_status || 'ACTIVE',
-          eventStatus: row.event_status || null,
-          eventVisibility: row.event_visibility || null
-        }))
+        committees: committeeRoleRows.map((row) => {
+          const cid = Number(row.committee_id);
+          const committeeEvents = (eventsByCommitteeId.get(cid) || []).map((ev) => {
+            const eid = Number(ev.event_id);
+            const winnerDesignation = winnerByEventId.get(eid);
+            const usersEventsDesignation = String(ev.designation || '').trim().toUpperCase();
+            const designation = winnerDesignation || usersEventsDesignation || 'MEMBER';
+            return {
+              eventId: eid,
+              eventName: ev.event_name,
+              committeeId: cid,
+              committeeName: ev.committee_name,
+              committeeLogo: ev.committee_logo || null,
+              designation,
+              membershipStatus: ev.membership_status || 'ACTIVE',
+              eventStatus: ev.event_status || null,
+              eventVisibility: ev.event_visibility || null
+            };
+          });
+          return {
+            committeeId: cid,
+            committeeName: row.committee_name,
+            committeeLogo: row.committee_logo || null,
+            committeeRole: row.committee_role || 'COMMITTEE_MEMBER',
+            roleLabel: String(row.committee_role || 'COMMITTEE_MEMBER')
+              .replace(/^COMMITTEE_/, '')
+              .replace(/_/g, ' ')
+              .toLowerCase()
+              .replace(/\b\w/g, (ch) => ch.toUpperCase()),
+            events: committeeEvents
+          };
+        })
       };
 
       const sessionToken = context.jwt.sign({

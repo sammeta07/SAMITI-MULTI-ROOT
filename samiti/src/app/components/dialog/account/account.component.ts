@@ -9,7 +9,6 @@ import { MatIconModule } from '@angular/material/icon';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { firstValueFrom } from 'rxjs';
 import { AccountService } from './account.service';
-import { MatTabsModule } from '@angular/material/tabs';
 import { NotifierService } from '../../../shared/notifier/notifier.service';
 import { MatProgressSpinner } from '@angular/material/progress-spinner';
 import { MatToolbar } from '@angular/material/toolbar';
@@ -17,8 +16,7 @@ import { ImageAssetService } from '../../../core/services/image-asset.service';
 import { ImageCropperDialogComponent } from '../../../shared/components/image-cropper-dialog/image-cropper-dialog.component';
 import { TextFormatPipe } from '../../../shared/pipe/text-format-pipe.pipe';
 import { TextFormatService } from '../../../shared/services/text-format-service.service';
-import { AuthAccountRoles, AuthService, AuthUserData } from '../../../core/services/auth.service';
-import { MyAccountCommitteeRoleItem, MyAccountEventRoleItem } from './account.models';
+import { AuthService, AuthUserData } from '../../../core/services/auth.service';
 
 @Component({
   selector: 'app-account-dialog',
@@ -32,7 +30,6 @@ import { MyAccountCommitteeRoleItem, MyAccountEventRoleItem } from './account.mo
     FormsModule,
     MatIconModule,
     MatTooltipModule,
-    MatTabsModule,
     MatToolbar,
     MatProgressSpinner,
     TextFormatPipe
@@ -55,10 +52,6 @@ export class AccountDialogComponent implements OnInit {
   isUploadingProfilePhoto = signal<boolean>(false);
   isEditMode = false;
   isLoading = signal<boolean>(false);
-  selectedTabIndex = signal<number>(0);
-  committeeRoles = signal<MyAccountCommitteeRoleItem[]>([]);
-  eventRoles = signal<MyAccountEventRoleItem[]>([]);
-  isRolesLoading = signal<boolean>(false);
 
   private notifier = inject(NotifierService);
   private accountService = inject(AccountService);
@@ -73,7 +66,6 @@ export class AccountDialogComponent implements OnInit {
 
   ngOnInit(): void {
     this.loadAccountFromLocalStorage();
-    this.loadRolesFromLocalStorage();
   }
 
   private loadAccountFromLocalStorage(): void {
@@ -81,21 +73,6 @@ export class AccountDialogComponent implements OnInit {
     if (userData) {
       this.applyUserData(userData);
     }
-  }
-
-  private loadRolesFromLocalStorage(): void {
-    const userData = this.authService.getStoredUserData();
-    const cachedRoles = userData?.accountRoles;
-
-    if (cachedRoles) {
-      this.applyRoles(cachedRoles);
-    }
-  }
-
-  private applyRoles(roles: AuthAccountRoles): void {
-    this.isRolesLoading.set(false);
-    this.committeeRoles.set(roles.committees || []);
-    this.eventRoles.set(roles.events || []);
   }
 
   private getLocalUserData(): AuthUserData | null {
@@ -213,14 +190,6 @@ export class AccountDialogComponent implements OnInit {
     }
   }
 
-  onTabChanged(index: number): void {
-    this.selectedTabIndex.set(index);
-    if (index !== 0 && this.isEditMode) {
-      this.isEditMode = false;
-      this.selectedProfilePhotoFile.set(null);
-    }
-  }
-
   async onProfilePhotoSelected(event: Event): Promise<void> {
     const inputElement = event.target as HTMLInputElement;
     const selectedFile = inputElement.files?.[0] || null;
@@ -310,44 +279,6 @@ export class AccountDialogComponent implements OnInit {
       this.isUploadingProfilePhoto.set(false);
       this.isLoading.set(false);
     }
-  }
-
-  get committeeRoleCount(): number {
-    return this.committeeRoles().length;
-  }
-
-  get eventRoleCount(): number {
-    return this.eventRoles().length;
-  }
-
-  get hasRoles(): boolean {
-    return this.committeeRoleCount > 0 || this.eventRoleCount > 0;
-  }
-
-  getRoleBadgeClass(role: string): string {
-    const normalizedRole = String(role || '').toUpperCase();
-
-    if (normalizedRole.includes('MASTER_ADMIN')) {
-      return 'role-badge role-badge-master';
-    }
-
-    if (normalizedRole.includes('ADMIN')) {
-      return 'role-badge role-badge-admin';
-    }
-
-    if (normalizedRole.includes('MEMBER')) {
-      return 'role-badge role-badge-member';
-    }
-
-    return 'role-badge role-badge-auth';
-  }
-
-  getRoleLabel(role: string): string {
-    return String(role || 'Member')
-      .replace(/^COMMITTEE_/, '')
-      .replace(/_/g, ' ')
-      .toLowerCase()
-      .replace(/\b\w/g, (char) => char.toUpperCase());
   }
 
   private async openProfilePhotoCropDialog(file: File): Promise<File | null> {

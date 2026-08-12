@@ -164,38 +164,64 @@ export const hierarchyTreeResolvers = {
       if (eventIds.length > 0) {
         const eventPlaceholders = eventIds.map(() => '?').join(',');
 
-        const eventRoleRows = await query<any[]>(
-          `SELECT
-             event_id,
-             designation
-           FROM users_events
-           WHERE user_id = ?
+        const winnerRows = await query<any[]>(
+          `SELECT event_id, role_id
+           FROM event_winners
+           WHERE winner_user_id = ?
              AND event_id IN (${eventPlaceholders})`,
           [loggedInUserId, ...eventIds]
         );
 
-        for (const eventRoleRow of eventRoleRows) {
-          const eventId = Number(eventRoleRow.event_id);
+        const winnerRoleIds = new Set<number>();
+        for (const winnerRow of winnerRows) {
+          const roleId = Number(winnerRow.role_id);
+          if (roleId > 0) {
+            winnerRoleIds.add(roleId);
+          }
+        }
+
+        const roleNameByRoleId = new Map<number, string>();
+        if (winnerRoleIds.size > 0) {
+          const roleIdPlaceholders = Array.from(winnerRoleIds).map(() => '?').join(',');
+          const roleRows = await query<any[]>(
+            `SELECT role_id, role_name
+             FROM events_roles_master
+             WHERE role_id IN (${roleIdPlaceholders})`,
+            Array.from(winnerRoleIds)
+          );
+
+          for (const roleRow of roleRows) {
+            const roleId = Number(roleRow.role_id);
+            const roleName = String(roleRow.role_name || '').trim();
+            if (roleName) {
+              roleNameByRoleId.set(roleId, roleName.toUpperCase());
+            }
+          }
+        }
+
+        for (const winnerRow of winnerRows) {
+          const eventId = Number(winnerRow.event_id);
           if (!eventRoleSetById.has(eventId)) {
             eventRoleSetById.set(eventId, new Set<string>());
           }
 
-          const roleValue = String(eventRoleRow.designation || '').trim();
-          if (roleValue) {
-            eventRoleSetById.get(eventId)!.add(roleValue.toUpperCase());
-          } else {
-            eventRoleSetById.get(eventId)!.add('MEMBER');
+          const roleId = Number(winnerRow.role_id);
+          const roleName = roleNameByRoleId.get(roleId);
+          if (roleName) {
+            eventRoleSetById.get(eventId)!.add(roleName);
           }
         }
 
         for (const eventRow of eventRows) {
           const eventId = Number(eventRow.event_id);
+          const eventRoles = eventRoleSetById.get(eventId) || new Set<string>();
+          eventRoles.add('MEMBER');
           const eventNode: InternalTreeNode = {
             id: `event_${eventId}`,
             name: String(eventRow.event_name),
             type: 'EVENT',
             logo: null,
-            roles: eventRoleSetById.get(eventId) || new Set<string>(),
+            roles: eventRoles,
             children: [],
             childIds: new Set<string>()
           };
