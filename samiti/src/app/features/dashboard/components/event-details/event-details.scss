@@ -23,7 +23,6 @@
   padding: 8px;
   display: flex;
   flex-direction: column;
-  gap: 6px;
   box-sizing: border-box;
 }
 
@@ -174,8 +173,8 @@
 .event-child-content {
   flex: 1;
   min-height: 0;
-  overflow: hidden;
-  border-radius: 8px;
+  overflow-y: auto;
+  // border-radius: 8px;
   border: 1px solid #e2e8f0;
   background: #f8fafc;
 }

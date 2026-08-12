@@ -213,27 +213,6 @@ export class EventVotingComponent implements OnInit, OnDestroy{
     return this.canManageVotingRoles && this.votingPhaseState === 2;
   }
 
-  public get votingPhaseLabel(): string {
-    switch (this.votingPhaseState) {
-      case 6: return 'Results Declared';
-      case 5: return 'Voting Stopped';
-      case 4: return 'Voting Started';
-      case 3: return 'Nominations Stopped';
-      case 2: return 'Nominations Started';
-      case 1: return 'Roles Locked';
-      default: return '';
-    }
-  }
-
-  public get votingPhaseIcon(): string {
-    if (this.votingPhaseState >= 6) return 'emoji_events';
-    if (this.isVotingClosed) return 'event_busy';
-    if (this.isVotingEnabled) return 'how_to_vote';
-    if (this.isNominationsStopped) return 'pause_circle';
-    if (this.isNominationsStarted) return 'schedule';
-    return 'hourglass_top';
-  }
-
   public get canStopVoting(): boolean {
     return this.canManageVotingRoles && this.votingPhaseState === 3;
   }
@@ -243,6 +222,7 @@ export class EventVotingComponent implements OnInit, OnDestroy{
   }
 
   public get votingGridLayoutClass(): string {
+    if (this.votingPhaseState === 1 || this.votingPhaseState === 6) return 'voting-nomination-grid-compact';
     if (this.currentEventMappedRoleCount <= 1) return 'voting-nomination-grid-single';
     if (this.currentEventMappedRoleCount === 2) return 'voting-nomination-grid-double';
     return 'voting-nomination-grid-multi';
@@ -926,6 +906,11 @@ export class EventVotingComponent implements OnInit, OnDestroy{
     const member = this.directAssignMembers().find((m) => m.userId === userId);
     this.directAssignInputText[roleId] = member ? (member.name.toLowerCase().replace(/\b\w/g, (c) => c.toUpperCase())) : '';
     this.onDirectAssignWinner(roleId, userId);
+  }
+
+  public onDirectAssignOptionSelection(roleId: number, event: { source?: { value?: number; disabled?: boolean }; isUserInput?: boolean }): void {
+    if (!event?.isUserInput || event.source?.disabled) return;
+    this.onDirectAssignSelect(roleId, { option: { value: event.source?.value ?? 0 } });
   }
 
   public getAssignedMember(roleId: number): { userId: number; name: string; photo: string | null; committeeRole?: string | null } | null {
