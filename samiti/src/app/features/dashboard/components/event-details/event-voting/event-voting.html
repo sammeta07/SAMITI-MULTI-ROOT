@@ -125,7 +125,7 @@
      <section class="voting-nomination-shell">
       <div class="voting-nomination-grid" [class]="'voting-nomination-grid ' + votingGridLayoutClass">
         @for (card of votingDisplayCards; track card.slot) {
-        <mat-card class="voting-nomination-card">
+        <mat-card class="voting-nomination-card" #votingCard>
           <mat-card-content>
             <div class="voting-card-header">
               <div class="voting-card-head" [class.voting-card-head-split]="isCompactVotingCard">
@@ -398,7 +398,7 @@
     <section class="voting-nomination-shell">
       <div class="voting-nomination-grid" [class]="'voting-nomination-grid ' + votingGridLayoutClass">
         @for (card of votingDisplayCards; track card.slot) {
-        <mat-card class="voting-nomination-card">
+        <mat-card class="voting-nomination-card" #votingCard>
           <mat-card-content>
             @if (votingPhaseState === 6 && getWinnerForRole(card.role.roleId) && !isTieRole(card.role.roleId)) {
             <div class="voting-card-header">

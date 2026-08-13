@@ -1,4 +1,4 @@
-import { Component, inject, OnInit, signal, effect, OnDestroy } from '@angular/core';
+import { Component, inject, OnInit, signal, effect, OnDestroy, AfterViewInit, ViewChildren, QueryList, ElementRef, Renderer2 } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ActivatedRoute, Router } from '@angular/router';
 import { MatDialog } from '@angular/material/dialog';
@@ -12,6 +12,7 @@ import { MatInputModule } from '@angular/material/input';
 import { MatAutocompleteModule } from '@angular/material/autocomplete';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { FormsModule } from '@angular/forms';
+import { BreakpointObserver, BreakpointState } from '@angular/cdk/layout';
 import { HttpErrorResponse } from '@angular/common/http';
 import { EventVotingService } from './event-voting.service';
 import { EventVotingPayload, EventMappedVotingRole, EventVoteHistory, EventResultsPayload, EventResultCandidate, VacateVotingRolePayload, AssignWinningRolePayload, EventDirectAssignMember } from './event-voting.models';
@@ -42,7 +43,7 @@ import { Subscription } from 'rxjs';
   templateUrl: './event-voting.html',
   styleUrl: './event-voting.scss'
 })
-export class EventVotingComponent implements OnInit, OnDestroy{
+export class EventVotingComponent implements OnInit, AfterViewInit, OnDestroy{
   private readonly route = inject(ActivatedRoute);
   private readonly router = inject(Router);
   private readonly dialog = inject(MatDialog);
@@ -51,8 +52,14 @@ export class EventVotingComponent implements OnInit, OnDestroy{
   private readonly authService = inject(AuthService);
   private readonly confirmDialog = inject(ConfirmDialogService);
   private readonly stateService = inject(EventDetailsStateService);
+  private readonly breakpointObserver = inject(BreakpointObserver);
+  private readonly renderer = inject(Renderer2);
+
+  @ViewChildren('votingCard') votingCards!: QueryList<ElementRef<HTMLElement>>;
 
   private paramSub?: Subscription;
+  private readonly resizeSub = new Subscription();
+  public readonly votingCardHeight = signal<number>(555);
   public readonly isBannerUploading = signal<boolean>(false);
   public readonly isVisibilityUpdating = signal<boolean>(false);
   public readonly selectedVotingRoleIds = signal<number[]>([]);
@@ -294,12 +301,53 @@ export class EventVotingComponent implements OnInit, OnDestroy{
     const parentParams$ = this.route.parent?.params;
     if (!parentParams$) return;
 
+    this.updateVotingCardHeight();
+
+    this.resizeSub.add(
+      this.breakpointObserver.observe([
+        '(max-width: 599px)',
+        '(min-width: 600px) and (max-width: 959px)',
+        '(min-width: 960px) and (max-width: 1199px)',
+        '(min-width: 1200px)'
+      ]).subscribe(() => this.updateVotingCardHeight())
+    );
+
+    this.resizeSub.add(
+      window.addEventListener('resize', () => this.updateVotingCardHeight())
+    );
+
     // Purani subscription clean karke naye ko assign karein
     this.paramSub = parentParams$.subscribe(params => {
       const eventId = params['id'];
       if (!eventId) return;
       this.loadEventVotingDetails(String(eventId));
     });
+  }
+
+  ngAfterViewInit(): void {
+    this.applyVotingCardHeight();
+
+    this.votingCards.changes.subscribe(() => this.applyVotingCardHeight());
+
+    effect(() => {
+      this.votingCardHeight();
+      this.applyVotingCardHeight();
+    });
+  }
+
+  private applyVotingCardHeight(): void {
+    const height = this.votingCardHeight();
+    this.votingCards.forEach((cardRef) => {
+      this.renderer.setStyle(cardRef.nativeElement, 'height', `${height}px`);
+    });
+  }
+
+  private updateVotingCardHeight(): void {
+    const vh = window.innerHeight;
+    const headerOffset = 140;
+    const paddingOffset = 60;
+    const availableHeight = Math.max(420, vh - headerOffset - paddingOffset);
+    this.votingCardHeight.set(Math.min(640, availableHeight));
   }
 
   private loadEventVotingDetails(id: string): void {
@@ -1172,5 +1220,6 @@ export class EventVotingComponent implements OnInit, OnDestroy{
 
   ngOnDestroy(): void {
     this.paramSub?.unsubscribe();
+    this.resizeSub.unsubscribe();
   }
 }
