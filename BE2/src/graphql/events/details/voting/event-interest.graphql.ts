@@ -103,7 +103,7 @@ export const eventInterestTypes = `
 export const eventInterestQueryFields = ``;
 
 export const eventInterestMutationFields = `
-  expressEventInterest(eventId: Int!, roleId: Int!): ExpressEventInterestPayload!
+  expressEventInterest(eventId: Int!, roleId: Int!, action: String!): ExpressEventInterestPayload!
   reviewEventInterest(eventId: Int!, roleId: Int!, userId: Int!, status: String!): ReviewEventInterestPayload!
 `;
 
@@ -168,14 +168,18 @@ async function requireMappedRole(eventId: number, roleId: number): Promise<void>
 export const eventInterestResolvers = {
   Query: {},
   Mutation: {
-    async expressEventInterest(_: any, args: { eventId: number; roleId: number }, context: any) {
+    async expressEventInterest(_: any, args: { eventId: number; roleId: number; action: string }, context: any) {
       const eventId = Number(args?.eventId);
       const roleId = Number(args?.roleId);
+      const action = String(args?.action || '').toUpperCase();
       if (!Number.isInteger(eventId) || eventId <= 0) {
         throwEventError('BAD_REQUEST', 'eventId must be a positive integer');
       }
       if (!Number.isInteger(roleId) || roleId <= 0) {
         throwEventError('BAD_REQUEST', 'roleId must be a positive integer');
+      }
+      if (!['INTERESTED', 'WITHDRAW'].includes(action)) {
+        throwEventError('BAD_REQUEST', "action must be either 'INTERESTED' or 'WITHDRAW'");
       }
 
       const loggedInUserId = await getLoggedInUserId(context);
@@ -190,52 +194,49 @@ export const eventInterestResolvers = {
 
       await requireMappedRole(eventId, roleId);
 
-      const existingRows = await query<Array<RowDataPacket & { id: number; status: string }>>(
-        `SELECT id, status FROM event_interest_expressions
-          WHERE event_id = ? AND role_id = ? AND user_id = ?
-          LIMIT 1`,
-        [eventId, roleId, loggedInUserId]
-      );
-
       let expressed = false;
-      if (existingRows.length > 0) {
-        const current = existingRows[0];
-        if (String(current.status).toUpperCase() === 'REJECTED') {
+      if (action === 'INTERESTED') {
+        const existingRows = await query<Array<RowDataPacket & { id: number; status: string }>>(
+          `SELECT id, status FROM event_interest_expressions
+            WHERE event_id = ? AND role_id = ? AND user_id = ?
+            LIMIT 1`,
+          [eventId, roleId, loggedInUserId]
+        );
+
+        if (existingRows.length > 0 && String(existingRows[0].status).toUpperCase() === 'REJECTED') {
           await query(
             `UPDATE event_interest_expressions
               SET status = 'PENDING', reviewed_by = NULL, reviewed_at = NULL, updated_at = CURRENT_TIMESTAMP
               WHERE id = ?`,
-            [current.id]
+            [existingRows[0].id]
           );
-          expressed = true;
-        } else {
+        } else if (existingRows.length === 0) {
           await query(
-            `DELETE FROM event_interest_expressions WHERE id = ?`,
-            [current.id]
+            `INSERT INTO event_interest_expressions (event_id, role_id, user_id, status)
+               VALUES (?, ?, ?, 'PENDING')`,
+            [eventId, roleId, loggedInUserId]
           );
-          expressed = false;
+
+          await query(
+            `INSERT INTO users_events (event_id, user_id, designation, status, created_at, updated_at)
+             VALUES (?, ?, 'MEMBER', 'ACTIVE', NOW(), NOW())
+             ON DUPLICATE KEY UPDATE updated_at = NOW()`,
+            [eventId, loggedInUserId]
+          );
         }
+        expressed = true;
       } else {
         await query(
-          `INSERT INTO event_interest_expressions (event_id, role_id, user_id, status)
-             VALUES (?, ?, ?, 'PENDING')`,
+          `DELETE FROM event_interest_expressions WHERE event_id = ? AND role_id = ? AND user_id = ?`,
           [eventId, roleId, loggedInUserId]
         );
-
-        await query(
-          `INSERT INTO users_events (event_id, user_id, designation, status, created_at, updated_at)
-           VALUES (?, ?, 'MEMBER', 'ACTIVE', NOW(), NOW())
-           ON DUPLICATE KEY UPDATE updated_at = NOW()`,
-          [eventId, loggedInUserId]
-        );
-
-        expressed = true;
+        expressed = false;
       }
 
       const myStatusRows = await query<Array<RowDataPacket & { roleId: number; status: string }>>(
         `SELECT role_id AS roleId, status
-          FROM event_interest_expressions
-          WHERE event_id = ? AND user_id = ? AND status IN ('PENDING', 'APPROVED')`,
+           FROM event_interest_expressions
+           WHERE event_id = ? AND user_id = ? AND status IN ('PENDING', 'APPROVED')`,
         [eventId, loggedInUserId]
       );
 

@@ -267,9 +267,9 @@ export class EventVotingService {
     );
   }
 
-  public expressEventInterest(eventId: number, roleId: number): Observable<ExpressEventInterestPayload> {
-    const mutation = `mutation ExpressEventInterest($eventId: Int!, $roleId: Int!) {
-      expressEventInterest(eventId: $eventId, roleId: $roleId) {
+  public expressEventInterest(eventId: number, roleId: number, action: 'INTERESTED' | 'WITHDRAW'): Observable<ExpressEventInterestPayload> {
+    const mutation = `mutation ExpressEventInterest($eventId: Int!, $roleId: Int!, $action: String!) {
+      expressEventInterest(eventId: $eventId, roleId: $roleId, action: $action) {
         eventId
         roleId
         expressed
@@ -285,7 +285,7 @@ export class EventVotingService {
       this.graphqlUrl,
       {
         query: mutation,
-        variables: { eventId, roleId }
+        variables: { eventId, roleId, action }
       },
       { withCredentials: true }
     ).pipe(
