@@ -1,21 +1,37 @@
 <div class="samiti-workspace-shell">
-   
-  @if (!isSmallScreen()) {
-    <aside class="workspace-sidebar" #sidebarEl [class.panel-collapsed]="!(uiService.isHeirarchyMenu$ | async)">
-      <div class="sidebar-tree-wrapper">
-        <app-dashboard-hierarchy-tree></app-dashboard-hierarchy-tree>
-      </div>
-    </aside>
+  <mat-sidenav-container class="workspace-sidenav-container">
+    <mat-sidenav #sidenav
+                 [class.panel-collapsed]="!isHierarchyMenuOpen()"
+                 [mode]="isSmallScreen() ? 'over' : 'side'"
+                 [opened]="!isSmallScreen() && isHierarchyMenuOpen()"
+                 [class.sidebar-collapsed]="!isHierarchyMenuOpen()"
+                 (closedStart)="closeSideMenu()">
 
-    <div class="workspace-layout-resizer" (mousedown)="initSidebarResize($event)"></div>
-  }
+      <!-- Main Sidenav Internal Wrapper -->
+      <div class="sidebar-wrapper">
+        <!-- Sidebar Header Bar -->
+        <div class="sidebar-header">
+          <div class="brand-title">
+            <mat-icon class="brand-icon">account_tree</mat-icon>
+            @if (isHierarchyMenuOpen()) {
+              <span class="brand-text">Hierarchy Overview</span>
+            }
+          </div>
+        </div>
 
+        <!-- Scrollable Tree Container (SINGLE Scrollbar Location) -->
+         <div class="sidebar-tree-wrapper">
+          <app-dashboard-hierarchy-tree></app-dashboard-hierarchy-tree>
+        </div>
+        </div>
+    </mat-sidenav>
 
-  <div class="workspace-main-container">
-    <section class="workspace-dynamic-content-area" [class.panel-expanded-full]="!(uiService.isHeirarchyMenu$ | async)">
-      <div class="content-view-scroller">
+    <!-- Main Workspace Outlet Container -->
+    <mat-sidenav-content class="workspace-main-container"
+                         [class.panel-expanded-full]="!isHierarchyMenuOpen()">
+      <main class="content-view-scroller">
         <router-outlet></router-outlet>
-      </div>
-    </section>
-  </div>
+      </main>
+    </mat-sidenav-content>
+  </mat-sidenav-container>
 </div>

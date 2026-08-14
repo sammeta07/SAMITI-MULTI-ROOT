@@ -1,74 +1,91 @@
 // Include theming for Angular Material with `mat.theme()`.
-// This Sass mixin will define CSS variables that are used for styling Angular Material
-// components according to the Material 3 design spec.
-// Learn more about theming and how to use it for your application's
-// custom components at https://material.angular.dev/guide/theming
 @use '@angular/material' as mat;
+
+/* ─── 1. Design System Tokens ───────────────────────────────── */
+:root {
+  /* Brand Palette */
+  --clr-navy:          #1E293B;   /* Primary header / footer background */
+  --clr-navy-light:    #2D3E55;   /* Interactive navy surface */
+  --clr-accent:        #F97316;   /* Primary Saffron CTA */
+  --clr-accent-hover:  #EA6C0A;   /* Darker saffron on hover */
+
+  /* Neutral Surface & Cards */
+  --clr-surface:       #F8FAFC;   /* Workspace shell background */
+  --clr-card:          #FFFFFF;   /* Panel & Card background */
+  --clr-border:        #E2E8F0;   /* Standard border divider */
+
+  /* Typography Colors */
+  --clr-text-dark:     #1E293B;   /* High contrast primary text */
+  --clr-text-muted:    #64748B;   /* Secondary caption text */
+  --clr-text-light:    #94A3B8;   /* Muted / Placeholder text */
+  --clr-white:         #FFFFFF;
+
+  /* UI Shapes & Shadows */
+  --radius-sm:         6px;
+  --radius-md:         10px;
+  --radius-lg:         16px;
+  --shadow-sm:         0 1px 4px rgba(0, 0, 0, 0.08);
+  --shadow-md:         0 4px 16px rgba(0, 0, 0, 0.10);
+}
+
+/* ─── 2. Global Resets & HTML Setup ──────────────────────────── */
+*, *::before, *::after {
+  box-sizing: border-box;
+}
 
 html {
   height: 100%;
-  @include mat.theme(
-    (
-      color: (
-        primary: mat.$azure-palette,
-        tertiary: mat.$blue-palette,
-      ),
-      typography: Roboto,
-      density: -2,
-    )
-  );
-
-  // Density applied separately — required in Angular Material v19+.
-  // Scale: 0 = default (largest) ── to ── -5 = most compact.
-  // Example: use -2 or -3 for a tighter, denser UI.
-  // @include mat.all-component-densities(-2);
+  @include mat.theme((
+    color: (
+      primary: mat.$azure-palette,
+      tertiary: mat.$blue-palette,
+    ),
+    typography: Roboto,
+    density: -2,
+  ));
 }
 
 body {
-  // Default the application to a light color theme. This can be changed to
-  // `dark` to enable the dark color theme, or to `light dark` to defer to the
-  // user's system settings.
-  color-scheme: light;
-
-  // Set a default background, font and text colors for the application using
-  // Angular Material's system-level CSS variables. Learn more about these
-  // variables at https://material.angular.dev/guide/system-variables
-  background-color: var(--mat-sys-surface);
-  color: var(--mat-sys-on-surface);
-  font: var(--mat-sys-body-medium);
-
-  // Reset the user agent margin.
   margin: 0;
   height: 100%;
-}
-/* ─── Design Tokens ─────────────────────────────────────────── */
-:root {
-  --clr-navy:         #1E293B;   /* header / footer bg          */
-  --clr-navy-light:   #2D3E55;   /* hover state inside navy     */
-  --clr-accent:       #F97316;   /* saffron-orange CTA          */
-  --clr-accent-hover: #EA6C0A;   /* darker accent on hover      */
-  --clr-surface:      #F1F5F9;   /* main content background     */
-  --clr-card:         #FFFFFF;   /* card / panel background     */
-  --clr-border:       #E2E8F0;   /* subtle borders              */
-  --clr-text-dark:    #1E293B;   /* primary text                */
-  --clr-text-muted:   #64748B;   /* secondary / caption text    */
-  --clr-text-light:   #94A3B8;   /* placeholder / hint text     */
-  --clr-white:        #FFFFFF;
-
-  --radius-sm: 6px;
-  --radius-md: 10px;
-  --radius-lg: 16px;
-  --shadow-sm: 0 1px 4px rgba(0,0,0,.08);
-  --shadow-md: 0 4px 16px rgba(0,0,0,.10);
+  color-scheme: light;
+  background-color: var(--mat-sys-surface, #f8fafc);
+  color: var(--mat-sys-on-surface, #1e293b);
+  font: var(--mat-sys-body-medium, Roboto, sans-serif);
 }
 
-/* ─── Global Reset ───────────────────────────────────────────── */
-*, *::before, *::after { box-sizing: border-box; }
+/* ─── 3. Material Sidenav Overrides (Kill Double Scrollbars) ── */
+.mat-sidenav-container,
+.mat-drawer-container {
+  overflow: hidden !important;
+  height: 100% !important;
+  background: transparent !important;
+}
 
-/* You can add global styles to this file, and also import other style files */
+.mat-sidenav,
+.mat-drawer {
+  overflow: hidden !important;
+  border-right: 1px solid var(--clr-border) !important;
+}
 
+.mat-sidenav-inner-container,
+.mat-drawer-inner-container {
+  display: flex !important;
+  flex-direction: column !important;
+  height: 100% !important;
+  width: 100% !important;
+  overflow: hidden !important; /* Delegates scrolling entirely to child wrapper */
+}
 
-/* ─── Keyframes for Panel Slide Actions ───────────────────────── */
+.mat-sidenav-content,
+.mat-drawer-content {
+  display: flex !important;
+  flex-direction: column !important;
+  height: 100% !important;
+  overflow: hidden !important;
+}
+
+/* ─── 4. Animation Keyframes ─────────────────────────────────── */
 @keyframes slideInFromRight {
   from {
     transform: translateX(100%);
@@ -80,7 +97,6 @@ body {
   }
 }
 
-/* 🚀 NEW: Left to Right Entry Animation Bracket */
 @keyframes slideInFromLeft {
   from {
     transform: translateX(-100%);
@@ -92,57 +108,42 @@ body {
   }
 }
 
-/* ─── Dialog Overlay Fixes ─────────────────────────────────────── */
-.cdk-overlay-pane.slide-in-dialog {
-  position: fixed !important;
-  right: 0 !important;
-  top: 0 !important;
-  border-radius: 0 !important;
-}
+/* ─── 5. Dialog & Side Drawer Overlay Overrides ───────────────── */
+.cdk-overlay-pane {
+  &.slide-in-dialog {
+    position: fixed !important;
+    right: 0 !important;
+    top: 0 !important;
+    height: 100% !important;
+    margin: 0 !important;
+    border-radius: 0 !important;
+    width: 50% !important;
+    min-width: 320px !important;
+    max-width: 500px !important;
+    animation: slideInFromRight 0.3s ease-out;
+  }
 
-/* 🚀 NEW: Overlay binding positioning fix for Left Side Drawer */
-.cdk-overlay-pane.slide-in-dialog-left {
-  position: fixed !important;
-  left: 0 !important;
-  top: 0 !important;
-  border-radius: 0 !important;
-}
+  &.slide-in-dialog-left {
+    position: fixed !important;
+    left: 0 !important;
+    top: 0 !important;
+    height: 100% !important;
+    margin: 0 !important;
+    border-radius: 0 !important;
+    width: 50% !important;
+    min-width: 320px !important;
+    max-width: 500px !important;
+    animation: slideInFromLeft 0.3s ease-out;
+  }
 
-/* ─── Right to Left Sidebar Panel (Existing) ───────────────────── */
-.slide-in-dialog {
-  position: fixed !important;
-  right: 0 !important;
-  top: 0 !important;
-  height: 100% !important;
-  margin: 0 !important;
-  border-radius: 0 !important;
-  width: 50% !important;
-  min-width: 320px !important;
-  max-width: 500px !important;
-  animation: slideInFromRight 0.3s ease-out;
-}
+  .mat-mdc-dialog-surface,
+  .mat-mdc-dialogContainer {
+    border-radius: 0 !important;
+  }
 
-/* 🚀 NEW: Left to Right Sidebar Panel Component Class */
-.slide-in-dialog-left {
-  position: fixed !important;
-  left: 0 !important;
-  top: 0 !important;
-  height: 100% !important;
-  margin: 0 !important;
-  border-radius: 0 !important;
-  width: 50% !important;
-  min-width: 320px !important;
-  max-width: 500px !important;
-  animation: slideInFromLeft 0.3s ease-out;
-}
-
-.cdk-overlay-pane .mat-mdc-dialog-surface,
-.cdk-overlay-pane .mat-mdc-dialogContainer {
-  border-radius: 0 !important;
-}
-
-.dialog-open {
-  overflow: hidden;
+  &.confirm-dialog-pane {
+    z-index: 2601 !important;
+  }
 }
 
 .cdk-overlay-backdrop.confirm-dialog-backdrop {
@@ -150,10 +151,11 @@ body {
   background: rgba(0, 0, 0, 0.55) !important;
 }
 
-.cdk-overlay-pane.confirm-dialog-pane {
-  z-index: 2601 !important;
+body.dialog-open {
+  overflow: hidden;
 }
 
+/* ─── 6. Global Utility Classes ─────────────────────────────── */
 .fit-image-cover {
   width: 100%;
   height: 100%;
@@ -176,6 +178,7 @@ body {
   object-position: center;
 }
 
+/* ─── 7. Toast & Notification Container ─────────────────────── */
 .notifier-container {
   position: fixed;
   top: 1rem;
@@ -184,86 +187,70 @@ body {
   display: flex;
   flex-direction: column;
   gap: 0.65rem;
-  z-index: 2500 !important; 
+  z-index: 2500 !important;
   pointer-events: none;
 }
 
-/* Emergency reassign autocomplete: keep the winner cup pinned to the row's right end.
-   These rules are global because mat-option content renders inside a CDK overlay. */
-.cdk-overlay-container .mat-auto-options,
-.mat-mdc-autocomplete-panel .mat-auto-options {
-  display: flex !important;
-  align-items: center !important;
-  justify-content: space-between !important;
-  gap: 10px !important;
-  width: 100% !important;
-  position: relative !important;
-}
-
-.cdk-overlay-container .mat-auto-options-name-email,
-.mat-mdc-autocomplete-panel .mat-auto-options-name-email {
-  flex: 1 1 auto !important;
-  min-width: 0 !important;
-  display: flex !important;
-  align-items: center !important;
-  justify-content: space-between !important;
-}
-
-.cdk-overlay-container .da-opt-cup,
-.mat-mdc-autocomplete-panel .da-opt-cup {
-  display: inline-flex !important;
-  align-items: center !important;
-  justify-content: center !important;
-  margin-left: auto !important;
-  flex: 0 0 auto !important;
-  color: #16a34a !important;
-
-  mat-icon {
-    font-size: 1rem !important;
-    width: 1rem !important;
-    height: 1rem !important;
-    line-height: 1 !important;
+/* ─── 8. Autocomplete Options & Direct Assign Badges ────────── */
+.cdk-overlay-container,
+.mat-mdc-autocomplete-panel {
+  .mat-auto-options {
+    display: flex !important;
+    align-items: center !important;
+    justify-content: space-between !important;
+    gap: 10px !important;
+    width: 100% !important;
+    position: relative !important;
   }
-}
 
-.cdk-overlay-container .done-icon,
-.mat-mdc-autocomplete-panel .done-icon {
-  flex: 0 0 auto !important;
-  display: flex !important;
-  align-items: center !important;
-}
-
-.cdk-overlay-container .mat-auto-options-cup,
-.mat-mdc-autocomplete-panel .mat-auto-options-cup {
-  color: #16a34a !important;
-  flex-shrink: 0 !important;
-
-  mat-icon {
-    font-size: 1rem !important;
-    width: 1rem !important;
-    height: 1rem !important;
-    line-height: 1 !important;
+  .mat-auto-options-name-email {
+    flex: 1 1 auto !important;
+    min-width: 0 !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: space-between !important;
   }
-}
 
-/* ─── Emergency Reassign / Direct Assign role accent colors ─── */
-.cdk-overlay-container .mat-mdc-option.role-master,
-.mat-mdc-autocomplete-panel .mat-mdc-option.role-master {
-  border-left-color: #ef4444 !important;
-  .da-opt-avatar { border-color: #ef4444 !important; background: #fee2e2 !important; }
-}
-.cdk-overlay-container .mat-mdc-option.role-admin,
-.mat-mdc-autocomplete-panel .mat-mdc-option.role-admin {
-  border-left-color: #22c55e !important;
-  .da-opt-avatar { border-color: #22c55e !important; background: #dcfce7 !important; }
-}
-.cdk-overlay-container .mat-mdc-option.role-member,
-.mat-mdc-autocomplete-panel .mat-mdc-option.role-member {
-  border-left-color: #3b82f6 !important;
-  .da-opt-avatar { border-color: #3b82f6 !important; background: #dbeafe !important; }
-}
-.cdk-overlay-container .mat-mdc-option.role-default,
-.mat-mdc-autocomplete-panel .mat-mdc-option.role-default {
-  border-left-color: #64748b !important;
-  .da-opt-avatar { border-color: #64748b !important; background: #e2e8f0 !important; }
+  .da-opt-cup,
+  .mat-auto-options-cup {
+    display: inline-flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    margin-left: auto !important;
+    flex: 0 0 auto !important;
+    color: #16a34a !important;
+
+    mat-icon {
+      font-size: 1rem !important;
+      width: 1rem !important;
+      height: 1rem !important;
+      line-height: 1 !important;
+    }
+  }
+
+  .done-icon {
+    flex: 0 0 auto !important;
+    display: flex !important;
+    align-items: center !important;
+  }
+
+  /* Role Specific Accent Colors */
+  .mat-mdc-option {
+    &.role-master {
+      border-left: 3px solid #ef4444 !important;
+      .da-opt-avatar { border-color: #ef4444 !important; background: #fee2e2 !important; }
+    }
+    &.role-admin {
+      border-left: 3px solid #22c55e !important;
+      .da-opt-avatar { border-color: #22c55e !important; background: #dcfce7 !important; }
+    }
+    &.role-member {
+      border-left: 3px solid #3b82f6 !important;
+      .da-opt-avatar { border-color: #3b82f6 !important; background: #dbeafe !important; }
+    }
+    &.role-default {
+      border-left: 3px solid #64748b !important;
+      .da-opt-avatar { border-color: #64748b !important; background: #e2e8f0 !important; }
+    }
+  }
 }

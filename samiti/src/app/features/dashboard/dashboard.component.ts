@@ -1,124 +1,87 @@
-import { Component, inject, ViewChild, ElementRef, signal, OnInit, OnDestroy } from '@angular/core';
+import {
+  Component,
+  inject,
+  ViewChild,
+  signal,
+  OnInit,
+  OnDestroy,
+  AfterViewInit
+} from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { RouterOutlet } from '@angular/router';
-import { MatDialog, MatDialogModule, MatDialogRef } from '@angular/material/dialog';
+import { MatSidenavModule, MatSidenav } from '@angular/material/sidenav';
+import { MatIconModule } from '@angular/material/icon';
 import { Subscription } from 'rxjs';
 import { DashboardHierarchyTreeComponent } from './components/dashboard-hierarchy-tree/dashboard-hierarchy-tree.component';
-import { DashboardSidebarDialogComponent } from './components/dashboard-sidebar-dialog/dashboard-sidebar-dialog.component';
-import { UiToggleService } from '../../shared/services/ui-toggle.service'
+import { UiToggleService } from '../../shared/services/ui-toggle.service';
+
 @Component({
   selector: 'app-dashboard',
   standalone: true,
   imports: [
     CommonModule,
     RouterOutlet,
-    MatDialogModule,
+    MatSidenavModule,
+    MatIconModule,
     DashboardHierarchyTreeComponent
   ],
   templateUrl: './dashboard.component.html',
   styleUrl: './dashboard.component.scss'
 })
-export class DashboardComponent implements OnInit, OnDestroy {
-  @ViewChild('sidebarEl', { static: false }) sidebarElement!: ElementRef<HTMLElement>;
-  private static readonly SIDEBAR_MIN_WIDTH = 200;
-  private static readonly SIDEBAR_MAX_WIDTH = 560;
+export class DashboardComponent implements OnInit, AfterViewInit, OnDestroy {
+  @ViewChild('sidenav') sidenav!: MatSidenav;
 
   readonly isSmallScreen = signal<boolean>(false);
+  readonly isHierarchyMenuOpen = signal<boolean>(false);
+
   private readonly mediaQuery = typeof window !== 'undefined'
     ? window.matchMedia('(max-width: 768px)')
     : null;
-  private sidebarDialogRef: MatDialogRef<DashboardSidebarDialogComponent> | null = null;
   private menuSubscription?: Subscription;
 
-  private readonly dialog = inject(MatDialog);
-
-  constructor(public uiService: UiToggleService) {}
+  private readonly uiService = inject(UiToggleService);
 
   ngOnInit(): void {
     this.isSmallScreen.set(this.mediaQuery?.matches ?? false);
+    this.isHierarchyMenuOpen.set(this.uiService.currentHierarchyMenuState);
+
     this.mediaQuery?.addEventListener('change', this.onScreenSizeChange);
 
     this.menuSubscription = this.uiService.isHeirarchyMenu$.subscribe((isOpen) => {
-      if (this.isSmallScreen()) {
-        isOpen ? this.openSidebarDialog() : this.closeSidebarDialog();
-      } else {
-        this.closeSidebarDialog();
-      }
+      this.isHierarchyMenuOpen.set(isOpen);
+      this.updateSidenavMode();
     });
+  }
+
+  ngAfterViewInit(): void {
+    this.updateSidenavMode();
   }
 
   ngOnDestroy(): void {
     this.mediaQuery?.removeEventListener('change', this.onScreenSizeChange);
     this.menuSubscription?.unsubscribe();
-    this.closeSidebarDialog();
   }
 
   private readonly onScreenSizeChange = (event: MediaQueryListEvent): void => {
     this.isSmallScreen.set(event.matches);
-
-    if (event.matches) {
-      this.uiService.currentHierarchyMenuState ? this.openSidebarDialog() : this.closeSidebarDialog();
-    } else {
-      this.closeSidebarDialog();
-    }
+    this.updateSidenavMode();
   };
 
-  private openSidebarDialog(): void {
-    if (this.sidebarDialogRef) {
-      return;
+  private updateSidenavMode(): void {
+    const isOpen = this.isHierarchyMenuOpen();
+    const isMobile = this.isSmallScreen();
+
+    if (this.sidenav) {
+      this.sidenav.mode = isMobile ? 'over' : 'side';
+      this.sidenav.opened = isOpen;
     }
-
-    document.body.classList.add('dialog-open');
-    this.sidebarDialogRef = this.dialog.open(DashboardSidebarDialogComponent, {
-      position: { right: '0', top: '0' },
-      height: '100%',
-      width: '100%',
-      autoFocus: true,
-      disableClose: true,
-      hasBackdrop: true,
-      panelClass: 'slide-in-dialog-left'
-    });
-
-    this.sidebarDialogRef.afterClosed().subscribe(() => {
-      document.body.classList.remove('dialog-open');
-      this.sidebarDialogRef = null;
-      this.uiService.setHierarchyMenuState(false);
-    });
   }
 
-  private closeSidebarDialog(): void {
-    const ref = this.sidebarDialogRef;
-    this.sidebarDialogRef = null;
-    ref?.close();
+  public toggleSideMenu(): void {
+    this.uiService.toggleHierarchyMenu();
   }
 
-
-  // 🎚️ RESIZER MOUSE DRAG DRIVER: Real-time calculation mechanics for sidebar width changes
-  public initSidebarResize(mouseDownEvent: MouseEvent): void {
-    mouseDownEvent.preventDefault();
-    
-    const startX = mouseDownEvent.clientX;
-    const startWidth = this.sidebarElement.nativeElement.getBoundingClientRect().width;
-
-    const doDrag = (moveEvent: MouseEvent) => {
-      const currentWidth = startWidth + (moveEvent.clientX - startX);
-
-      if (
-        currentWidth >= DashboardComponent.SIDEBAR_MIN_WIDTH &&
-        currentWidth <= DashboardComponent.SIDEBAR_MAX_WIDTH
-      ) {
-        this.sidebarElement.nativeElement.style.width = `${currentWidth}px`;
-        this.sidebarElement.nativeElement.style.minWidth = `${currentWidth}px`;
-        this.sidebarElement.nativeElement.style.maxWidth = `${currentWidth}px`;
-      }
-    };
-
-    const stopDrag = () => {
-      window.removeEventListener('mousemove', doDrag);
-      window.removeEventListener('mouseup', stopDrag);
-    };
-
-    window.addEventListener('mousemove', doDrag);
-    window.addEventListener('mouseup', stopDrag);
+  public closeSideMenu(): void {
+    this.uiService.setHierarchyMenuState(false);
   }
 }
