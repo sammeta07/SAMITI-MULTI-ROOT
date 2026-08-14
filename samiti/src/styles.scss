@@ -33,8 +33,14 @@
   box-sizing: border-box;
 }
 
-html {
+html, body {
   height: 100%;
+  margin: 0;
+  padding: 0;
+  overflow: hidden; /* Main window scroll freeze - delegates scroll to .app-main */
+}
+
+html {
   @include mat.theme((
     color: (
       primary: mat.$azure-palette,
@@ -46,8 +52,6 @@ html {
 }
 
 body {
-  margin: 0;
-  height: 100%;
   color-scheme: light;
   background-color: var(--mat-sys-surface, #f8fafc);
   color: var(--mat-sys-on-surface, #1e293b);

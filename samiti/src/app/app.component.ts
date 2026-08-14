@@ -15,6 +15,9 @@ import { StartupLoaderService } from './core/services/startup-loader.service';
   templateUrl: './app.component.html',
   styleUrl: './app.component.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
+  host: {
+    class: 'app-root-host'
+  }
 })
 export class App implements OnInit {
   private router = inject(Router);
