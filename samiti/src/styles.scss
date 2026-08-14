@@ -187,3 +187,83 @@ body {
   z-index: 2500 !important; 
   pointer-events: none;
 }
+
+/* Emergency reassign autocomplete: keep the winner cup pinned to the row's right end.
+   These rules are global because mat-option content renders inside a CDK overlay. */
+.cdk-overlay-container .mat-auto-options,
+.mat-mdc-autocomplete-panel .mat-auto-options {
+  display: flex !important;
+  align-items: center !important;
+  justify-content: space-between !important;
+  gap: 10px !important;
+  width: 100% !important;
+  position: relative !important;
+}
+
+.cdk-overlay-container .mat-auto-options-name-email,
+.mat-mdc-autocomplete-panel .mat-auto-options-name-email {
+  flex: 1 1 auto !important;
+  min-width: 0 !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: space-between !important;
+}
+
+.cdk-overlay-container .da-opt-cup,
+.mat-mdc-autocomplete-panel .da-opt-cup {
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  margin-left: auto !important;
+  flex: 0 0 auto !important;
+  color: #16a34a !important;
+
+  mat-icon {
+    font-size: 1rem !important;
+    width: 1rem !important;
+    height: 1rem !important;
+    line-height: 1 !important;
+  }
+}
+
+.cdk-overlay-container .done-icon,
+.mat-mdc-autocomplete-panel .done-icon {
+  flex: 0 0 auto !important;
+  display: flex !important;
+  align-items: center !important;
+}
+
+.cdk-overlay-container .mat-auto-options-cup,
+.mat-mdc-autocomplete-panel .mat-auto-options-cup {
+  color: #16a34a !important;
+  flex-shrink: 0 !important;
+
+  mat-icon {
+    font-size: 1rem !important;
+    width: 1rem !important;
+    height: 1rem !important;
+    line-height: 1 !important;
+  }
+}
+
+/* ─── Emergency Reassign / Direct Assign role accent colors ─── */
+.cdk-overlay-container .mat-mdc-option.role-master,
+.mat-mdc-autocomplete-panel .mat-mdc-option.role-master {
+  border-left-color: #ef4444 !important;
+  .da-opt-avatar { border-color: #ef4444 !important; background: #fee2e2 !important; }
+}
+.cdk-overlay-container .mat-mdc-option.role-admin,
+.mat-mdc-autocomplete-panel .mat-mdc-option.role-admin {
+  border-left-color: #22c55e !important;
+  .da-opt-avatar { border-color: #22c55e !important; background: #dcfce7 !important; }
+}
+.cdk-overlay-container .mat-mdc-option.role-member,
+.mat-mdc-autocomplete-panel .mat-mdc-option.role-member {
+  border-left-color: #3b82f6 !important;
+  .da-opt-avatar { border-color: #3b82f6 !important; background: #dbeafe !important; }
+}
+.cdk-overlay-container .mat-mdc-option.role-default,
+.mat-mdc-autocomplete-panel .mat-mdc-option.role-default {
+  border-left-color: #64748b !important;
+  .da-opt-avatar { border-color: #64748b !important; background: #e2e8f0 !important; }
+}

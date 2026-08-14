@@ -68,6 +68,7 @@ export class EventVotingService {
             name
             email
             photo
+            committeeRole
           }
         }
         pendingEventInterests {
@@ -403,9 +404,9 @@ export class EventVotingService {
     );
   }
 
-  public resolveTieBreaker(eventId: number, roleId: number, winnerCandidateId: number): Observable<ResolveTieBreakerPayload> {
-    const mutation = `mutation ResolveTieBreaker($eventId: Int!, $roleId: Int!, $winnerCandidateId: Int!) {
-      resolveTieBreaker(eventId: $eventId, roleId: $roleId, winnerCandidateId: $winnerCandidateId) {
+  public resolveTieBreaker(eventId: number, roleId: number, winnerCandidateId: number, votingMode?: string): Observable<ResolveTieBreakerPayload> {
+    const mutation = `mutation ResolveTieBreaker($eventId: Int!, $roleId: Int!, $winnerCandidateId: Int!, $votingMode: String) {
+      resolveTieBreaker(eventId: $eventId, roleId: $roleId, winnerCandidateId: $winnerCandidateId, votingMode: $votingMode) {
         eventId
         roleId
         winnerUserId
@@ -419,7 +420,7 @@ export class EventVotingService {
       this.graphqlUrl,
       {
         query: mutation,
-        variables: { eventId, roleId, winnerCandidateId }
+        variables: { eventId, roleId, winnerCandidateId, votingMode }
       },
       { withCredentials: true }
     ).pipe(
@@ -427,9 +428,9 @@ export class EventVotingService {
     );
   }
 
-  public assignWinningRole(eventId: number, roleId: number, newWinnerUserId: number, newWinnerName: string, newWinnerPhoto: string | null): Observable<AssignWinningRolePayload> {
-    const mutation = `mutation AssignWinningRole($eventId: Int!, $roleId: Int!, $newWinnerUserId: Int!, $newWinnerName: String!, $newWinnerPhoto: String) {
-      assignWinningRole(eventId: $eventId, roleId: $roleId, newWinnerUserId: $newWinnerUserId, newWinnerName: $newWinnerName, newWinnerPhoto: $newWinnerPhoto) {
+  public assignWinningRole(eventId: number, roleId: number, newWinnerUserId: number, newWinnerName: string, newWinnerPhoto: string | null, votingMode?: string): Observable<AssignWinningRolePayload> {
+    const mutation = `mutation AssignWinningRole($eventId: Int!, $roleId: Int!, $newWinnerUserId: Int!, $newWinnerName: String!, $newWinnerPhoto: String, $votingMode: String) {
+      assignWinningRole(eventId: $eventId, roleId: $roleId, newWinnerUserId: $newWinnerUserId, newWinnerName: $newWinnerName, newWinnerPhoto: $newWinnerPhoto, votingMode: $votingMode) {
         eventId
         roleId
         winnerUserId
@@ -444,7 +445,7 @@ export class EventVotingService {
       this.graphqlUrl,
       {
         query: mutation,
-        variables: { eventId, roleId, newWinnerUserId, newWinnerName, newWinnerPhoto }
+        variables: { eventId, roleId, newWinnerUserId, newWinnerName, newWinnerPhoto, votingMode }
       },
       { withCredentials: true }
     ).pipe(

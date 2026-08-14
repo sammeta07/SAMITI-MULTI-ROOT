@@ -1,4 +1,4 @@
-import { Component, inject, OnInit, signal, effect, OnDestroy, AfterViewInit, ViewChildren, QueryList, ElementRef, Renderer2 } from '@angular/core';
+import { Component, inject, Injector, runInInjectionContext, OnInit, signal, effect, OnDestroy, AfterViewInit, ViewChildren, QueryList, ElementRef, Renderer2 } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ActivatedRoute, Router } from '@angular/router';
 import { MatDialog } from '@angular/material/dialog';
@@ -99,8 +99,10 @@ export class EventVotingComponent implements OnInit, AfterViewInit, OnDestroy{
     return this.stateService.eventData();
   }
 
-  public get votingMode(): 'VOTING' | 'DIRECT_ASSIGN' | null {
-    return (this.eventData?.votingMode as 'VOTING' | 'DIRECT_ASSIGN' | undefined) || 'VOTING';
+  private readonly injector = inject(Injector);
+
+  public get votingMode(): 'VOTING' | 'DIRECT_ASSIGN' | 'TIE_BREAKER' | 'EMERGENCY_REASSIGN' | null {
+    return (this.eventData?.votingMode as 'VOTING' | 'DIRECT_ASSIGN' | 'TIE_BREAKER' | 'EMERGENCY_REASSIGN' | undefined) || 'VOTING';
   }
 
   public get canManageVotingRoles(): boolean {
@@ -108,11 +110,21 @@ export class EventVotingComponent implements OnInit, AfterViewInit, OnDestroy{
   }
 
   public get isVotingMode(): boolean {
-    return this.votingMode === 'VOTING';
+    return this.votingMode === 'VOTING' || this.votingMode === 'TIE_BREAKER';
   }
 
-  public get currentVotingMode(): 'VOTING' | 'DIRECT_ASSIGN' | null {
+  public get currentVotingMode(): 'VOTING' | 'DIRECT_ASSIGN' | 'TIE_BREAKER' | 'EMERGENCY_REASSIGN' | null {
     return this.votingMode;
+  }
+
+  public getVotingModeLabel(): string {
+    switch ((this.votingMode || 'VOTING').toString().toUpperCase()) {
+      case 'DIRECT_ASSIGN': return 'Direct Assign';
+      case 'TIE_BREAKER': return 'Tie Breaker';
+      case 'EMERGENCY_REASSIGN': return 'Emergency Reassign';
+      case 'VOTING':
+      default: return 'Voting';
+    }
   }
 
   public get isVotingRolesLocked(): boolean {
@@ -329,16 +341,20 @@ export class EventVotingComponent implements OnInit, AfterViewInit, OnDestroy{
 
     this.votingCards.changes.subscribe(() => this.applyVotingCardHeight());
 
-    effect(() => {
-      this.votingCardHeight();
-      this.applyVotingCardHeight();
+    runInInjectionContext(this.injector, () => {
+      effect(() => {
+        this.votingCardHeight();
+        this.applyVotingCardHeight();
+      });
     });
   }
 
   private applyVotingCardHeight(): void {
     const height = this.votingCardHeight();
     this.votingCards.forEach((cardRef) => {
-      this.renderer.setStyle(cardRef.nativeElement, 'height', `${height}px`);
+      const el = cardRef?.nativeElement;
+      if (!el) return;
+      this.renderer.setStyle(el, 'height', `${height}px`);
     });
   }
 
@@ -384,6 +400,7 @@ export class EventVotingComponent implements OnInit, AfterViewInit, OnDestroy{
   private initializeVotingState(eventId: number): void {
     const data = this.stateService.eventData();
     if (!data) return;
+    this.cancelReassign();
     this.selectedVotingRoleIds.set(
       (data.mappedVotingRoles || []).map((role) => Number(role.roleId)).filter((roleId) => Number.isInteger(roleId) && roleId > 0)
     );
@@ -391,16 +408,22 @@ export class EventVotingComponent implements OnInit, AfterViewInit, OnDestroy{
     this.myInterestStatuses.set(
       (data.myInterestStatuses || []).map((item) => ({ roleId: Number(item.roleId), status: String(item.status || 'PENDING') }))
     );
-    this.interestReviewList.set([]);
-    this.directAssignSelected.set(
-      (data.mappedVotingRoles || []).reduce((acc: Record<number, number | null>, role: EventMappedVotingRole) => {
-        const rid = Number(role.roleId);
-        if (Number.isInteger(rid) && rid > 0) {
-          acc[rid] = role.winnerUserId ?? null;
+        this.interestReviewList.set([]);
+        this.directAssignSelected.set(
+          (data.mappedVotingRoles || []).reduce((acc: Record<number, number | null>, role: EventMappedVotingRole) => {
+            const rid = Number(role.roleId);
+            if (Number.isInteger(rid) && rid > 0) {
+              acc[rid] = role.winnerUserId ?? null;
+            }
+            return acc;
+          }, {} as Record<number, number | null>)
+        );
+        if (data.votingPhaseState === 6) {
+          const currentResults = this.eventResults();
+          if (!currentResults || currentResults.eventId !== Number(data.eventId)) {
+            this.loadEventResults(Number(data.eventId));
+          }
         }
-        return acc;
-      }, {} as Record<number, number | null>)
-    );
     this.directAssignInputText = (data.mappedVotingRoles || []).reduce((acc: Record<number, string>, role: EventMappedVotingRole) => {
       const rid = Number(role.roleId);
       if (Number.isInteger(rid) && rid > 0) {
@@ -613,12 +636,31 @@ export class EventVotingComponent implements OnInit, AfterViewInit, OnDestroy{
   private refreshInterestApprovedPeopleFromReviewList(): void {
     const prev = this.stateService.eventData();
     if (!prev) return;
-    const approvedMap = new Map<number, Array<{ userId: number; name: string; email: string; photo?: string | null }>>();
+
+    const existingRoleMap = new Map<number, Map<number, string>>();
+    for (const info of prev.interestApprovedPeople) {
+      const roleId = Number(info.roleId);
+      const userMap = new Map<number, string>();
+      for (const p of info.approvedPeople) {
+        userMap.set(Number(p.userId), (p as any).committeeRole || '');
+      }
+      existingRoleMap.set(roleId, userMap);
+    }
+
+    const approvedMap = new Map<number, Array<{ userId: number; name: string; email: string; photo?: string | null; committeeRole: string }>>();
     for (const item of this.interestReviewList()) {
       if (String(item.status).toUpperCase() === 'APPROVED') {
         const roleId = Number(item.roleId);
         if (!approvedMap.has(roleId)) approvedMap.set(roleId, []);
-        approvedMap.get(roleId)!.push({ userId: item.userId, name: item.userName, email: item.userEmail, photo: item.userPhoto || null });
+        const userId = Number(item.userId);
+        const committeeRole = existingRoleMap.get(roleId)?.get(userId) || '';
+        approvedMap.get(roleId)!.push({
+          userId,
+          name: item.userName,
+          email: item.userEmail,
+          photo: item.userPhoto || null,
+          committeeRole
+        });
       }
     }
     const interestApprovedPeople = Array.from(approvedMap.entries()).map(([roleId, approvedPeople]) => ({ roleId, approvedPeople }));
@@ -699,9 +741,10 @@ export class EventVotingComponent implements OnInit, AfterViewInit, OnDestroy{
     return { total, approved };
   }
 
-  public approvedPeopleForRole(roleId: number): Array<{ userId: number; name: string; email: string; photo?: string | null }> {
+  public approvedPeopleForRole(roleId: number): Array<{ userId: number; name: string; email: string; photo?: string | null; committeeRole?: string }> {
     const list = this.eventData?.interestApprovedPeople ?? [];
     const match = list.find((info) => Number(info.roleId) === Number(roleId));
+    console.log('[approvedPeopleForRole] roleId=', roleId, 'raw=', JSON.stringify(match?.approvedPeople ?? []));
     return match?.approvedPeople ?? [];
   }
 
@@ -766,7 +809,11 @@ export class EventVotingComponent implements OnInit, AfterViewInit, OnDestroy{
     if (!results?.roles?.length) return [];
     const roleResult = results.roles.find((r) => Number(r.roleId) === Number(roleId));
     if (!roleResult?.candidates?.length) return [];
-    return [...roleResult.candidates].sort((a, b) => Number(b.voteCount || 0) - Number(a.voteCount || 0));
+    return [...roleResult.candidates].sort((a, b) => {
+      if (a.isWinner && !b.isWinner) return -1;
+      if (!a.isWinner && b.isWinner) return 1;
+      return Number(b.voteCount || 0) - Number(a.voteCount || 0);
+    });
   }
 
   public isTieRole(roleId: number): boolean {
@@ -796,11 +843,16 @@ export class EventVotingComponent implements OnInit, AfterViewInit, OnDestroy{
     const dialogRef = this.confirmDialog.open(dialogData);
     dialogRef.afterClosed().subscribe((result) => {
       if (!result?.confirmed) return;
-      this.votingService.resolveTieBreaker(currentEvent.eventId, normalizedRoleId, normalizedWinnerId).subscribe({
+      this.votingService.resolveTieBreaker(currentEvent.eventId, normalizedRoleId, normalizedWinnerId, 'TIE_BREAKER').subscribe({
         next: () => { this.notifier.success('Tie breaker resolved successfully'); this.loadEventResults(Number(currentEvent.eventId)); this.refreshVoting(); },
         error: (err: HttpErrorResponse) => { this.notifier.error(err?.error?.message || 'Failed to resolve tie breaker'); }
       });
     });
+  }
+
+  public isReassignOpenForRole(roleId: number | string): boolean {
+    const current = this.openReassignForRoleId();
+    return current != null && Number(current) === Number(roleId);
   }
 
   public onAssignWinningRole(roleId: number): void {
@@ -812,18 +864,9 @@ export class EventVotingComponent implements OnInit, AfterViewInit, OnDestroy{
     this.openReassignForRoleId.set(normalizedRoleId);
     this.selectedReassignMemberId.set(null);
     this.reassignMemberSearchQuery.set('');
-
-    if (!this.reassignMembersLoaded().has(normalizedRoleId)) {
-      this.votingService.getDirectAssignMembers(currentEvent.eventId).subscribe({
-        next: (members) => {
-          this.directAssignMembers.set(members);
-          this.reassignMembersLoaded.update((s) => new Set(s).add(normalizedRoleId));
-        },
-        error: (err: HttpErrorResponse) => {
-          this.notifier.error(err?.error?.message || 'Failed to load members for reassign.');
-        }
-      });
-    }
+    // NOTE: The reassign candidate list is derived directly from
+    // eventVotingDetails.interestApprovedPeople inside getReassignOptions().
+    // No eventDirectAssignMembers API call is made here (or anywhere in the reassign flow).
   }
 
   public onReassignSearch(roleId: number, query: string): void {
@@ -833,7 +876,7 @@ export class EventVotingComponent implements OnInit, AfterViewInit, OnDestroy{
   public onReassignSelect(roleId: number, event: { option: { value: number | string } }): void {
     const userId = Number(event.option.value);
     this.reassignMemberSearchQuery.set('');
-    const member = this.directAssignMembers().find((m) => m.userId === userId);
+    const member = this.getReassignOptions(roleId).find((m) => m.userId === userId);
     const name = member ? member.name.toLowerCase().replace(/\b\w/g, (c) => c.toUpperCase()) : '';
     this.directAssignInputText[roleId] = name;
     this.selectedReassignMemberId.set(userId);
@@ -841,19 +884,34 @@ export class EventVotingComponent implements OnInit, AfterViewInit, OnDestroy{
 
   public getReassignOptions(roleId: number): EventDirectAssignMember[] {
     const query = this.reassignMemberSearchQuery().toLowerCase().trim();
-    const members = this.directAssignMembers();
+    // Source: approved nominees returned by eventVotingDetails.interestApprovedPeople (no API call).
+    const approved = this.approvedPeopleForRole(roleId).map((p) => ({
+      userId: Number(p.userId),
+      name: p.name,
+      email: p.email,
+      photo: p.photo ?? null,
+      committeeRole: p.committeeRole || '',
+      isWinner: false,
+    }));
+    console.log('[ReassignOptions] roleId=', roleId, 'approved=', JSON.stringify(approved));
+    const winner = this.getMappedRoleWinner(roleId);
+    const merged = [...approved];
+    if (winner && !merged.some((m) => m.userId === winner.userId)) {
+      merged.push({
+        userId: winner.userId,
+        name: winner.name,
+        email: '',
+        photo: winner.photo ?? null,
+        committeeRole: '',
+        isWinner: true,
+      });
+    }
+    const withFlag = merged.map((m) => ({ ...m, isWinner: winner != null && m.userId === winner.userId }));
     const filtered = query
-      ? members.filter((m) => m.name.toLowerCase().includes(query) || m.email.toLowerCase().includes(query))
-      : members;
-    const rolePriority = (role: string): number => {
-      if (role === 'COMMITTEE_MASTER_ADMIN') return 0;
-      if (role === 'COMMITTEE_ADMIN') return 1;
-      if (role === 'COMMITTEE_MEMBER') return 2;
-      return 3;
-    };
+      ? withFlag.filter((m) => m.name.toLowerCase().includes(query) || m.email.toLowerCase().includes(query))
+      : withFlag;
     return [...filtered].sort((a, b) => {
-      const diff = rolePriority(a.committeeRole) - rolePriority(b.committeeRole);
-      if (diff !== 0) return diff;
+      if (a.isWinner !== b.isWinner) return a.isWinner ? -1 : 1;
       return a.name.localeCompare(b.name);
     });
   }
@@ -869,14 +927,14 @@ export class EventVotingComponent implements OnInit, AfterViewInit, OnDestroy{
     const normalizedRoleId = Number(roleId);
     const newWinnerUserId = this.selectedReassignMemberId();
     if (!newWinnerUserId) return;
-    const members = this.directAssignMembers();
+    const members = this.getReassignOptions(normalizedRoleId);
     const selected = members.find((p) => p.userId === newWinnerUserId);
     if (!selected) return;
     const dialogData: ConfirmDialogData = { title: 'Emergency Reassign Winner', message: `Are you sure you want to assign this role to ${selected.name}?`, confirmText: 'Reassign', cancelText: 'Cancel' };
     const dialogRef = this.confirmDialog.open(dialogData);
     dialogRef.afterClosed().subscribe((result) => {
       if (!result?.confirmed) return;
-      this.votingService.assignWinningRole(currentEvent.eventId, normalizedRoleId, newWinnerUserId, selected.name, selected.photo || null).subscribe({
+      this.votingService.assignWinningRole(currentEvent.eventId, normalizedRoleId, newWinnerUserId, selected.name, selected.photo || null, 'EMERGENCY_REASSIGN').subscribe({
         next: () => { this.notifier.success('Winner reassigned successfully'); this.openReassignForRoleId.set(null); this.selectedReassignMemberId.set(null); this.reassignMemberSearchQuery.set(''); this.refreshVoting(); this.loadEventResults(Number(currentEvent.eventId)); },
         error: (err: HttpErrorResponse) => { this.notifier.error(err?.error?.message || 'Failed to reassign winner'); }
       });
@@ -1027,12 +1085,16 @@ export class EventVotingComponent implements OnInit, AfterViewInit, OnDestroy{
   }
 
   public getRoleColorClass(role?: string | null): string {
-    switch ((role || '').toUpperCase()) {
-      case 'COMMITTEE_MASTER_ADMIN': return 'role-master';
-      case 'COMMITTEE_ADMIN': return 'role-admin';
-      case 'COMMITTEE_MEMBER': return 'role-member';
-      default: return 'role-default';
-    }
+    const cls = (() => {
+      switch ((role || '').toUpperCase()) {
+        case 'COMMITTEE_MASTER_ADMIN': return 'role-master';
+        case 'COMMITTEE_ADMIN': return 'role-admin';
+        case 'COMMITTEE_MEMBER': return 'role-member';
+        default: return 'role-default';
+      }
+    })();
+    console.log('[getRoleColorClass] role=', role, '->', cls);
+    return cls;
   }
 
   public getAssignedRoleClass(roleId: number): string {
@@ -1221,5 +1283,6 @@ export class EventVotingComponent implements OnInit, AfterViewInit, OnDestroy{
   ngOnDestroy(): void {
     this.paramSub?.unsubscribe();
     this.resizeSub.unsubscribe();
+    this.cancelReassign();
   }
 }

@@ -23,6 +23,7 @@ export interface EventInterestPerson {
   name: string;
   email: string;
   photo?: string | null;
+  committeeRole?: string;
 }
 
 export interface EventInterestInfo {
@@ -217,7 +218,7 @@ export interface EventVotingPayload {
   canManageVotingRoles: boolean;
   currentCommitteeRole: string;
   votingPhaseState: number;
-  votingMode?: 'VOTING' | 'DIRECT_ASSIGN';
+  votingMode?: 'VOTING' | 'DIRECT_ASSIGN' | 'TIE_BREAKER' | 'EMERGENCY_REASSIGN';
 }
 
 export interface EventCommitteeMember {

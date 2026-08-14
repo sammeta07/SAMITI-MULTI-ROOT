@@ -257,9 +257,9 @@ export const eventVotingMutationFields = `
   allowEventVoting(eventId: Int!): AllowEventVotingPayload!
   stopEventVoting(eventId: Int!): StopEventVotingPayload!
   declareEventResults(eventId: Int!): DeclareEventResultsPayload!
-  resolveTieBreaker(eventId: Int!, roleId: Int!, winnerCandidateId: Int!): ResolveTieBreakerPayload!
+  resolveTieBreaker(eventId: Int!, roleId: Int!, winnerCandidateId: Int!, votingMode: String): ResolveTieBreakerPayload!
   vacateVotingRole(eventId: Int!, roleId: Int!): VacateVotingRolePayload!
-  assignWinningRole(eventId: Int!, roleId: Int!, newWinnerUserId: Int!, newWinnerName: String!, newWinnerPhoto: String): AssignWinningRolePayload!
+  assignWinningRole(eventId: Int!, roleId: Int!, newWinnerUserId: Int!, newWinnerName: String!, newWinnerPhoto: String, votingMode: String): AssignWinningRolePayload!
   directAssignWinner(eventId: Int!, roleId: Int!, userId: Int!): DirectAssignWinnerPayload!
 `;
 
@@ -1051,6 +1051,7 @@ export const eventVotingResolvers = {
           await connection.query(
             `UPDATE events
              SET voting_phase_state = 6,
+                 voting_mode = 'DIRECT_ASSIGN',
                  updated_by = ?
              WHERE id = ?`,
             [loggedInUserId, eventId]
@@ -1263,6 +1264,7 @@ export const eventVotingResolvers = {
         await connection.query(
           `UPDATE events
            SET voting_phase_state = 6,
+               voting_mode = 'VOTING',
                updated_by = ?
            WHERE id = ?`,
           [loggedInUserId, eventId]
@@ -1318,7 +1320,7 @@ export const eventVotingResolvers = {
       };
     },
 
-    async resolveTieBreaker(_: any, args: { eventId: number; roleId: number; winnerCandidateId: number }, context: any) {
+    async resolveTieBreaker(_: any, args: { eventId: number; roleId: number; winnerCandidateId: number; votingMode?: string }, context: any) {
       const eventId = Number(args?.eventId);
       const roleId = Number(args?.roleId);
       const winnerCandidateId = Number(args?.winnerCandidateId);
@@ -1421,6 +1423,11 @@ export const eventVotingResolvers = {
 
         await connection.commit();
         await syncWinnersToUsersEvents(eventId);
+        const votingMode = String(args?.votingMode || 'TIE_BREAKER').trim() || 'TIE_BREAKER';
+        await query(
+          `UPDATE events SET voting_mode = ?, voting_phase_state = 6, updated_by = ? WHERE id = ?`,
+          [votingMode, loggedInUserId, eventId]
+        );
       } catch (error) {
         await connection.rollback();
         throw error;
@@ -1517,7 +1524,7 @@ export const eventVotingResolvers = {
       };
     },
 
-    async assignWinningRole(_: any, args: { eventId: number; roleId: number; newWinnerUserId: number; newWinnerName: string; newWinnerPhoto: string }, context: any) {
+    async assignWinningRole(_: any, args: { eventId: number; roleId: number; newWinnerUserId: number; newWinnerName: string; newWinnerPhoto: string; votingMode?: string }, context: any) {
       const eventId = Number(args?.eventId);
       if (!Number.isInteger(eventId) || eventId <= 0) {
         throwEventError('BAD_REQUEST', 'eventId must be a positive integer');
@@ -1540,6 +1547,7 @@ export const eventVotingResolvers = {
 
       const newWinnerPhoto = args?.newWinnerPhoto ? String(args.newWinnerPhoto) : null;
       const supportsVotingPhaseState = await hasEventsVotingPhaseStateColumn();
+      const loggedInUserId = await getLoggedInUserId(context);
 
       const eventRows = await query<any[]>(
         `SELECT
@@ -1624,6 +1632,11 @@ export const eventVotingResolvers = {
       );
 
       await syncWinnersToUsersEvents(eventId);
+      const votingMode = String(args?.votingMode || 'EMERGENCY_REASSIGN').trim() || 'EMERGENCY_REASSIGN';
+      await query(
+        `UPDATE events SET voting_mode = ?, voting_phase_state = 6, updated_by = ? WHERE id = ?`,
+        [votingMode, loggedInUserId, eventId]
+      );
 
       return {
         eventId,

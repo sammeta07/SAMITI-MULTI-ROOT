@@ -7,6 +7,7 @@ export interface EventInterestPerson {
   name: string;
   email: string;
   photo: string | null;
+  committeeRole: string;
 }
 
 export async function getEventInterestApprovedPeople(
@@ -18,14 +19,19 @@ export async function getEventInterestApprovedPeople(
     name: string;
     email: string;
     photo: string | null;
+    committeeRole: string | null;
   }>>(
     `SELECT
         u.id AS userId,
         u.name AS name,
         u.email AS email,
-        u.profile_photo AS photo
+        u.profile_photo AS photo,
+        uc.committee_role AS committeeRole
       FROM event_interest_expressions eie
       INNER JOIN users u ON u.id = eie.user_id
+      LEFT JOIN users_committees uc ON uc.user_id = u.id AND uc.committee_id = (
+        SELECT e2.committee_id FROM events e2 WHERE e2.id = eie.event_id LIMIT 1
+      )
       WHERE eie.event_id = ?
         AND eie.role_id = ?
         AND eie.status = 'APPROVED'
@@ -37,7 +43,8 @@ export async function getEventInterestApprovedPeople(
     userId: Number(row.userId),
     name: String(row.name || ''),
     email: String(row.email || ''),
-    photo: row.photo ? String(row.photo) : null
+    photo: row.photo ? String(row.photo) : null,
+    committeeRole: String(row.committeeRole || '').toUpperCase()
   }));
 }
 
@@ -69,6 +76,7 @@ export const eventInterestTypes = `
     name: String!
     email: String!
     photo: String
+    committeeRole: String
   }
 
   type EventInterestInfo {

@@ -129,7 +129,7 @@ export const eventVotingDetailsResolvers = {
       const myInterestRoleIds = await getMyEventInterestRoleIds(eventId, loggedInUserId);
       const myInterestStatuses = await getMyEventInterestStatuses(eventId, loggedInUserId);
 
-      const interestApprovedPeople: Array<{ roleId: number; approvedPeople: Array<{ userId: number; name: string; email: string; photo: string | null }> }> = [];
+      const interestApprovedPeople: Array<{ roleId: number; approvedPeople: Array<{ userId: number; name: string; email: string; photo: string | null; committeeRole: string }> }> = [];
       for (const mappedRole of mappedVotingRoleRows) {
         const approvedPeople = await getEventInterestApprovedPeople(eventId, Number(mappedRole.roleId));
         interestApprovedPeople.push({ roleId: Number(mappedRole.roleId), approvedPeople });

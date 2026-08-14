@@ -297,13 +297,16 @@ export const eventVoteResolvers = {
         roleStats.set(roleId, candidateMap2);
       });
 
-      const singleCandidateMap = new Map<number, { userId: number; name: string; photo: string | null; committeeRole: string }>();
+      // All APPROVED nominees per role. These are the people who "fought" for the role
+      // and must be listed in the results even if they received zero votes.
+      const approvedCandidatesMap = new Map<number, Array<{ userId: number; name: string; email: string; photo: string | null; committeeRole: string }>>();
       if (mappedRoleIds.length > 0) {
         const placeholders = mappedRoleIds.map(() => '?').join(',');
-        const singleCandidateRows = await query<Array<RowDataPacket & {
+        const approvedRows = await query<Array<RowDataPacket & {
           roleId: number;
           userId: number;
           name: string;
+          email: string;
           photo: string | null;
           committeeRole: string;
         }>>(
@@ -311,21 +314,26 @@ export const eventVoteResolvers = {
               eie.role_id AS roleId,
               u.id AS userId,
               u.name AS name,
+              u.email AS email,
               u.profile_photo AS photo,
               c.committee_role AS committeeRole
             FROM event_interest_expressions eie
             INNER JOIN users u ON u.id = eie.user_id
             LEFT JOIN users_committees c ON c.user_id = u.id AND c.committee_id = ?
             WHERE eie.event_id = ? AND eie.role_id IN (${placeholders}) AND eie.status = 'APPROVED'
-            GROUP BY eie.role_id, u.id, u.name, u.profile_photo, c.committee_role`,
+            GROUP BY eie.role_id, u.id, u.name, u.email, u.profile_photo, c.committee_role`,
           [access.committeeId, eventId, ...mappedRoleIds]
         );
 
-        singleCandidateRows.forEach((row) => {
+        approvedRows.forEach((row) => {
           const roleId = Number(row.roleId);
-          singleCandidateMap.set(roleId, {
+          if (!approvedCandidatesMap.has(roleId)) {
+            approvedCandidatesMap.set(roleId, []);
+          }
+          approvedCandidatesMap.get(roleId)!.push({
             userId: Number(row.userId),
             name: String(row.name || ''),
+            email: String(row.email || ''),
             photo: row.photo ? String(row.photo) : null,
             committeeRole: String(row.committeeRole || 'COMMITTEE_MEMBER')
           });
@@ -340,6 +348,47 @@ export const eventVoteResolvers = {
       winnerRows.forEach((row) => {
         winnerMap.set(Number(row.roleId), Number(row.winnerUserId));
       });
+
+      // Fetch user details for declared winners that are not present in the candidate list
+      // (e.g. directly assigned winners in DIRECT_ASSIGN mode who never received a vote).
+      const missingWinnerIds = new Set<number>();
+      winnerRows.forEach((row) => {
+        const wid = Number(row.winnerUserId);
+        if (wid > 0 && !candidateMap.has(wid)) {
+          missingWinnerIds.add(wid);
+        }
+      });
+
+      const extraUserMap = new Map<number, { name: string; email: string; photo: string | null; committeeRole: string }>();
+      if (missingWinnerIds.size > 0) {
+        const placeholders = Array.from(missingWinnerIds).map(() => '?').join(',');
+        const extraUserRows = await query<Array<RowDataPacket & {
+          userId: number;
+          name: string;
+          email: string;
+          photo: string | null;
+          committeeRole: string;
+        }>>(
+          `SELECT
+              u.id AS userId,
+              u.name AS name,
+              u.email AS email,
+              u.profile_photo AS photo,
+              c.committee_role AS committeeRole
+            FROM users u
+            LEFT JOIN users_committees c ON c.user_id = u.id AND c.committee_id = ?
+            WHERE u.id IN (${placeholders})`,
+          [access.committeeId, ...Array.from(missingWinnerIds)]
+        );
+        extraUserRows.forEach((row) => {
+          extraUserMap.set(Number(row.userId), {
+            name: String(row.name || ''),
+            email: String(row.email || ''),
+            photo: row.photo ? String(row.photo) : null,
+            committeeRole: String(row.committeeRole || 'COMMITTEE_MEMBER')
+          });
+        });
+      }
 
       const roles = roleIds.map((roleId) => {
         const candidateVotes = roleStats.get(roleId) || new Map<number, number>();
@@ -357,30 +406,57 @@ export const eventVoteResolvers = {
             };
           });
 
-        const singleCandidate = singleCandidateMap.get(roleId);
-        if (singleCandidate && !candidates.some((c) => c.userId === singleCandidate.userId)) {
-          candidates.push({
-            userId: singleCandidate.userId,
-            name: singleCandidate.name,
-            email: '',
-            photo: singleCandidate.photo,
-            committeeRole: singleCandidate.committeeRole,
-            voteCount: 0,
-            isWinner: false
-          });
+        // Include every approved nominee for this role so the results list shows
+        // everyone who contested, with their actual vote count (0 if they got none).
+        const approvedCandidates = approvedCandidatesMap.get(roleId) || [];
+        for (const ac of approvedCandidates) {
+          if (!candidates.some((c) => c.userId === ac.userId)) {
+            candidates.push({
+              userId: ac.userId,
+              name: ac.name,
+              email: ac.email,
+              photo: ac.photo,
+              committeeRole: ac.committeeRole,
+              voteCount: candidateVotes.get(ac.userId) || 0,
+              isWinner: false
+            });
+          }
         }
 
-        candidates.sort((a, b) => b.voteCount - a.voteCount);
-
-        const maxVotes = candidates.length > 0 ? candidates[0].voteCount : 0;
-        const hasSingleCandidate = candidates.length === 1;
-        const winners = candidates.filter((c) => c.voteCount === maxVotes && (maxVotes > 0 || hasSingleCandidate));
-        winners.forEach((w) => (w.isWinner = true));
-
+        // The declared winner in event_winners is the single source of truth.
         const declaredWinnerId = winnerMap.get(roleId) || 0;
         if (declaredWinnerId > 0) {
-          candidates.forEach((c) => (c.isWinner = Number(c.userId) === declaredWinnerId));
+          let existingWinner = candidates.find((c) => c.userId === declaredWinnerId);
+          if (!existingWinner) {
+            const userInfo = extraUserMap.get(declaredWinnerId) || { name: '', email: '', photo: null, committeeRole: 'COMMITTEE_MEMBER' };
+            candidates.push({
+              userId: declaredWinnerId,
+              name: userInfo.name,
+              email: userInfo.email,
+              photo: userInfo.photo,
+              committeeRole: userInfo.committeeRole,
+              voteCount: 0,
+              isWinner: true
+            });
+            existingWinner = candidates[candidates.length - 1];
+          }
+          existingWinner.isWinner = true;
+          // Ensure only the declared winner is flagged as winner.
+          candidates.forEach((c) => { c.isWinner = c.userId === declaredWinnerId; });
+        } else {
+          // No declared winner yet - fall back to vote-based determination (pre-declaration view).
+          const maxVotes = candidates.length > 0 ? Math.max(...candidates.map((c) => c.voteCount)) : 0;
+          const hasSingleCandidate = candidates.length === 1;
+          const winners = candidates.filter((c) => c.voteCount === maxVotes && (maxVotes > 0 || hasSingleCandidate));
+          winners.forEach((w) => (w.isWinner = true));
         }
+
+        // Winner first, then by vote count descending.
+        candidates.sort((a, b) => {
+          if (a.isWinner && !b.isWinner) return -1;
+          if (!a.isWinner && b.isWinner) return 1;
+          return b.voteCount - a.voteCount;
+        });
 
         return {
           roleId,
