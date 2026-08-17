@@ -1,4 +1,4 @@
-import { Component, inject, Injector, runInInjectionContext, OnInit, signal, effect, OnDestroy, AfterViewInit, ViewChildren, QueryList, ElementRef, Renderer2 } from '@angular/core';
+import { Component, inject, Injector, runInInjectionContext, OnInit, signal, computed, effect, OnDestroy, AfterViewInit, ViewChildren, QueryList, ElementRef, Renderer2 } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ActivatedRoute, Router } from '@angular/router';
 import { MatDialog } from '@angular/material/dialog';
@@ -94,6 +94,23 @@ export class EventVotingComponent implements OnInit, AfterViewInit, OnDestroy{
   public readonly directAssignSelected = signal<Record<number, number | null>>({});
   public readonly isDirectAssignLoading = signal<Record<number, boolean>>({});
   public directAssignInputText: Record<number, string> = {};
+
+  public readonly uiState = computed(() => {
+    const mode = this.votingMode;
+    const phase = this.votingPhaseState;
+    if (mode === 'DIRECT') {
+      return phase >= 6 ? 'direct-results' : 'direct-setup';
+    }
+    switch (phase) {
+      case 1: return 'voting-nominations-open';
+      case 2: return 'voting-nominations-closed';
+      case 3: return 'voting-review-pending';
+      case 4: return 'voting-active';
+      case 5: return 'voting-stopped';
+      case 6: return 'voting-results';
+      default: return 'voting-setup';
+    }
+  });
 
   public get eventData(): EventVotingPayload | null {
     return this.stateService.eventData();
