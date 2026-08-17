@@ -15,7 +15,8 @@ export interface EventMappedVotingRole {
   winnerUserId?: number | null;
   winnerName?: string | null;
   winnerPhoto?: string | null;
-  winnerVoteCount?: number | null;
+   winnerVoteCount?: number | null;
+   winnerWonBy?: string | null;
 }
 
 export interface EventInterestPerson {
@@ -105,8 +106,9 @@ export interface ToggleEventVotingRolePayload {
     winnerUserId?: number | null;
     winnerName?: string | null;
     winnerPhoto?: string | null;
-    winnerVoteCount?: number | null;
-  }>;
+     winnerVoteCount?: number | null;
+     winnerWonBy?: string | null;
+   }>;
 }
 
 export interface LockEventVotingRolesPayload {
@@ -218,7 +220,7 @@ export interface EventVotingPayload {
   canManageVotingRoles: boolean;
   currentCommitteeRole: string;
   votingPhaseState: number;
-  votingMode?: 'VOTING' | 'DIRECT_ASSIGN' | 'TIE_BREAKER' | 'EMERGENCY_REASSIGN';
+   votingMode?: 'VOTING' | 'DIRECT';
 }
 
 export interface EventCommitteeMember {

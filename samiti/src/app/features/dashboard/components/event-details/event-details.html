@@ -27,10 +27,10 @@
         @if (isMasterAdmin && votingPhaseState < 6) {
           <mat-select [(value)]="currentVotingMode" (selectionChange)="onVotingModeChange($event.value)" class="mode-dropdown" appearance="outline" hideRequiredMarker>
             <mat-option value="VOTING">Voting</mat-option>
-            <mat-option value="DIRECT_ASSIGN">Direct Assign</mat-option>
+            <mat-option value="DIRECT">Direct</mat-option>
           </mat-select>
         } @else {
-          <span class="mode-label-value">Mode : {{ currentVotingMode === 'DIRECT_ASSIGN' ? 'Direct Assign' : 'Voting' }}</span>
+          <span class="mode-label-value">Mode : {{ currentVotingMode }}</span>
         }
       </div>
       }

@@ -101,8 +101,8 @@ export class EventVotingComponent implements OnInit, AfterViewInit, OnDestroy{
 
   private readonly injector = inject(Injector);
 
-  public get votingMode(): 'VOTING' | 'DIRECT_ASSIGN' | 'TIE_BREAKER' | 'EMERGENCY_REASSIGN' | null {
-    return (this.eventData?.votingMode as 'VOTING' | 'DIRECT_ASSIGN' | 'TIE_BREAKER' | 'EMERGENCY_REASSIGN' | undefined) || 'VOTING';
+  public get votingMode(): 'VOTING' | 'DIRECT' | null {
+    return (this.eventData?.votingMode as 'VOTING' | 'DIRECT' | undefined) || 'VOTING';
   }
 
   public get canManageVotingRoles(): boolean {
@@ -110,18 +110,16 @@ export class EventVotingComponent implements OnInit, AfterViewInit, OnDestroy{
   }
 
   public get isVotingMode(): boolean {
-    return this.votingMode === 'VOTING' || this.votingMode === 'TIE_BREAKER';
+    return this.votingMode === 'VOTING';
   }
 
-  public get currentVotingMode(): 'VOTING' | 'DIRECT_ASSIGN' | 'TIE_BREAKER' | 'EMERGENCY_REASSIGN' | null {
+  public get currentVotingMode(): 'VOTING' | 'DIRECT' | null {
     return this.votingMode;
   }
 
   public getVotingModeLabel(): string {
     switch ((this.votingMode || 'VOTING').toString().toUpperCase()) {
-      case 'DIRECT_ASSIGN': return 'Direct Assign';
-      case 'TIE_BREAKER': return 'Tie Breaker';
-      case 'EMERGENCY_REASSIGN': return 'Emergency Reassign';
+      case 'DIRECT': return 'Direct Assign';
       case 'VOTING':
       default: return 'Voting';
     }
@@ -794,6 +792,44 @@ export class EventVotingComponent implements OnInit, AfterViewInit, OnDestroy{
     return roleResult.candidates.find((c) => Number(c.voteCount || 0) === maxVotes) || null;
   }
 
+  public getWinnerWonByForRole(roleId: number): string | null {
+    const mappedRole = this.eventData?.mappedVotingRoles?.find((r) => Number(r.roleId) === Number(roleId));
+    if (!mappedRole?.winnerWonBy) return null;
+    const wonBy = String(mappedRole.winnerWonBy || '').toUpperCase();
+    switch (wonBy) {
+      case 'COUNT': return 'By Count';
+      case 'TIE_BREAKER': return 'Tie Breaker';
+      case 'RE_ASSIGN': return 'Re-Assigned';
+      case 'DIRECT_ASSIGN': return 'Direct Assign';
+      case 'DIRECT': return 'Direct';
+      default: return wonBy || null;
+    }
+  }
+
+  public getVotingModeWonByDisplay(roleId: number): string {
+    const modeLabel = this.getVotingModeLabel();
+    const voteCount = this.getWinnerForRole(Number(roleId))?.voteCount ?? 0;
+    const wonBy = this.getWinnerWonByForRole(Number(roleId));
+    const isDirectMode = modeLabel === 'Direct Assign';
+
+    if (voteCount === 0) {
+      return `${modeLabel} ${voteCount} votes`;
+    }
+
+    if (!wonBy) {
+      if (isDirectMode) {
+        return modeLabel;
+      }
+      return `${modeLabel} ${voteCount} votes`;
+    }
+
+    if (isDirectMode) {
+      return `${modeLabel} Won By ${wonBy}`;
+    }
+
+    return `${modeLabel} ${voteCount} votes Won By ${wonBy}`;
+  }
+
   public getMappedRoleWinner(roleId: number): { userId: number; name: string; photo: string | null } | null {
     const mappedRole = this.eventData?.mappedVotingRoles?.find((r) => Number(r.roleId) === Number(roleId));
     if (!mappedRole?.winnerUserId) return null;
@@ -843,7 +879,7 @@ export class EventVotingComponent implements OnInit, AfterViewInit, OnDestroy{
     const dialogRef = this.confirmDialog.open(dialogData);
     dialogRef.afterClosed().subscribe((result) => {
       if (!result?.confirmed) return;
-      this.votingService.resolveTieBreaker(currentEvent.eventId, normalizedRoleId, normalizedWinnerId, 'TIE_BREAKER').subscribe({
+      this.votingService.resolveTieBreaker(currentEvent.eventId, normalizedRoleId, normalizedWinnerId).subscribe({
         next: () => { this.notifier.success('Tie breaker resolved successfully'); this.loadEventResults(Number(currentEvent.eventId)); this.refreshVoting(); },
         error: (err: HttpErrorResponse) => { this.notifier.error(err?.error?.message || 'Failed to resolve tie breaker'); }
       });
@@ -934,7 +970,7 @@ export class EventVotingComponent implements OnInit, AfterViewInit, OnDestroy{
     const dialogRef = this.confirmDialog.open(dialogData);
     dialogRef.afterClosed().subscribe((result) => {
       if (!result?.confirmed) return;
-      this.votingService.assignWinningRole(currentEvent.eventId, normalizedRoleId, newWinnerUserId, selected.name, selected.photo || null, 'EMERGENCY_REASSIGN').subscribe({
+      this.votingService.assignWinningRole(currentEvent.eventId, normalizedRoleId, newWinnerUserId, selected.name, selected.photo || null).subscribe({
         next: () => { this.notifier.success('Winner reassigned successfully'); this.openReassignForRoleId.set(null); this.selectedReassignMemberId.set(null); this.reassignMemberSearchQuery.set(''); this.refreshVoting(); this.loadEventResults(Number(currentEvent.eventId)); },
         error: (err: HttpErrorResponse) => { this.notifier.error(err?.error?.message || 'Failed to reassign winner'); }
       });
@@ -967,7 +1003,7 @@ export class EventVotingComponent implements OnInit, AfterViewInit, OnDestroy{
     dialogRef.afterClosed().subscribe(() => document.body.classList.remove('dialog-open'));
   }
 
-  public onVotingModeChange(mode: 'VOTING' | 'DIRECT_ASSIGN'): void {
+  public onVotingModeChange(mode: 'VOTING' | 'DIRECT'): void {
     const currentEvent = this.eventData;
     if (!currentEvent?.eventId || !mode) return;
     this.isUpdatingVotingMode.set(true);
@@ -1209,7 +1245,7 @@ export class EventVotingComponent implements OnInit, AfterViewInit, OnDestroy{
   private loadDirectAssignMembers(eventId: number): void {
     const currentEvent = this.eventData;
     if (!currentEvent) return;
-    if (String(currentEvent.votingMode).toUpperCase() !== 'DIRECT_ASSIGN') return;
+    if (String(currentEvent.votingMode).toUpperCase() !== 'DIRECT') return;
     const phase = Number(currentEvent.votingPhaseState || 0);
     if (phase < 1 || phase >= 6) return;
     this.votingService.getDirectAssignMembers(eventId).subscribe({

@@ -55,6 +55,7 @@ export class EventVotingService {
           winnerName
           winnerPhoto
           winnerVoteCount
+          winnerWonBy
         }
         myInterestRoleIds
         myInterestStatuses {
@@ -124,6 +125,7 @@ export class EventVotingService {
           winnerName
           winnerPhoto
           winnerVoteCount
+          winnerWonBy
         }
       }
     }`;
@@ -471,7 +473,7 @@ export class EventVotingService {
     );
   }
 
-  public updateEventVotingMode(eventId: number, mode: 'VOTING' | 'DIRECT_ASSIGN'): Observable<{ eventId: number; votingMode: string }> {
+   public updateEventVotingMode(eventId: number, mode: 'VOTING' | 'DIRECT'): Observable<{ eventId: number; votingMode: string }> {
     const mutation = `mutation UpdateEventVotingMode($eventId: Int!, $mode: String!) {
       updateEventVotingMode(eventId: $eventId, mode: $mode) {
         eventId

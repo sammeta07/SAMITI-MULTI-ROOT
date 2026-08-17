@@ -75,6 +75,7 @@ export class GroupDetailsService {
             winnerName
             winnerPhoto
             winnerVoteCount
+            winnerWonBy
           }
         }
       }
@@ -136,6 +137,7 @@ export class GroupDetailsService {
           winnerName
           winnerPhoto
           winnerVoteCount
+          winnerWonBy
         }
       }
     }`;

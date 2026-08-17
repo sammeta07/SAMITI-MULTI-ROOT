@@ -1,0 +1,5 @@
+SET @col_exists = (SELECT COUNT(*) FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'event_winners' AND COLUMN_NAME = 'won_by');
+SET @sql = IF(@col_exists = 0, 'ALTER TABLE event_winners ADD COLUMN won_by VARCHAR(32) NOT NULL DEFAULT ''COUNT'' AFTER declared_at', 'SELECT 1');
+PREPARE stmt FROM @sql;
+EXECUTE stmt;
+DEALLOCATE PREPARE stmt;

@@ -54,8 +54,8 @@ export class EventDetailsComponent {
     return String(this.eventData?.currentCommitteeRole || 'NONE').toUpperCase() === 'COMMITTEE_MASTER_ADMIN';
   }
 
-  public get currentVotingMode(): 'VOTING' | 'DIRECT_ASSIGN' | null {
-    return (this.eventData?.votingMode as 'VOTING' | 'DIRECT_ASSIGN' | undefined) || 'VOTING';
+   public get currentVotingMode(): 'VOTING' | 'DIRECT' | null {
+     return (this.eventData?.votingMode as 'VOTING' | 'DIRECT' | undefined) || 'VOTING';
   }
 
   public get votingPhaseState(): number {
@@ -91,7 +91,7 @@ export class EventDetailsComponent {
     }
   }
 
-  public onVotingModeChange(mode: 'VOTING' | 'DIRECT_ASSIGN'): void {
+   public onVotingModeChange(mode: 'VOTING' | 'DIRECT'): void {
     const currentEvent = this.eventData;
     if (!currentEvent?.eventId || !mode) return;
     this.votingService.updateEventVotingMode(currentEvent.eventId, mode).subscribe({

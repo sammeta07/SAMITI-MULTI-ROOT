@@ -260,7 +260,7 @@
                     <div class="result-vote-count">
                       {{ candidate.voteCount }} votes
                       @if (candidate.userId === getWinnerForRole(card.role.roleId)!.userId) {
-                      <span class="voting-mode-chip">{{ getVotingModeLabel() }}</span>
+                      <span class="voting-mode-chip">{{ getVotingModeWonByDisplay(card.role.roleId) }}</span>
                       }
                     </div>
                   </div>
@@ -520,7 +520,7 @@
                     <div class="result-vote-count">
                       {{ candidate.voteCount }} votes
                       @if (candidate.userId === getWinnerForRole(card.role.roleId)!.userId) {
-                      <span class="voting-mode-chip">{{ getVotingModeLabel() }}</span>
+                      <span class="voting-mode-chip">{{ getVotingModeWonByDisplay(card.role.roleId) }}</span>
                       }
                     </div>
                   </div>

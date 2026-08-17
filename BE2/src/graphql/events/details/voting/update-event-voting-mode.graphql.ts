@@ -1,7 +1,7 @@
 import { execute, query } from '../../../../config/db';
 import { hasEventsVotingModeColumn } from './event-voting-mode-support';
 
-const ALLOWED_VOTING_MODES = new Set(['VOTING', 'DIRECT_ASSIGN']);
+const ALLOWED_VOTING_MODES = new Set(['VOTING', 'DIRECT']);
 
 function throwEventError(code: string, message: string): never {
   throw new Error(`${code}: ${message}`);
@@ -65,7 +65,7 @@ export const updateEventVotingModeResolvers = {
       }
 
       if (!ALLOWED_VOTING_MODES.has(mode)) {
-        throwEventError('BAD_REQUEST', 'Invalid voting mode. Allowed values: VOTING, DIRECT_ASSIGN');
+        throwEventError('BAD_REQUEST', 'Invalid voting mode. Allowed values: VOTING, DIRECT');
       }
 
       const supportsVotingMode = await hasEventsVotingModeColumn();

@@ -350,7 +350,7 @@ export const eventVoteResolvers = {
       });
 
       // Fetch user details for declared winners that are not present in the candidate list
-      // (e.g. directly assigned winners in DIRECT_ASSIGN mode who never received a vote).
+      // (e.g. directly assigned winners in DIRECT mode who never received a vote).
       const missingWinnerIds = new Set<number>();
       winnerRows.forEach((row) => {
         const wid = Number(row.winnerUserId);

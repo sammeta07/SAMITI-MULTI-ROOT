@@ -60,6 +60,7 @@ export async function getMappedVotingRoles(eventId: number): Promise<Array<{
   winnerName: string | null;
   winnerPhoto: string | null;
   winnerVoteCount: number | null;
+  winnerWonBy: string | null;
 }>> {
   const mappedVotingRoleRows = await query<Array<RowDataPacket & {
     roleId: number;
@@ -83,7 +84,7 @@ export async function getMappedVotingRoles(eventId: number): Promise<Array<{
 
   const roleIds = mappedVotingRoleRows.map((row) => Number(row.roleId)).filter((id) => Number.isInteger(id) && id > 0);
 
-  const winnerMap = new Map<number, { userId: number; name: string; photo: string | null; voteCount: number }>();
+  const winnerMap = new Map<number, { userId: number; name: string; photo: string | null; voteCount: number; wonBy: string | null }>();
   if (roleIds.length > 0) {
     const placeholders = roleIds.map(() => '?').join(',');
   const winnerRows = await query<Array<RowDataPacket & {
@@ -92,13 +93,15 @@ export async function getMappedVotingRoles(eventId: number): Promise<Array<{
     winnerName: string;
     winnerPhoto: string | null;
     winnerVoteCount: number;
+    wonBy: string | null;
   }>>(
     `SELECT
        role_id AS roleId,
        winner_user_id AS winnerUserId,
        winner_name AS winnerName,
        winner_photo AS winnerPhoto,
-       winner_vote_count AS winnerVoteCount
+       winner_vote_count AS winnerVoteCount,
+       won_by AS wonBy
      FROM event_winners
      WHERE event_id = ? AND role_id IN (${placeholders})`,
     [eventId, ...roleIds]
@@ -111,7 +114,8 @@ export async function getMappedVotingRoles(eventId: number): Promise<Array<{
       userId: Number(row.winnerUserId),
       name: String(row.winnerName || ''),
       photo: row.winnerPhoto ? String(row.winnerPhoto) : null,
-      voteCount: Number(row.winnerVoteCount || 0)
+       voteCount: Number(row.winnerVoteCount || 0),
+       wonBy: row.wonBy ? String(row.wonBy) : null
     });
   });
 
@@ -130,7 +134,8 @@ export async function getMappedVotingRoles(eventId: number): Promise<Array<{
       winnerUserId: winner?.userId ?? null,
       winnerName: winner?.name ?? null,
       winnerPhoto: winner?.photo ?? null,
-      winnerVoteCount: winner?.voteCount ?? null
+      winnerVoteCount: winner?.voteCount ?? null,
+      winnerWonBy: winner?.wonBy ?? null
     };
   });
 }
@@ -145,8 +150,9 @@ export const eventVotingTypes = `
     winnerUserId: Int
     winnerName: String
     winnerPhoto: String
-    winnerVoteCount: Int
-  }
+     winnerVoteCount: Int
+     winnerWonBy: String
+   }
 
   type ToggleEventVotingRolePayload {
     eventId: Int!
@@ -1040,7 +1046,7 @@ export const eventVotingResolvers = {
         throwEventError('FORBIDDEN', 'Only committee admin can declare results');
       }
 
-      if (votingMode === 'DIRECT_ASSIGN') {
+      if (votingMode === 'DIRECT') {
         const mappedVotingRoleRows = await getMappedVotingRoles(eventId);
         const roleIds = mappedVotingRoleRows.map((role) => Number(role.roleId)).filter((id) => Number.isInteger(id) && id > 0);
 
@@ -1051,7 +1057,7 @@ export const eventVotingResolvers = {
           await connection.query(
             `UPDATE events
              SET voting_phase_state = 6,
-                 voting_mode = 'DIRECT_ASSIGN',
+                 voting_mode = 'DIRECT',
                  updated_by = ?
              WHERE id = ?`,
             [loggedInUserId, eventId]
@@ -1088,16 +1094,17 @@ export const eventVotingResolvers = {
 
             await connection.query(
               `INSERT INTO event_winners
-                (event_id, role_id, winner_user_id, winner_name, winner_photo, winner_vote_count, declared_at)
-               VALUES
-                (?, ?, ?, ?, ?, ?, NOW())
-               ON DUPLICATE KEY UPDATE
-                winner_user_id = VALUES(winner_user_id),
-                winner_name = VALUES(winner_name),
-                winner_photo = VALUES(winner_photo),
-                winner_vote_count = VALUES(winner_vote_count),
-                declared_at = NOW()`,
-              [eventId, roleId, winnerUserId, winnerName, winnerPhoto, voteCount]
+                 (event_id, role_id, winner_user_id, winner_name, winner_photo, winner_vote_count, declared_at, won_by)
+                VALUES
+                 (?, ?, ?, ?, ?, ?, NOW(), ?)
+                ON DUPLICATE KEY UPDATE
+                 winner_user_id = VALUES(winner_user_id),
+                 winner_name = VALUES(winner_name),
+                 winner_photo = VALUES(winner_photo),
+                 winner_vote_count = VALUES(winner_vote_count),
+                 declared_at = NOW(),
+                 won_by = VALUES(won_by)`,
+              [eventId, roleId, winnerUserId, winnerName, winnerPhoto, voteCount, 'DIRECT_ASSIGN']
             );
           }
 
@@ -1285,22 +1292,24 @@ export const eventVotingResolvers = {
 
           await connection.query(
             `INSERT INTO event_winners
-              (event_id, role_id, winner_user_id, winner_name, winner_photo, winner_vote_count, declared_at)
+              (event_id, role_id, winner_user_id, winner_name, winner_photo, winner_vote_count, declared_at, won_by)
              VALUES
-              (?, ?, ?, ?, ?, ?, NOW())
+              (?, ?, ?, ?, ?, ?, NOW(), ?)
              ON DUPLICATE KEY UPDATE
               winner_user_id = VALUES(winner_user_id),
               winner_name = VALUES(winner_name),
               winner_photo = VALUES(winner_photo),
               winner_vote_count = VALUES(winner_vote_count),
-              declared_at = NOW()`,
+              declared_at = NOW(),
+              won_by = VALUES(won_by)`,
             [
               eventId,
               roleId,
               winner.userId,
               winner.name,
               winner.photo,
-              winner.voteCount
+              winner.voteCount,
+              'COUNT'
             ]
           );
         }
@@ -1402,31 +1411,32 @@ export const eventVotingResolvers = {
 
         await connection.query(
           `INSERT INTO event_winners
-            (event_id, role_id, winner_user_id, winner_name, winner_photo, winner_vote_count, declared_at)
+            (event_id, role_id, winner_user_id, winner_name, winner_photo, winner_vote_count, declared_at, won_by)
            VALUES
-            (?, ?, ?, ?, ?, ?, NOW())
+            (?, ?, ?, ?, ?, ?, NOW(), ?)
            ON DUPLICATE KEY UPDATE
             winner_user_id = VALUES(winner_user_id),
             winner_name = VALUES(winner_name),
             winner_photo = VALUES(winner_photo),
             winner_vote_count = VALUES(winner_vote_count),
-            declared_at = NOW()`,
+            declared_at = NOW(),
+            won_by = VALUES(won_by)`,
           [
             eventId,
             roleId,
             winnerCandidateId,
             candidate.name,
             candidate.photo || null,
-            voteCount
+            voteCount,
+            'TIE_BREAKER'
           ]
         );
 
         await connection.commit();
         await syncWinnersToUsersEvents(eventId);
-        const votingMode = String(args?.votingMode || 'TIE_BREAKER').trim() || 'TIE_BREAKER';
         await query(
-          `UPDATE events SET voting_mode = ?, voting_phase_state = 6, updated_by = ? WHERE id = ?`,
-          [votingMode, loggedInUserId, eventId]
+          `UPDATE events SET voting_mode = 'VOTING', voting_phase_state = 6, updated_by = ? WHERE id = ?`,
+          [loggedInUserId, eventId]
         );
       } catch (error) {
         await connection.rollback();
@@ -1497,7 +1507,7 @@ export const eventVotingResolvers = {
       }
 
       const phase = Number(event.votingPhaseState || 0);
-      if (votingMode === 'DIRECT_ASSIGN') {
+      if (votingMode === 'DIRECT') {
         if (phase < 1 || phase > 5) {
           throwEventError('BAD_REQUEST', 'Voting role can only be vacated before results are declared');
         }
@@ -1619,23 +1629,23 @@ export const eventVotingResolvers = {
 
       await query(
         `INSERT INTO event_winners
-          (event_id, role_id, winner_user_id, winner_name, winner_photo, winner_vote_count, declared_at)
+          (event_id, role_id, winner_user_id, winner_name, winner_photo, winner_vote_count, declared_at, won_by)
          VALUES
-          (?, ?, ?, ?, ?, ?, NOW())
+          (?, ?, ?, ?, ?, ?, NOW(), ?)
          ON DUPLICATE KEY UPDATE
           winner_user_id = VALUES(winner_user_id),
           winner_name = VALUES(winner_name),
           winner_photo = VALUES(winner_photo),
           winner_vote_count = VALUES(winner_vote_count),
-          declared_at = NOW()`,
-        [eventId, roleId, newWinnerUserId, newWinnerName, newWinnerPhoto, voteCount]
+          declared_at = NOW(),
+          won_by = VALUES(won_by)`,
+        [eventId, roleId, newWinnerUserId, newWinnerName, newWinnerPhoto, voteCount, 'RE_ASSIGN']
       );
 
       await syncWinnersToUsersEvents(eventId);
-      const votingMode = String(args?.votingMode || 'EMERGENCY_REASSIGN').trim() || 'EMERGENCY_REASSIGN';
       await query(
-        `UPDATE events SET voting_mode = ?, voting_phase_state = 6, updated_by = ? WHERE id = ?`,
-        [votingMode, loggedInUserId, eventId]
+        `UPDATE events SET voting_mode = 'VOTING', voting_phase_state = 6, updated_by = ? WHERE id = ?`,
+        [loggedInUserId, eventId]
       );
 
       return {
@@ -1744,16 +1754,17 @@ export const eventVotingResolvers = {
 
       await query(
         `INSERT INTO event_winners
-          (event_id, role_id, winner_user_id, winner_name, winner_photo, winner_vote_count, declared_at)
+          (event_id, role_id, winner_user_id, winner_name, winner_photo, winner_vote_count, declared_at, won_by)
          VALUES
-          (?, ?, ?, ?, ?, ?, NOW())
+          (?, ?, ?, ?, ?, ?, NOW(), ?)
          ON DUPLICATE KEY UPDATE
           winner_user_id = VALUES(winner_user_id),
           winner_name = VALUES(winner_name),
           winner_photo = VALUES(winner_photo),
           winner_vote_count = VALUES(winner_vote_count),
-          declared_at = NOW()`,
-        [eventId, roleId, userId, newWinnerName, newWinnerPhoto, voteCount]
+          declared_at = NOW(),
+          won_by = VALUES(won_by)`,
+        [eventId, roleId, userId, newWinnerName, newWinnerPhoto, voteCount, 'DIRECT_ASSIGN']
       );
 
       await syncWinnersToUsersEvents(eventId);
