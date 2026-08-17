@@ -13,6 +13,46 @@
   box-sizing: border-box;
 }
 
+.year-dropdown-bar {
+  width: 100%;
+  padding: 12px 12px 4px 12px;
+  box-sizing: border-box;
+  background: #ffffff;
+  border-bottom: 1px solid #f1f5f9;
+  z-index: 10;
+
+  .year-select-full {
+    width: 100%;
+
+    ::ng-deep {
+      .mdc-select-trigger {
+        padding: 0 !important;
+      }
+
+      .mdc-selected-text {
+        font-size: 13px;
+        font-weight: 600;
+        color: var(--clr-navy, #1e293b);
+      }
+
+      .mdc-floating-label {
+        font-size: 12px;
+      }
+
+      .mdc-notched-outline .mdc-notch-leading-text,
+      .mdc-notched-outline .mdc-notch-trailing-text,
+      .mdc-notched-outline .mdc-notch-suffix {
+        stroke: var(--clr-border, #e2e8f0);
+      }
+
+      .mat-mdc-form-field-align-placeholder .mdc-notched-outline .mdc-notch-leading-text,
+      .mat-mdc-form-field-align-placeholder .mdc-notched-outline .mdc-notch-suffix {
+        color: var(--clr-navy, #1e293b);
+      }
+    }
+  }
+}
+
 .spinner-loading-overlay {
   display: flex;
   flex-direction: column;

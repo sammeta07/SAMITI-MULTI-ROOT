@@ -1,5 +1,16 @@
 <div class="samiti-tree-container">
 
+  <div class="year-dropdown-bar">
+    <mat-form-field appearance="outline" class="year-select-full">
+      <mat-label>Year</mat-label>
+      <mat-select [value]="selectedYear()" (selectionChange)="onYearChange($event.value)">
+        @for (year of availableYears(); track $index) {
+          <mat-option [value]="year">{{ year }}</mat-option>
+        }
+      </mat-select>
+    </mat-form-field>
+  </div>
+
   @if (isLoading()) {
     <div class="spinner-loading-overlay">
       <mat-progress-spinner mode="indeterminate" diameter="25"></mat-progress-spinner>

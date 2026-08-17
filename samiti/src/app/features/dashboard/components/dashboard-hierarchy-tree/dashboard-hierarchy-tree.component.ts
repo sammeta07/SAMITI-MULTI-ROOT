@@ -6,6 +6,8 @@ import { MatIconModule } from '@angular/material/icon';
 import { MatButtonModule } from '@angular/material/button';
 import { MatMenuModule } from '@angular/material/menu';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
+import { MatSelectModule } from '@angular/material/select';
+import { MatFormFieldModule } from '@angular/material/form-field';
 import { HttpErrorResponse } from '@angular/common/http';
 import { filter } from 'rxjs/operators';
 import { DashboardHierarchyTreeService } from './dashboard-hierarchy-tree.service';
@@ -22,7 +24,9 @@ import { sanitizeCloudinaryLogoUrl } from '../../../../shared/services/cloudinar
     MatIconModule,
     MatButtonModule,
     MatMenuModule,
-    MatProgressSpinnerModule
+    MatProgressSpinnerModule,
+    MatSelectModule,
+    MatFormFieldModule
   ],
   templateUrl: './dashboard-hierarchy-tree.html',
   styleUrl: './dashboard-hierarchy-tree.scss'
@@ -36,6 +40,12 @@ export class DashboardHierarchyTreeComponent implements OnInit {
   public readonly isLoading = signal<boolean>(false);
   public readonly selectedNode = signal<TreeNode | null>(null);
   public readonly highlightedNodeToken = signal<string>('');
+
+  private readonly currentYear = new Date().getFullYear();
+  public readonly availableYears = signal<number[]>(
+    Array.from({ length: 10 }, (_, i) => this.currentYear - i)
+  );
+  public readonly selectedYear = signal<number>(this.currentYear);
   
   // 🚀 FIXED: Dynamic signal tracking static navigation items from old dashboard
   public readonly activeStaticMenu = signal<string | null>('home');
@@ -66,6 +76,11 @@ export class DashboardHierarchyTreeComponent implements OnInit {
   }
 
   public hasChild = (_: number, node: TreeNode): boolean => !!node.children && node.children.length > 0;
+
+  public onYearChange(year: number): void {
+    this.selectedYear.set(year);
+    this.treeService.triggerHierarchyTreeRefresh();
+  }
 
   public isNodeExpanded(node: TreeNode): boolean {
     return this.expandedNodeKeys().has(this.getNodeKey(node));

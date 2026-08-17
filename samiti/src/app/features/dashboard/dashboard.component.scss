@@ -93,38 +93,6 @@
   overflow: hidden;
 }
 
-/* 🏷️ BRAND / SIDEBAR HEADER */
-.sidebar-header {
-  height: 52px;
-  min-height: 52px;
-  display: flex;
-  align-items: center;
-  padding: 0 16px;
-  border-bottom: 1px solid #f1f5f9;
-  background: #ffffff;
-
-  .brand-title {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    color: var(--clr-navy, #1e293b);
-
-    .brand-icon {
-      color: var(--clr-accent, #f97316);
-      font-size: 22px;
-      width: 22px;
-      height: 22px;
-    }
-
-    .brand-text {
-      font-weight: 600;
-      font-size: 14px;
-      letter-spacing: 0.3px;
-      white-space: nowrap;
-    }
-  }
-}
-
 /* 🌳 TREE WRAPPER (SOLE Y-SCROLL CONTEXT) */
 .sidebar-tree-wrapper {
   flex: 1 1 auto;
