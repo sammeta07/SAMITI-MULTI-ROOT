@@ -12,10 +12,10 @@ import { MatInputModule } from '@angular/material/input';
 import { MatAutocompleteModule } from '@angular/material/autocomplete';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { FormsModule } from '@angular/forms';
-import { BreakpointObserver, BreakpointState } from '@angular/cdk/layout';
+import { BreakpointObserver } from '@angular/cdk/layout';
 import { HttpErrorResponse } from '@angular/common/http';
 import { EventVotingService } from './event-voting.service';
-import { EventVotingPayload, EventMappedVotingRole, EventVoteHistory, EventResultsPayload, EventResultCandidate, VacateVotingRolePayload, AssignWinningRolePayload, EventDirectAssignMember } from './event-voting.models';
+import { EventVotingPayload, EventMappedVotingRole, EventVoteHistory, EventResultsPayload, EventResultCandidate, VacateVotingRolePayload, EventDirectAssignMember } from './event-voting.models';
 import { NotifierService } from '../../../../../shared/notifier/notifier.service';
 import { ConfirmDialogService } from '../../../../../components/dialog/confirm/confirm-dialog.service';
 import { ConfirmDialogData } from '../../../../../components/dialog/confirm/confirm-dialog.models';
@@ -43,7 +43,7 @@ import { Subscription } from 'rxjs';
   templateUrl: './event-voting.html',
   styleUrl: './event-voting.scss'
 })
-export class EventVotingComponent implements OnInit, AfterViewInit, OnDestroy{
+export class EventVotingComponent implements OnInit, AfterViewInit, OnDestroy {
   private readonly route = inject(ActivatedRoute);
   private readonly router = inject(Router);
   private readonly dialog = inject(MatDialog);
@@ -343,7 +343,6 @@ export class EventVotingComponent implements OnInit, AfterViewInit, OnDestroy{
       window.addEventListener('resize', () => this.updateVotingCardHeight())
     );
 
-    // Purani subscription clean karke naye ko assign karein
     this.paramSub = parentParams$.subscribe(params => {
       const eventId = params['id'];
       if (!eventId) return;
@@ -423,22 +422,22 @@ export class EventVotingComponent implements OnInit, AfterViewInit, OnDestroy{
     this.myInterestStatuses.set(
       (data.myInterestStatuses || []).map((item) => ({ roleId: Number(item.roleId), status: String(item.status || 'PENDING') }))
     );
-        this.interestReviewList.set([]);
-        this.directAssignSelected.set(
-          (data.mappedVotingRoles || []).reduce((acc: Record<number, number | null>, role: EventMappedVotingRole) => {
-            const rid = Number(role.roleId);
-            if (Number.isInteger(rid) && rid > 0) {
-              acc[rid] = role.winnerUserId ?? null;
-            }
-            return acc;
-          }, {} as Record<number, number | null>)
-        );
-        if (data.votingPhaseState === 6) {
-          const currentResults = this.eventResults();
-          if (!currentResults || currentResults.eventId !== Number(data.eventId)) {
-            this.loadEventResults(Number(data.eventId));
-          }
+    this.interestReviewList.set([]);
+    this.directAssignSelected.set(
+      (data.mappedVotingRoles || []).reduce((acc: Record<number, number | null>, role: EventMappedVotingRole) => {
+        const rid = Number(role.roleId);
+        if (Number.isInteger(rid) && rid > 0) {
+          acc[rid] = role.winnerUserId ?? null;
         }
+        return acc;
+      }, {} as Record<number, number | null>)
+    );
+    if (data.votingPhaseState === 6) {
+      const currentResults = this.eventResults();
+      if (!currentResults || currentResults.eventId !== Number(data.eventId)) {
+        this.loadEventResults(Number(data.eventId));
+      }
+    }
     this.directAssignInputText = (data.mappedVotingRoles || []).reduce((acc: Record<number, string>, role: EventMappedVotingRole) => {
       const rid = Number(role.roleId);
       if (Number.isInteger(rid) && rid > 0) {
@@ -759,7 +758,6 @@ export class EventVotingComponent implements OnInit, AfterViewInit, OnDestroy{
   public approvedPeopleForRole(roleId: number): Array<{ userId: number; name: string; email: string; photo?: string | null; committeeRole?: string }> {
     const list = this.eventData?.interestApprovedPeople ?? [];
     const match = list.find((info) => Number(info.roleId) === Number(roleId));
-    console.log('[approvedPeopleForRole] roleId=', roleId, 'raw=', JSON.stringify(match?.approvedPeople ?? []));
     return match?.approvedPeople ?? [];
   }
 
@@ -917,9 +915,6 @@ export class EventVotingComponent implements OnInit, AfterViewInit, OnDestroy{
     this.openReassignForRoleId.set(normalizedRoleId);
     this.selectedReassignMemberId.set(null);
     this.reassignMemberSearchQuery.set('');
-    // NOTE: The reassign candidate list is derived directly from
-    // eventVotingDetails.interestApprovedPeople inside getReassignOptions().
-    // No eventDirectAssignMembers API call is made here (or anywhere in the reassign flow).
   }
 
   public onReassignSearch(roleId: number, query: string): void {
@@ -937,7 +932,6 @@ export class EventVotingComponent implements OnInit, AfterViewInit, OnDestroy{
 
   public getReassignOptions(roleId: number): EventDirectAssignMember[] {
     const query = this.reassignMemberSearchQuery().toLowerCase().trim();
-    // Source: approved nominees returned by eventVotingDetails.interestApprovedPeople (no API call).
     const approved = this.approvedPeopleForRole(roleId).map((p) => ({
       userId: Number(p.userId),
       name: p.name,
@@ -946,7 +940,6 @@ export class EventVotingComponent implements OnInit, AfterViewInit, OnDestroy{
       committeeRole: p.committeeRole || '',
       isWinner: false,
     }));
-    console.log('[ReassignOptions] roleId=', roleId, 'approved=', JSON.stringify(approved));
     const winner = this.getMappedRoleWinner(roleId);
     const merged = [...approved];
     if (winner && !merged.some((m) => m.userId === winner.userId)) {
@@ -1011,7 +1004,6 @@ export class EventVotingComponent implements OnInit, AfterViewInit, OnDestroy{
   }
 
   private openVoteHistoryDialog(history: EventVoteHistory): void {
-    const event = this.eventData;
     document.body.classList.add('dialog-open');
     const dialogRef = this.dialog.open(VoteHistoryDialogComponent, {
       position: { right: '0', top: '0' }, height: '100%', width: '50%', autoFocus: true, disableClose: true, hasBackdrop: true, panelClass: 'slide-in-dialog',
@@ -1031,7 +1023,6 @@ export class EventVotingComponent implements OnInit, AfterViewInit, OnDestroy{
   }
 
   public onDirectAssignWinner(roleId: number, userId: number | null): void {
-    console.log("*****");
     const currentEvent = this.eventData;
     if (!currentEvent?.eventId) return;
 
@@ -1146,7 +1137,6 @@ export class EventVotingComponent implements OnInit, AfterViewInit, OnDestroy{
         default: return 'role-default';
       }
     })();
-    console.log('[getRoleColorClass] role=', role, '->', cls);
     return cls;
   }
 

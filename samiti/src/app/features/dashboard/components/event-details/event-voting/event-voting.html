@@ -1,635 +1,593 @@
 <div class="voting-tab-content">
-  @if (isAllDesignationsVisible) {
-  <section class="voting-available-roles-card">
-    <div class="panel-card-header voting-available-roles-header">
-      <div class="header-title-left">
-        <mat-icon class="icon-accent-voting">fact_check</mat-icon>
-        <span class="title-text">All Designations</span>
-        <span class="count-pill">{{ eventData?.availableRoles?.length || 0 }}</span>
-      </div>
-      <div class="header-actions-right">
-        <div class="voting-controls-actions-row voting-controls-header-actions">
-          @if (isLockControlEnabled) {
-          <button mat-stroked-button class="action-btn role-lock-btn voting-phase-btn"
-                  (click)="onLockVotingRoles()">
-            <mat-icon>lock</mat-icon>
-            <span>Lock Roles</span>
-          </button>
-          }
-        </div>
-      </div>
-    </div>
-    <div class="role-picker-grid">
-      @for (role of eventData?.availableRoles || []; track role.roleId || role.roleName) {
-      <label class="role-picker-card"
-             [class.role-picker-card-selected]="isRoleMapped(role.roleId)"
-             [class.role-picker-card-locked]="isVotingRolesLocked">
-        <span class="role-selected-badge" aria-hidden="true">
-          <mat-icon>check_circle</mat-icon>
-        </span>
-        <div class="role-picker-text">
-          <div class="role-name-primary">{{ (role.hindiName || role.roleName) | uppercase }}</div>
-          <div class="role-name-secondary">{{ ((role.englishName || role.roleCode || role.roleName || '').split('_').join(' ')) | titlecase }}</div>
-        </div>
-        <input type="checkbox"
-               [checked]="isRoleMapped(role.roleId)"
-               [disabled]="!canEditVotingRoles || !role.roleId"
-               (change)="onToggleVotingRole(role.roleId || 0, $any($event.target).checked)" />
-      </label>
-      } @empty {
-      <div class="table-empty-cell">No master roles available.</div>
-      }
-    </div>
-  </section>
-  }
 
-  <section class="horizontal-full-card designations-section-style">
-    <div class="panel-card-header designations-header-bg">
-      <div class="header-title-left">
-        <mat-icon class="icon-accent-designation">badge</mat-icon>
-        <span class="title-text">Selected Designations {{ votingPhaseState ? '(' + votingPhaseState + ')' : '' }}</span>
-        <span class="count-pill">{{ votingDisplayCards.length || 0 }}</span>
-      </div>
-      
-      <div class="header-actions-right">
-        @if (isVotingMode) {
+  <!-- ========================================================================= -->
+  <!-- MODE 1: VOTING MODE                                                       -->
+  <!-- ========================================================================= -->
+  @if (isVotingMode) {
+
+    <!-- Phase 0: Master Role Picker Grid (Visible only in Draft Phase 0 for Admins) -->
+    @if (isAllDesignationsVisible) {
+    <section class="voting-available-roles-card">
+      <div class="panel-card-header voting-available-roles-header">
+        <div class="header-title-left">
+          <mat-icon class="icon-accent-voting">fact_check</mat-icon>
+          <span class="title-text">All Designations</span>
+          <span class="count-pill">{{ eventData?.availableRoles?.length || 0 }}</span>
+        </div>
+        <div class="header-actions-right">
           <div class="voting-controls-actions-row voting-controls-header-actions">
-            @if (isMasterAdmin) {
+            @if (isLockControlEnabled) {
+            <button mat-stroked-button class="action-btn role-lock-btn voting-phase-btn"
+                    [disabled]="isLockingVotingRoles()" (click)="onLockVotingRoles()">
+              <mat-icon>lock</mat-icon>
+              <span>Lock Roles</span>
+            </button>
+            }
+          </div>
+        </div>
+      </div>
+      <div class="role-picker-grid">
+        @for (role of eventData?.availableRoles || []; track role.roleId || role.roleName) {
+        <label class="role-picker-card"
+               [class.role-picker-card-selected]="isRoleMapped(role.roleId)"
+               [class.role-picker-card-locked]="isVotingRolesLocked">
+          <span class="role-selected-badge" aria-hidden="true">
+            <mat-icon>check_circle</mat-icon>
+          </span>
+          <div class="role-picker-text">
+            <div class="role-name-primary">{{ (role.hindiName || role.roleName) | uppercase }}</div>
+            <div class="role-name-secondary">{{ ((role.englishName || role.roleCode || role.roleName || '').split('_').join(' ')) | titlecase }}</div>
+          </div>
+          <input type="checkbox"
+                 [checked]="isRoleMapped(role.roleId)"
+                 [disabled]="!canEditVotingRoles || !role.roleId"
+                 (change)="onToggleVotingRole(role.roleId || 0, $any($event.target).checked)" />
+        </label>
+        } @empty {
+        <div class="table-empty-cell">No master roles available.</div>
+        }
+      </div>
+    </section>
+    }
+
+    <!-- Main Mapped Designations Section -->
+    <section class="horizontal-full-card designations-section-style">
+      
+      <!-- Header Controls & Phase Lifecycle Triggers -->
+      <div class="panel-card-header designations-header-bg">
+        <div class="header-title-left">
+          <mat-icon class="icon-accent-designation">badge</mat-icon>
+          <span class="title-text">Selected Designations {{ votingPhaseState ? '(' + votingPhaseState + ')' : '' }}</span>
+          <span class="count-pill">{{ votingDisplayCards.length || 0 }}</span>
+        </div>
+        
+        <div class="header-actions-right">
+          @if (isMasterAdmin) {
+            <div class="voting-controls-actions-row voting-controls-header-actions">
+              
+              <!-- Condition 1: Phase 0 (Draft) -->
+              @if (votingPhaseState === 0 && isLockControlEnabled) {
+              <button mat-stroked-button class="action-btn role-lock-btn voting-phase-btn" (click)="onLockVotingRoles()">
+                <mat-icon>lock</mat-icon>
+                <span>Lock Roles</span>
+              </button>
+              }
+
+              <!-- Condition 2: Phase 1 (Roles Locked -> Start Nominations) -->
               @if (isStartNominationsEnabled) {
-              <button mat-stroked-button class="action-btn allow-voting-btn voting-phase-btn"
-                      (click)="onStartNominations()">
+              <button mat-stroked-button class="action-btn allow-voting-btn voting-phase-btn" (click)="onStartNominations()">
                 <mat-icon>how_to_reg</mat-icon>
                 <span>Start Nominations</span>
               </button>
               }
+
+              <!-- Condition 3: Phase 2 (Nominations Open -> Stop Nominations) -->
               @if (isStopNominationsEnabled) {
-              <button mat-stroked-button class="action-btn stop-voting-btn voting-phase-btn"
-                      (click)="onStopNominations()">
+              <button mat-stroked-button class="action-btn stop-voting-btn voting-phase-btn" (click)="onStopNominations()">
                 <mat-icon>remove_circle</mat-icon>
                 <span>Stop Nominations</span>
               </button>
               }
-              @if (isStartVotingEnabled) {
-              <span class="tooltip-wrapper">
-                <button mat-stroked-button class="action-btn voting-started-btn voting-phase-btn"
-                        (click)="onStartVoting()">
-                  <mat-icon>how_to_vote</mat-icon>
-                  <span>Start Voting</span>
-                </button>
-              </span>
+
+              <!-- Condition 4: Phase 3 (Reviewing -> Start Voting) -->
+              @if (votingPhaseState === 3) {
+                <span class="tooltip-wrapper" [matTooltip]="startVotingDisabledReason">
+                  <button mat-stroked-button class="action-btn voting-started-btn voting-phase-btn"
+                          [disabled]="!isStartVotingEnabled" (click)="onStartVoting()">
+                    <mat-icon>how_to_vote</mat-icon>
+                    <span>Start Voting</span>
+                  </button>
+                </span>
               }
+
+              <!-- Condition 5: Phase 4 (Voting Live -> Stop Voting) -->
               @if (isStopVotingEnabled) {
-              <button mat-stroked-button class="action-btn voting-closed-btn voting-phase-btn"
-                      (click)="onStopVoting()">
+              <button mat-stroked-button class="action-btn voting-closed-btn voting-phase-btn" (click)="onStopVoting()">
                 <mat-icon>event_busy</mat-icon>
                 <span>Stop Voting</span>
               </button>
               }
-              @if (votingPhaseState < 6 && isDeclareResultsEnabled) {
-              <button mat-stroked-button class="action-btn voting-declare-btn voting-phase-btn"
-                      (click)="onDeclareResults()">
+
+              <!-- Condition 6: Phase 5 (Voting Stopped -> Declare Results) -->
+              @if (votingPhaseState === 5 && isDeclareResultsEnabled) {
+              <button mat-stroked-button class="action-btn voting-declare-btn voting-phase-btn" (click)="onDeclareResults()">
                 <mat-icon>emoji_events</mat-icon>
                 <span>Declare Results</span>
               </button>
               }
-            }
-          </div>
-        } @else if (!isVotingMode && isMasterAdmin && votingPhaseState < 6) {
-          <div class="voting-controls-actions-row voting-controls-header-actions">
-            @if (isDeclareResultsEnabled) {
-            <button mat-stroked-button class="action-btn voting-declare-btn voting-phase-btn"
-                    (click)="onDeclareResults()">
-              <mat-icon>emoji_events</mat-icon>
-              <span>Declare Results</span>
-            </button>
-            }
-          </div>
-        }
+            </div>
+          }
 
-        @if (isVotingMode && votingPhaseState >= 4) {
-        <button mat-stroked-button class="history-btn" (click)="openVoteHistory()">
-          <mat-icon>history</mat-icon>
-          <span>History</span>
-        </button>
-        }
+          @if (votingPhaseState >= 4) {
+          <button mat-stroked-button class="history-btn" (click)="openVoteHistory()">
+            <mat-icon>history</mat-icon>
+            <span>History</span>
+          </button>
+          }
 
-        @if (isVotingMode && !isStartVotingEnabled && startVotingDisabledReason) {
-        <div class="voting-disabled-hint">
-          <mat-icon>info</mat-icon>
-          <span>{{ startVotingDisabledReason }}</span>
+          @if (!isStartVotingEnabled && startVotingDisabledReason) {
+          <div class="voting-disabled-hint">
+            <mat-icon>info</mat-icon>
+            <span>{{ startVotingDisabledReason }}</span>
+          </div>
+          }
         </div>
-        }
       </div>
-    </div>
 
-    @if (isVotingMode) {
-    <section class="voting-nomination-shell">
-      <div class="voting-nomination-grid" [class]="'voting-nomination-grid ' + votingGridLayoutClass">
-        @for (card of votingDisplayCards; track card.slot) {
-        <mat-card class="voting-nomination-card" #votingCard>
-          <mat-card-content>
-            <div class="voting-card-header">
-              <div class="voting-card-head" [class.voting-card-head-split]="isCompactVotingCard">
-                <div class="voting-card-icon-wrap"
-                     [class.voting-card-icon-wrap-president]="isPresidentRole(card.role)"
-                     [class.voting-card-icon-wrap-compact]="isCompactVotingCard"
-                     [class.voting-card-icon-wrap-winner]="votingPhaseState === 6 && getWinnerForRole(card.role.roleId)">
-                  @if (votingPhaseState === 6 && getWinnerForRole(card.role.roleId) && !isTieRole(card.role.roleId)) {
-                    @if (getWinnerForRole(card.role.roleId)!.photo) {
-                      <img [src]="getWinnerForRole(card.role.roleId)!.photo!"
-                           [alt]="getWinnerForRole(card.role.roleId)!.name | titlecase"
-                           class="voting-card-winner-photo" />
-                    } @else {
-                      <div class="voting-card-winner-fallback">
-                        <mat-icon>emoji_events</mat-icon>
-                      </div>
-                    }
-                  } @else {
-                    <mat-icon>{{ getVotingRoleIcon(card.role) }}</mat-icon>
-                  }
-                </div>
-                <div class="voting-card-names">
-                  <div class="voting-card-role-primary" [class.voting-card-role-primary-president]="isPresidentRole(card.role)">
-                    {{ ((card.role.englishName || card.role.roleName || '').split('_').join(' ')) | titlecase }}
-                  </div>
-                  <div class="voting-card-role-secondary" [class.voting-card-role-secondary-president]="isPresidentRole(card.role)">
-                    {{ (card.role.hindiName || card.role.roleName) | uppercase }}
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            @if (isReassignOpenForRole(card.role.roleId)) {
-            <div class="reassign-select-row">
-              <mat-form-field class="reassign-select-field" appearance="fill">
-                <span matPrefix class="da-input-icon">
-                  <mat-icon>swap_horiz</mat-icon>
-                </span>
-                <input type="text" matInput autocomplete="off" autocapitalize="none" spellcheck="false"
-                       [matAutocomplete]="autoReassign"
-                       [(ngModel)]="directAssignInputText[card.role.roleId]"
-                       (input)="onReassignSearch(card.role.roleId, $any($event.target).value)"
-                       placeholder="Search member to reassign..." />
-                <span matSuffix class="da-input-icon">
-                  <mat-icon>expand_more</mat-icon>
-                </span>
-                <mat-autocomplete #autoReassign="matAutocomplete" hideSingleSelectionIndicator (optionSelected)="onReassignSelect(card.role.roleId, $event)">
-                  @for (member of getReassignOptions(card.role.roleId); track member.userId) {
-                    <mat-option [value]="member.userId"
-                                class="da-opt-row"
-                                [class.da-opt-winner]="member.isWinner"
-                                [ngClass]="getRoleColorClass(member.committeeRole)"
-                                [disabled]="member.isWinner || member.committeeRole === 'COMMITTEE_MASTER_ADMIN'"
-                                (onSelectionChange)="onReassignOptionSelection(card.role.roleId, $event)">
-                      <div class="mat-auto-options">
-                        <span class="da-opt-avatar" [ngClass]="getRoleColorClass(member.committeeRole)">
-                          @if (member.photo) {
-                            <img [src]="member.photo" [alt]="member.name" class="da-opt-img" />
-                          } @else {
-                            <span class="da-opt-initials">{{ getInitials(member.name) }}</span>
-                          }
-                        </span>
-                        <div class="mat-auto-options-name-email">
-                          <span class="da-opt-name">{{ member.name | titlecase }}</span>
-                          <span class="da-opt-email">{{ member.email }}</span>
+      <!-- Nomination Cards Shell -->
+      <section class="voting-nomination-shell">
+        <div class="voting-nomination-grid" [class]="votingGridLayoutClass">
+          @for (card of votingDisplayCards; track card.slot) {
+          <mat-card class="voting-nomination-card" #votingCard>
+            <mat-card-content>
+              
+              <!-- Card Top Header (Winner Photo vs Role Icon) -->
+              <div class="voting-card-header">
+                <div class="voting-card-head" [class.voting-card-head-split]="isCompactVotingCard">
+                  <div class="voting-card-icon-wrap"
+                       [class.voting-card-icon-wrap-president]="isPresidentRole(card.role)"
+                       [class.voting-card-icon-wrap-compact]="isCompactVotingCard"
+                       [class.voting-card-icon-wrap-winner]="votingPhaseState === 6 && getWinnerForRole(card.role.roleId)">
+                    
+                    @if (votingPhaseState === 6 && getWinnerForRole(card.role.roleId) && !isTieRole(card.role.roleId)) {
+                      @if (getWinnerForRole(card.role.roleId)!.photo) {
+                        <img [src]="getWinnerForRole(card.role.roleId)!.photo!"
+                             [alt]="getWinnerForRole(card.role.roleId)!.name | titlecase"
+                             class="voting-card-winner-photo" />
+                      } @else {
+                        <div class="voting-card-winner-fallback">
+                          <mat-icon>emoji_events</mat-icon>
                         </div>
-                        @if (member.isWinner) {
-                          <span class="da-opt-cup">
-                            <mat-icon>emoji_events</mat-icon>
-                          </span>
-                        } @else if (member.committeeRole === 'COMMITTEE_MASTER_ADMIN') {
-                          <span class="da-opt-restricted">Restricted</span>
-                        }
-                      </div>
-                    </mat-option>
-                  } @empty {
-                    <mat-option disabled class="da-opt-empty">No members found</mat-option>
-                  }
-                </mat-autocomplete>
-              </mat-form-field>
-              <button mat-stroked-button class="action-btn reassign-confirm-btn" (click)="onConfirmReassign(card.role.roleId)" [disabled]="!selectedReassignMemberId()">Reassign</button>
-              <button mat-stroked-button class="action-btn reassign-cancel-btn" (click)="cancelReassign()">Cancel</button>
-            </div>
-            }
+                      }
+                    } @else {
+                      <mat-icon>{{ getVotingRoleIcon(card.role) }}</mat-icon>
+                    }
+                  </div>
 
-            @if (votingPhaseState >= 5 && isTieRole(card.role.roleId)) {
-            <div class="voting-card-tie-breaker">
-              <div class="tie-breaker-label">
-                <mat-icon>casino</mat-icon>
-                <span>Tie Breaker: Committee Decision Required</span>
+                  <div class="voting-card-names">
+                    <div class="voting-card-role-primary" [class.voting-card-role-primary-president]="isPresidentRole(card.role)">
+                      {{ ((card.role.englishName || card.role.roleName || '').split('_').join(' ')) | titlecase }}
+                    </div>
+                    <div class="voting-card-role-secondary" [class.voting-card-role-secondary-president]="isPresidentRole(card.role)">
+                      {{ (card.role.hindiName || card.role.roleName) | uppercase }}
+                    </div>
+                  </div>
+                </div>
               </div>
-              <div class="tie-breaker-actions">
-                <span class="tie-breaker-hint">Select winner:</span>
-                @for (candidate of getTiedCandidatesForRole(card.role.roleId); track candidate.userId) {
-                <button mat-stroked-button class="tie-breaker-btn" (click)="onResolveTieBreaker(card.role.roleId, candidate.userId, candidate.name)" [disabled]="!isMasterAdmin">
-                  <span class="tie-breaker-candidate-name">{{ candidate.name + ' - ' | titlecase }} </span>
-                  <span class="tie-breaker-vote-count">{{ candidate.voteCount }}</span>
+
+              <!-- CONDITION 3: Phase 2 Member Interest Toggle -->
+              @if (!isMasterAdmin && votingPhaseState === 2) {
+              <div class="voting-card-interest-row">
+                @if (isInterestedInRole(card.role.roleId)) {
+                <button mat-stroked-button class="interest-btn interest-btn-withdraw"
+                        [disabled]="isExpressingInterest()"
+                        (click)="onExpressInterest(card.role.roleId, 'WITHDRAW')">
+                  <mat-icon>cancel</mat-icon>
+                  <span>Withdraw</span>
+                </button>
+                } @else {
+                <button mat-stroked-button class="interest-btn"
+                        [disabled]="isExpressingInterest()"
+                        (click)="onExpressInterest(card.role.roleId, 'INTERESTED')">
+                  <mat-icon>add_circle_outline</mat-icon>
+                  <span>I am interested</span>
                 </button>
                 }
               </div>
-            </div>
-            }
+              }
 
-            <!-- PHASE 6 RESULT LIST WITH SCROLLING SUPPORT -->
-            @if (votingPhaseState === 6 && getWinnerForRole(card.role.roleId) && !isTieRole(card.role.roleId)) {
-            <div class="voting-card-footer">
-              <div class="result-candidates-scroll">
-                @for (candidate of getCandidatesForRole(card.role.roleId); track candidate.userId) {
-                <div class="result-candidate-row" [class.result-winner-row]="candidate.userId === getWinnerForRole(card.role.roleId)!.userId">
-                  <div class="result-candidate-top">
-                    <div class="result-candidate-avatar">
-                      @if (candidate.photo) {
-                      <img [src]="candidate.photo" [alt]="candidate.name | titlecase" class="avatar-img" (error)="candidate.photo = null" />
-                      } @else {
-                      <span class="avatar-fallback">{{ candidate.name.charAt(0).toUpperCase() }}</span>
-                      }
-                    </div>
-                    <div class="result-candidate-name">
-                      <span class="result-candidate-name-text">{{ candidate.name | titlecase }}
-                        @if (candidate.userId === getWinnerForRole(card.role.roleId)!.userId) {
-                        <mat-icon class="result-winner-cup">emoji_events</mat-icon>
+              <!-- CONDITION 2 to 5: Candidate Review & Voting Table (Phase 1-5) -->
+              @if (votingPhaseState >= 1 && votingPhaseState < 6) {
+                @if (pendingInterestForRole(card.role.roleId).length > 0) {
+                <div class="voting-card-pending-list">
+                  <div class="voting-card-pending-scroll">
+                    <table class="voting-card-pending-table">
+                      <thead>
+                        <tr>
+                          @if (votingPhaseState !== 4) { <th class="pending-col-index">#</th> }
+                          <th class="pending-col-user">
+                            Name
+                            @if (isMasterAdmin && votingPhaseState === 4 && pendingInterestCountsForRole(card.role.roleId).approved > 0) {
+                            ({{ pendingInterestCountsForRole(card.role.roleId).approved }} / {{ pendingInterestCountsForRole(card.role.roleId).total }})
+                            }
+                          </th>
+                          @if (isMasterAdmin && votingPhaseState === 3) { <th class="pending-col-action">Action</th> }
+                          @if (votingPhaseState === 4 || votingPhaseState === 5) { <th class="pending-col-vote">Action</th> }
+                        </tr>
+                      </thead>
+                      <tbody>
+                        @for (item of getSortedPendingInterestsForRole(card.role.roleId); track item.id; let i = $index) {
+                        <tr [class]="getInterestStatusClass(item.status)" [class.voted-by-me]="hasVotedFor(card.role.roleId, item.userId)">
+                          @if (votingPhaseState !== 4) { <td class="pending-col-index">{{ i + 1 }}</td> }
+                          <td class="pending-col-user">
+                            <div class="voting-card-pending-user">
+                              @if (item.userPhoto) {
+                              <img class="voting-card-pending-avatar" [src]="item.userPhoto" [alt]="item.userName | titlecase" />
+                              } @else {
+                              <span class="voting-card-pending-avatar voting-card-pending-avatar-fallback">{{ item.userName.charAt(0).toUpperCase() }}</span>
+                              }
+                              <div class="voting-card-pending-info">
+                                <span class="voting-card-pending-name">
+                                  {{ item.userName | titlecase }}
+                                  @if (item.userId === currentLoggedInUserId) { <span class="pending-you-badge">YOU</span> }
+                                </span>
+                                <span class="voting-card-pending-email">{{ item.userEmail }}</span>
+                              </div>
+                            </div>
+                          </td>
+
+                          <!-- Phase 3: Admin Review Controls -->
+                          @if (isMasterAdmin && votingPhaseState === 3) {
+                          <td class="pending-col-action">
+                            <div class="voting-card-pending-actions">
+                              @if ((item.status || 'PENDING').toUpperCase() !== 'APPROVED') {
+                              <button mat-icon-button class="interest-approve-btn" title="Approve" (click)="onReviewInterest(item, 'APPROVED')">
+                                <mat-icon>check</mat-icon>
+                              </button>
+                              }
+                              @if ((item.status || 'PENDING').toUpperCase() !== 'REJECTED') {
+                              <button mat-icon-button class="interest-reject-btn" title="Reject" (click)="onReviewInterest(item, 'REJECTED')">
+                                <mat-icon>close</mat-icon>
+                              </button>
+                              }
+                            </div>
+                          </td>
+                          }
+
+                          <!-- Phase 4 & 5: Vote Action Button -->
+                          @if (votingPhaseState === 4 || votingPhaseState === 5) {
+                          <td class="pending-col-vote">
+                            @if (item.status.toUpperCase() === 'APPROVED') {
+                              @if (isSingleCandidateRole(card.role.roleId)) {
+                              <span class="auto-winner-badge">
+                                <mat-icon>emoji_events</mat-icon>
+                                <span>WINNER</span>
+                              </span>
+                              } @else if (hasVotedFor(card.role.roleId, item.userId)) {
+                              <button mat-flat-button class="cast-vote-btn cast-vote-btn-voted"
+                                      [disabled]="votingPhaseState === 5"
+                                      (click)="onCastVote(card.role.roleId, { userId: item.userId, userName: item.userName })">
+                                <mat-icon>check_circle</mat-icon>
+                                <span>VOTED</span>
+                              </button>
+                              } @else if (votingPhaseState === 4) {
+                              <button mat-flat-button class="cast-vote-btn"
+                                      (click)="onCastVote(card.role.roleId, { userId: item.userId, userName: item.userName })">
+                                <mat-icon>how_to_vote</mat-icon>
+                                <span>VOTE</span>
+                              </button>
+                              }
+                            }
+                          </td>
+                          }
+                        </tr>
                         }
-                      </span>
-                      <span class="result-candidate-email">{{ candidate.email }}</span>
-                    </div>
-                    @if (candidate.userId === getWinnerForRole(card.role.roleId)!.userId && isMasterAdmin) {
-                    <button type="button" class="assign-winner-btn center-reassign-btn" (click)="onAssignWinningRole(card.role.roleId)" matTooltip="Emergency reassign winner" matTooltipPosition="above">
-                      <span class="assign-winner-icon" aria-hidden="true">⇄</span>
-                    </button>
-                    }
-                    <div class="result-vote-count">
-                      {{ candidate.voteCount }} votes
-                      @if (candidate.userId === getWinnerForRole(card.role.roleId)!.userId) {
-                      <span class="voting-mode-chip">{{ getVotingModeWonByDisplay(card.role.roleId) }}</span>
-                      }
-                    </div>
+                      </tbody>
+                    </table>
                   </div>
                 </div>
+                } @else {
+                <div class="voting-interest-empty-state">
+                  <span class="empty-state-icon"><mat-icon>how_to_reg</mat-icon></span>
+                  <span class="empty-state-title">No nominations yet</span>
+                  <span class="empty-state-sub">Members can express interest once nominations open.</span>
+                </div>
                 }
-              </div>
-            </div>
-            }
-
-            @if (!isMasterAdmin && votingPhaseState === 2) {
-            <div class="voting-card-interest-row">
-              @if (isInterestedInRole(card.role.roleId)) {
-              <button mat-stroked-button class="interest-btn interest-btn-withdraw" (click)="onExpressInterest(card.role.roleId, 'WITHDRAW')">
-                <mat-icon>cancel</mat-icon>
-                <span>Withdraw</span>
-              </button>
-              } @else {
-              <button mat-stroked-button class="interest-btn" (click)="onExpressInterest(card.role.roleId, 'INTERESTED')">
-                <mat-icon>add_circle_outline</mat-icon>
-                <span>I am interested</span>
-              </button>
               }
-            </div>
-            }
 
-            @if (((isMasterAdmin && votingPhaseState >= 2 && votingPhaseState < 6) || (!isMasterAdmin && votingPhaseState >= 1 && votingPhaseState < 6)) && pendingInterestForRole(card.role.roleId).length > 0) {
-            <div class="voting-card-pending-list">
-              <div class="voting-card-pending-scroll">
-                <table class="voting-card-pending-table">
-                  <thead>
-                    <tr>
-                      @if (votingPhaseState !== 4) {
-                      <th class="pending-col-index">#</th>
-                      }
-                      <th class="pending-col-user">
-                        Name
-                        @if (isMasterAdmin && votingPhaseState === 4 && pendingInterestCountsForRole(card.role.roleId).approved > 0) {
-                        ({{ pendingInterestCountsForRole(card.role.roleId).approved }} / {{ pendingInterestCountsForRole(card.role.roleId).total }})
-                        }
-                      </th>
-                      @if (isMasterAdmin && votingPhaseState === 3) {
-                      <th class="pending-col-action">Action</th>
-                      }
-                      @if (votingPhaseState === 4 || votingPhaseState === 5) {
-                      <th class="pending-col-vote">Action</th>
-                      }
-                    </tr>
-                  </thead>
-                  <tbody>
-                    @for (item of getSortedPendingInterestsForRole(card.role.roleId); track item.id; let i = $index) {
-                    <tr [class]="getInterestStatusClass(item.status)" [class.voted-by-me]="hasVotedFor(card.role.roleId, item.userId)">
-                      @if (votingPhaseState !== 4) {
-                      <td class="pending-col-index">{{ i + 1 }}</td>
-                      }
-                      <td class="pending-col-user">
-                        <div class="voting-card-pending-user">
-                          @if (item.userPhoto) {
-                          <img class="voting-card-pending-avatar" [src]="item.userPhoto" [alt]="item.userName | titlecase" />
-                          } @else {
-                          <span class="voting-card-pending-avatar voting-card-pending-avatar-fallback">{{ item.userName.charAt(0).toUpperCase() }}</span>
-                          }
-                          <div class="voting-card-pending-info">
-                            <span class="voting-card-pending-name">
-                              {{ item.userName | titlecase }}
-                              @if (item.userId === currentLoggedInUserId) {
-                              <span class="pending-you-badge">YOU</span>
-                              }
-                            </span>
-                            <span class="voting-card-pending-email">{{ item.userEmail }}</span>
-                          </div>
-                        </div>
-                      </td>
-                      @if (isMasterAdmin && votingPhaseState === 3) {
-                      <td class="pending-col-action">
-                        <div class="voting-card-pending-actions">
-                          @if ((item.status || 'PENDING').toUpperCase() !== 'APPROVED') {
-                          <button mat-icon-button class="interest-approve-btn" title="Approve" (click)="onReviewInterest(item, 'APPROVED')">
-                            <mat-icon>check</mat-icon>
-                          </button>
-                          }
-                          @if ((item.status || 'PENDING').toUpperCase() !== 'REJECTED') {
-                          <button mat-icon-button class="interest-reject-btn" title="Reject" (click)="onReviewInterest(item, 'REJECTED')">
-                            <mat-icon>close</mat-icon>
-                          </button>
-                          }
-                        </div>
-                      </td>
-                      }
-                      @if (votingPhaseState === 4 || votingPhaseState === 5) {
-                      <td class="pending-col-vote">
-                        @if (item.status.toUpperCase() === 'APPROVED') {
-                          @if (isSingleCandidateRole(card.role.roleId)) {
-                          <span class="auto-winner-badge">
-                            <mat-icon>emoji_events</mat-icon>
-                            <span>WINNER</span>
-                          </span>
-                          } @else if (hasVotedFor(card.role.roleId, item.userId)) {
-                          <button mat-flat-button class="cast-vote-btn cast-vote-btn-voted"
-                                  [disabled]="votingPhaseState === 5"
-                                  (click)="onCastVote(card.role.roleId, { userId: item.userId, userName: item.userName })">
-                            <mat-icon>check_circle</mat-icon>
-                            <span>VOTED</span>
-                          </button>
-                          } @else if (votingPhaseState === 4) {
-                          <button mat-flat-button class="cast-vote-btn"
-                                  (click)="onCastVote(card.role.roleId, { userId: item.userId, userName: item.userName })">
-                            <mat-icon>how_to_vote</mat-icon>
-                            <span>VOTE</span>
-                          </button>
-                          }
-                        }
-                      </td>
-                      }
-                    </tr>
-                    }
-                  </tbody>
-                </table>
+              <!-- CONDITION 6: Phase 5 Tie Breaker Panel -->
+              @if (votingPhaseState === 5 && isTieRole(card.role.roleId)) {
+              <div class="voting-card-tie-breaker">
+                <div class="tie-breaker-label">
+                  <mat-icon>casino</mat-icon>
+                  <span>Tie Breaker: Committee Decision Required</span>
+                </div>
+                <div class="tie-breaker-actions">
+                  <span class="tie-breaker-hint">Select winner:</span>
+                  @for (candidate of getTiedCandidatesForRole(card.role.roleId); track candidate.userId) {
+                  <button mat-stroked-button class="tie-breaker-btn" (click)="onResolveTieBreaker(card.role.roleId, candidate.userId, candidate.name)" [disabled]="!isMasterAdmin">
+                    <span class="tie-breaker-candidate-name">{{ candidate.name + ' - ' | titlecase }} </span>
+                    <span class="tie-breaker-vote-count">{{ candidate.voteCount }}</span>
+                  </button>
+                  }
+                </div>
               </div>
-            </div>
-            }
-            @else if (((isMasterAdmin && votingPhaseState >= 2 && votingPhaseState < 6) || (!isMasterAdmin && votingPhaseState >= 1 && votingPhaseState < 6)) && pendingInterestForRole(card.role.roleId).length === 0) {
-            <div class="voting-interest-empty-state">
-              <span class="empty-state-icon">
-                <mat-icon>how_to_reg</mat-icon>
-              </span>
-              <span class="empty-state-title">No nominations yet</span>
-              <span class="empty-state-sub">Members can express interest for this designation once nominations open.</span>
-            </div>
-            }
+              }
 
-            @if (isMasterAdmin && canVacateRole) {
-            <div class="voting-card-vacate-action">
-              <button mat-stroked-button class="vacate-role-btn"
-                      (click)="onVacateRole(card.role.roleId)"
-                      [disabled]="isVacatingVotingRole()">
-                <mat-icon>delete_outline</mat-icon>
-                <span>Vacate Role</span>
-              </button>
-            </div>
-            }
-          </mat-card-content>
-        </mat-card>
-        } @empty {
-        <div class="voting-empty-state">
-          <mat-icon>how_to_vote</mat-icon>
-          <span>No voting roles mapped for this event yet.</span>
-        </div>
-        }
-      </div>
-    </section>
-    }
-
-    @if (!isVotingMode) {
-    <section class="voting-nomination-shell">
-      <div class="voting-nomination-grid" [class]="'voting-nomination-grid ' + votingGridLayoutClass">
-        @for (card of votingDisplayCards; track card.slot) {
-        <mat-card class="voting-nomination-card" #votingCard>
-          <mat-card-content>
-            @if (votingPhaseState === 6 && getWinnerForRole(card.role.roleId) && !isTieRole(card.role.roleId)) {
-            <div class="voting-card-header">
-              <div class="voting-card-head">
-                <div class="voting-card-icon-wrap voting-card-icon-wrap-winner">
-                  @if (getWinnerForRole(card.role.roleId)!.photo) {
-                  <img [src]="getWinnerForRole(card.role.roleId)!.photo!"
-                       [alt]="getWinnerForRole(card.role.roleId)!.name | titlecase"
-                       class="voting-card-winner-photo" />
-                  } @else {
-                  <div class="voting-card-winner-fallback">
-                    <mat-icon>emoji_events</mat-icon>
+              <!-- CONDITION 7: Phase 6 Final Voting Results View -->
+              @if (votingPhaseState === 6 && getWinnerForRole(card.role.roleId) && !isTieRole(card.role.roleId)) {
+              <div class="voting-card-footer">
+                <div class="result-candidates-scroll">
+                  @for (candidate of getCandidatesForRole(card.role.roleId); track candidate.userId) {
+                  <div class="result-candidate-row" [class.result-winner-row]="candidate.userId === getWinnerForRole(card.role.roleId)!.userId">
+                    <div class="result-candidate-top">
+                      <div class="result-candidate-avatar">
+                        @if (candidate.photo) {
+                        <img [src]="candidate.photo" [alt]="candidate.name | titlecase" class="avatar-img" (error)="candidate.photo = null" />
+                        } @else {
+                        <span class="avatar-fallback">{{ candidate.name.charAt(0).toUpperCase() }}</span>
+                        }
+                      </div>
+                      <div class="result-candidate-name">
+                        <span class="result-candidate-name-text">
+                          {{ candidate.name | titlecase }}
+                          @if (candidate.userId === getWinnerForRole(card.role.roleId)!.userId) {
+                          <mat-icon class="result-winner-cup">emoji_events</mat-icon>
+                          }
+                        </span>
+                        <span class="result-candidate-email">{{ candidate.email }}</span>
+                      </div>
+                      
+                      @if (candidate.userId === getWinnerForRole(card.role.roleId)!.userId && isMasterAdmin) {
+                      <button type="button" class="assign-winner-btn center-reassign-btn" (click)="onAssignWinningRole(card.role.roleId)" matTooltip="Emergency reassign winner" matTooltipPosition="above">
+                        <span class="assign-winner-icon" aria-hidden="true">⇄</span>
+                      </button>
+                      }
+                      
+                      <div class="result-vote-count">
+                        {{ candidate.voteCount }} votes
+                        @if (candidate.userId === getWinnerForRole(card.role.roleId)!.userId) {
+                        <span class="voting-mode-chip">{{ getVotingModeWonByDisplay(card.role.roleId) }}</span>
+                        }
+                      </div>
+                    </div>
                   </div>
                   }
                 </div>
-                <div class="voting-card-names">
-                  <div class="voting-card-role-primary">{{ ((card.role.englishName || card.role.roleName || '').split('_').join(' ')) | titlecase }}</div>
-                  <div class="voting-card-role-secondary">{{ (card.role.hindiName || card.role.roleName) | uppercase }}</div>
-                </div>
               </div>
-            </div>
+              }
 
-            @if (isReassignOpenForRole(card.role.roleId)) {
-            <div class="reassign-select-row">
-              <mat-form-field class="reassign-select-field" appearance="fill">
-                <span matPrefix class="da-input-icon">
-                  <mat-icon>swap_horiz</mat-icon>
-                </span>
-                <input type="text" matInput autocomplete="off" autocapitalize="none" spellcheck="false"
-                       [matAutocomplete]="autoReassign"
-                       [(ngModel)]="directAssignInputText[card.role.roleId]"
-                       (input)="onReassignSearch(card.role.roleId, $any($event.target).value)"
-                       placeholder="Search member to reassign..." />
-                <span matSuffix class="da-input-icon">
-                  <mat-icon>expand_more</mat-icon>
-                </span>
-                <mat-autocomplete #autoReassign="matAutocomplete" hideSingleSelectionIndicator (optionSelected)="onReassignSelect(card.role.roleId, $event)">
-                  @for (member of getReassignOptions(card.role.roleId); track member.userId) {
-                    <mat-option [value]="member.userId"
-                                class="da-opt-row"
-                                [ngClass]="getRoleColorClass(member.committeeRole)"
+              <!-- Emergency Reassign Panel (Phase 6 Admin Override) -->
+              @if (isReassignOpenForRole(card.role.roleId)) {
+              <div class="reassign-select-row">
+                <mat-form-field class="reassign-select-field" appearance="fill">
+                  <span matPrefix class="da-input-icon"><mat-icon>swap_horiz</mat-icon></span>
+                  <input type="text" matInput autocomplete="off" [(ngModel)]="directAssignInputText[card.role.roleId]"
+                         (input)="onReassignSearch(card.role.roleId, $any($event.target).value)"
+                         placeholder="Search member to reassign..." [matAutocomplete]="autoReassign" />
+                  <span matSuffix class="da-input-icon"><mat-icon>expand_more</mat-icon></span>
+                  
+                  <mat-autocomplete #autoReassign="matAutocomplete" hideSingleSelectionIndicator (optionSelected)="onReassignSelect(card.role.roleId, $event)">
+                    @for (member of getReassignOptions(card.role.roleId); track member.userId) {
+                    <mat-option [value]="member.userId" class="da-opt-row" [ngClass]="getRoleColorClass(member.committeeRole)"
                                 [disabled]="member.isWinner || member.committeeRole === 'COMMITTEE_MASTER_ADMIN'"
                                 (onSelectionChange)="onReassignOptionSelection(card.role.roleId, $event)">
                       <div class="mat-auto-options">
                         <span class="da-opt-avatar" [ngClass]="getRoleColorClass(member.committeeRole)">
-                          @if (member.photo) {
-                            <img [src]="member.photo" [alt]="member.name" class="da-opt-img" />
-                          } @else {
-                            <span class="da-opt-initials">{{ getInitials(member.name) }}</span>
-                          }
+                          @if (member.photo) { <img [src]="member.photo" [alt]="member.name" class="da-opt-img" /> }
+                          @else { <span class="da-opt-initials">{{ getInitials(member.name) }}</span> }
                         </span>
                         <div class="mat-auto-options-name-email">
                           <span class="da-opt-name">{{ member.name | titlecase }}</span>
                           <span class="da-opt-email">{{ member.email }}</span>
                         </div>
-                        @if (member.isWinner) {
-                        <div class="mat-auto-options-cup">
-                          <mat-icon>emoji_events</mat-icon>
-                        </div>
-                        }
+                        @if (member.isWinner) { <span class="da-opt-cup"><mat-icon>emoji_events</mat-icon></span> }
+                        @else if (member.committeeRole === 'COMMITTEE_MASTER_ADMIN') { <span class="da-opt-restricted">Restricted</span> }
                       </div>
                     </mat-option>
-                  } @empty {
+                    } @empty {
                     <mat-option disabled class="da-opt-empty">No members found</mat-option>
-                  }
-                </mat-autocomplete>
-              </mat-form-field>
-              <button mat-stroked-button class="action-btn reassign-confirm-btn" (click)="onConfirmReassign(card.role.roleId)" [disabled]="!selectedReassignMemberId()">Reassign</button>
-              <button mat-stroked-button class="action-btn reassign-cancel-btn" (click)="cancelReassign()">Cancel</button>
-            </div>
-            }
-
-            <!-- PHASE 6 RESULT LIST -->
-            @if (votingPhaseState === 6 && getWinnerForRole(card.role.roleId) && !isTieRole(card.role.roleId)) {
-            <div class="voting-card-footer">
-              <div class="result-candidates-scroll">
-                @for (candidate of getCandidatesForRole(card.role.roleId); track candidate.userId) {
-                <div class="result-candidate-row" [class.result-winner-row]="candidate.userId === getWinnerForRole(card.role.roleId)!.userId">
-                  <div class="result-candidate-top">
-                    <div class="result-candidate-avatar">
-                      @if (candidate.photo) {
-                      <img [src]="candidate.photo" [alt]="candidate.name | titlecase" class="avatar-img" (error)="candidate.photo = null" />
-                      } @else {
-                      <span class="avatar-fallback">{{ candidate.name.charAt(0).toUpperCase() }}</span>
-                      }
-                    </div>
-                    <div class="result-candidate-name">
-                      <span class="result-candidate-name-text">{{ candidate.name | titlecase }}
-                        @if (candidate.userId === getWinnerForRole(card.role.roleId)!.userId) {
-                        <mat-icon class="result-winner-cup">emoji_events</mat-icon>
-                        }
-                      </span>
-                      <span class="result-candidate-email">{{ candidate.email }}</span>
-                    </div>
-                    @if (candidate.userId === getWinnerForRole(card.role.roleId)!.userId && isMasterAdmin) {
-                    <button type="button" class="assign-winner-btn center-reassign-btn" (click)="onAssignWinningRole(card.role.roleId)" matTooltip="Emergency reassign winner" matTooltipPosition="above">
-                      <span class="assign-winner-icon" aria-hidden="true">⇄</span>
-                    </button>
                     }
-                    <div class="result-vote-count">
-                      {{ candidate.voteCount }} votes
-                      @if (candidate.userId === getWinnerForRole(card.role.roleId)!.userId) {
-                      <span class="voting-mode-chip">{{ getVotingModeWonByDisplay(card.role.roleId) }}</span>
-                      }
-                    </div>
-                  </div>
-                </div>
-                }
+                  </mat-autocomplete>
+                </mat-form-field>
+
+                <button mat-stroked-button class="action-btn reassign-confirm-btn" (click)="onConfirmReassign(card.role.roleId)" [disabled]="!selectedReassignMemberId()">Reassign</button>
+                <button mat-stroked-button class="action-btn reassign-cancel-btn" (click)="cancelReassign()">Cancel</button>
               </div>
-            </div>
-            }
+              }
 
-            } @else {
-            <div class="voting-card-header">
-              <div class="voting-card-head">
-                <div class="voting-card-icon-wrap" [class.voting-card-icon-wrap-winner]="getAssignedMember(card.role.roleId)">
-                  @if (getAssignedMember(card.role.roleId); as assigned) {
-                    @if (assigned.photo && !avatarLoadFailed().has(assigned.userId)) {
-                      <img [src]="assigned.photo" [alt]="assigned.name | titlecase" class="voting-card-winner-photo" (error)="onAvatarError(assigned.userId)" />
-                    } @else {
-                      <div class="voting-card-winner-fallback">
-                        <mat-icon>emoji_events</mat-icon>
-                        <span class="voting-card-winner-name">{{ assigned.name | titlecase }}</span>
-                      </div>
-                    }
-                  } @else {
-                    <mat-icon>{{ getVotingRoleIcon(card.role) }}</mat-icon>
-                  }
-                </div>
-                <div class="voting-card-names">
-                  <div class="voting-card-role-primary">{{ ((card.role.englishName || card.role.roleName || '').split('_').join(' ')) | titlecase }}</div>
-                  <div class="voting-card-role-secondary">{{ (card.role.hindiName || card.role.roleName) | uppercase }}</div>
-                </div>
+              <!-- Vacate Role Button (Draft / Active Phases) -->
+              @if (isMasterAdmin && canVacateRole) {
+              <div class="voting-card-vacate-action">
+                <button mat-stroked-button class="vacate-role-btn" [disabled]="isVacatingVotingRole()" (click)="onVacateRole(card.role.roleId)">
+                  <mat-icon>delete_outline</mat-icon>
+                  <span>Vacate Role</span>
+                </button>
               </div>
-            </div>
+              }
 
-            @if (isMasterAdmin && votingPhaseState < 6) {
-            <div class="direct-assign-body">
-              <mat-form-field class="direct-assign-select-field" appearance="fill" subscriptSizing="dynamic">
-                <span matPrefix class="da-input-icon">
-                  <mat-icon>emoji_events</mat-icon>
-                </span>
-                <input type="text" matInput autocomplete="off" autocapitalize="none" spellcheck="false"
-                       [matAutocomplete]="autoAssign"
-                       [(ngModel)]="directAssignInputText[card.role.roleId]"
-                       (input)="onDirectAssignSearch(card.role.roleId, $any($event.target).value)"
-                       (focus)="onDropdownOpen()"
-                       placeholder="Search member by name..." />
-                <span matSuffix class="da-input-icon">
-                  <mat-icon>expand_more</mat-icon>
-                </span>
-                <mat-autocomplete #autoAssign="matAutocomplete" hideSingleSelectionIndicator (optionSelected)="onDirectAssignSelect(card.role.roleId, $event)">
-                  @for (member of getDirectAssignOptions(card.role.roleId); track member.userId) {
-                    <mat-option [value]="member.userId"
-                                class="da-opt-row"
-                                [ngClass]="getRoleColorClass(member.committeeRole)"
-                                [disabled]="member.committeeRole === 'COMMITTEE_MASTER_ADMIN' || getAssignedMember(card.role.roleId)?.userId === member.userId || isUserAssignedToOtherRole(member.userId, card.role.roleId)"
-                                (onSelectionChange)="onDirectAssignOptionSelection(card.role.roleId, $event)">
-                      <div class="mat-auto-options">
-                        <div class="mat-auto-options-avatar">
-                          <span class="da-opt-avatar" [ngClass]="getRoleColorClass(member.committeeRole)">
-                            @if (member.photo) {
-                              <img [src]="member.photo" [alt]="member.name" class="da-opt-img" />
-                            } @else {
-                              <span class="da-opt-initials">{{ getInitials(member.name) }}</span>
-                            }
-                          </span>
-                        </div>
-                        <div class="mat-auto-options-name-email">
-                          <div class="da-opt-text-group">
-                            <div class="da-opt-name">{{ member.name | titlecase }}</div>
-                            <div class="da-opt-email">{{ member.email }}</div>
-                          </div>
-                          <div class="done-icon">
-                            @if (getAssignedMember(card.role.roleId)?.userId === member.userId) {
-                            <div class="mat-auto-options-cup">
-                              <mat-icon>done</mat-icon>
-                            </div>
-                            }
-                          </div>
-                        </div>
-                      </div>
-                    </mat-option>
-                  } @empty {
-                    <mat-option disabled class="da-opt-empty">No members found</mat-option>
-                  }
-                </mat-autocomplete>
-              </mat-form-field>
-            </div>
-            }
+            </mat-card-content>
+          </mat-card>
+          } @empty {
+          <div class="voting-empty-state">
+            <mat-icon>how_to_vote</mat-icon>
+            <span>No voting roles mapped for this event yet.</span>
+          </div>
+          }
+        </div>
+      </section>
+    </section>
+  }
 
-            @if (isMasterAdmin && canVacateRole) {
-            <div class="voting-card-vacate-action">
-              <button mat-stroked-button class="vacate-role-btn"
-                      (click)="onVacateRole(card.role.roleId)"
-                      [disabled]="isVacatingVotingRole()">
-                <mat-icon>delete_outline</mat-icon>
-                <span>Vacate Role</span>
-              </button>
-            </div>
+  <!-- ========================================================================= -->
+  <!-- MODE 2: DIRECT ASSIGNMENT MODE                                            -->
+  <!-- ========================================================================= -->
+  @else if (votingMode === 'DIRECT') {
+
+    <section class="horizontal-full-card designations-section-style">
+      
+      <!-- Direct Assignment Header -->
+      <div class="panel-card-header designations-header-bg">
+        <div class="header-title-left">
+          <mat-icon class="icon-accent-designation">badge</mat-icon>
+          <span class="title-text">Direct Committee Assignment</span>
+          <span class="count-pill">{{ votingDisplayCards.length || 0 }}</span>
+        </div>
+
+        <!-- CONDITION 7: Direct Mode Phase 0 (Finalize Direct Assignments) -->
+        @if (isMasterAdmin && votingPhaseState < 6) {
+        <div class="header-actions-right">
+          <div class="voting-controls-actions-row voting-controls-header-actions">
+            @if (isDeclareResultsEnabled) {
+            <button mat-stroked-button class="action-btn voting-declare-btn voting-phase-btn" (click)="onDeclareResults()">
+              <mat-icon>emoji_events</mat-icon>
+              <span>Finalize Assignments</span>
+            </button>
             }
-            }
-          </mat-card-content>
-        </mat-card>
-        } @empty {
-        <div class="voting-empty-state">
-          <mat-icon>badge</mat-icon>
-          <span>No designations mapped for this event yet.</span>
+          </div>
         </div>
         }
       </div>
+
+      <!-- Direct Assignment Cards Grid -->
+      <section class="voting-nomination-shell">
+        <div class="voting-nomination-grid" [class]="votingGridLayoutClass">
+          @for (card of votingDisplayCards; track card.slot) {
+          <mat-card class="voting-nomination-card" #votingCard>
+            <mat-card-content>
+              
+              <!-- CONDITION 8: Direct Mode Finalized Results View (Phase 6) -->
+              @if (votingPhaseState === 6 && getWinnerForRole(card.role.roleId)) {
+                <div class="voting-card-header">
+                  <div class="voting-card-head">
+                    <div class="voting-card-icon-wrap voting-card-icon-wrap-winner">
+                      @if (getWinnerForRole(card.role.roleId)!.photo) {
+                      <img [src]="getWinnerForRole(card.role.roleId)!.photo!" [alt]="getWinnerForRole(card.role.roleId)!.name | titlecase" class="voting-card-winner-photo" />
+                      } @else {
+                      <div class="voting-card-winner-fallback">
+                        <mat-icon>emoji_events</mat-icon>
+                      </div>
+                      }
+                    </div>
+                    <div class="voting-card-names">
+                      <div class="voting-card-role-primary">{{ ((card.role.englishName || card.role.roleName || '').split('_').join(' ')) | titlecase }}</div>
+                      <div class="voting-card-role-secondary">{{ (card.role.hindiName || card.role.roleName) | uppercase }}</div>
+                    </div>
+                  </div>
+                </div>
+
+                <div class="voting-card-footer">
+                  <div class="result-candidates-scroll">
+                    @for (candidate of getCandidatesForRole(card.role.roleId); track candidate.userId) {
+                    <div class="result-candidate-row result-winner-row">
+                      <div class="result-candidate-top">
+                        <div class="result-candidate-avatar">
+                          @if (candidate.photo) { <img [src]="candidate.photo" [alt]="candidate.name | titlecase" class="avatar-img" /> }
+                          @else { <span class="avatar-fallback">{{ candidate.name.charAt(0).toUpperCase() }}</span> }
+                        </div>
+                        <div class="result-candidate-name">
+                          <span class="result-candidate-name-text">{{ candidate.name | titlecase }} <mat-icon class="result-winner-cup">emoji_events</mat-icon></span>
+                          <span class="result-candidate-email">{{ candidate.email }}</span>
+                        </div>
+                        <div class="result-vote-count">
+                          <span class="voting-mode-chip">DIRECT ASSIGN</span>
+                        </div>
+                      </div>
+                    </div>
+                    }
+                  </div>
+                </div>
+              }
+
+              <!-- CONDITION 7: Direct Mode Active Assignment Controls (Phase 0) -->
+              @else {
+                <div class="voting-card-header">
+                  <div class="voting-card-head">
+                    <div class="voting-card-icon-wrap" [class.voting-card-icon-wrap-winner]="getAssignedMember(card.role.roleId)">
+                      @if (getAssignedMember(card.role.roleId); as assigned) {
+                        @if (assigned.photo && !avatarLoadFailed().has(assigned.userId)) {
+                        <img [src]="assigned.photo" [alt]="assigned.name | titlecase" class="voting-card-winner-photo" (error)="onAvatarError(assigned.userId)" />
+                        } @else {
+                        <div class="voting-card-winner-fallback">
+                          <mat-icon>emoji_events</mat-icon>
+                          <span class="voting-card-winner-name">{{ assigned.name | titlecase }}</span>
+                        </div>
+                        }
+                      } @else {
+                        <mat-icon>{{ getVotingRoleIcon(card.role) }}</mat-icon>
+                      }
+                    </div>
+                    <div class="voting-card-names">
+                      <div class="voting-card-role-primary">{{ ((card.role.englishName || card.role.roleName || '').split('_').join(' ')) | titlecase }}</div>
+                      <div class="voting-card-role-secondary">{{ (card.role.hindiName || card.role.roleName) | uppercase }}</div>
+                    </div>
+                  </div>
+                </div>
+
+                <!-- Admin Member Autocomplete Picker -->
+                @if (isMasterAdmin && votingPhaseState < 6) {
+                <div class="direct-assign-body">
+                  <mat-form-field class="direct-assign-select-field" appearance="fill" subscriptSizing="dynamic">
+                    <span matPrefix class="da-input-icon"><mat-icon>emoji_events</mat-icon></span>
+                    <input type="text" matInput autocomplete="off" [(ngModel)]="directAssignInputText[card.role.roleId]"
+                           (input)="onDirectAssignSearch(card.role.roleId, $any($event.target).value)"
+                           (focus)="onDropdownOpen()" placeholder="Search member by name..." [matAutocomplete]="autoAssign" />
+                    <span matSuffix class="da-input-icon"><mat-icon>expand_more</mat-icon></span>
+
+                    <mat-autocomplete #autoAssign="matAutocomplete" hideSingleSelectionIndicator (optionSelected)="onDirectAssignSelect(card.role.roleId, $event)">
+                      @for (member of getDirectAssignOptions(card.role.roleId); track member.userId) {
+                      <mat-option [value]="member.userId" class="da-opt-row" [ngClass]="getRoleColorClass(member.committeeRole)"
+                                  [disabled]="member.committeeRole === 'COMMITTEE_MASTER_ADMIN' || getAssignedMember(card.role.roleId)?.userId === member.userId || isUserAssignedToOtherRole(member.userId, card.role.roleId)"
+                                  (onSelectionChange)="onDirectAssignOptionSelection(card.role.roleId, $event)">
+                        <div class="mat-auto-options">
+                          <div class="mat-auto-options-avatar">
+                            <span class="da-opt-avatar" [ngClass]="getRoleColorClass(member.committeeRole)">
+                              @if (member.photo) { <img [src]="member.photo" [alt]="member.name" class="da-opt-img" /> }
+                              @else { <span class="da-opt-initials">{{ getInitials(member.name) }}</span> }
+                            </span>
+                          </div>
+                          <div class="mat-auto-options-name-email">
+                            <div class="da-opt-text-group">
+                              <div class="da-opt-name">{{ member.name | titlecase }}</div>
+                              <div class="da-opt-email">{{ member.email }}</div>
+                            </div>
+                            <div class="done-icon">
+                              @if (getAssignedMember(card.role.roleId)?.userId === member.userId) {
+                              <div class="mat-auto-options-cup"><mat-icon>done</mat-icon></div>
+                              }
+                            </div>
+                          </div>
+                        </div>
+                      </mat-option>
+                      } @empty {
+                      <mat-option disabled class="da-opt-empty">No members found</mat-option>
+                      }
+                    </mat-autocomplete>
+                  </mat-form-field>
+                </div>
+                }
+
+                @if (isMasterAdmin && canVacateRole) {
+                <div class="voting-card-vacate-action">
+                  <button mat-stroked-button class="vacate-role-btn" [disabled]="isVacatingVotingRole()" (click)="onVacateRole(card.role.roleId)">
+                    <mat-icon>delete_outline</mat-icon>
+                    <span>Vacate Role</span>
+                  </button>
+                </div>
+                }
+              }
+
+            </mat-card-content>
+          </mat-card>
+          } @empty {
+          <div class="voting-empty-state">
+            <mat-icon>badge</mat-icon>
+            <span>No designations mapped for this event yet.</span>
+          </div>
+          }
+        </div>
+      </section>
     </section>
-    }
-  </section>
+  }
+
 </div>
