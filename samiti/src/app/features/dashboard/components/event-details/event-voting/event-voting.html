@@ -320,7 +320,7 @@
                               let i = $index
                             ) {
                               <tr
-                                [class]="getInterestStatusClass(item.status)"
+                                [class]="getInterestStatusClass(item.status) + ' ' + getRoleColorClass(item.committeeRole)"
                                 [class.voted-by-me]="hasVotedFor(card.role.roleId, item.userId)"
                               >
                                 @if (votingPhaseState !== 4) {

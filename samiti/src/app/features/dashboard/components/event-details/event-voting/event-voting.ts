@@ -79,9 +79,11 @@ export class EventVotingComponent implements OnInit, AfterViewInit, OnDestroy {
     userEmail: string;
     userPhoto?: string | null;
     status: string;
+    committeeRole?: string;
   }>>([]);
   public readonly eventResults = signal<EventResultsPayload | null>(null);
   public readonly directAssignMembers = signal<EventDirectAssignMember[]>([]);
+  public readonly committeeMemberRoles = signal<Map<number, string>>(new Map());
   public readonly selectedReassignMemberId = signal<number | null>(null);
   public readonly openReassignForRoleId = signal<number | null>(null);
   public readonly reassignMemberSearchQuery = signal<string>('');
@@ -447,9 +449,23 @@ export class EventVotingComponent implements OnInit, AfterViewInit, OnDestroy {
       }));
     this.directAssignMembers.set(initialMembers);
     this.loadDirectAssignMembers(eventId);
+    this.loadCommitteeMemberRoles(eventId);
     if (Number(data.votingPhaseState || 0) === 6) {
       this.loadEventResults(eventId);
     }
+  }
+
+  private loadCommitteeMemberRoles(eventId: number): void {
+    this.votingService.getCommitteeMembers(eventId).subscribe({
+      next: (members) => {
+        const map = new Map<number, string>();
+        for (const m of members) map.set(Number(m.userId), m.committeeRole);
+        this.committeeMemberRoles.set(map);
+        // Re-enrich rows now that accurate roles are available.
+        this.enrichInterestRoles();
+      },
+      error: () => { /* role colours fall back to COMMITTEE_MEMBER */ }
+    });
   }
 
   private loadEventResults(eventId: number): void {
@@ -668,6 +684,31 @@ export class EventVotingComponent implements OnInit, AfterViewInit, OnDestroy {
     }
     const interestApprovedPeople = Array.from(approvedMap.entries()).map(([roleId, approvedPeople]) => ({ roleId, approvedPeople }));
     this.stateService.eventData.set({ ...prev, interestApprovedPeople });
+
+    // Enrich each pending-interest row with the candidate's committee role so the
+    // table row border can be coloured by role (master_admin=red, admin=green, member=blue).
+    this.enrichInterestRoles();
+  }
+
+  private enrichInterestRoles(): void {
+    const data = this.stateService.eventData();
+    const approvedRoleMap = new Map<number, Map<number, string>>();
+    for (const info of data?.interestApprovedPeople || []) {
+      const roleId = Number(info.roleId);
+      const userMap = new Map<number, string>();
+      for (const p of info.approvedPeople) {
+        userMap.set(Number(p.userId), (p as any).committeeRole || '');
+      }
+      approvedRoleMap.set(roleId, userMap);
+    }
+    const committeeRoles = this.committeeMemberRoles();
+    this.interestReviewList.update((list) => list.map((entry) => {
+      const role =
+        committeeRoles.get(Number(entry.userId)) ||
+        approvedRoleMap.get(Number(entry.roleId))?.get(Number(entry.userId)) ||
+        'COMMITTEE_MEMBER';
+      return { ...entry, committeeRole: role };
+    }));
   }
 
   public onReviewInterest(item: { eventId: number; roleId: number; userId: number; userName?: string }, status: 'APPROVED' | 'REJECTED'): void {
@@ -699,7 +740,7 @@ export class EventVotingComponent implements OnInit, AfterViewInit, OnDestroy {
     return 'pending-row-pending';
   }
 
-  public getPendingInterestsGroupedForRole(roleId: number): Array<{ status: string; items: Array<{ id: number; eventId: number; roleId: number; userId: number; userName: string; userEmail: string; userPhoto?: string | null; status: string }> }> {
+  public getPendingInterestsGroupedForRole(roleId: number): Array<{ status: string; items: Array<{ id: number; eventId: number; roleId: number; userId: number; userName: string; userEmail: string; userPhoto?: string | null; status: string; committeeRole?: string }> }> {
     const list = this.pendingInterestForRole(roleId);
     const groups = new Map<string, Array<any>>();
     const statusOrder = ['APPROVED', 'PENDING', 'REJECTED'];
@@ -711,7 +752,7 @@ export class EventVotingComponent implements OnInit, AfterViewInit, OnDestroy {
     return statusOrder.filter(s => groups.has(s)).map(status => ({ status, items: groups.get(status)! }));
   }
 
-  public getSortedPendingInterestsForRole(roleId: number): Array<{ id: number; eventId: number; roleId: number; userId: number; userName: string; userEmail: string; userPhoto?: string | null; status: string }> {
+  public getSortedPendingInterestsForRole(roleId: number): Array<{ id: number; eventId: number; roleId: number; userId: number; userName: string; userEmail: string; userPhoto?: string | null; status: string; committeeRole?: string }> {
     const list = this.pendingInterestForRole(roleId);
     const statusOrder: Record<string, number> = { 'APPROVED': 0, 'PENDING': 1, 'REJECTED': 2 };
     return [...list].sort((a, b) => {
@@ -721,7 +762,7 @@ export class EventVotingComponent implements OnInit, AfterViewInit, OnDestroy {
     });
   }
 
-  public pendingInterestForRole(roleId: number): Array<{ id: number; eventId: number; roleId: number; userId: number; userName: string; userEmail: string; userPhoto?: string | null; status: string }> {
+  public pendingInterestForRole(roleId: number): Array<{ id: number; eventId: number; roleId: number; userId: number; userName: string; userEmail: string; userPhoto?: string | null; status: string; committeeRole?: string }> {
     const roleIdNum = Number(roleId);
     let allForRole = this.interestReviewList().filter((item) => Number(item.roleId) === roleIdNum);
     if (!this.isMasterAdmin && this.votingPhaseState >= 4) {

@@ -559,19 +559,22 @@
   .pending-col-action { width: 80px; }
   .pending-col-vote { width: 90px; }
 
-  .pending-row-approved td:first-child { border-left: 3px solid #16a34a; }
-  .pending-row-rejected td:first-child { border-left: 3px solid #dc2626; }
-  .pending-row-pending td:first-child { border-left: 3px solid #eab308; }
+  .role-master td:first-child { border-left: 3px solid #ef4444; }
+  .role-admin td:first-child { border-left: 3px solid #22c55e; }
+  .role-member td:first-child { border-left: 3px solid #3b82f6; }
+  .role-default td:first-child { border-left: 3px solid #64748b; }
 }
 
 .voting-card-pending-user { display: flex; align-items: center; gap: 6px; }
 
 .voting-card-pending-avatar {
-  width: 22px;
-  height: 22px;
+  width: 36px;
+  height: 36px;
   border-radius: 50%;
   object-fit: cover;
   flex-shrink: 0;
+  border: 2px solid transparent;
+  box-sizing: border-box;
 }
 
 .voting-card-pending-avatar-fallback {
@@ -580,9 +583,13 @@
   justify-content: center;
   background: #cbd5e1;
   color: #1e293b;
-  font-size: 0.65rem;
+  font-size: 0.8rem;
   font-weight: 700;
 }
+
+.pending-row-approved .voting-card-pending-avatar { border-color: #16a34a; }
+.pending-row-rejected .voting-card-pending-avatar { border-color: #dc2626; }
+.pending-row-pending .voting-card-pending-avatar { border-color: #eab308; }
 
 .voting-card-pending-info { display: flex; flex-direction: column; min-width: 0; }
 .voting-card-pending-name { font-weight: 700; color: #0f172a; font-size: 0.7rem; }
@@ -815,8 +822,12 @@
 
 ::ng-deep .vacate-role-btn {
   width: 100%;
-  height: 26px;
-  font-size: 0.68rem;
+  min-height: 26px;
+  height: auto;
+  line-height: 1.1;
+  white-space: normal;
+  padding: 3px 4px;
+  font-size: 0.62rem;
   font-weight: 700;
   color: #dc2626 !important;
   background: #ffffff !important;
