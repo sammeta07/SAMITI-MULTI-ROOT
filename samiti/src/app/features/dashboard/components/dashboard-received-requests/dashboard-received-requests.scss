@@ -522,23 +522,3 @@
   margin: 0;
   letter-spacing: -0.1px;
 }
-
-@media (max-width: 768px) {
-  .dashboard-requests-wrapper {
-    padding: 8px;
-  }
-
-  .inner-tabs .mat-mdc-tab {
-    padding: 0 8px;
-  }
-
-  .tab-label-text {
-    display: none;
-  }
-
-  .modern-table th,
-  .modern-table td {
-    padding: 8px 10px;
-    font-size: 12px;
-  }
-}

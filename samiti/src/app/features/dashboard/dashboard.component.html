@@ -2,14 +2,12 @@
   <mat-sidenav-container class="workspace-sidenav-container">
     <mat-sidenav #sidenav
                  [class.panel-collapsed]="!isHierarchyMenuOpen()"
-                 [mode]="isSmallScreen() ? 'over' : 'side'"
-                 [opened]="!isSmallScreen() && isHierarchyMenuOpen()"
+                 mode="side"
+                 [opened]="isHierarchyMenuOpen()"
                  [class.sidebar-collapsed]="!isHierarchyMenuOpen()"
                  (closedStart)="closeSideMenu()">
 
-      <!-- Main Sidenav Internal Wrapper -->
       <div class="sidebar-wrapper">
-        <!-- Scrollable Tree Container (SINGLE Scrollbar Location) -->
          <div class="sidebar-tree-wrapper">
           <app-dashboard-hierarchy-tree></app-dashboard-hierarchy-tree>
         </div>

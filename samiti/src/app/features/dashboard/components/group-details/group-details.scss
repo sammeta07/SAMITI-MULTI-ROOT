@@ -1137,12 +1137,12 @@
       flex-shrink: 0;
     }
 
-  .roles-option-label {
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
+    .roles-option-label {
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
   }
-}
 
 /* Roles select — below the toggle button, compact */
 .roles-select {
@@ -1298,17 +1298,9 @@
 /* ================== 🚀 RECONFIGURED: TRIPLE GRID SYSTEM PANEL ================== */
 .dashboard-triple-grid {
   display: grid;
-  grid-template-columns: repeat(3, 1fr); // 🚀 Pure 3 Column split alignment for Desktop
+  grid-template-columns: repeat(3, 1fr);
   gap: 8px;
   width: 100%;
-
-  @media (max-width: 1200px) {
-    grid-template-columns: repeat(2, 1fr); // Mid viewports shift to 2 columns container
-  }
-
-  @media (max-width: 768px) {
-    grid-template-columns: 1fr; // Mobile view stack layout collapse
-  }
 }
 
 .section-search-pill {
@@ -1623,19 +1615,3 @@
     min-height: 0;
   }
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-

@@ -21,7 +21,6 @@
   width: 100%;
   height: 100%;
   background: transparent;
-
   ::ng-deep {
     .mat-drawer-container,
     .mat-sidenav-container {
@@ -139,7 +138,6 @@
   overflow-y: auto;
   overflow-x: hidden;
   box-sizing: border-box;
-  padding: 20px;
 
   &::-webkit-scrollbar {
     width: 6px;
@@ -153,15 +151,4 @@
   }
 }
 
-/* 📱 MOBILE RESPONSIVE ADAPTATION */
-@media (max-width: 768px) {
-  .mat-sidenav {
-    height: calc(100vh - 60px) !important;
-    max-width: 280px !important;
-    width: 280px !important;
-
-    &.sidebar-collapsed {
-      width: 0 !important;
-    }
-  }
-}
+/* User identity rows custom styling tags borders mapping */

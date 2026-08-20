@@ -627,26 +627,6 @@
   letter-spacing: -0.1px;
 }
 
-@media (max-width: 768px) {
-  .dashboard-requests-wrapper {
-    padding: 8px;
-  }
-
-  .inner-tabs .mat-mdc-tab {
-    padding: 0 8px;
-  }
-
-  .tab-label-text {
-    display: none;
-  }
-
-  .modern-table th,
-  .modern-table td {
-    padding: 8px 10px;
-    font-size: 12px;
-  }
-}
-
 .col-expand {
   width: 40px;
   min-width: 40px;
@@ -731,17 +711,6 @@
   font-size: 13px;
   font-weight: 700;
   text-align: center;
-}
-
-@media (max-width: 768px) {
-  .col-expand {
-    width: 36px;
-    min-width: 36px;
-  }
-
-  .history-detail-container {
-    padding: 10px 12px;
-  }
 }
 
 .cards-container {
@@ -861,14 +830,4 @@
   justify-content: flex-end;
   padding-top: 4px;
   border-top: 1px solid #f1f5f9;
-}
-
-@media (max-width: 768px) {
-  .request-card {
-    padding: 12px;
-  }
-
-  .request-card-meta {
-    grid-template-columns: 1fr;
-  }
 }

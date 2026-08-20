@@ -2,6 +2,7 @@
   <div class="home-body">
 
     <section class="committees-col" 
+             [style.flex]="'0 0 ' + committeesWidth() + '%'"
              [class.panel-collapsed]="!(uiService.isCommitteesSectionVisible$ | async)" 
              aria-label="Committees Management Panel">
       <div class="col-search-bar">
@@ -441,6 +442,14 @@
         }
       </div>
     </section>
+
+    <div class="col-resizer"
+         (mousedown)="onResizeStart($event)"
+         [class.hidden]="!(uiService.isCommitteesSectionVisible$ | async)"
+         role="separator"
+         aria-orientation="vertical"
+         matTooltip="Drag to resize"
+         matTooltipPosition="above"></div>
 
     <aside class="sidebar-col" 
            [class.panel-expanded-full]="!(uiService.isCommitteesSectionVisible$ | async)" 

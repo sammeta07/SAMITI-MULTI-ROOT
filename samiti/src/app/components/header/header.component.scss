@@ -67,11 +67,7 @@
   font-weight: 400;
   color: var(--clr-text-light);
   letter-spacing: 0.02em;
-  display: none;
-
-  @media (min-width: 600px) {
-    display: inline;
-  }
+  display: inline;
 }
 
 /* ── Spacer ── */
@@ -162,7 +158,7 @@
 }
 
 /* ==========================================================================
-   📍 LOCATION BUTTON STYLES (Default / Big Screen)
+   📍 LOCATION BUTTON STYLES
    ========================================================================== */
 .location-btn {
   display: inline-flex;
@@ -218,7 +214,7 @@
 }
 
 /* ==========================================================================
-   🔐 NAV ACTIONS STYLES (Default / Big Screen)
+   🔐 NAV ACTIONS STYLES
    ========================================================================== */
 .actions {
   display: flex;
@@ -302,74 +298,4 @@
   &:hover { border-color: var(--clr-accent); background: rgba(249, 115, 22, 0.12); }
   .avatar-img { width: 100%; height: 100%; object-fit: cover; border-radius: 50%; }
   .avatar-initials { font-size: 0.75rem; font-weight: 600; text-transform: uppercase; color: var(--clr-accent); }
-}
-
-/* ==========================================================================
-   📱 RESPONSIVE MEDIA QUERIES (Dense Single Line Engine)
-   ========================================================================== */
-@media (max-width: 1024px) {
-  .samiti-header { padding: 0 0.85rem; }
-  .search-pill { display: none; }
-  .location-btn { margin-right: 0.6rem; padding: 0 0.85rem; max-width: 180px; }
-  .actions { gap: 0.4rem; }
-  .auth-action-btn { padding: 0 0.9rem !important; font-size: 0.76rem !important; }
-}
-
-@media (max-width: 760px) {
-  .samiti-header {
-    padding: 0 0.5rem;
-    gap: 6px;
-  }
-
-  .spacer { display: none; }
-  .brand { flex-shrink: 0; }
-
-  /* 📍 LOCATION DYNAMICS: Hide icon, ONLY display text string clearly */
-  .location-btn {
-    margin-left: auto;
-    margin-right: 2px;
-    padding: 0 6px;
-    background: transparent;
-    border-color: transparent;
-    max-width: 110px; /* Safe bounds allocation */
-    height: 34px;
-    
-    mat-icon { 
-      display: none !important; /* Hide icon completely on small screen */
-    }
-  }
-
-  .location-text {
-    display: inline-block !important; /* Forces location text to remain hamesha visible */
-    font-size: 0.75rem;
-    max-width: 95px;
-    color: rgba(255, 255, 255, 0.9);
-  }
-
-  /* 🔐 COMPACT ROW CONTROLS: Strict inline iconic viewports */
-  .actions {
-    gap: 4px;
-    flex-shrink: 0;
-  }
-  .auth-action-btn {
-    min-width: 34px !important;
-    width: 34px !important;
-    height: 34px !important;
-    padding: 0 !important; /* Converts tabs button structural boundaries into a tight square format */
-    border-radius: 6px !important;
-    
-    mat-icon {
-      margin: 0 !important;
-      font-size: 1.1rem !important;
-      width: 1.1rem !important;
-      height: 1.1rem !important;
-    }
-  }
-
-  /* 🚫 Strips explicit names entirely to alignment rows alignment safely */
-  .auth-btn-text {
-    display: none !important;
-  }
-
-  .user-avatar-btn { width: 34px; height: 34px; }
 }

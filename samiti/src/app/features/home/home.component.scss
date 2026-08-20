@@ -1,6 +1,12 @@
 /* ==========================================================================
    🧱 BASE LAYOUT CONFIGURATIONS & CONTAINERS FRAMEWORK
    ========================================================================== */
+:host {
+  display: block;
+  height: 100%;
+  min-height: 0;
+}
+
 .home-page {
   display: flex;
   flex-direction: column;
@@ -23,12 +29,10 @@
 
 /* 🏛️ GROUPS PANEL BASE */
 .committees-col {
-  flex: 7;
-  overflow: hidden;
+  flex: 0 0 70%;
   display: flex;
   flex-direction: column;
   background: #f8fafc;
-  border-right: 1px solid #e2e8f0;
   transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
   opacity: 1;
   visibility: visible;
@@ -46,12 +50,56 @@
 
 /* 📋 PROGRAMS PANEL BASE */
 .sidebar-col {
-  flex: 3;
+  flex: 1 1 0%;
   overflow: hidden;
   display: flex;
   flex-direction: column;
   background: #ffffff;
   transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* 🟰 VERTICAL RESIZE HANDLE BETWEEN GROUPS & PROGRAMS */
+.col-resizer {
+  flex: 0 0 6px;
+  align-self: stretch;
+  cursor: col-resize;
+  background: transparent;
+  position: relative;
+  z-index: 5;
+  transition: background 0.15s ease;
+
+  &::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 4px;
+    background: #e2e8f0;
+    transition: background 0.15s ease;
+  }
+
+  &:hover::before,
+  &:active::before {
+    background: #f97316;
+  }
+
+  &.hidden {
+    display: none;
+  }
+}
+
+/* Disable layout transitions while user is dragging the handle */
+body.resizing-col {
+  cursor: col-resize;
+  user-select: none;
+
+  .committees-col,
+  .sidebar-col,
+  .col-resizer {
+    transition: none !important;
+  }
 }
 
 /* When groups panel is hidden, programs takes total available screen width fluidly */
@@ -205,6 +253,8 @@
 .sidebar-scroll {
   height: 100%;
   overflow-y: auto;
+  scroll-behavior: smooth;
+  -webkit-overflow-scrolling: touch;
   padding: 0.75rem;
   display: flex;
   flex-direction: column;
@@ -236,6 +286,7 @@
   flex-direction: column;
   flex: 1;
   overflow: hidden;
+  padding: 10px;
 
   ::ng-deep .mat-mdc-tab-header {
     border-bottom: none !important;
@@ -321,7 +372,7 @@
     border-top: none !important;
     border-radius: 0 0 8px 8px;
     background: #f8fafc;
-    border: 1px solid #c2c6c7;
+    border: 1px solid #767e80;
   }
 
   ::ng-deep .mat-mdc-tab-body-content {
@@ -332,7 +383,7 @@
 
 .committees-tabs-header-actions {
   position: absolute;
-  top: 0.22rem;
+  top: 0.8rem;
   right: 12px;
   z-index: 3;
   display: inline-flex;
@@ -872,62 +923,18 @@
 @keyframes hsk-shimmer { 100% { transform: translateX(100%); } }
 
 /* ==========================================================================
-   📱 ADAPTIVE MOBILE BREAKPOINTS & EXCLUSIVE COLUMN MUTATION
+   📐 DESKTOP LAYOUT ADJUSTMENTS
    ========================================================================== */
-@media (max-width: 1200px) {
-  .event-card { flex: 0 0 calc((100% - 10px) / 2); }
+.event-card { flex: 0 0 calc((100% - 10px) / 2); }
+
+.home-page {
+  flex-direction: row;
 }
 
-@media (max-width: 992px) {
-  .home-page {
-    flex-direction: column !important;
-  }
-
-  .home-body {
-    flex-direction: column !important;
-    overflow: hidden !important;
-    position: relative;
-    width: 100%;
-    height: 100%;
-  }
-
-  /* ⚡ SCREEN SWITCH ENGINE: Mono-panel dynamic viewing constraint */
-  .committees-col {
-    flex: 1 1 100% !important;
-    width: 100% !important;
-    height: 100% !important;
-    border-right: none !important;
-    
-    /* Small screen par collapsed class active hone par component layout se total detach ho jayega */
-    &.panel-collapsed {
-      display: none !important;
-      flex: none !important;
-      width: 0 !important;
-      height: 0 !important;
-    }
-  }
-
-  .sidebar-col {
-    flex: 1 1 100% !important;
-    width: 100% !important;
-    height: 100% !important;
-    display: block;
-
-    /* Jab dynamic visibility variables se groups active hoga tab program pane automatically shut down hoga */
-    &:not(.panel-expanded-full) {
-      display: none !important;
-    }
-  }
-}
-
-@media (max-width: 760px) {
-  .committee-card-grid { grid-template-columns: 54px 1fr; grid-template-rows: auto auto auto; }
-  .card-actions-identity-area { grid-column: 1 / 3; grid-row: 2 / 3; align-items: flex-start; padding-left: 0; margin-top: 4px; }
-  .event-card { flex: 0 0 100%; }
-  .event-card-banner { aspect-ratio: 4 / 3; min-height: 160px; }
-}
-
-@media (max-width: 480px) {
-  .event-card-banner { aspect-ratio: 3 / 2; min-height: 150px; }
+.home-body {
+  flex-direction: row;
+  overflow: hidden;
+  position: relative;
+  width: 100%;
 }
 

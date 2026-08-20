@@ -35,9 +35,11 @@
               [class.role-picker-card-selected]="isRoleMapped(role.roleId)"
               [class.role-picker-card-locked]="isVotingRolesLocked"
             >
-              <span class="role-selected-badge" aria-hidden="true">
-                <mat-icon>check_circle</mat-icon>
-              </span>
+              @if (isRoleMapped(role.roleId)) {
+                <span class="role-selected-badge" aria-hidden="true">
+                  <mat-icon>check_circle</mat-icon>
+                </span>
+              }
               <div class="role-picker-text">
                 <div class="role-name-primary">
                   {{ role.hindiName || role.roleName | uppercase }}
@@ -78,18 +80,6 @@
         <div class="header-actions-right">
           @if (isMasterAdmin) {
             <div class="voting-controls-actions-row voting-controls-header-actions">
-              <!-- Condition 1: Phase 0 (Draft) -->
-              @if (votingPhaseState === 0 && isLockControlEnabled) {
-                <button
-                  mat-stroked-button
-                  class="action-btn role-lock-btn voting-phase-btn"
-                  (click)="onLockVotingRoles()"
-                >
-                  <mat-icon>lock</mat-icon>
-                  <span>Lock Roles</span>
-                </button>
-              }
-
               <!-- Condition 2: Phase 1 (Roles Locked -> Start Nominations) -->
               @if (isStartNominationsEnabled) {
                 <button
@@ -173,7 +163,7 @@
 
       <!-- Nomination Cards Shell -->
       <section class="voting-nomination-shell">
-        <div class="voting-nomination-grid" [class]="votingGridLayoutClass">
+        <div class="voting-nomination-grid" [ngClass]="votingGridLayoutClass">
           @for (card of votingDisplayCards; track card.slot) {
             <mat-card class="voting-nomination-card" #votingCard>
               <mat-card-content>
@@ -639,7 +629,7 @@
         </div>
       </section>
     </section>
-  }
+  }<!--  -->
 
   <!-- ========================================================================= -->
   <!-- MODE 2: DIRECT ASSIGNMENT MODE                                            -->
@@ -675,7 +665,7 @@
 
       <!-- Direct Assignment Cards Grid -->
       <section class="voting-nomination-shell">
-        <div class="voting-nomination-grid" [class]="votingGridLayoutClass">
+        <div class="voting-nomination-grid" [ngClass]="votingGridLayoutClass">
           @for (card of votingDisplayCards; track card.slot) {
             <mat-card class="voting-nomination-card" #votingCard>
               <mat-card-content>

@@ -18,8 +18,7 @@ export class UiToggleService {
       this.groupsPanelVisible.next(!this.groupsPanelVisible.value);
     }
   // =====================Sidemenu=================
-    private readonly smallScreenQuery = '(max-width: 768px)';
-    private isHeirarchyMenuSubject = new BehaviorSubject<boolean>(!this.isSmallScreen());
+    private isHeirarchyMenuSubject = new BehaviorSubject<boolean>(true);
     isHeirarchyMenu$ = this.isHeirarchyMenuSubject.asObservable();
     toggleHierarchyMenu(): void {
       this.isHeirarchyMenuSubject.next(!this.isHeirarchyMenuSubject.value);
@@ -29,8 +28,5 @@ export class UiToggleService {
     }
     get currentHierarchyMenuState(): boolean {
       return this.isHeirarchyMenuSubject.value;
-    }
-    isSmallScreen(): boolean {
-      return typeof window !== 'undefined' && window.matchMedia(this.smallScreenQuery).matches;
     }
   }

@@ -31,21 +31,14 @@ import { UiToggleService } from '../../shared/services/ui-toggle.service';
 export class DashboardComponent implements OnInit, AfterViewInit, OnDestroy {
   @ViewChild('sidenav') sidenav!: MatSidenav;
 
-  readonly isSmallScreen = signal<boolean>(false);
   readonly isHierarchyMenuOpen = signal<boolean>(false);
 
-  private readonly mediaQuery = typeof window !== 'undefined'
-    ? window.matchMedia('(max-width: 768px)')
-    : null;
   private menuSubscription?: Subscription;
 
   private readonly uiService = inject(UiToggleService);
 
   ngOnInit(): void {
-    this.isSmallScreen.set(this.mediaQuery?.matches ?? false);
     this.isHierarchyMenuOpen.set(this.uiService.currentHierarchyMenuState);
-
-    this.mediaQuery?.addEventListener('change', this.onScreenSizeChange);
 
     this.menuSubscription = this.uiService.isHeirarchyMenu$.subscribe((isOpen) => {
       this.isHierarchyMenuOpen.set(isOpen);
@@ -58,21 +51,14 @@ export class DashboardComponent implements OnInit, AfterViewInit, OnDestroy {
   }
 
   ngOnDestroy(): void {
-    this.mediaQuery?.removeEventListener('change', this.onScreenSizeChange);
     this.menuSubscription?.unsubscribe();
   }
 
-  private readonly onScreenSizeChange = (event: MediaQueryListEvent): void => {
-    this.isSmallScreen.set(event.matches);
-    this.updateSidenavMode();
-  };
-
   private updateSidenavMode(): void {
     const isOpen = this.isHierarchyMenuOpen();
-    const isMobile = this.isSmallScreen();
 
     if (this.sidenav) {
-      this.sidenav.mode = isMobile ? 'over' : 'side';
+      this.sidenav.mode = 'side';
       this.sidenav.opened = isOpen;
     }
   }

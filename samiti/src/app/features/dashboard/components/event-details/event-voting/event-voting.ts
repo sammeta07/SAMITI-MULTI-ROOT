@@ -12,7 +12,6 @@ import { MatInputModule } from '@angular/material/input';
 import { MatAutocompleteModule } from '@angular/material/autocomplete';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { FormsModule } from '@angular/forms';
-import { BreakpointObserver } from '@angular/cdk/layout';
 import { HttpErrorResponse } from '@angular/common/http';
 import { EventVotingService } from './event-voting.service';
 import { EventVotingPayload, EventMappedVotingRole, EventVoteHistory, EventResultsPayload, EventResultCandidate, VacateVotingRolePayload, EventDirectAssignMember } from './event-voting.models';
@@ -52,7 +51,6 @@ export class EventVotingComponent implements OnInit, AfterViewInit, OnDestroy {
   private readonly authService = inject(AuthService);
   private readonly confirmDialog = inject(ConfirmDialogService);
   private readonly stateService = inject(EventDetailsStateService);
-  private readonly breakpointObserver = inject(BreakpointObserver);
   private readonly renderer = inject(Renderer2);
 
   @ViewChildren('votingCard') votingCards!: QueryList<ElementRef<HTMLElement>>;
@@ -329,15 +327,6 @@ export class EventVotingComponent implements OnInit, AfterViewInit, OnDestroy {
     if (!parentParams$) return;
 
     this.updateVotingCardHeight();
-
-    this.resizeSub.add(
-      this.breakpointObserver.observe([
-        '(max-width: 599px)',
-        '(min-width: 600px) and (max-width: 959px)',
-        '(min-width: 960px) and (max-width: 1199px)',
-        '(min-width: 1200px)'
-      ]).subscribe(() => this.updateVotingCardHeight())
-    );
 
     this.resizeSub.add(
       window.addEventListener('resize', () => this.updateVotingCardHeight())

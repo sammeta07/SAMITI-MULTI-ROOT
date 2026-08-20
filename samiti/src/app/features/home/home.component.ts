@@ -82,6 +82,32 @@ export class HomeComponent implements OnDestroy {
   public clearSearch(): void { this.committeeSearchQuery.set(''); }
   public clearProgramSearch(): void { this.programSearchQuery.set(''); }
 
+  public readonly committeesWidth = signal<number>(70);
+
+  public onResizeStart(event: MouseEvent): void {
+    event.preventDefault();
+    const homeBody = (event.currentTarget as HTMLElement).parentElement;
+    if (!homeBody) return;
+
+    const rect = homeBody.getBoundingClientRect();
+    document.body.classList.add('resizing-col');
+
+    const onMove = (e: MouseEvent) => {
+      let pct = ((e.clientX - rect.left) / rect.width) * 100;
+      pct = Math.min(Math.max(pct, 28), 82);
+      this.committeesWidth.set(pct);
+    };
+
+    const onUp = () => {
+      document.body.classList.remove('resizing-col');
+      window.removeEventListener('mousemove', onMove);
+      window.removeEventListener('mouseup', onUp);
+    };
+
+    window.addEventListener('mousemove', onMove);
+    window.addEventListener('mouseup', onUp);
+  }
+
   public readonly filteredNearbyGroups = computed(() => {
     const query = this.committeeSearchQuery().toLowerCase().trim();
     const source = this.nearbyGroups;

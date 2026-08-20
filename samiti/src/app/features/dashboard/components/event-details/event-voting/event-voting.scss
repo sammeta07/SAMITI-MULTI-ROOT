@@ -79,6 +79,13 @@
     border-radius: 12px;
   }
 
+  .title-text {
+    font-size: 0.82rem;
+    font-weight: 700;
+    color: #0f172a;
+    white-space: nowrap;
+  }
+
   .header-actions-right {
     display: inline-flex;
     align-items: center;
@@ -97,6 +104,12 @@
 
 .voting-available-roles-header {
   border-bottom: 1px solid #f1f5f9;
+  min-height: 46px;
+}
+
+.designations-header-bg {
+  border-bottom: 1px solid #f1f5f9;
+  min-height: 46px;
 }
 
 .role-picker-grid {
@@ -209,26 +222,12 @@
 
 .voting-nomination-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(290px, 1fr));
+  align-items: start;
+  align-content: start;
   gap: 12px;
   flex: 1;
   overflow-y: auto;
   padding-right: 4px;
-
-  @media (max-width: 599px) {
-    grid-template-columns: 1fr;
-    gap: 8px;
-  }
-
-  @media (min-width: 600px) and (max-width: 1023px) {
-    grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
-    gap: 10px;
-  }
-
-  @media (min-width: 1200px) {
-    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
-    gap: 14px;
-  }
 }
 
 .voting-nomination-card {
@@ -249,17 +248,9 @@
     padding: 12px;
     display: flex;
     flex-direction: column;
-    min-height: 480px;
+    flex: 1;
+    min-height: 0;
     box-sizing: border-box;
-
-    @media (max-width: 599px) {
-      min-height: 420px;
-      padding: 10px;
-    }
-
-    @media (min-width: 600px) and (max-width: 1023px) {
-      min-height: 450px;
-    }
   }
 }
 
@@ -278,13 +269,6 @@
   background: #f8fafc;
 
   mat-icon { font-size: 2.8rem; width: 2.8rem; height: 2.8rem; color: #64748b; }
-
-  @media (max-width: 599px) {
-    width: 70px;
-    height: 70px;
-
-    mat-icon { font-size: 2.2rem; width: 2.2rem; height: 2.2rem; }
-  }
 }
 
 .voting-card-icon-wrap-winner {
@@ -520,22 +504,12 @@
   font-size: 0.7rem;
   box-sizing: border-box;
 
-  @media (max-width: 599px) {
-    font-size: 0.65rem;
-  }
-
   th, td {
     padding: 4px 6px;
     text-align: left;
     border-bottom: 1px solid #f1f5f9;
     vertical-align: middle;
     box-sizing: border-box;
-  }
-
-  @media (max-width: 599px) {
-    th, td {
-      padding: 3px 4px;
-    }
   }
 
   th {
@@ -552,12 +526,6 @@
   .pending-col-user { width: auto; }
   .pending-col-action { width: 80px; }
   .pending-col-vote { width: 90px; }
-
-  @media (max-width: 599px) {
-    .pending-col-index { display: none; }
-    .pending-col-action { width: 70px; }
-    .pending-col-vote { width: 65px; }
-  }
 
   .pending-row-approved td:first-child { border-left: 3px solid #16a34a; }
   .pending-row-rejected td:first-child { border-left: 3px solid #dc2626; }
@@ -683,18 +651,6 @@
   .interest-btn-withdraw {
     width: 100%;
     justify-content: center;
-  }
-
-  @media (max-width: 599px) {
-    padding-top: 6px;
-
-    .interest-btn,
-    .interest-btn-withdraw {
-      height: 28px;
-      font-size: 0.65rem;
-      padding: 0 8px;
-      gap: 2px;
-    }
   }
 }
 
