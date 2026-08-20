@@ -167,8 +167,11 @@
           @for (card of votingDisplayCards; track card.slot) {
             <mat-card class="voting-nomination-card" #votingCard>
               <mat-card-content>
-                <!-- Card Top Header (Winner Photo vs Role Icon) -->
-                <div class="voting-card-header">
+                <div class="voting-card-split">
+                  <!-- LEFT: Photo, Role Name, Vacate -->
+                  <div class="voting-card-left">
+                    <!-- Card Top Header (Winner Photo vs Role Icon) -->
+                    <div class="voting-card-header">
                   <div
                     class="voting-card-head"
                     [class.voting-card-head-split]="isCompactVotingCard"
@@ -221,6 +224,25 @@
                     </div>
                   </div>
                 </div>
+
+                <!-- Vacate Role Button (Master Admin, Active Phases) -->
+                @if (isMasterAdmin && canVacateRole) {
+                  <div class="voting-card-vacate-action">
+                    <button
+                      mat-stroked-button
+                      class="vacate-role-btn"
+                      [disabled]="isVacatingVotingRole()"
+                      (click)="onVacateRole(card.role.roleId)"
+                    >
+                      <mat-icon>delete_outline</mat-icon>
+                      <span>Vacate Role</span>
+                    </button>
+                  </div>
+                }
+                  </div><!-- /voting-card-left -->
+
+                  <!-- RIGHT: Interest / Table / Tie-Breaker / Results / Reassign -->
+                  <div class="voting-card-right">
 
                 <!-- CONDITION 3: Phase 2 Member Interest Toggle -->
                 @if (!isMasterAdmin && votingPhaseState === 2) {
@@ -604,20 +626,8 @@
                   </div>
                 }
 
-                <!-- Vacate Role Button (Draft / Active Phases) -->
-                @if (isMasterAdmin && canVacateRole) {
-                  <div class="voting-card-vacate-action">
-                    <button
-                      mat-stroked-button
-                      class="vacate-role-btn"
-                      [disabled]="isVacatingVotingRole()"
-                      (click)="onVacateRole(card.role.roleId)"
-                    >
-                      <mat-icon>delete_outline</mat-icon>
-                      <span>Vacate Role</span>
-                    </button>
-                  </div>
-                }
+                  </div><!-- /voting-card-right -->
+                </div><!-- /voting-card-split -->
               </mat-card-content>
             </mat-card>
           } @empty {
