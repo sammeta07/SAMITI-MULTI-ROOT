@@ -244,6 +244,18 @@
                   <!-- RIGHT: Interest / Table / Tie-Breaker / Results / Reassign -->
                   <div class="voting-card-right">
 
+                <!-- Phase 0 Placeholder (no nominations/voting data yet) -->
+                @if (votingPhaseState === 0) {
+                  <div class="voting-interest-empty-state">
+                    <span class="empty-state-icon"><mat-icon>fact_check</mat-icon></span>
+                    <span class="empty-state-title">Roles mapped</span>
+                    <span class="empty-state-sub"
+                      >Nominations and voting activity will appear here once roles are locked and
+                      nominations open.</span
+                    >
+                  </div>
+                }
+
                 <!-- CONDITION 3: Phase 2 Member Interest Toggle -->
                 @if (!isMasterAdmin && votingPhaseState === 2) {
                   <div class="voting-card-interest-row">
@@ -424,11 +436,19 @@
                     </div>
                   } @else {
                     <div class="voting-interest-empty-state">
-                      <span class="empty-state-icon"><mat-icon>how_to_reg</mat-icon></span>
-                      <span class="empty-state-title">No nominations yet</span>
-                      <span class="empty-state-sub"
-                        >Members can express interest once nominations open.</span
-                      >
+                      @if (votingPhaseState === 1) {
+                        <span class="empty-state-icon"><mat-icon>playlist_add_check</mat-icon></span>
+                        <span class="empty-state-title">Nominations not started</span>
+                        <span class="empty-state-sub"
+                          >Members will be able to express interest once nominations open.</span
+                        >
+                      } @else {
+                        <span class="empty-state-icon"><mat-icon>how_to_reg</mat-icon></span>
+                        <span class="empty-state-title">No nominations yet</span>
+                        <span class="empty-state-sub"
+                          >Members can express interest once nominations open.</span
+                        >
+                      }
                     </div>
                   }
                 }
