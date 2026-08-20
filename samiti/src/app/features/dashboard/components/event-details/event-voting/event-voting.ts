@@ -69,6 +69,7 @@ export class EventVotingComponent implements OnInit, AfterViewInit, OnDestroy {
   public readonly myInterestRoleIds = signal<number[]>([]);
   public readonly myInterestStatuses = signal<Array<{ roleId: number; status: string }>>([]);
   public readonly isExpressingInterest = signal<boolean>(false);
+  public readonly isLoading = signal<boolean>(false);
   public readonly interestReviewList = signal<Array<{
     id: number;
     eventId: number;
@@ -372,6 +373,7 @@ export class EventVotingComponent implements OnInit, AfterViewInit, OnDestroy {
   }
 
   private loadEventVotingDetails(id: string): void {
+    this.isLoading.set(true);
     this.votingService.getEventVotingDetails(id).subscribe({
       next: (data) => {
         this.stateService.eventData.set(data ?? null);
@@ -394,10 +396,12 @@ export class EventVotingComponent implements OnInit, AfterViewInit, OnDestroy {
           (data.myVotes || []).forEach((vote) => { myVotes[Number(vote.roleId)] = Number(vote.candidateId); });
           this.myVotes.set(myVotes);
         }
+        this.isLoading.set(false);
       },
       error: (err: HttpErrorResponse) => {
         this.notifier.error(err?.error?.message || 'Failed to load event details.');
         this.stateService.eventData.set(null);
+        this.isLoading.set(false);
       }
     });
   }
@@ -1327,6 +1331,7 @@ export class EventVotingComponent implements OnInit, AfterViewInit, OnDestroy {
   private refreshVoting(): void {
     const currentEvent = this.stateService.eventData();
     if (currentEvent?.eventId) {
+      this.isLoading.set(true);
       this.votingService.getEventVotingDetails(String(currentEvent.eventId)).subscribe({
         next: (data) => {
           this.stateService.eventData.set(data ?? null);
@@ -1348,7 +1353,9 @@ export class EventVotingComponent implements OnInit, AfterViewInit, OnDestroy {
           const myVotes: Record<number, number> = {};
           (data.myVotes || []).forEach((vote) => { myVotes[Number(vote.roleId)] = Number(vote.candidateId); });
           this.myVotes.set(myVotes);
-        }
+          this.isLoading.set(false);
+        },
+        error: () => { this.isLoading.set(false); }
       });
     }
   }

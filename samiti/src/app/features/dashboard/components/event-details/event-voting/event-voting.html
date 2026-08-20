@@ -1,4 +1,20 @@
 <div class="voting-tab-content">
+  @if (isLoading()) {
+    <!-- Skeleton Loader -->
+    <div class="voting-skeleton">
+      <div class="voting-skeleton-grid">
+        @for (i of [1, 2, 3, 4]; track i) {
+          <div class="voting-skeleton-card">
+            <div class="voting-skeleton-avatar skeleton-box circle"></div>
+            <div class="voting-skeleton-lines">
+              <div class="skeleton-box voting-skeleton-line lg"></div>
+              <div class="skeleton-box voting-skeleton-line"></div>
+            </div>
+          </div>
+        }
+      </div>
+    </div>
+  } @else {
   <!-- ========================================================================= -->
   <!-- MODE 1: VOTING MODE                                                       -->
   <!-- ========================================================================= -->
@@ -106,7 +122,7 @@
 
               <!-- Condition 4: Phase 3 (Reviewing -> Start Voting) -->
               @if (votingPhaseState === 3) {
-                <span class="tooltip-wrapper" [matTooltip]="startVotingDisabledReason">
+                <span class="tooltip-wrapper" [class.disabled-wrap]="!isStartVotingEnabled">
                   <button
                     mat-stroked-button
                     class="action-btn voting-started-btn voting-phase-btn"
@@ -928,5 +944,6 @@
         </div>
       </section>
     </section>
+  }
   }
 </div>

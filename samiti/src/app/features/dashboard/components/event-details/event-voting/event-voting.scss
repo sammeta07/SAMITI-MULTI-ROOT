@@ -182,6 +182,10 @@
   mat-icon { font-size: 0.9rem; width: 0.9rem; height: 0.9rem; }
 }
 
+/* Blocked cursor when Start Voting is disabled (Phase 3) */
+.tooltip-wrapper.disabled-wrap { cursor: not-allowed; }
+.voting-started-btn:disabled { cursor: not-allowed; }
+
 .voting-controls-actions-row {
   display: flex;
   align-items: center;
@@ -1075,4 +1079,75 @@
     border-left-color: #64748b;
     .da-opt-avatar { border-color: #64748b; background: #e2e8f0; }
   }
+}
+
+/* ─── SKELETON / PLACEHOLDER LOADER ─── */
+.voting-skeleton {
+  height: 100%;
+  box-sizing: border-box;
+  padding: 4px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+}
+
+.voting-skeleton-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(290px, 1fr));
+  gap: 12px;
+}
+
+.voting-skeleton-card {
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  background: #ffffff;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 16px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.02);
+}
+
+.voting-skeleton-avatar {
+  width: 72px;
+  height: 72px;
+  flex-shrink: 0;
+  border-radius: 50%;
+
+  &.circle { border-radius: 50%; }
+}
+
+.voting-skeleton-lines {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  min-width: 0;
+}
+
+.voting-skeleton-line {
+  height: 14px;
+  border-radius: 6px;
+
+  &.lg { height: 20px; width: 60%; }
+}
+
+.skeleton-box {
+  position: relative;
+  overflow: hidden;
+  background: #eef2f6;
+  border-radius: 6px;
+
+  &::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    transform: translateX(-100%);
+    background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.65), transparent);
+    animation: voting-skeleton-shimmer 1.3s infinite;
+  }
+}
+
+@keyframes voting-skeleton-shimmer {
+  100% { transform: translateX(100%); }
 }
