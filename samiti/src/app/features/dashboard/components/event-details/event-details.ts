@@ -100,6 +100,10 @@ export class EventDetailsComponent {
     return this.votingPhaseState >= 6;
   }
 
+  public get tabsEnabled(): boolean {
+    return this.isResultsDeclared;
+  }
+
   public get votingPhaseLabel(): string {
     switch (this.votingPhaseState) {
       case 6: return 'Results Declared';

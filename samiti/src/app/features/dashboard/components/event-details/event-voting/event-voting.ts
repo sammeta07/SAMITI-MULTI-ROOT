@@ -13,6 +13,7 @@ import { MatAutocompleteModule } from '@angular/material/autocomplete';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { FormsModule } from '@angular/forms';
 import { HttpErrorResponse } from '@angular/common/http';
+import { finalize } from 'rxjs';
 import { EventVotingService } from './event-voting.service';
 import { EventVotingPayload, EventMappedVotingRole, EventVoteHistory, EventResultsPayload, EventResultCandidate, VacateVotingRolePayload, EventDirectAssignMember } from './event-voting.models';
 import { NotifierService } from '../../../../../shared/notifier/notifier.service';
@@ -21,6 +22,7 @@ import { ConfirmDialogData } from '../../../../../components/dialog/confirm/conf
 import { AuthService } from '../../../../../core/services/auth.service';
 import { VoteHistoryDialogComponent } from '../../../../../components/dialog/vote-history/vote-history.component';
 import { EventDetailsStateService } from '../event-details-state.service';
+import { LoadingStateService } from '../../../../../shared/services/loading-state.service';
 import { Subscription } from 'rxjs';
 
 @Component({
@@ -51,6 +53,7 @@ export class EventVotingComponent implements OnInit, AfterViewInit, OnDestroy {
   private readonly authService = inject(AuthService);
   private readonly confirmDialog = inject(ConfirmDialogService);
   private readonly stateService = inject(EventDetailsStateService);
+  private readonly loadingState = inject(LoadingStateService);
   private readonly renderer = inject(Renderer2);
 
   @ViewChildren('votingCard') votingCards!: QueryList<ElementRef<HTMLElement>>;
@@ -374,7 +377,13 @@ export class EventVotingComponent implements OnInit, AfterViewInit, OnDestroy {
 
   private loadEventVotingDetails(id: string): void {
     this.isLoading.set(true);
-    this.votingService.getEventVotingDetails(id).subscribe({
+    this.loadingState.begin();
+    this.votingService.getEventVotingDetails(id).pipe(
+      finalize(() => {
+        this.isLoading.set(false);
+        this.loadingState.end();
+      })
+    ).subscribe({
       next: (data) => {
         this.stateService.eventData.set(data ?? null);
         if (data?.eventId) {
@@ -396,12 +405,10 @@ export class EventVotingComponent implements OnInit, AfterViewInit, OnDestroy {
           (data.myVotes || []).forEach((vote) => { myVotes[Number(vote.roleId)] = Number(vote.candidateId); });
           this.myVotes.set(myVotes);
         }
-        this.isLoading.set(false);
       },
       error: (err: HttpErrorResponse) => {
         this.notifier.error(err?.error?.message || 'Failed to load event details.');
         this.stateService.eventData.set(null);
-        this.isLoading.set(false);
       }
     });
   }

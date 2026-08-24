@@ -2,22 +2,22 @@
   <div class="workspace-body scrollable-container">
     <!-- Navigation Menu styled like dashboard-sent-requests tabs -->
 <nav class="inner-tabs">
-  <button type="button" class="tab-button" [class.active]="currentTab === 'voting'" (click)="navigateToTab('voting')">
+  <button type="button" class="tab-button" [class.active]="currentTab === 'voting'" [disabled]="!tabsEnabled" (click)="navigateToTab('voting')">
     <mat-icon class="tab-icon">how_to_vote</mat-icon>
     <span class="tab-label-text">Voting</span>
   </button>
 
-  <button type="button" class="tab-button" [class.active]="currentTab === 'overview'" (click)="navigateToTab('overview')">
+  <button type="button" class="tab-button" [class.active]="currentTab === 'overview'" [disabled]="!tabsEnabled" (click)="navigateToTab('overview')">
     <mat-icon class="tab-icon">info</mat-icon>
     <span class="tab-label-text">Overview</span>
   </button>
 
-  <button type="button" class="tab-button" [class.active]="currentTab === 'programs'" (click)="navigateToTab('programs')">
+  <button type="button" class="tab-button" [class.active]="currentTab === 'programs'" [disabled]="!tabsEnabled" (click)="navigateToTab('programs')">
     <mat-icon class="tab-icon">event_note</mat-icon>
     <span class="tab-label-text">Programs</span>
   </button>
 
-  <button type="button" class="tab-button" [class.active]="currentTab === 'people'" (click)="navigateToTab('people')">
+  <button type="button" class="tab-button" [class.active]="currentTab === 'people'" [disabled]="!tabsEnabled" (click)="navigateToTab('people')">
     <mat-icon class="tab-icon">groups</mat-icon>
     <span class="tab-label-text">People</span>
   </button>

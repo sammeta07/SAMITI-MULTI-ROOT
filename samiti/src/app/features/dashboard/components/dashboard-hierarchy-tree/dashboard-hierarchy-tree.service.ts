@@ -35,8 +35,8 @@ export class DashboardHierarchyTreeService {
             logo
             roles
             startDate
-           endDate
-           status
+            endDate
+            status
             children {
               id
               name
@@ -44,8 +44,8 @@ export class DashboardHierarchyTreeService {
               logo
               roles
               startDate
-           endDate
-           status
+              endDate
+              status
               children {
                 id
                 name
@@ -53,8 +53,8 @@ export class DashboardHierarchyTreeService {
                 logo
                 roles
                 startDate
-           endDate
-           status
+                endDate
+                status
                 children {
                   id
                   name
@@ -62,8 +62,8 @@ export class DashboardHierarchyTreeService {
                   logo
                   roles
                   startDate
-           endDate
-           status
+                  endDate
+                  status
                 }
               }
             }

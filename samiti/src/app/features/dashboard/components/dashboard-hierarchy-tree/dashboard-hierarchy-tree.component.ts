@@ -12,6 +12,7 @@ import { HttpErrorResponse } from '@angular/common/http';
 import { filter } from 'rxjs/operators';
 import { DashboardHierarchyTreeService } from './dashboard-hierarchy-tree.service';
 import { NotifierService } from '../../../../shared/notifier/notifier.service';
+import { LoadingStateService } from '../../../../shared/services/loading-state.service';
 import { AdminHierarchyTreeNode, RoleNode, TreeNode } from './dashboard-hierarchy-tree.models';
 import { sanitizeCloudinaryLogoUrl } from '../../../../shared/services/cloudinary-logo.util';
 import { SelectedYearService } from '../../../../shared/services/selected-year.service';
@@ -37,19 +38,44 @@ export class DashboardHierarchyTreeComponent implements OnInit {
   private readonly notifier = inject(NotifierService);
   private readonly router = inject(Router);
   private readonly selectedYearService = inject(SelectedYearService);
+  private readonly loadingState = inject(LoadingStateService);
   private readonly routeRefreshAttempts = new Set<string>();
 
   public readonly isLoading = signal<boolean>(false);
-  public readonly selectedNode = signal<TreeNode | null>(null);
-  public readonly highlightedNodeToken = signal<string>('');
+  public readonly isNavigating = signal<boolean>(false);
+  private awaitingDestinationLoad = false;
+  private destinationLoadBegun = false;
+  private navigateTimeout: ReturnType<typeof setTimeout> | null = null;
+  private static readonly NAVIGATING_GUARD_TIMEOUT_MS = 12000;
+
+  private readonly releaseNavigatingGuard = effect(() => {
+    const loading = this.loadingState.isLoading();
+    if (this.awaitingDestinationLoad) {
+      if (loading) {
+        this.destinationLoadBegun = true;
+        this.isNavigating.set(true);
+      } else if (this.destinationLoadBegun) {
+        this.isNavigating.set(false);
+        this.awaitingDestinationLoad = false;
+        this.destinationLoadBegun = false;
+        if (this.navigateTimeout) {
+          clearTimeout(this.navigateTimeout);
+          this.navigateTimeout = null;
+        }
+      }
+    }
+    return loading;
+  });
+
+  private readonly selectedNode = signal<TreeNode | null>(null);
+  private readonly highlightedNodeToken = signal<string>('');
 
   private readonly currentYear = new Date().getFullYear();
   public readonly availableYears = signal<number[]>(
     Array.from({ length: 10 }, (_, i) => this.currentYear - i)
   );
   public readonly selectedYear = this.selectedYearService.selectedYear;
-  
-  // 🚀 FIXED: Dynamic signal tracking static navigation items from old dashboard
+
   public readonly activeStaticMenu = signal<string | null>('home');
   public readonly isRequestsMenuOpen = signal<boolean>(true);
   public readonly hasCommitteesHierarchy = signal<boolean>(false);
@@ -134,8 +160,8 @@ export class DashboardHierarchyTreeComponent implements OnInit {
           type: 'role',
           roleScope: roleScope ?? undefined,
           children: (role.committees || [])
-          .map((committeeNode) => this.mapAdminNodeToTreeNode(committeeNode, roleScope))
-          .filter((treeNode): treeNode is TreeNode => Boolean(treeNode))
+            .map((committeeNode) => this.mapAdminNodeToTreeNode(committeeNode, roleScope))
+            .filter((treeNode): treeNode is TreeNode => Boolean(treeNode))
         };
       })
       .filter((roleNode) => (roleNode.children?.length || 0) > 0)
@@ -311,7 +337,7 @@ export class DashboardHierarchyTreeComponent implements OnInit {
       const routeSelectionKey = `${typeParam}:${targetId}`;
 
       if (matchedNode) {
-        this.activeStaticMenu.set(null); // Deselect static menus if tree item is matched
+        this.activeStaticMenu.set(null);
         this.selectedNode.set(matchedNode);
         this.triggerNodeHighlight(matchedNode);
         this.expandAncestorsChain(this.dataSource.data, matchedNode);
@@ -328,14 +354,12 @@ export class DashboardHierarchyTreeComponent implements OnInit {
       }
     }
 
-    // Default system landing node behavior definition
     if (this.dataSource.data.length > 0 && !this.selectedNode() && !this.activeStaticMenu()) {
       if (shouldAutoOpenFirstNode && this.tryOpenFirstHierarchyNode()) {
         this.isLoading.set(false);
         return;
       }
 
-      // Only auto-redirect on bare /dashboard route; keep current group/event route untouched.
       if (this.isDashboardRootRoute(urlSegments)) {
         this.onSelectStaticMenu('home');
       }
@@ -451,7 +475,6 @@ export class DashboardHierarchyTreeComponent implements OnInit {
     }
   }
 
-  // 🚀 FIXED: Static Menu selection handling logic to switch route viewports cleanly
   public onSelectStaticMenu(menuType: 'home' | 'requests' | 'requests-sent' | 'requests-received'): void {
     if (menuType === 'requests') return;
 
@@ -462,9 +485,7 @@ export class DashboardHierarchyTreeComponent implements OnInit {
 
     const segments = menuType === 'home' ? ['home'] : ['requests', menuType.replace('requests-', '')];
 
-    this.router.navigate(['/dashboard', ...segments]).then(() => {
-      console.log(`Successfully shifted application context viewport to static hub: [${menuType.replace('requests-', '').toUpperCase()}]`);
-    });
+    this.router.navigate(['/dashboard', ...segments]);
   }
 
   public toggleRequestsMenu(): void {
@@ -485,11 +506,14 @@ export class DashboardHierarchyTreeComponent implements OnInit {
 
   public onNodeClick(node: TreeNode): void {
     if (node.type === 'role') {
-      // this.treeNodeSelected.emit(node);
       return;
     }
 
-    this.activeStaticMenu.set(null); // Clear static highlights when tree node gets selected
+    if (this.isNavigating()) {
+      return;
+    }
+
+    this.activeStaticMenu.set(null);
     this.selectedNode.set(node);
     this.triggerNodeHighlight(node);
 
@@ -500,9 +524,38 @@ export class DashboardHierarchyTreeComponent implements OnInit {
         return;
       }
 
+      this.isNavigating.set(true);
+      this.awaitingDestinationLoad = true;
+      this.destinationLoadBegun = false;
+      if (this.navigateTimeout) {
+        clearTimeout(this.navigateTimeout);
+      }
+      this.navigateTimeout = setTimeout(() => {
+        if (this.isNavigating()) {
+          this.isNavigating.set(false);
+          this.awaitingDestinationLoad = false;
+          this.destinationLoadBegun = false;
+        }
+        this.navigateTimeout = null;
+      }, DashboardHierarchyTreeComponent.NAVIGATING_GUARD_TIMEOUT_MS);
       this.router.navigate(['/dashboard', node.type, node.id]).then((success) => {
         if (!success) {
           this.notifier.error(`Unable to open ${node.type} details.`);
+          this.isNavigating.set(false);
+          this.awaitingDestinationLoad = false;
+          this.destinationLoadBegun = false;
+          if (this.navigateTimeout) {
+            clearTimeout(this.navigateTimeout);
+            this.navigateTimeout = null;
+          }
+        }
+      }).catch(() => {
+        this.isNavigating.set(false);
+        this.awaitingDestinationLoad = false;
+        this.destinationLoadBegun = false;
+        if (this.navigateTimeout) {
+          clearTimeout(this.navigateTimeout);
+          this.navigateTimeout = null;
         }
       });
       this.treeNodeSelected.emit(node);
@@ -557,6 +610,9 @@ export class DashboardHierarchyTreeComponent implements OnInit {
     if (!node.roleScope || node.roleScope === 'member') {
       return null;
     }
+    if (node.type === 'group') {
+      return null;
+    }
     return node.roleScope === 'master_admin' ? 'Master Admin' : 'Admin';
   }
 
@@ -569,9 +625,25 @@ export class DashboardHierarchyTreeComponent implements OnInit {
       return false;
     }
     const normalized = firstRole.trim().toLowerCase();
-    if (normalized === 'member' || normalized === '') {
-      return false;
+    return !(normalized === 'member' || normalized === '');
+  }
+
+  public getCommitteeLogoRoleClass(node: TreeNode): string {
+    if (node.type !== 'group' || !node.roles?.length) {
+      return '';
     }
-    return true;
+    const roleSet = new Set(
+      node.roles.map((role) => String(role || '').trim().toUpperCase()).filter(Boolean)
+    );
+    if (roleSet.has('COMMITTEE_MASTER_ADMIN')) {
+      return 'committee-role-master_admin';
+    }
+    if (roleSet.has('COMMITTEE_ADMIN')) {
+      return 'committee-role-admin';
+    }
+    if (roleSet.has('COMMITTEE_MEMBER')) {
+      return 'committee-role-member';
+    }
+    return '';
   }
 }

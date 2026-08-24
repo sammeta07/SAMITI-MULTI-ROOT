@@ -13,7 +13,7 @@ import { MatSlideToggleModule } from '@angular/material/slide-toggle';
 import { MatTooltipModule, MatTooltip } from '@angular/material/tooltip';
 import { ChangeDetectorRef } from '@angular/core';
 import { HttpErrorResponse } from '@angular/common/http';
-import { firstValueFrom } from 'rxjs';
+import { firstValueFrom, finalize } from 'rxjs';
 import { GroupDetailsService } from './group-details.service';
 import { NotifierService } from '../../../../shared/notifier/notifier.service';
 import { CancelCommitteeMembershipRequestPayload, CommitteeEventListItem, CommitteeProfileMeta, CommitteeRosterMember, CommitteeDetailsPayload, SubmitCommitteeMembershipRequestPayload } from './group-details.models';
@@ -26,6 +26,7 @@ import { PromoteMemberDialogService } from '../../../../components/dialog/promot
 import { DemoteMemberDialogService } from '../../../../components/dialog/demote-member/demote-member.service';
 import { RemoveMemberDialogService } from '../../../../components/dialog/remove-member/remove-member.service';
 import { DashboardHierarchyTreeService } from '../dashboard-hierarchy-tree/dashboard-hierarchy-tree.service';
+import { LoadingStateService } from '../../../../shared/services/loading-state.service';
 import { TextFormatPipe } from '../../../../shared/pipe/text-format-pipe.pipe';
 import { ImageAssetService } from '../../../../core/services/image-asset.service';
 import { ImageCropperDialogComponent } from '../../../../shared/components/image-cropper-dialog/image-cropper-dialog.component';
@@ -61,6 +62,7 @@ export class GroupDetailsComponent implements OnInit {
   private readonly demoteMemberDialog = inject(DemoteMemberDialogService);
   private readonly removeMemberDialog = inject(RemoveMemberDialogService);
   private readonly hierarchyTreeService = inject(DashboardHierarchyTreeService);
+  private readonly loadingState = inject(LoadingStateService);
   private readonly cdr = inject(ChangeDetectorRef);
   private readonly imageAssetService = inject(ImageAssetService);
 
@@ -426,8 +428,14 @@ export class GroupDetailsComponent implements OnInit {
 
   private fetchCommitteeDetailsPayload(id: string): void {
     this.isLoading.set(true);
-    
-    this.groupDetailsService.getCommitteeDetails(id).subscribe({
+    this.loadingState.begin();
+
+    this.groupDetailsService.getCommitteeDetails(id).pipe(
+      finalize(() => {
+        this.isLoading.set(false);
+        this.loadingState.end();
+      })
+    ).subscribe({
       next: (data: CommitteeDetailsPayload) => {
         if (data && data.committeeId) {
           const committeeInfo: CommitteeProfileMeta = {
@@ -497,11 +505,9 @@ export class GroupDetailsComponent implements OnInit {
         } else {
           this.notifier.error('Failed to parse committee details.');
         }
-        this.isLoading.set(false);
       },
       error: (err: HttpErrorResponse) => {
         this.notifier.error(err?.error?.message || 'Transaction error loading group rows.');
-        this.isLoading.set(false);
       }
     });
   }

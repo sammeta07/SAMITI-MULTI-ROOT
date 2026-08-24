@@ -13,11 +13,13 @@
 
   @if (isLoading()) {
     <div class="spinner-loading-overlay">
-      <mat-progress-spinner mode="indeterminate" diameter="25"></mat-progress-spinner>
-      <span>Mapping matrix hierarchy records...</span>
+      <mat-progress-spinner mode="indeterminate" diameter="22"></mat-progress-spinner>
+      <span>Loading structure...</span>
     </div>
-  } @else {
-    <div class="tree-scroll-viewport">
+   } @else {
+    <div class="tree-viewport-guard" [class.is-navigating]="isNavigating()">
+      <div class="tree-scroll-viewport">
+
 
       <div class="sidebar-global-static-menu-deck">
         <div class="node-interactive-strip static-menu-item" 
@@ -28,6 +30,7 @@
           </div>
           <span class="node-label-txt bold-text">Home</span>
         </div>
+
         <div class="node-interactive-strip static-menu-item" 
              [class.is-selected]="activeStaticMenu() === 'requests'"
              (click)="onSelectStaticMenu('requests')">
@@ -67,106 +70,44 @@
       </div>
 
       @if (hasCommitteesHierarchy()) {
-      <hr class="sidebar-deck-divider" />
-      <span class="tree-section-caption-tag">GROUPS</span>
+        <hr class="sidebar-deck-divider" />
+        <span class="tree-section-caption-tag">GROUPS</span>
 
-      <mat-tree [dataSource]="dataSource" [childrenAccessor]="childrenAccessor" class="samiti-fluent-tree">
+        <mat-tree [dataSource]="dataSource" [childrenAccessor]="childrenAccessor" class="samiti-fluent-tree">
 
-        <mat-nested-tree-node *matTreeNodeDef="let node" class="tree-flat-node-row leaf-node-spec"
-          [ngClass]="['type-' + node.type]"
-          [class.is-selected]="isNodeSelected(node)">
+          <!-- Leaf Node Definition -->
+          <mat-nested-tree-node *matTreeNodeDef="let node" class="tree-flat-node-row leaf-node-spec"
+            [ngClass]="['type-' + node.type, getCommitteeLogoRoleClass(node), (node.type === 'event' && node.status ? 'status-container-' + node.status.toLowerCase() : '')]"
+            [class.is-selected]="isNodeSelected(node)">
 
-          <div class="tree-node-guide-stub-horizontal"></div>
+            <div class="tree-node-guide-stub-horizontal"></div>
 
-          <div class="node-interactive-strip" (click)="onNodeClick(node)"
-            [ngClass]="['type-' + node.type, isNodeSelected(node) ? 'is-selected' : '', (node.type === 'event' && node.status ? 'status-container-' + node.status.toLowerCase() : '')]"
-            [class.is-just-selected]="isNodeHighlighted(node)">
-            
-            <div class="node-logo-avatar-wrapper branch-leaf-avatar" [ngClass]="'color-' + node.type">
-              @if ((node.type === 'group' || node.type === 'event') && node.logo) {
-                <img [src]="node.logo" [alt]="node.name" class="brand-image-node" (error)="node.logo = null" />
-              } @else if (node.type === 'group') {
-                <span class="logo-fallback-initial">{{ getNodeInitial(node.name) }}</span>
-              } @else if (node.type === 'event') {
-                <span class="logo-fallback-initial">{{ getNodeInitial(node.name) }}</span>
-              } @else if (node.type === 'program') {
-                <span class="type-letter-icon">P</span>
-              } @else if (node.type === 'task') {
-                <span class="type-letter-icon">T</span>
-              } @else {
-                <mat-icon class="type-indicator-icon">
-                  assignment_turned_in
-                </mat-icon>
-              }
-            </div>
-
-                <div class="node-text-content">
-                  <div class="node-title-row">
-                    <span class="node-label-txt">{{ node.name | titlecase }}</span>
-                    @if (node.type === 'event' && shouldShowEventRole(node)) {
-                      <span class="event-role-subtitle event-role-inline">{{ node.roles[0] }}</span>
-                    }
-                  </div>
-              @if (node.type === 'event' && (node.startDate || node.endDate)) {
-                <span class="event-date-range-subtitle">
-                  @if (node.startDate) { {{ node.startDate | date: 'd MMM y' }} }
-                  @if (node.startDate && node.endDate) { &ndash; }
-                  @if (node.endDate) { {{ node.endDate | date: 'd MMM y' }} }
-                </span>
-              }
-            </div>
-
-          </div>
-
-          <div class="node-actions-right-aligned">
-            <button mat-icon-button [matMenuTriggerFor]="actionMenu" [matMenuTriggerData]="{ currentTarget: node }"
-              class="node-three-dots-btn" (click)="$event.stopPropagation()">
-              <mat-icon>more_vert</mat-icon>
-            </button>
-          </div>
-        </mat-nested-tree-node>
-
-        <mat-nested-tree-node *matTreeNodeDef="let node; when: hasChild" [isExpanded]="isNodeExpanded(node)">
-          <div class="tree-flat-node-row parent-node-spec" [ngClass]="['type-' + node.type, node.roleScope ? 'scope-' + node.roleScope : '']" [class.is-selected]="isNodeSelected(node)">
-            
-            <div class="tree-node-guide-stub-horizontal" *ngIf="node.type !== 'role'"></div>
-
-            <div class="node-interactive-strip" (click)="onNodeClick(node)"
-              [ngClass]="['type-' + node.type, isNodeExpanded(node) ? 'is-active-expanded' : '', isNodeSelected(node) ? 'is-selected' : '', (node.type === 'event' && node.status ? 'status-container-' + node.status.toLowerCase() : '')]"
-              [class.is-just-selected]="isNodeHighlighted(node)">
+              <div class="node-interactive-strip" (click)="onNodeClick(node)"
+                [ngClass]="['type-' + node.type, isNodeSelected(node) ? 'is-selected' : '', getCommitteeLogoRoleClass(node), (node.type === 'event' && node.status ? 'status-container-' + node.status.toLowerCase() : '')]"
+                [class.is-just-selected]="isNodeHighlighted(node)">
               
-              <div class="node-logo-avatar-wrapper" [ngClass]="['type-' + node.type]">
+              <div class="node-logo-avatar-wrapper branch-leaf-avatar" [ngClass]="['color-' + node.type, getCommitteeLogoRoleClass(node)]">
                 @if ((node.type === 'group' || node.type === 'event') && node.logo) {
                   <img [src]="node.logo" [alt]="node.name" class="brand-image-node" (error)="node.logo = null" />
-                } @else if (node.type === 'group') {
-                  <span class="logo-fallback-initial">{{ getNodeInitial(node.name) }}</span>
-                } @else if (node.type === 'event') {
+                } @else if (node.type === 'group' || node.type === 'event') {
                   <span class="logo-fallback-initial">{{ getNodeInitial(node.name) }}</span>
                 } @else if (node.type === 'program') {
                   <span class="type-letter-icon">P</span>
                 } @else if (node.type === 'task') {
                   <span class="type-letter-icon">T</span>
                 } @else {
-                  <mat-icon class="type-indicator-icon">
-                    @switch (node.type) {
-                      @case ('role') { admin_panel_settings }
-                      @case ('group') { groups }
-                      @default { folder }
-                    }
-                  </mat-icon>
+                  <mat-icon class="type-indicator-icon">assignment_turned_in</mat-icon>
                 }
               </div>
 
               <div class="node-text-content">
                 <div class="node-title-row">
-                  <span class="node-label-txt" [class.bold-text]="node.type !== 'role'">{{ node.name | titlecase }}</span>
-                  @if (getNodeDesignation(node) && node.type !== 'role') {
-                    <span class="event-role-subtitle event-role-inline">{{ getNodeDesignation(node) }}</span>
-                  }
+                   <span class="node-label-txt" [class.bold-text]="isNodeSelected(node)">{{ node.name | titlecase }}</span>
                   @if (node.type === 'event' && shouldShowEventRole(node)) {
                     <span class="event-role-subtitle event-role-inline">{{ node.roles[0] }}</span>
                   }
                 </div>
+                <!-- RESTORED: From & To Dates Range for Child Events -->
                 @if (node.type === 'event' && (node.startDate || node.endDate)) {
                   <span class="event-date-range-subtitle">
                     @if (node.startDate) { {{ node.startDate | date: 'd MMM y' }} }
@@ -175,29 +116,88 @@
                   </span>
                 }
               </div>
+
             </div>
 
-            <div class="node-actions-right-aligned gap-control-wrapper">
-              <button mat-icon-button class="toggle-expansion-flat-btn" (click)="toggleNodeExpansion(node, $event)">
-                <mat-icon class="mat-icon-rtl-mirror">
-                  {{ isNodeExpanded(node) ? 'expand_more' : 'chevron_right' }}
-                </mat-icon>
-              </button>
-
+            <div class="node-actions-right-aligned">
               <button mat-icon-button [matMenuTriggerFor]="actionMenu" [matMenuTriggerData]="{ currentTarget: node }"
                 class="node-three-dots-btn" (click)="$event.stopPropagation()">
                 <mat-icon>more_vert</mat-icon>
               </button>
             </div>
-          </div>
+          </mat-nested-tree-node>
 
-          <div role="group" class="tree-nested-recursion-shell"
-               [class.samiti-tree-invisible]="!isNodeExpanded(node)">
-            <ng-container matTreeNodeOutlet></ng-container>
-          </div>
-        </mat-nested-tree-node>
+          <!-- Parent Node Definition -->
+           <mat-nested-tree-node *matTreeNodeDef="let node; when: hasChild" [isExpanded]="isNodeExpanded(node)">
+             <div class="tree-flat-node-row parent-node-spec" [ngClass]="['type-' + node.type, node.roleScope ? 'scope-' + node.roleScope : '', getCommitteeLogoRoleClass(node), (node.type === 'event' && node.status ? 'status-container-' + node.status.toLowerCase() : '')]" [class.is-selected]="isNodeSelected(node)">
+              
+              <div class="tree-node-guide-stub-horizontal" *ngIf="node.type !== 'role'"></div>
 
-      </mat-tree>
+              <div class="node-interactive-strip" (click)="onNodeClick(node)"
+                [ngClass]="['type-' + node.type, isNodeExpanded(node) ? 'is-active-expanded' : '', isNodeSelected(node) ? 'is-selected' : '', getCommitteeLogoRoleClass(node), (node.type === 'event' && node.status ? 'status-container-' + node.status.toLowerCase() : '')]"
+                [class.is-just-selected]="isNodeHighlighted(node)">
+                
+                <div class="node-logo-avatar-wrapper" [ngClass]="['type-' + node.type, getCommitteeLogoRoleClass(node)]">
+                  @if ((node.type === 'group' || node.type === 'event') && node.logo) {
+                    <img [src]="node.logo" [alt]="node.name" class="brand-image-node" (error)="node.logo = null" />
+                  } @else if (node.type === 'group' || node.type === 'event') {
+                    <span class="logo-fallback-initial">{{ getNodeInitial(node.name) }}</span>
+                  } @else if (node.type === 'program') {
+                    <span class="type-letter-icon">P</span>
+                  } @else if (node.type === 'task') {
+                    <span class="type-letter-icon">T</span>
+                  } @else {
+                    <mat-icon class="type-indicator-icon">
+                      @switch (node.type) {
+                        @case ('role') { admin_panel_settings }
+                        @case ('group') { groups }
+                        @default { folder }
+                      }
+                    </mat-icon>
+                  }
+                </div>
+
+                <div class="node-text-content">
+                  <div class="node-title-row">
+                     <span class="node-label-txt" [class.bold-text]="isNodeSelected(node)">{{ node.name | titlecase }}</span>
+                    @if (getNodeDesignation(node) && node.type !== 'role') {
+                      <span class="event-role-subtitle event-role-inline">{{ getNodeDesignation(node) }}</span>
+                    }
+                    @if (node.type === 'event' && shouldShowEventRole(node)) {
+                      <span class="event-role-subtitle event-role-inline">{{ node.roles[0] }}</span>
+                    }
+                  </div>
+                  <!-- RESTORED: From & To Dates Range for Child Events -->
+                  @if (node.type === 'event' && (node.startDate || node.endDate)) {
+                    <span class="event-date-range-subtitle">
+                      @if (node.startDate) { {{ node.startDate | date: 'd MMM y' }} }
+                      @if (node.startDate && node.endDate) { &ndash; }
+                      @if (node.endDate) { {{ node.endDate | date: 'd MMM y' }} }
+                    </span>
+                  }
+                </div>
+              </div>
+
+              <div class="node-actions-right-aligned gap-control-wrapper">
+                <button mat-icon-button class="toggle-expansion-flat-btn" (click)="toggleNodeExpansion(node, $event)">
+                  <mat-icon class="mat-icon-rtl-mirror">
+                    {{ isNodeExpanded(node) ? 'expand_more' : 'chevron_right' }}
+                  </mat-icon>
+                </button>
+
+                <button mat-icon-button [matMenuTriggerFor]="actionMenu" [matMenuTriggerData]="{ currentTarget: node }"
+                  class="node-three-dots-btn" (click)="$event.stopPropagation()">
+                  <mat-icon>more_vert</mat-icon>
+                </button>
+              </div>
+            </div>
+
+            <div role="group" class="tree-nested-recursion-shell" [class.samiti-tree-invisible]="!isNodeExpanded(node)">
+              <ng-container matTreeNodeOutlet></ng-container>
+            </div>
+          </mat-nested-tree-node>
+
+        </mat-tree>
       }
 
       <mat-menu #actionMenu="matMenu" xPosition="before" class="samiti-compact-context-menu">
@@ -215,6 +215,8 @@
         </ng-template>
       </mat-menu>
 
+    </div>
+      <div class="navigation-dimming-overlay" *ngIf="isNavigating()"></div>
     </div>
   }
 </div>

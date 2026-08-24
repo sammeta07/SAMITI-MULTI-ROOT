@@ -48,15 +48,9 @@
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
   transition: all 0.2s ease;
 
-  &.role-master-admin {
-    border-color: #fca5a5;
-    border-left-color: #ef4444;
-    box-shadow: 0 4px 14px rgba(239, 68, 68, 0.08);
-  }
-  &.role-admin { border-color: #86efac; border-left-color: #22c55e; }
-  &.role-member { border-color: #93c5fd; border-left-color: #3b82f6; }
-  &.role-pending { border-left-color: #eab308; }
-  &.role-none { border-left-color: #cbd5e1; }
+  /* Role-based coloring lives on the committee logo border, not the outer card
+     border, which stays neutral for every role. */
+  &.role-master-admin { box-shadow: 0 4px 14px rgba(239, 68, 68, 0.08); }
 }
 
 .committee-card-grid { 
@@ -133,7 +127,7 @@
 /* ACTION BUTTONS STYLES */
 .action-buttons-area {
   grid-column: 3;
-  grid-row: 2 / 4;
+  grid-row: 3;
   display: flex;
   align-items: center;
   justify-content: flex-end;
@@ -202,13 +196,13 @@
 
   /* Public Event Button */
   .create-event-btn {
-    background: linear-gradient(135deg, #f97316 0%, #ea580c 100%) !important;
-    color: #ffffff !important;
-    border: none !important;
+    background: transparent !important;
+    color: #f97316 !important;
+    border: 1px solid #f97316 !important;
 
     &:hover:not(:disabled) {
-      background: linear-gradient(135deg, #ea580c 0%, #c2410c 100%) !important;
-      box-shadow: 0 4px 12px rgba(249, 115, 22, 0.3) !important;
+      background: rgba(249, 115, 22, 0.08) !important;
+      box-shadow: 0 2px 8px rgba(249, 115, 22, 0.12) !important;
     }
   }
 
@@ -241,7 +235,7 @@
   height: 56px; 
   border-radius: 12px; 
   object-fit: cover; 
-  border: 1px solid #e2e8f0; 
+  border: 4px solid #e2e8f0; 
 }
 
 .committee-avatar-fallback { 
@@ -254,14 +248,29 @@
   align-items: center; 
   justify-content: center; 
   font-size: 1.5rem; 
-  font-weight: 700; 
+  font-weight: 700;
+  border: 4px solid #e2e8f0; 
 
   &.fb-master-admin { background: linear-gradient(135deg, #fecaca, #fca5a5); color: #b91c1c; }
   &.fb-admin { background: linear-gradient(135deg, #bbf7d0, #86efac); color: #15803d; }
   &.fb-member { background: linear-gradient(135deg, #bfdbfe, #93c5fd); color: #1e40af; }
   &.fb-pending { background: linear-gradient(135deg, #fef08a, #fde047); color: #a16207; }
   &.fb-none { background: linear-gradient(135deg, #e2e8f0, #cbd5e1); color: #475569; }
+
+  /* Role-colored border applied to the committee logo, driven by the outer card role */
+  .gd-committee-card.role-master-admin & { border-color: #ef4444; }
+  .gd-committee-card.role-admin & { border-color: #22c55e; }
+  .gd-committee-card.role-member & { border-color: #3b82f6; }
+  .gd-committee-card.role-pending & { border-color: #eab308; }
+  .gd-committee-card.role-none & { border-color: #cbd5e1; }
 }
+
+/* Role-colored border for the logo image (used when a logo is uploaded) */
+.gd-committee-card.role-master-admin .committee-avatar { border-color: #ef4444; }
+.gd-committee-card.role-admin .committee-avatar { border-color: #22c55e; }
+.gd-committee-card.role-member .committee-avatar { border-color: #3b82f6; }
+.gd-committee-card.role-pending .committee-avatar { border-color: #eab308; }
+.gd-committee-card.role-none .committee-avatar { border-color: #cbd5e1; }
 
 .committee-logo-edit-trigger {
   position: relative;
@@ -505,14 +514,11 @@
   border-radius: 6px;
   transition: all 0.15s ease;
 
-  &:hover { background: #f8fafc; border-color: #e2e8f0; }
-
-  &.row-master-admin { border-left: 3px solid #ef4444; }
-  &.row-admin { border-left: 3px solid #22c55e; }
-  &.row-member { border-left: 3px solid #3b82f6; }
+   &:hover { background: #f8fafc; border-color: #e2e8f0; }
 }
 
 .row-avatar {
+  box-sizing: border-box;
   width: 32px;
   height: 32px;
   display: flex;
@@ -524,9 +530,9 @@
   flex-shrink: 0;
 
   &.circle-shape { border-radius: 50%; overflow: hidden; }
-  &.avatar-master-admin { background: linear-gradient(135deg, #ef4444, #dc2626); }
-  &.avatar-admin { background: linear-gradient(135deg, #22c55e, #16a34a); }
-  &.avatar-member { background: linear-gradient(135deg, #3b82f6, #1d4ed8); }
+  &.avatar-master-admin { background: linear-gradient(135deg, #ef4444, #dc2626); border: 3px solid #ef4444; }
+  &.avatar-admin { background: linear-gradient(135deg, #22c55e, #16a34a); border: 3px solid #22c55e; }
+  &.avatar-member { background: linear-gradient(135deg, #3b82f6, #1d4ed8); border: 3px solid #3b82f6; }
 
   .avatar-img { width: 100%; height: 100%; object-fit: cover; }
 }
@@ -637,7 +643,7 @@
 .event-logo-circle {
   width: 44px;
   height: 44px;
-  border-radius: 50%;
+  border-radius: 12px;
   overflow: hidden;
   display: inline-flex;
   align-items: center;
@@ -725,13 +731,13 @@
       text-transform: uppercase;
       font-weight: 700;
       &.tag-upcoming { background: #fefce8; color: #a16207; border-color: #fef08a; }
-      &.tag-started { background: #eff6ff; color: #1d4ed8; border-color: #bfdbfe; }
-      &.tag-ongoing { background: #f0fdf4; color: #15803d; border-color: #bbf7d0; }
+      &.tag-started,
+      &.tag-ongoing { background: #f0fdf4; color: #15803d; border-color: #86efac; }
       &.tag-completed { background: #f1f5f9; color: #475569; border-color: #cbd5e1; }
     }
 
   &.event-type-pill {
-    &.type-public { background: #eff6ff; color: #1d4ed8; border-color: #bfdbfe; }
+    &.type-public { background: #ffffff; color: #475569; border-color: #cbd5e1; }
     &.type-private { background: #fdf2f8; color: #be185d; border-color: #fbcfe8; }
   }
 

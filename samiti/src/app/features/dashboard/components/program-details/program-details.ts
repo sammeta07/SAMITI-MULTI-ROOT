@@ -8,13 +8,14 @@ import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatCheckboxModule } from '@angular/material/checkbox';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { HttpErrorResponse } from '@angular/common/http';
-import { firstValueFrom } from 'rxjs';
+import { firstValueFrom, finalize } from 'rxjs';
 import { ProgramDetailsPayload, ProgramTask } from './program-details.models';
 import { ProgramDetailsService } from './program-details.service';
 import { NotifierService } from '../../../../shared/notifier/notifier.service';
 import { DashboardHierarchyTreeService } from '../dashboard-hierarchy-tree/dashboard-hierarchy-tree.service';
 import { CreateProgramDialogComponent } from '../../../../components/dialog/create-program/create-program.component';
 import { ImageAssetService } from '../../../../core/services/image-asset.service';
+import { LoadingStateService } from '../../../../shared/services/loading-state.service';
 import { ConfirmDialogService } from '../../../../components/dialog/confirm/confirm-dialog.service';
 import { ConfirmDialogData } from '../../../../components/dialog/confirm/confirm-dialog.models';
 
@@ -41,6 +42,7 @@ export class ProgramDetailsComponent implements OnInit {
   private readonly programDetailsService = inject(ProgramDetailsService);
   private readonly hierarchyTreeService = inject(DashboardHierarchyTreeService);
   private readonly imageAssetService = inject(ImageAssetService);
+  private readonly loadingState = inject(LoadingStateService);
   private readonly confirmDialog = inject(ConfirmDialogService);
   private readonly cdr = inject(ChangeDetectorRef);
 
@@ -145,19 +147,23 @@ export class ProgramDetailsComponent implements OnInit {
 
   private fetchProgramDetails(id: string): void {
     this.isLoading.set(true);
+    this.loadingState.begin();
     this.programData.set(null);
 
-    this.programDetailsService.getProgramDetails(id).subscribe({
+    this.programDetailsService.getProgramDetails(id).pipe(
+      finalize(() => {
+        this.isLoading.set(false);
+        this.loadingState.end();
+      })
+    ).subscribe({
       next: (data: ProgramDetailsPayload) => {
         this.programData.set(data ?? null);
         this.tasks.set([]);
-        this.isLoading.set(false);
       },
       error: (err: HttpErrorResponse) => {
         this.notifier.error(err?.error?.message || 'Failed to load program details.');
         this.programData.set(null);
         this.tasks.set([]);
-        this.isLoading.set(false);
       }
     });
   }

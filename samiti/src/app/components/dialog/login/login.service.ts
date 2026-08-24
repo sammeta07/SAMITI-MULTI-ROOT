@@ -3,7 +3,7 @@ import { HttpClient } from '@angular/common/http';
 import { Observable } from 'rxjs';
 import { map } from 'rxjs/operators';
 import { environment } from '../../../../environments/environment';
-import { LoginPayload, LoginResponse } from './login.models';
+import { LoginPayload, LoginResponse, LoginUserData } from './login.models';
 import { TextFormatService } from '../../../shared/services/text-format-service.service';
 
 @Injectable({
@@ -32,26 +32,6 @@ export class LoginService {
           baseRole
           profilePhoto
           fcmToken
-          accountRoles {
-            committees {
-              committeeId
-              committeeName
-              committeeLogo
-              committeeRole
-              roleLabel
-              events {
-                eventId
-                eventName
-                committeeId
-                committeeName
-                committeeLogo
-                designation
-                membershipStatus
-                eventStatus
-                eventVisibility
-              }
-            }
-          }
         }
       }
     }`;
@@ -65,6 +45,36 @@ export class LoginService {
       }
     }).pipe(
       map(res => res.data.login)
+    );
+  }
+
+  userAccountRoles(): Observable<LoginUserData['accountRoles']> {
+    const url = this.graphqlUrl;
+    const query = `query UserAccountRoles {
+      userAccountRoles {
+        committees {
+          committeeId
+          committeeName
+          committeeLogo
+          committeeRole
+          roleLabel
+          events {
+            eventId
+            eventName
+            committeeId
+            committeeName
+            committeeLogo
+            designation
+            membershipStatus
+            eventStatus
+            eventVisibility
+          }
+        }
+      }
+    }`;
+
+    return this.http.post<{ data: { userAccountRoles: LoginUserData['accountRoles'] } }>(url, { query }).pipe(
+      map(res => res.data.userAccountRoles)
     );
   }
 }

@@ -99,11 +99,23 @@ export class LoginDialogComponent implements OnInit {
           baseRole: u.baseRole,
           photo: u.profilePhoto,
           fcmToken: u.fcmToken,
-          dashboardTree: [],
-          accountRoles: u.accountRoles || null
+          dashboardTree: []
         };
         
         this.authService.startSession({ token, userData: userdata });
+
+        this.loginService.userAccountRoles().subscribe({
+          next: (accountRoles) => {
+            const updatedUserData = {
+              ...userdata,
+              accountRoles
+            };
+            this.authService.updateStoredUserData(updatedUserData);
+          },
+          error: () => {
+            // accountRoles fetch failed; continue with existing session
+          }
+        });
 
         this.dialogRef.close(true);
 
