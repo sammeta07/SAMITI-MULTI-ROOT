@@ -1,100 +1,226 @@
 <div class="overview-tab-content">
-  <section class="gd-committee-card">
-    <div class="committee-card-grid">
-      <div class="card-logo-area">
-        @if (eventData?.eventBanner || eventData?.bannerImages?.length) {
-        <img [src]="eventData?.eventBanner || eventData?.bannerImages?.[0]" [alt]="eventData?.eventName" class="committee-avatar" />
-        } @else {
-        <div class="committee-avatar-fallback event-avatar-fallback">{{ eventData?.eventName?.charAt(0) || 'E' }}</div>
-        }
-      </div>
-      <div class="card-main-info-area">
-        <div class="card-title-row">
-          <h3 class="committee-display-name">{{ eventData?.eventName }}</h3>
+  @if (isLoading()) {
+    <div class="skeleton-wrapper" aria-busy="true" aria-live="polite">
+      <section class="gd-committee-card skeleton-card">
+        <div class="committee-card-grid">
+          <div class="card-logo-area">
+            <div class="skeleton-box skeleton-avatar"></div>
+          </div>
+          <div class="card-main-info-area">
+            <div class="skeleton-box skeleton-line lg" style="width: 45%;"></div>
+            <div class="skeleton-box skeleton-line sm" style="width: 70%; margin-top: 8px;"></div>
+          </div>
+          <div class="card-identity-pills-area">
+            <div class="skeleton-box skeleton-chip"></div>
+            <div class="skeleton-box skeleton-chip" style="width: 90px;"></div>
+            <div class="skeleton-box skeleton-chip" style="width: 90px;"></div>
+          </div>
+          <div class="card-actions-identity-area">
+            <div class="skeleton-box skeleton-chip" style="width: 80px;"></div>
+          </div>
+          <div class="action-buttons-area directions-status-row">
+            <div class="skeleton-box" style="width: 90px; height: 34px; border-radius: 8px;"></div>
+            <div class="skeleton-box" style="width: 70px; height: 34px; border-radius: 8px;"></div>
+            <div class="skeleton-box" style="width: 70px; height: 34px; border-radius: 8px;"></div>
+          </div>
         </div>
-        <div class="card-location-row">
-          <span class="location-text-trim">{{ eventData?.committeeAddress || eventData?.category || 'General event' }}</span>
+      </section>
+
+      <section class="banner-images-section skeleton-card">
+        <div class="panel-card-header banner-header-bg">
+          <div class="header-title-left">
+            <div class="skeleton-box skeleton-avatar circle" style="width: 18px; height: 18px;"></div>
+            <div class="skeleton-box skeleton-line sm" style="width: 120px;"></div>
+            <div class="skeleton-box skeleton-chip" style="width: 40px; height: 20px;"></div>
+          </div>
+          <div class="skeleton-box" style="width: 80px; height: 28px; border-radius: 6px;"></div>
         </div>
-      </div>
-      <div class="card-actions-identity-area">
-        <div class="identity-top-row">
-          <span class="meta-pill status-pill status-badge-{{ eventData?.status?.toLowerCase() }}">
-            <mat-icon>circle</mat-icon>{{ eventData?.status }}
-          </span>
+        <div class="banner-grid">
+          @for (n of skeletonRows5; track n) {
+            <div class="skeleton-box banner-skeleton-tile"></div>
+          }
+        </div>
+      </section>
+    </div>
+  } @else {
+
+    <section class="gd-committee-card">
+      <div class="committee-card-grid">
+        <div class="card-logo-area">
+          <ng-template #eventLogoContent>
+            @if (eventData?.eventLogo; as eventLogo) {
+              <img [src]="eventLogo" alt="Event Logo" class="committee-avatar" (error)="onEventLogoLoadError()" />
+            } @else {
+              <div class="committee-avatar-fallback event-avatar-fallback">
+                {{ fallbackInitial }}
+              </div>
+            }
+          </ng-template>
+
+          @if (canManageEvent) {
+            <input #eventLogoInput type="file" hidden accept="image/*" (change)="onEventLogoSelected($event)">
+            <button type="button" class="committee-logo-edit-trigger"
+              [class.is-uploading]="isUploadingEventLogo()"
+              (click)="eventLogoInput.click()" [disabled]="isUploadingEventLogo()"
+              matTooltip="Change Event Logo" matTooltipPosition="above"
+              aria-label="Change event logo">
+              <ng-container [ngTemplateOutlet]="eventLogoContent"></ng-container>
+              <span class="logo-edit-overlay" aria-hidden="true">
+                @if (isUploadingEventLogo()) {
+                  <mat-progress-spinner mode="indeterminate" diameter="22" class="logo-upload-spinner"></mat-progress-spinner>
+                } @else {
+                  <mat-icon>edit</mat-icon>
+                }
+              </span>
+            </button>
+          } @else {
+            <ng-container [ngTemplateOutlet]="eventLogoContent"></ng-container>
+          }
+        </div>
+        
+        <div class="card-main-info-area">
+          <div class="card-title-row">
+            <h3 class="committee-display-name">{{ (eventData?.eventDisplayName || eventData?.eventName || '') | titlecase }}</h3>
+          </div>
+          <div class="card-location-row">
+            <mat-icon class="location-icon">location_on</mat-icon>
+            <span class="location-text-trim">{{ (eventData?.committeeAddress || eventData?.category || 'General event') | titlecase }}</span>
+          </div>
+        </div>
+
+        <div class="card-identity-pills-area">
           <span class="meta-pill category-pill">
             <mat-icon>category</mat-icon>{{ eventData?.category || 'General' }}
           </span>
-          <span class="meta-pill visibility-pill">
-            <mat-icon>visibility</mat-icon>{{ eventData?.visibility === 'VISIBLE' ? 'Public' : 'Private' }}
-          </span>
-          @if (eventData?.startDate) {
-          <span class="meta-pill date-pill"><mat-icon>calendar_month</mat-icon> {{ eventData?.startDate | date:'dd MMM yyyy' }}</span>
+          @if (eventData?.startDate; as startDate) {
+            <span class="meta-pill date-pill">
+              <mat-icon>calendar_month</mat-icon> {{ startDate | date:'dd MMM yyyy' }}
+            </span>
           }
-          @if (eventData?.endDate) {
-          <span class="meta-pill date-pill"><mat-icon>event_busy</mat-icon> {{ eventData?.endDate | date:'dd MMM yyyy' }}</span>
+          @if (eventData?.endDate; as endDate) {
+            <span class="meta-pill date-pill">
+              <mat-icon>event_busy</mat-icon> {{ endDate | date:'dd MMM yyyy' }}
+            </span>
           }
         </div>
-        <div class="directions-status-row">
-          <mat-slide-toggle class="event-visibility-toggle"
-            [checked]="eventData?.visibility === 'VISIBLE'"
-            (change)="onEventVisibilityChange($event.checked)">
-            {{ eventData?.visibility }}
-          </mat-slide-toggle>
-          <button mat-stroked-button class="action-btn edit-btn" (click)="onEditEvent()">
-            <mat-icon>edit</mat-icon>Edit
+
+        <div class="card-actions-identity-area">
+          @if (userEventRoleLabel) {
+            <span class="user-role-badge event-role-highlight">
+              <mat-icon class="role-badge-icon">verified</mat-icon>{{ userEventRoleLabel }}
+            </span>
+          }
+        </div>
+
+        <!-- REDESIGNED ACTION BUTTONS & TOGGLE DECK -->
+        <div class="action-buttons-area directions-status-row">
+          
+          <div class="toggle-control-capsule" [class.is-visible]="eventData?.visibility === 'VISIBLE'">
+            <span class="toggle-status-badge">
+              <span class="status-dot"></span>
+              {{ eventData?.visibility === 'VISIBLE' ? 'VISIBLE' : 'HIDDEN' }}
+            </span>
+            <mat-slide-toggle class="event-visibility-toggle"
+              [checked]="eventData?.visibility === 'VISIBLE'"
+              [disabled]="!canManageEvent"
+              (change)="onEventVisibilityChange($event.checked)">
+            </mat-slide-toggle>
+          </div>
+
+          <button mat-button class="btn-action btn-edit" [disabled]="!canManageEvent" (click)="onEditEvent()">
+            <mat-icon>edit_note</mat-icon>
+            <span>Edit</span>
           </button>
-          <button mat-stroked-button class="action-btn delete-btn" (click)="onDeleteEvent()">
-            <mat-icon>delete</mat-icon>Delete
+
+          <button mat-button class="btn-action btn-delete" [disabled]="!canManageEvent" (click)="onDeleteEvent()">
+            <mat-icon>delete_forever</mat-icon>
+            <span>Delete</span>
           </button>
         </div>
       </div>
-    </div>
-  </section>
+    </section>
 
-  <section class="banner-images-section">
-    <div class="panel-card-header banner-header-bg">
-      <div class="header-title-left">
-        <mat-icon class="icon-accent-banner">photo_library</mat-icon>
-        <span class="title-text">Banner Images</span>
-        <span class="count-pill">{{ bannerCount }}/{{ MAX_BANNERS }}</span>
-      </div>
-      <button mat-stroked-button class="banner-add-btn"
-              [disabled]="!canUploadMoreBanners"
-              (click)="onAddBannerClick()"
-              [matTooltip]="canUploadMoreBanners ? 'Upload up to ' + (MAX_BANNERS - bannerCount) + ' more image(s)' : 'Maximum ' + MAX_BANNERS + ' banners reached'">
-        <mat-icon>add_photo_alternate</mat-icon>
-        <span>Add</span>
-      </button>
-    </div>
+    <!-- BANNER SECTION -->
+    <section class="banner-images-section">
+      <div class="panel-card-header banner-header-bg">
+        <div class="header-title-left">
+          <mat-icon class="icon-accent-banner">photo_library</mat-icon>
+          <span class="title-text">Banner Images</span>
+          <span class="count-pill">{{ bannerCount }}/{{ MAX_BANNERS }}</span>
+        </div>
 
-    @if (bannerCount > 0) {
-    <div class="banner-grid">
-      @for (imgUrl of eventData!.bannerImages; track imgUrl) {
-      <div class="banner-image-card">
-        <img [src]="imgUrl" [alt]="eventData?.eventName" class="banner-img" />
-        <button mat-icon-button class="banner-delete-btn" title="Delete banner" (click)="onDeleteBanner(imgUrl)">
-          <mat-icon>delete</mat-icon>
-        </button>
+        <div class="banner-header-actions">
+          @if (canManageEvent && bannerCount > 0) {
+            @if (isSelectionMode()) {
+              <button mat-button class="btn-action btn-cancel" type="button" (click)="toggleSelectionMode()" [disabled]="isDeletingBanners()">
+                <mat-icon>close</mat-icon>
+                <span>Cancel</span>
+              </button>
+              <button mat-button class="btn-action btn-delete" type="button" (click)="deleteSelectedBanners()" [disabled]="selectedBannerCount === 0 || isDeletingBanners()">
+                @if (isDeletingBanners()) {
+                  <mat-progress-spinner mode="indeterminate" diameter="16" strokeWidth="2"></mat-progress-spinner>
+                } @else {
+                  <mat-icon>delete</mat-icon>
+                }
+                <span>Delete Selected ({{ selectedBannerCount }})</span>
+              </button>
+            } @else {
+              <button mat-button class="btn-action btn-select" type="button" (click)="toggleSelectionMode()">
+                <mat-icon>check_box</mat-icon>
+                <span>Select</span>
+              </button>
+            }
+          }
+        </div>
       </div>
-      }
-      @if (canUploadMoreBanners) {
-      <button type="button" class="banner-upload-tile" (click)="onAddBannerClick()">
-        <mat-icon>add_photo_alternate</mat-icon>
-        <span>Add Banner</span>
-      </button>
-      }
-    </div>
-    } @else {
-    <div class="banner-empty-state">
-      <mat-icon>image_not_supported</mat-icon>
-      <p>No banner images uploaded yet.</p>
-      <button mat-flat-button class="banner-empty-upload-btn" (click)="onAddBannerClick()">
-        <mat-icon>add_photo_alternate</mat-icon>
-        <span>Upload Banner</span>
-      </button>
-    </div>
-    }
-  </section>
+
+      <div class="banner-grid">
+        @if (bannerCount === 0 && canUploadMoreBanners && canManageEvent && !isSelectionMode()) {
+          <button type="button" class="banner-upload-tile" (click)="onAddSingleBannerClick()">
+            <mat-icon>add_photo_alternate</mat-icon>
+            <span>Add Banner</span>
+          </button>
+        }
+
+        @for (imgUrl of eventData?.bannerImages || []; track imgUrl) {
+          <div class="banner-image-card"
+               [class.selected]="isSelectionMode() && isBannerSelected(imgUrl)"
+               (click)="isSelectionMode() ? toggleBannerSelection(imgUrl) : null">
+            <img [src]="imgUrl" [alt]="eventData?.eventName || 'Banner Image'" class="banner-img" />
+
+            @if (isSelectionMode()) {
+              <div class="banner-select-overlay">
+                <mat-checkbox [checked]="isBannerSelected(imgUrl)" (click)="$event.stopPropagation()" (change)="toggleBannerSelection(imgUrl)"></mat-checkbox>
+              </div>
+            } @else {
+              @if (canDeleteBanners) {
+                <button mat-icon-button class="banner-delete-btn" title="Delete banner" (click)="onDeleteBanner(imgUrl)">
+                  <mat-icon>delete</mat-icon>
+                </button>
+              }
+            }
+          </div>
+        }
+
+        @if (bannerCount > 0 && canUploadMoreBanners && canManageEvent && !isSelectionMode()) {
+          <button type="button" class="banner-upload-tile" (click)="onAddSingleBannerClick()">
+            <mat-icon>add_photo_alternate</mat-icon>
+            <span>Add Banner</span>
+          </button>
+        }
+
+        @if (bannerCount === 0 && !(canUploadMoreBanners && canManageEvent && !isSelectionMode())) {
+          <div class="banner-empty-state">
+            <mat-icon>image_not_supported</mat-icon>
+            <p>No banner images uploaded yet.</p>
+          </div>
+        }
+      </div>
+    </section>
+
+  }
 
   <input #bannerFileInput type="file" accept="image/*" multiple hidden (change)="onBannerFilesSelected($event)" />
+  <input #bannerSingleFileInput type="file" accept="image/*" hidden (change)="onSingleBannerFileSelected($event)" />
+  <input #eventLogoInput type="file" accept="image/*" hidden (change)="onEventLogoSelected($event)" />
 </div>

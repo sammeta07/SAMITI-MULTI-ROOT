@@ -14,6 +14,7 @@ export const eventOverviewTypes = `
     eventName: String!
     eventDisplayName: String!
     eventBanner: String
+    eventLogo: String
     bannerImages: [String!]!
     status: String!
     category: String
@@ -26,6 +27,13 @@ export const eventOverviewTypes = `
     createdBy: Int!
     updatedBy: Int
     createdAt: String
+    myDesignation: MyDesignation
+    committeeRole: String
+  }
+
+  type MyDesignation {
+    roleId: Int
+    name: String
   }
 `;
 
@@ -65,7 +73,8 @@ export const eventOverviewResolvers = {
           e.longitude,
           e.created_by AS createdBy,
           e.updated_by AS updatedBy,
-          e.created_at AS createdAt
+          e.created_at AS createdAt,
+          e.event_logo AS eventLogo
            ${supportsVotingPhaseState ? ', COALESCE(e.voting_phase_state, 0) AS votingPhaseState' : ', 0 AS votingPhaseState'}
            ${supportsVotingMode ? ', e.voting_mode AS votingMode' : ", 'VOTING' AS votingMode"}
         FROM events e
@@ -90,6 +99,16 @@ export const eventOverviewResolvers = {
       );
 
       const membership = committeeMembership[0];
+
+      const myDesignationRows = await query<any[]>(
+        `SELECT ue.role_id AS roleId, UPPER(COALESCE(NULLIF(TRIM(ue.designation), ''), 'MEMBER')) AS name
+         FROM users_events ue
+         WHERE ue.event_id = ? AND ue.user_id = ?
+         LIMIT 1`,
+        [eventId, loggedInUserId]
+      ).catch(() => []);
+      const myDesignation = myDesignationRows[0] || null;
+
       const hasCommitteeAccess = Boolean(
         membership &&
         (
@@ -98,6 +117,22 @@ export const eventOverviewResolvers = {
           String(membership.committee_role || '') === 'COMMITTEE_MASTER_ADMIN'
         )
       );
+
+      const isCurrentUserMasterAdmin = Boolean(membership && String(membership.committee_role || '') === 'COMMITTEE_MASTER_ADMIN');
+      const canManageVotingRoles = Boolean(
+        membership && (
+          String(membership.committee_role || '') === 'COMMITTEE_ADMIN' ||
+          String(membership.committee_role || '') === 'COMMITTEE_MASTER_ADMIN'
+        )
+      );
+      const canSelfNominate = Boolean(membership && String(membership.committee_role || '') === 'COMMITTEE_MEMBER');
+      const committeeRole = isCurrentUserMasterAdmin
+        ? 'COMMITTEE_MASTER_ADMIN'
+        : canManageVotingRoles
+          ? 'COMMITTEE_ADMIN'
+          : canSelfNominate
+            ? 'COMMITTEE_MEMBER'
+            : 'NONE';
 
       if (visibility === 'HIDDEN' && !hasCommitteeAccess) {
         throwEventError('FORBIDDEN', 'You are not allowed to access this event');
@@ -119,6 +154,7 @@ export const eventOverviewResolvers = {
         eventName: String(event.eventName || ''),
         eventDisplayName: String(event.eventDisplayName || ''),
         eventBanner: bannerImageRows[0]?.mediaUrl || null,
+        eventLogo: event.eventLogo || null,
         bannerImages: bannerImageRows.map((row) => row.mediaUrl),
         status: String(event.status || ''),
         category: event.category || null,
@@ -130,7 +166,9 @@ export const eventOverviewResolvers = {
         longitude: event.longitude ? Number(event.longitude) : null,
         createdBy: Number(event.createdBy),
         updatedBy: event.updatedBy ? Number(event.updatedBy) : null,
-        createdAt: event.createdAt || null
+        createdAt: event.createdAt || null,
+        myDesignation: myDesignation,
+        committeeRole
       };
     }
   }

@@ -1,4 +1,5 @@
 import { query, execute } from '../../config/db';
+import { deleteLocalMediaFileIfExists } from '../../media/image-cleanup';
 
 const MAX_BANNER_IMAGES = 5;
 
@@ -156,10 +157,19 @@ export const uploadProgramBannerImagesResolvers = {
         throwError('FORBIDDEN', 'Only committee admins can delete program banners');
       }
 
+      const deletedRows = await query<any[]>(
+        `SELECT media_url AS mediaUrl FROM program_media_assets WHERE program_id = ? AND media_url = ? LIMIT 1`,
+        [programId, mediaUrl]
+      );
+
       await execute(
         `DELETE FROM program_media_assets WHERE program_id = ? AND media_url = ?`,
         [programId, mediaUrl]
       );
+
+      if (deletedRows.length > 0) {
+        await deleteLocalMediaFileIfExists(mediaUrl);
+      }
 
       const updatedBannerRows = await query<any[]>(
         `SELECT media_url AS mediaUrl FROM program_media_assets

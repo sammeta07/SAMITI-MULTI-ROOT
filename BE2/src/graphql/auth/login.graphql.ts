@@ -40,11 +40,6 @@ type LoginEventRoleRow = RowDataPacket & {
   event_visibility: string | null;
 };
 
-type LoginEventWinnerRow = RowDataPacket & {
-  event_id: number;
-  winner_name: string;
-};
-
 type CountRow = RowDataPacket & {
   total_count: number;
 };
@@ -217,33 +212,18 @@ export const loginResolvers = {
           c.id AS committee_id,
           c.committee_name,
           c.logo AS committee_logo,
+          UPPER(COALESCE(NULLIF(TRIM(ue.designation), ''), 'MEMBER')) AS designation,
           UPPER(COALESCE(NULLIF(TRIM(ue.status), ''), 'ACTIVE')) AS membership_status,
           e.status AS event_status,
           e.visibility AS event_visibility
          FROM users_events ue
          INNER JOIN events e ON e.id = ue.event_id
          INNER JOIN committees c ON c.id = e.committee_id
-         WHERE ue.user_id = ?
-         ORDER BY c.committee_name ASC, e.name ASC`,
+          WHERE ue.user_id = ?
+            AND e.voting_phase_state = 6
+          ORDER BY c.committee_name ASC, e.name ASC`,
         [user.id]
       ).catch(() => []);
-
-      const winnerRows = await query<LoginEventWinnerRow[]>(
-        `SELECT event_id, winner_name
-         FROM event_winners
-         WHERE winner_user_id = ?
-         ORDER BY event_id ASC`,
-        [user.id]
-      ).catch(() => []);
-
-      const winnerByEventId = new Map<number, string>();
-      for (const row of winnerRows) {
-        const eid = Number(row.event_id);
-        const name = String(row.winner_name || '').trim();
-        if (name) {
-          winnerByEventId.set(eid, name.toUpperCase());
-        }
-      }
 
       const eventsByCommitteeId = new Map<number, LoginEventRoleRow[]>();
       for (const row of eventRoleRows) {
@@ -258,9 +238,8 @@ export const loginResolvers = {
           const cid = Number(row.committee_id);
           const committeeEvents = (eventsByCommitteeId.get(cid) || []).map((ev) => {
             const eid = Number(ev.event_id);
-            const winnerDesignation = winnerByEventId.get(eid);
             const usersEventsDesignation = String(ev.designation || '').trim().toUpperCase();
-            const designation = winnerDesignation || usersEventsDesignation || 'MEMBER';
+            const designation = usersEventsDesignation || 'MEMBER';
             return {
               eventId: eid,
               eventName: ev.event_name,

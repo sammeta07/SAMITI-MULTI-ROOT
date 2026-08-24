@@ -1,4 +1,4 @@
-import { Component, inject } from '@angular/core';
+import { Component, inject, effect } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ActivatedRoute, Router, RouterModule, RouterOutlet } from '@angular/router';
 import { MatIconModule } from '@angular/material/icon';
@@ -37,6 +37,40 @@ export class EventDetailsComponent {
   private readonly votingService = inject(EventVotingService);
   private readonly stateService = inject(EventDetailsStateService);
 
+  // Tracks the last event whose default tab was already resolved, so the
+  // auto-default only runs once per distinct event open (not on every data
+  // refresh). Reopening a different event re-evaluates the default tab.
+  private lastResolvedEventId: number | null = null;
+
+  constructor() {
+    // For events already in "Results Declared" (phase >= 6), the default tab
+    // should be Overview instead of Voting. Once event data is loaded and the
+    // user is on the default Voting tab, route them to Overview.
+    effect(() => {
+      const data = this.stateService.eventData();
+      if (!data) return;
+      const eventId = Number(data.eventId);
+      if (!eventId) return;
+
+      // Skip re-evaluation when the same event's data merely refreshes
+      // (e.g. declaring results), but re-run when a different event is opened.
+      if (eventId === this.lastResolvedEventId) return;
+
+      const phase = Number(data.votingPhaseState || 0);
+      this.lastResolvedEventId = eventId;
+      if (phase < 6) return;
+
+      const url = this.router.url;
+      const baseEventUrl = `/dashboard/event/${eventId}`;
+      const isDefaultVoting =
+        url.endsWith('/voting') || url === baseEventUrl || url.endsWith(`/event/${eventId}`);
+
+      if (isDefaultVoting) {
+        this.router.navigate(['/dashboard', 'event', eventId, 'overview']);
+      }
+    });
+  }
+
   public get eventData(): EventVotingPayload | null {
     return this.stateService.eventData();
   }
@@ -51,7 +85,7 @@ export class EventDetailsComponent {
   }
 
   public get isMasterAdmin(): boolean {
-    return String(this.eventData?.currentCommitteeRole || 'NONE').toUpperCase() === 'COMMITTEE_MASTER_ADMIN';
+    return String(this.eventData?.committeeRole || 'NONE').toUpperCase() === 'COMMITTEE_MASTER_ADMIN';
   }
 
    public get currentVotingMode(): 'VOTING' | 'DIRECT' | null {
@@ -60,6 +94,10 @@ export class EventDetailsComponent {
 
   public get votingPhaseState(): number {
     return Number(this.eventData?.votingPhaseState || 0);
+  }
+
+  public get isResultsDeclared(): boolean {
+    return this.votingPhaseState >= 6;
   }
 
   public get votingPhaseLabel(): string {
@@ -85,10 +123,14 @@ export class EventDetailsComponent {
   }
 
   public navigateToTab(tab: string): void {
-    const eventId = this.eventData?.eventId ?? this.route.snapshot.params['id'];
-    if (eventId) {
-      this.router.navigate(['/dashboard', 'event', eventId, tab]);
+    if (tab !== 'voting' && !this.isResultsDeclared) {
+      return;
     }
+
+    const eventId = this.eventData?.eventId ?? this.route.snapshot.params['id'];
+    if (!eventId) return;
+    const target = tab === 'voting' || this.isResultsDeclared ? tab : 'voting';
+    this.router.navigate(['/dashboard', 'event', eventId, target]);
   }
 
    public onVotingModeChange(mode: 'VOTING' | 'DIRECT'): void {

@@ -165,7 +165,7 @@ export class GroupDetailsComponent implements OnInit {
 
     try {
       const uploadedLogoMetadata = await firstValueFrom(
-        this.imageAssetService.uploadSingleImageForCommitteeLogo(selectedOrCroppedFile)
+        this.imageAssetService.uploadSingleImageForCommitteeLogo(selectedOrCroppedFile, `committee-logo-${committee.committeeId}`)
       );
 
       const updatedCommittee = await firstValueFrom(
@@ -239,7 +239,7 @@ export class GroupDetailsComponent implements OnInit {
 
     try {
       const uploadedMetadata = await firstValueFrom(
-        this.imageAssetService.uploadSingleImageForCommitteeLogo(selectedOrCroppedFile)
+        this.imageAssetService.uploadSingleImageForCommitteeLogo(selectedOrCroppedFile, `designation-${eventId}-${role}`)
       );
 
       const key = `${eventId}:${role}`;
@@ -302,7 +302,7 @@ export class GroupDetailsComponent implements OnInit {
 
     try {
       const uploadedMetadata = await firstValueFrom(
-        this.imageAssetService.uploadSingleImageForCommitteeLogo(selectedOrCroppedFile)
+        this.imageAssetService.uploadSingleImageForCommitteeLogo(selectedOrCroppedFile, `event-logo-${eventItem.eventId}`)
       );
 
       const updated = await firstValueFrom(
@@ -317,6 +317,7 @@ export class GroupDetailsComponent implements OnInit {
       );
 
       const formattedEventName = this.toTitleCase(eventItem.eventName || 'Event');
+      this.hierarchyTreeService.triggerHierarchyTreeRefresh();
       this.notifier.success(`Logo for **${formattedEventName}** has been updated successfully.`);
     } catch (error: any) {
       this.notifier.error(error?.message || 'Failed to update event logo.');
@@ -468,7 +469,27 @@ export class GroupDetailsComponent implements OnInit {
               ...event,
               id: event.id || Number(event.eventId || 0)
             }));
-            this.committeeEvents.set(safeEvents);
+            const statusSortOrder: Record<string, number> = {
+              COMPLETED: 0,
+              STARTED: 1,
+              UPCOMING: 2
+            };
+
+            const sortedEvents = [...safeEvents].sort((a, b) => {
+              const statusA = String(a.status || '').toUpperCase();
+              const statusB = String(b.status || '').toUpperCase();
+              const orderA = statusSortOrder[statusA] ?? 99;
+              const orderB = statusSortOrder[statusB] ?? 99;
+
+              if (orderA !== orderB) {
+                return orderA - orderB;
+              }
+
+              const dateA = a.startDate ? new Date(a.startDate).getTime() : Infinity;
+              const dateB = b.startDate ? new Date(b.startDate).getTime() : Infinity;
+              return dateA - dateB;
+            });
+            this.committeeEvents.set(sortedEvents);
           } else {
             this.committeeEvents.set([]);
           }

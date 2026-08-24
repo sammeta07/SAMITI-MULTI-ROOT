@@ -2,7 +2,7 @@
   <div class="home-body">
 
     <section class="committees-col" 
-             [style.flex]="'0 0 ' + committeesWidth() + '%'"
+             [style.flex-basis]="committeesWidth() + '%'"
              [class.panel-collapsed]="!(uiService.isCommitteesSectionVisible$ | async)" 
              aria-label="Committees Management Panel">
       <div class="col-search-bar">
@@ -76,7 +76,8 @@
             [class.panel-role-none]="!isAuth">
 
             <mat-expansion-panel-header>
-              <div class="committee-card-grid">
+              <div class="panel-header-inner">
+                <div class="committee-card-grid">
                 <div class="card-logo-area">
                   <ng-template #homeCommitteeLogoContent>
                     @if (committee.committeeLogo) {
@@ -93,11 +94,12 @@
                     }
                   </ng-template>
 
-                  @if (isAuth && isCommitteeAdmin(committee)) {
+                  @if (isAuth && isCommitteeMasterAdmin(committee)) {
                     <input #homeCommitteeLogoInput type="file" hidden accept="image/*" (click)="$event.stopPropagation()" (change)="onCommitteeLogoSelected($event, committee)">
                     <button type="button" class="committee-logo-edit-trigger"
+                      [class.is-uploading]="isUploadingCommitteeLogo(committee.id)"
                       (click)="$event.stopPropagation(); homeCommitteeLogoInput.click()"
-                     [disabled]="committee.committeeRole !== 'COMMITTEE_MASTER_ADMIN' || isUploadingCommitteeLogo(committee.id)"
+                      [disabled]="isUploadingCommitteeLogo(committee.id)"
                       matTooltip="Change committee logo" matTooltipPosition="above"
                       aria-label="Change committee logo">
                       <ng-container [ngTemplateOutlet]="homeCommitteeLogoContent"></ng-container>
@@ -132,36 +134,32 @@
                   </div>
                 </div>
 
+                <div class="card-identity-pills-area">
+                  <div class="committee-id-pill">
+                    <span>ID: {{ committee.id }}</span>
+                    <button mat-icon-button type="button" class="copy-id-btn"
+                      (click)="copyCommitteeId(committee.id.toString(), $event, tooltip)" #tooltip="matTooltip"
+                      matTooltip="Copy Committee ID" matTooltipPosition="above">
+                      @if (copiedCommitteeId === committee.id.toString()) {
+                      <mat-icon class="copy-icon-success">done_all</mat-icon>
+                      } @else {
+                      <mat-icon>content_copy</mat-icon>
+                      }
+                    </button>
+                  </div>
+                  <span class="meta-pill text-muted-badge since-year-badge">Est. {{ committee.establishYear }}</span>
+                  <div class="phone-contact-group">
+                    @for (phone of committee.contactNumbers; track phone + '-' + $index) {
+                    <span class="meta-pill phone-contact-badge">
+                      <mat-icon>phone</mat-icon>{{ phone }}
+                    </span>
+                    }
+                  </div>
+                </div>
+
                 <div class="card-actions-identity-area">
                   <div class="identity-top-row">
-                    <div class="phone-contact-group">
-                      @for (phone of committee.contactNumbers; track phone + '-' + $index) {
-                      <span class="meta-pill phone-contact-badge">
-                        <mat-icon>phone</mat-icon>{{ phone }}
-                      </span>
-                      }
-                    </div>
-                    <span class="meta-pill text-muted-badge since-year-badge">Est. {{ committee.establishYear }}</span>
-                    <div class="committee-id-pill">
-                      <span>ID: {{ committee.id }}</span>
-                      <button mat-icon-button type="button" class="copy-id-btn"
-                        (click)="copyCommitteeId(committee.id.toString(), $event, tooltip)" #tooltip="matTooltip"
-                        matTooltip="Copy Committee ID" matTooltipPosition="above">
-                        @if (copiedCommitteeId === committee.id.toString()) {
-                        <mat-icon class="copy-icon-success">done_all</mat-icon>
-                        } @else {
-                        <mat-icon>content_copy</mat-icon>
-                        }
-                      </button>
-                    </div>
                     @if (isAuth) {
-                        @if (committee.status === 'PENDING' && committee.pendingRequestRole) {
-                        <span class="user-role-badge badge-pending"
-                          [matTooltip]="'Pending Approval For' +' ' + getPendingRoleLabel(committee.pendingRequestRole)"
-                          matTooltipPosition="above">
-                          {{committee.status}}
-                        </span>
-                      }
                       @if (committee.committeeRole === 'COMMITTEE_MASTER_ADMIN') {
                         <span class="user-role-badge badge-master-admin">
                           <mat-icon class="role-badge-icon">verified</mat-icon>MASTER ADMIN
@@ -181,31 +179,36 @@
                   </div>
 
                    <div class="directions-status-row">
-                     @if (isAuth) {
-                       @if (committee.status === 'PENDING' && committee.pendingRequestRole) {
-                        <button mat-stroked-button type="button" class="action-btn delete-btn"
-                          (click)="cancelRequest(committee.id, $event)">
-                          <mat-icon>cancel</mat-icon>
-                          <span>Cancel</span>
-                        </button>
-                       }
-                        @if (!committee.committeeRole && committee.status !== 'PENDING') {
-                         <button mat-flat-button type="button" class="join-committee-btn"
-                           (click)="onRequestMemberRole(committee.id, $event)">
-                           <mat-icon>group_add</mat-icon>
-                           <span>Join</span>
+                      @if (isAuth) {
+                        @if (committee.status === 'PENDING' && committee.pendingRequestRole) {
+                         <button mat-stroked-button type="button" class="action-btn delete-btn"
+                           matTooltip="Cancel join request"
+                           (click)="cancelRequest(committee.id, $event)">
+                           <mat-icon>cancel</mat-icon>
+                           <span>Cancel</span>
                          </button>
-                       }
-                     }
-                    <button type="button" class="proximity-display-row"
-                      (click)="openCommitteeInMaps(committee, $event)"
-                      matTooltip="Navigate with Google Maps" matTooltipPosition="above">
-                      <mat-icon class="compass-pointer-icon">directions</mat-icon>
-                      <span class="spatial-distance-metric">{{ committee.distanceMeters }} m</span>
-                    </button>
-                  </div>
+                        }
+                         @if (!committee.committeeRole && committee.status !== 'PENDING') {
+                          <button mat-flat-button type="button" class="join-committee-btn"
+                            (click)="onRequestMemberRole(committee.id, $event)">
+                            <mat-icon>group_add</mat-icon>
+                            <span>Join</span>
+                          </button>
+                        }
+                      }
+                    </div>
                 </div>
 
+                <div class="distance-display-area">
+                  <button type="button" class="proximity-display-row"
+                    (click)="openCommitteeInMaps(committee, $event)"
+                    matTooltip="Navigate with Google Maps" matTooltipPosition="above">
+                    <mat-icon class="compass-pointer-icon">directions</mat-icon>
+                    <span class="spatial-distance-metric">{{ committee.distanceMeters }} m</span>
+                  </button>
+                </div>
+
+                </div>
               </div>
             </mat-expansion-panel-header>
 

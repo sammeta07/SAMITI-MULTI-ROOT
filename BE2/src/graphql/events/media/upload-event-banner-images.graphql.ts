@@ -1,4 +1,5 @@
 import { query, execute } from '../../../config/db';
+import { deleteLocalMediaFileIfExists } from '../../../media/image-cleanup';
 
 const MAX_BANNER_IMAGES = 5;
 
@@ -137,10 +138,19 @@ export const uploadEventBannerImagesResolvers = {
       );
       if (adminRows.length === 0) throwError('FORBIDDEN', 'Only committee admins can delete event banners');
 
+      const deletedRows = await query<any[]>(
+        `SELECT media_url AS mediaUrl FROM event_media_assets WHERE event_id = ? AND media_url = ? LIMIT 1`,
+        [eventId, mediaUrl]
+      );
+
       await execute(
         `DELETE FROM event_media_assets WHERE event_id = ? AND media_url = ?`,
         [eventId, mediaUrl]
       );
+
+      if (deletedRows.length > 0) {
+        await deleteLocalMediaFileIfExists(mediaUrl);
+      }
 
       const updatedBannerRows = await query<any[]>(
         `SELECT media_url AS mediaUrl FROM event_media_assets

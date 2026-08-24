@@ -4,6 +4,9 @@ export interface AdminHierarchyTreeNode {
   type: string;
   logo?: string | null;
   roles: string[];
+  startDate?: string | null;
+  endDate?: string | null;
+  status?: string | null;
   children: AdminHierarchyTreeNode[];
 }
 
@@ -44,4 +47,6 @@ export interface TreeNode {
   logo?: string | null;
   roleScope?: 'master_admin' | 'admin' | 'member';
   roles?: string[];
+  startDate?: string | null;
+  endDate?: string | null;
 }

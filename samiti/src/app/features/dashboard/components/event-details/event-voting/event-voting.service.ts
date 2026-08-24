@@ -94,7 +94,7 @@ export class EventVotingService {
         }
         canReviewInterest
         canManageVotingRoles
-        currentCommitteeRole
+        committeeRole
         votingPhaseState
         votingMode
       }

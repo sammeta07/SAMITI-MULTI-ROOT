@@ -14,6 +14,7 @@ import { DashboardHierarchyTreeService } from './dashboard-hierarchy-tree.servic
 import { NotifierService } from '../../../../shared/notifier/notifier.service';
 import { AdminHierarchyTreeNode, RoleNode, TreeNode } from './dashboard-hierarchy-tree.models';
 import { sanitizeCloudinaryLogoUrl } from '../../../../shared/services/cloudinary-logo.util';
+import { SelectedYearService } from '../../../../shared/services/selected-year.service';
 
 @Component({
   selector: 'app-dashboard-hierarchy-tree',
@@ -35,6 +36,7 @@ export class DashboardHierarchyTreeComponent implements OnInit {
   private readonly treeService = inject(DashboardHierarchyTreeService);
   private readonly notifier = inject(NotifierService);
   private readonly router = inject(Router);
+  private readonly selectedYearService = inject(SelectedYearService);
   private readonly routeRefreshAttempts = new Set<string>();
 
   public readonly isLoading = signal<boolean>(false);
@@ -45,7 +47,7 @@ export class DashboardHierarchyTreeComponent implements OnInit {
   public readonly availableYears = signal<number[]>(
     Array.from({ length: 10 }, (_, i) => this.currentYear - i)
   );
-  public readonly selectedYear = signal<number>(this.currentYear);
+  public readonly selectedYear = this.selectedYearService.selectedYear;
   
   // 🚀 FIXED: Dynamic signal tracking static navigation items from old dashboard
   public readonly activeStaticMenu = signal<string | null>('home');
@@ -153,13 +155,18 @@ export class DashboardHierarchyTreeComponent implements OnInit {
       .map((childNode) => this.mapAdminNodeToTreeNode(childNode, roleScope))
       .filter((childNode): childNode is TreeNode => Boolean(childNode));
 
+    this.sortTreeChildren(mappedChildren);
+
     return {
       name: node.name,
       type: mappedType,
       id: this.extractNumericId(node.id),
-      logo: mappedType === 'group' ? sanitizeCloudinaryLogoUrl(node.logo || null) : null,
+      logo: (mappedType === 'group' || mappedType === 'event') ? sanitizeCloudinaryLogoUrl(node.logo || null) : null,
       roleScope: roleScope ?? undefined,
       roles: node.roles || undefined,
+      startDate: node.startDate ?? undefined,
+      endDate: node.endDate ?? undefined,
+      status: node.status ?? undefined,
       children: mappedChildren.length > 0 ? mappedChildren : undefined
     };
   }
@@ -209,10 +216,47 @@ export class DashboardHierarchyTreeComponent implements OnInit {
       return directNumeric;
     }
 
-    const idParts = rawId.split('_');
-    const trailingSegment = idParts[idParts.length - 1];
+    const idParts = rawId.split('_') as string[];
+    const trailingSegment = idParts[idParts.length - 1] as string;
     const parsedId = Number(trailingSegment);
     return Number.isNaN(parsedId) ? undefined : parsedId;
+  }
+
+  private sortTreeChildren(nodes: TreeNode[]): void {
+    const statusOrder: Record<string, number> = {
+      COMPLETED: 0,
+      STARTED: 1,
+      UPCOMING: 2
+    };
+
+    nodes.sort((left, right) => {
+      const isLeftEvent = left.type === 'event';
+      const isRightEvent = right.type === 'event';
+
+      if (isLeftEvent && isRightEvent) {
+        const leftStatus = String(left.status || '').toUpperCase();
+        const rightStatus = String(right.status || '').toUpperCase();
+        const leftOrder = statusOrder[leftStatus] ?? 99;
+        const rightOrder = statusOrder[rightStatus] ?? 99;
+
+        if (leftOrder !== rightOrder) {
+          return leftOrder - rightOrder;
+        }
+
+        const leftDate = left.startDate ?? '';
+        const rightDate = right.startDate ?? '';
+
+        if (leftDate !== rightDate) {
+          if (!leftDate) return 1;
+          if (!rightDate) return -1;
+          return leftDate < rightDate ? -1 : 1;
+        }
+
+        return left.name.localeCompare(right.name);
+      }
+
+      return left.name.localeCompare(right.name);
+    });
   }
 
   private syncActiveNodeFromRawUrl(): void {
@@ -507,5 +551,27 @@ export class DashboardHierarchyTreeComponent implements OnInit {
 
   public getNodeInitial(name: string | undefined): string {
     return String(name || '').trim().charAt(0).toUpperCase() || '?';
+  }
+
+  public getNodeDesignation(node: TreeNode): string | null {
+    if (!node.roleScope || node.roleScope === 'member') {
+      return null;
+    }
+    return node.roleScope === 'master_admin' ? 'Master Admin' : 'Admin';
+  }
+
+  public shouldShowEventRole(node: TreeNode): boolean {
+    if (node.type !== 'event' || !node.roles?.length) {
+      return false;
+    }
+    const firstRole = node.roles[0];
+    if (!firstRole) {
+      return false;
+    }
+    const normalized = firstRole.trim().toLowerCase();
+    if (normalized === 'member' || normalized === '') {
+      return false;
+    }
+    return true;
   }
 }

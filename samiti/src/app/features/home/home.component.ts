@@ -23,6 +23,7 @@ import { StartupLoaderService } from '../../core/services/startup-loader.service
 import { UiToggleService } from '../../shared/services/ui-toggle.service';
 import { ImageAssetService } from '../../core/services/image-asset.service';
 import { ImageCropperDialogComponent } from '../../shared/components/image-cropper-dialog/image-cropper-dialog.component';
+import { SelectedYearService } from '../../shared/services/selected-year.service';
 
 @Component({
   selector: 'app-home',
@@ -53,6 +54,7 @@ export class HomeComponent implements OnDestroy {
   private readonly confirmDialog = inject(ConfirmDialogService); // Injecting ConfirmDialogService
   private readonly startupLoaderService = inject(StartupLoaderService);
   private readonly imageAssetService = inject(ImageAssetService);
+  private readonly selectedYearService = inject(SelectedYearService);
 
   private nearbyExpandedCommitteeIds = new Set<number>();
   private favouriteExpandedCommitteeIds = new Set<number>();
@@ -174,6 +176,17 @@ export class HomeComponent implements OnDestroy {
 
       const role = String(c.committeeRole || '').toUpperCase();
       return role === 'COMMITTEE_MEMBER' || role === 'COMMITTEE_ADMIN' || role === 'COMMITTEE_MASTER_ADMIN';
+    }).sort((firstCommittee, secondCommittee) => {
+      const rolePriority: Record<string, number> = {
+        COMMITTEE_MASTER_ADMIN: 1,
+        COMMITTEE_ADMIN: 2,
+        COMMITTEE_MEMBER: 3
+      };
+      const firstRole = this.isAuthItem(firstCommittee) ? firstCommittee.committeeRole : '';
+      const secondRole = this.isAuthItem(secondCommittee) ? secondCommittee.committeeRole : '';
+      const firstPriority = rolePriority[String(firstRole || '').toUpperCase()] ?? 4;
+      const secondPriority = rolePriority[String(secondRole || '').toUpperCase()] ?? 4;
+      return firstPriority - secondPriority;
     });
   }
 
@@ -183,7 +196,7 @@ export class HomeComponent implements OnDestroy {
   }
 
   // ─── Event year tabs helpers ──────────────────────────────
-  readonly currentYear: number = new Date().getFullYear();
+  readonly currentYear = this.selectedYearService.selectedYear;
 
   private extractEventYear(event: CommitteeEvent): number | null {
     if (!event.startDate) return null;
@@ -192,7 +205,7 @@ export class HomeComponent implements OnDestroy {
   }
 
   getCommitteeEventYears(committee: CommitteesList): number[] {
-    const years = new Set<number>([this.currentYear]);
+    const years = new Set<number>([this.currentYear()]);
     for (const event of committee.events) {
       const year = this.extractEventYear(event);
       if (year) years.add(year);
@@ -213,7 +226,7 @@ export class HomeComponent implements OnDestroy {
 
   getDefaultYearTabIndex(committee: CommitteesList): number {
     const years = this.getCommitteeEventYears(committee);
-    const index = years.indexOf(this.currentYear);
+    const index = years.indexOf(this.currentYear());
     return index >= 0 ? index : 0;
   }
 
@@ -336,6 +349,7 @@ export class HomeComponent implements OnDestroy {
       latitude: locationCoords.lat,
       longitude: locationCoords.long,
       distanceKm: this.selectedCommitteeRadius,
+      year: this.selectedYearService.selectedYear(),
     };
 
     const fetch$ = this.isLoggedIn
@@ -469,7 +483,11 @@ export class HomeComponent implements OnDestroy {
           this.notifier.error('Failed to update favourite status');
           return;
         }
-        target.isFavourite = response.isFavourite;
+        this.committeeList.set(this.committeeList().map(committee =>
+          committee.id === committeeId
+            ? { ...committee, isFavourite: response.isFavourite }
+            : committee
+        ));
         this.selectedTabIndex = targetTabIndex;
         this.cdr.detectChanges();
         this.scrollToCommittee(committeeId, targetTabIndex);
@@ -636,6 +654,12 @@ export class HomeComponent implements OnDestroy {
     return role === 'COMMITTEE_ADMIN' || role === 'COMMITTEE_MASTER_ADMIN';
   }
 
+  isCommitteeMasterAdmin(committee: CommitteesList): boolean {
+    if (!this.isAuthItem(committee)) return false;
+    const role = String(committee.committeeRole || '').toUpperCase();
+    return role === 'COMMITTEE_MASTER_ADMIN';
+  }
+
   isUploadingCommitteeLogo(committeeId: number): boolean {
     return this.uploadingLogoCommitteeIds.has(committeeId);
   }
@@ -664,7 +688,7 @@ export class HomeComponent implements OnDestroy {
 
     try {
       const uploadedLogoMetadata = await firstValueFrom(
-        this.imageAssetService.uploadSingleImageForCommitteeLogo(selectedOrCroppedFile)
+        this.imageAssetService.uploadSingleImageForCommitteeLogo(selectedOrCroppedFile, `committee-logo-${committee.id}`)
       );
 
       const updatedLogo = await firstValueFrom(

@@ -27,30 +27,43 @@ export class DashboardHierarchyTreeService {
           type
           logo
           roles
+          startDate
           children {
             id
             name
             type
             logo
             roles
+            startDate
+           endDate
+           status
             children {
               id
               name
               type
               logo
               roles
+              startDate
+           endDate
+           status
               children {
                 id
                 name
                 type
                 logo
                 roles
+                startDate
+           endDate
+           status
                 children {
                   id
                   name
                   type
                   logo
                   roles
+                  startDate
+           endDate
+           status
                 }
               }
             }

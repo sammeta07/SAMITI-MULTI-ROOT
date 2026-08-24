@@ -1,10 +1,11 @@
-import { Component, ElementRef, inject, OnInit, signal, ViewChild } from '@angular/core';
+import { Component, ElementRef, inject, OnInit, signal, ViewChild, ChangeDetectorRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ActivatedRoute } from '@angular/router';
 import { MatDialog } from '@angular/material/dialog';
 import { MatIconModule } from '@angular/material/icon';
 import { MatButtonModule } from '@angular/material/button';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
+import { MatCheckboxModule } from '@angular/material/checkbox';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { HttpErrorResponse } from '@angular/common/http';
 import { firstValueFrom } from 'rxjs';
@@ -25,6 +26,7 @@ import { ConfirmDialogData } from '../../../../components/dialog/confirm/confirm
     MatIconModule,
     MatButtonModule,
     MatProgressSpinnerModule,
+    MatCheckboxModule,
     MatTooltipModule
   ],
   templateUrl: './program-details.html',
@@ -40,15 +42,92 @@ export class ProgramDetailsComponent implements OnInit {
   private readonly hierarchyTreeService = inject(DashboardHierarchyTreeService);
   private readonly imageAssetService = inject(ImageAssetService);
   private readonly confirmDialog = inject(ConfirmDialogService);
+  private readonly cdr = inject(ChangeDetectorRef);
 
   public readonly isLoading = signal<boolean>(false);
   public readonly isBannerUploading = signal<boolean>(false);
+  public readonly isDeletingBanners = signal<boolean>(false);
+  public readonly isSelectionMode = signal<boolean>(false);
+  public readonly selectedBannerUrls = signal<Set<string>>(new Set<string>());
   public readonly programData = signal<ProgramDetailsPayload | null>(null);
   public readonly tasks = signal<ProgramTask[]>([]);
   public readonly MAX_BANNERS = 5;
 
   public get bannerCount(): number {
     return this.programData()?.bannerImages?.length ?? 0;
+  }
+
+  public get selectedBannerCount(): number {
+    return this.selectedBannerUrls().size;
+  }
+
+  public toggleSelectionMode(): void {
+    const next = !this.isSelectionMode();
+    this.isSelectionMode.set(next);
+    if (!next) {
+      this.selectedBannerUrls.set(new Set<string>());
+    }
+  }
+
+  public toggleBannerSelection(imageUrl: string): void {
+    const current = new Set(this.selectedBannerUrls());
+    if (current.has(imageUrl)) {
+      current.delete(imageUrl);
+    } else {
+      current.add(imageUrl);
+    }
+    this.selectedBannerUrls.set(current);
+  }
+
+  public isBannerSelected(imageUrl: string): boolean {
+    return this.selectedBannerUrls().has(imageUrl);
+  }
+
+  public async deleteSelectedBanners(): Promise<void> {
+    const currentProgram = this.programData();
+    const selectedUrls = [...this.selectedBannerUrls()];
+    if (!currentProgram?.programId || selectedUrls.length === 0 || this.isDeletingBanners()) {
+      return;
+    }
+
+    const dialogData: ConfirmDialogData = {
+      title: 'Delete Banner Images',
+      message: `Are you sure you want to delete ${selectedUrls.length} selected banner image(s)? This action cannot be undone.`,
+      confirmText: 'Delete',
+      cancelText: 'Cancel'
+    };
+
+    const dialogRef = this.confirmDialog.open(dialogData);
+    const result = await firstValueFrom(dialogRef.afterClosed());
+    if (!result?.confirmed) {
+      return;
+    }
+
+    this.isDeletingBanners.set(true);
+    try {
+      let lastPayload: any = null;
+      for (const url of selectedUrls) {
+        lastPayload = await firstValueFrom(this.programDetailsService.deleteProgramBannerImage(currentProgram.programId, url));
+      }
+
+      this.programData.update((prev) =>
+        prev
+          ? {
+              ...prev,
+              bannerImages: lastPayload?.bannerImages ?? prev.bannerImages.filter((u) => !selectedUrls.includes(u)),
+              programBanner: lastPayload ? lastPayload.bannerImages[0] || null : prev.programBanner
+            }
+          : prev
+      );
+      this.cdr.detectChanges();
+      this.selectedBannerUrls.set(new Set<string>());
+      this.isSelectionMode.set(false);
+      this.notifier.success(`${selectedUrls.length} banner image(s) deleted successfully.`);
+    } catch (err: any) {
+      this.notifier.error(err?.error?.message || err?.message || 'Failed to delete banner images.');
+    } finally {
+      this.isDeletingBanners.set(false);
+    }
   }
 
   public get canUploadMoreBanners(): boolean {
@@ -183,6 +262,7 @@ export class ProgramDetailsComponent implements OnInit {
             }
           : prev
       );
+      this.cdr.detectChanges();
 
       this.notifier.success(`${urls.length} banner image${urls.length > 1 ? 's' : ''} uploaded successfully.`);
     } catch (err: any) {
@@ -222,6 +302,7 @@ export class ProgramDetailsComponent implements OnInit {
                 }
               : prev
           );
+          this.cdr.detectChanges();
           this.notifier.success('Banner image deleted successfully.');
         },
         error: (err: HttpErrorResponse) => {

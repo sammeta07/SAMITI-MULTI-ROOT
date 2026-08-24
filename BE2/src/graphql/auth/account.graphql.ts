@@ -1,6 +1,7 @@
 import { RowDataPacket } from 'mysql2/promise';
 import { execute, query } from '../../config/db';
 import { deleteLocalMediaFileIfExists } from '../../media/image-cleanup';
+import { isCloudinaryStorageEnabled } from '../../media/cloudinary-storage';
 
 const MOBILE_PATTERN = /^\d{10}$/;
 
@@ -127,7 +128,12 @@ export const accountResolvers = {
         [name.trim(), normalizedMobile, nextProfilePhotoUrl, loggedInUserId]
       );
 
+      // In Cloudinary mode the profile photo is uploaded with a fixed public id
+      // (user-profile-<id>) and overwrites the previous asset, so the old photo is
+      // already replaced. In local mode each upload gets a unique filename, so we
+      // must delete the previous file to avoid orphaned storage.
       if (
+        !isCloudinaryStorageEnabled() &&
         normalizedIncomingPhoto &&
         existingAccount.profile_photo &&
         existingAccount.profile_photo !== normalizedIncomingPhoto

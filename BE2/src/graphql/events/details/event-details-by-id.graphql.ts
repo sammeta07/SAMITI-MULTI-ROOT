@@ -181,7 +181,7 @@ export const eventDetailsTypes = `
     interestApprovedPeople: [EventInterestInfo!]!
     canReviewInterest: Boolean!
     canManageVotingRoles: Boolean!
-    currentCommitteeRole: String!
+    committeeRole: String!
     committeeMemberCount: Int!
     committeeAdminCount: Int!
     votingPhaseState: Int!
@@ -271,7 +271,7 @@ export const eventDetailsResolvers = {
       );
       const canSelfNominate = Boolean(membership && String(membership.committee_role || '') === 'COMMITTEE_MEMBER');
       const isCurrentUserMasterAdmin = Boolean(membership && String(membership.committee_role || '') === 'COMMITTEE_MASTER_ADMIN');
-      const currentCommitteeRole = isCurrentUserMasterAdmin
+      const committeeRole = isCurrentUserMasterAdmin
         ? 'COMMITTEE_MASTER_ADMIN'
         : canManageVotingRoles
           ? 'COMMITTEE_ADMIN'
@@ -419,7 +419,7 @@ export const eventDetailsResolvers = {
         interestApprovedPeople,
         canReviewInterest: isMasterAdmin,
         canManageVotingRoles,
-        currentCommitteeRole,
+        committeeRole,
         committeeMemberCount,
         committeeAdminCount,
         votingPhaseState: getEventVotingPhaseState(event, supportsVotingPhaseState),

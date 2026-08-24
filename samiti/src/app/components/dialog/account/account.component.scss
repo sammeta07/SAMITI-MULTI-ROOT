@@ -249,10 +249,17 @@
       width: 1.25rem;
       height: 1.25rem;
     }
+
+    .logo-upload-spinner {
+      ::ng-deep circle {
+        stroke: #ffffff !important;
+      }
+    }
   }
 
   &:hover:not(:disabled) .photo-edit-overlay,
-  &:focus-visible .photo-edit-overlay {
+  &:focus-visible .photo-edit-overlay,
+  &.is-uploading .photo-edit-overlay {
     opacity: 1;
   }
 }

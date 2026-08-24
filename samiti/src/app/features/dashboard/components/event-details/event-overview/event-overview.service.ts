@@ -23,6 +23,11 @@ export interface UpdatedEventVisibilityPayload {
   updatedBy: number;
 }
 
+export interface UpdatedEventLogoPayload {
+  eventId: number;
+  eventLogo: string | null;
+}
+
 @Injectable({
   providedIn: 'root'
 })
@@ -40,6 +45,7 @@ export class EventOverviewService {
         eventName
         eventDisplayName
         eventBanner
+        eventLogo
         bannerImages
         status
         category
@@ -52,6 +58,11 @@ export class EventOverviewService {
         createdBy
         updatedBy
         createdAt
+        myDesignation {
+          roleId
+          name
+        }
+        committeeRole
       }
     }`;
 
@@ -138,6 +149,37 @@ export class EventOverviewService {
       { withCredentials: true }
     ).pipe(
       map(res => res.data.deleteEventBannerImage)
+    );
+  }
+
+  public updateEventLogo(eventId: number, committeeId: number, logo: string): Observable<UpdatedEventLogoPayload> {
+    const mutation = `mutation UpdateEventLogo($input: UpdateEventLogoInput!) {
+      updateEventLogo(input: $input) {
+        eventId
+        eventLogo
+      }
+    }`;
+
+    return this.http.post<{ errors?: Array<{ message: string }>; data: { updateEventLogo: UpdatedEventLogoPayload } }>(
+      this.graphqlUrl,
+      {
+        query: mutation,
+        variables: {
+          input: {
+            eventId,
+            committeeId,
+            eventLogo: logo
+          }
+        }
+      },
+      { withCredentials: true }
+    ).pipe(
+      map((res) => {
+        if (res.errors?.length) {
+          throw new Error(res.errors[0].message || 'Failed to update event logo');
+        }
+        return res.data.updateEventLogo;
+      })
     );
   }
 }

@@ -340,6 +340,35 @@
   }
 
   &:hover .banner-delete-btn { opacity: 1; }
+
+  &.selected {
+    border-color: #2563eb;
+    box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.5);
+  }
+
+  .banner-select-overlay {
+    position: absolute;
+    top: 4px;
+    left: 4px;
+    z-index: 2;
+    background: rgba(15, 23, 42, 0.55);
+    border-radius: 6px;
+    padding: 2px 4px;
+  }
+
+  &.selected .banner-img { opacity: 0.75; }
+}
+
+.banner-header-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+
+  .banner-delete-selected-btn mat-progress-spinner {
+    display: inline-block;
+    vertical-align: middle;
+    margin-right: 6px;
+  }
 }
 
 .banner-upload-tile {

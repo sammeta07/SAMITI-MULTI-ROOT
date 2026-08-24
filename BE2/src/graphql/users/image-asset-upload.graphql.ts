@@ -46,11 +46,13 @@ export const imageAssetUploadTypes = `
     dataUrl: String!
     preferredResizeMode: ImageResizeModeType
     compressionQuality: Int
+    publicId: String
   }
 
   input ImageAssetBatchUploadInput {
     usageContext: ImageAssetUsageContextType!
     files: [ImageAssetUploadItemInput!]!
+    publicId: String
   }
 
   type UploadedImageAssetMetadata {
@@ -82,12 +84,14 @@ export const imageAssetUploadResolvers = {
             dataUrl: string;
             preferredResizeMode?: keyof typeof GRAPHQL_IMAGE_RESIZE_MODE_TO_STORAGE_MODE;
             compressionQuality?: number;
+            publicId?: string;
           }>;
+          publicId?: string;
         };
       },
       context: any
     ) {
-      const { usageContext, files } = args.input;
+      const { usageContext, files, publicId } = args.input;
 
       if (!Array.isArray(files) || files.length === 0) {
         throw new Error('At least one image must be provided for upload.');
@@ -110,7 +114,8 @@ export const imageAssetUploadResolvers = {
             preferredResizeMode: fileItem.preferredResizeMode
               ? GRAPHQL_IMAGE_RESIZE_MODE_TO_STORAGE_MODE[fileItem.preferredResizeMode]
               : undefined,
-            compressionQuality: fileItem.compressionQuality
+            compressionQuality: fileItem.compressionQuality,
+            publicId: fileItem.publicId || publicId
           });
 
           return {

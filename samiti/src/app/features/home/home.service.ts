@@ -35,8 +35,8 @@ export class HomeService {
 
     getCommitteesListGuestByDistanceKm(body: CommitteeListRequestBackend) {
         const url = this.graphqlUrl;
-        const query = `query committeesListGuestUser($latitude: Float!, $longitude: Float!, $distanceKm: Float!) {
-          committeesListGuestUser(latitude: $latitude, longitude: $longitude, distanceKm: $distanceKm) {
+        const query = `query committeesListGuestUser($latitude: Float!, $longitude: Float!, $distanceKm: Float!, $year: Int!) {
+          committeesListGuestUser(latitude: $latitude, longitude: $longitude, distanceKm: $distanceKm, year: $year) {
             id
             address
             committeeName
@@ -65,7 +65,8 @@ export class HomeService {
             variables: {
               latitude: body.latitude,
               longitude: body.longitude,
-              distanceKm: body.distanceKm
+              distanceKm: body.distanceKm,
+              year: body.year
             }
           },
           {
@@ -86,8 +87,8 @@ export class HomeService {
 
     getCommitteesListAuthUserByDistanceKm(body: CommitteeListRequestBackend) {
         const url = this.graphqlUrl;
-        const query = `query CommitteesListAuthUser($latitude: Float!, $longitude: Float!, $distanceKm: Float!) {
-          committeesListAuthUser(latitude: $latitude, longitude: $longitude, distanceKm: $distanceKm) {
+        const query = `query CommitteesListAuthUser($latitude: Float!, $longitude: Float!, $distanceKm: Float!, $year: Int!) {
+          committeesListAuthUser(latitude: $latitude, longitude: $longitude, distanceKm: $distanceKm, year: $year) {
             id
             address
             committeeName
@@ -118,7 +119,8 @@ export class HomeService {
           variables: {
             latitude: body.latitude,
             longitude: body.longitude,
-            distanceKm: body.distanceKm
+            distanceKm: body.distanceKm,
+            year: body.year
           }
         }).pipe(
           map((res) => {

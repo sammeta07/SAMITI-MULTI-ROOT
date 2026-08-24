@@ -20,13 +20,13 @@ export const authCommitteeTypes = `
 `;
 
 export const authCommitteeQueryFields = `
-    committeesListAuthUser(latitude: Float!, longitude: Float!, distanceKm: Float!): [CommitteeAuth!]!
+    committeesListAuthUser(latitude: Float!, longitude: Float!, distanceKm: Float!, year: Int!): [CommitteeAuth!]!
 `;
 
 export const authCommitteesResolvers = {
   Query: {
-    async committeesListAuthUser(_: any, args: { latitude: number; longitude: number; distanceKm: number }, context: any) {
-      const { latitude, longitude, distanceKm } = args;
+    async committeesListAuthUser(_: any, args: { latitude: number; longitude: number; distanceKm: number; year: number }, context: any) {
+      const { latitude, longitude, distanceKm, year } = args;
 
       const authHeader = context.headers?.authorization;
       const tokenFromCookie = context.cookies?.token;
@@ -95,8 +95,9 @@ export const authCommitteesResolvers = {
             DATE_FORMAT(end_date, '%Y-%m-%d') AS endDate
           FROM events
           WHERE committee_id IN (${placeholders})
+            AND YEAR(start_date) = ?
           ORDER BY start_date DESC, created_at DESC
-        `, committeeIds);
+        `, [...committeeIds, year]);
 
         const eventIds = eventRows.map((e: any) => e.eventId);
         let bannersMap: Record<number, string[]> = {};

@@ -29,13 +29,15 @@
 
 /* 🏛️ GROUPS PANEL BASE */
 .committees-col {
-  flex: 0 0 70%;
+  flex: 0 1 70%;
+  min-width: 0;
   display: flex;
   flex-direction: column;
   background: #f8fafc;
-  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+  transition: flex-basis 0.25s cubic-bezier(0.4, 0, 0.2, 1);
   opacity: 1;
   visibility: visible;
+  overflow: hidden;
 }
 
 /* 💻 LARGE SCREEN SPECIFIC SLIDE HIDE EFFECT */
@@ -51,6 +53,7 @@
 /* 📋 PROGRAMS PANEL BASE */
 .sidebar-col {
   flex: 1 1 0%;
+  min-width: 0;
   overflow: hidden;
   display: flex;
   flex-direction: column;
@@ -385,7 +388,7 @@ body.resizing-col {
   position: absolute;
   top: 0.8rem;
   right: 12px;
-  z-index: 3;
+  z-index: 100;
   display: inline-flex;
   align-items: center;
   gap: 0.35rem;
@@ -499,7 +502,22 @@ body.resizing-col {
     .mat-expansion-indicator { margin-top: 2px !important; }
   }
 
-  ::ng-deep .mat-expansion-panel-body { padding: 0 14px 10px !important; }
+  ::ng-deep .mat-expansion-panel-body { padding: 0 10px 10px !important; }
+
+  .panel-header-inner {
+    background: transparent;
+    border-radius: 8px;
+    padding: 4px;
+    transition: background 0.2s ease, border-color 0.2s ease;
+    border: 1px solid transparent;
+    width: 100%;
+    box-sizing: border-box;
+  }
+
+  ::ng-deep .mat-expanded .panel-header-inner {
+    background: #f8fafc;
+    border-color: #e2e8f0;
+  }
 }
 
 /* ==========================================================================
@@ -509,16 +527,46 @@ body.resizing-col {
   display: grid;
   width: 100%;
   grid-template-columns: 58px 1fr 190px;
-  grid-template-rows: auto auto;
+  grid-template-rows: auto auto auto;
   column-gap: 14px;
   align-items: start;
 }
 
 .card-logo-area {
+  grid-column: 1;
+  grid-row: 1 / 3;
+}
+
+.card-main-info-area {
+  grid-column: 2;
+  grid-row: 1 / 3;
+}
+
+.card-identity-pills-area {
+  grid-column: 1 / 3;
+  grid-row: 3;
   display: flex;
-  flex-direction: column;
   align-items: center;
   gap: 6px;
+  flex-wrap: wrap;
+  margin-top: 5px;
+}
+
+.card-actions-identity-area {
+  grid-column: 3;
+  grid-row: 1 / 3;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 5px;
+  box-sizing: border-box;
+}
+
+.distance-display-area {
+  grid-column: 3;
+  grid-row: 3;
+  display: flex;
+  justify-content: flex-end;
 }
 
 .committee-avatar {
@@ -654,17 +702,6 @@ body.resizing-col {
 
 .card-location-row { display: flex; align-items: center; gap: 4px; color: #475569; font-size: 1.05rem; }
 .location-text-trim { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-
-.card-actions-identity-area {
-  grid-column: 3 / 4;
-  grid-row: 1 / 2;
-  display: flex;
-  flex-direction: column;
-  align-items: flex-end;
-  gap: 5px;
-  padding-right: 10px;
-  box-sizing: border-box;
-}
 
 .identity-top-row { display: flex; align-items: center; gap: 6px; }
 .phone-contact-group { display: inline-flex; align-items: center; gap: 5px; flex-wrap: nowrap; justify-content: flex-end; }
@@ -814,7 +851,7 @@ body.resizing-col {
    👥 EVENTS CARDS ARCHITECTURE & LAYOUTS
    ========================================================================== */
 .committee-events-shell {
-  display: flex; flex-wrap: nowrap; gap: 10px; padding: 4px 0 8px; overflow-x: auto;
+  display: flex; flex-wrap: nowrap; gap: 10px; padding: 10px; overflow-x: auto;
   scrollbar-width: thin; scrollbar-color: #e2e8f0 transparent;
   &::-webkit-scrollbar { height: 4px; }
   &::-webkit-scrollbar-track { background: transparent; }

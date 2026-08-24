@@ -26,14 +26,14 @@ export const guestCommitteeTypes = `
 `;
 
 export const guestCommitteeQueryFields = `
-    committeesListGuestUser(latitude: Float!, longitude: Float!, distanceKm: Float!): [Committee!]!
+    committeesListGuestUser(latitude: Float!, longitude: Float!, distanceKm: Float!, year: Int!): [Committee!]!
 `;
 import { normalizeEventSummaryRow, parseContactNumbers } from './committee-list.helpers';
 
 export const guestCommitteesResolvers = {
   Query: {
-    async committeesListGuestUser(_: any, args: { latitude: number; longitude: number; distanceKm: number }) {
-      const { latitude, longitude, distanceKm } = args;
+    async committeesListGuestUser(_: any, args: { latitude: number; longitude: number; distanceKm: number; year: number }) {
+      const { latitude, longitude, distanceKm, year } = args;
 
       const rawList = await query<any[]>(`
         SELECT 
@@ -70,8 +70,9 @@ export const guestCommitteesResolvers = {
           FROM events
           WHERE committee_id IN (${placeholders})
             AND visibility = 'VISIBLE'
+            AND YEAR(start_date) = ?
           ORDER BY start_date DESC, created_at DESC
-        `, committeeIds);
+        `, [...committeeIds, year]);
 
         const eventIds = eventRows.map((e: any) => e.eventId);
         let bannersMap: Record<number, string[]> = {};

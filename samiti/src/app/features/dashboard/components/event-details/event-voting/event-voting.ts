@@ -152,7 +152,7 @@ export class EventVotingComponent implements OnInit, AfterViewInit, OnDestroy {
   }
 
   public get isLockControlEnabled(): boolean {
-    return this.votingPhaseState === 0 && this.currentEventMappedRoleCount > 0;
+    return this.isMasterAdmin && this.votingPhaseState === 0 && this.currentEventMappedRoleCount > 0;
   }
 
   public get isStartNominationsEnabled(): boolean {
@@ -274,15 +274,15 @@ export class EventVotingComponent implements OnInit, AfterViewInit, OnDestroy {
 
   public get isAllDesignationsVisible(): boolean {
     if (this.votingPhaseState >= 1) return false;
-    return String(this.eventData?.currentCommitteeRole || 'NONE').toUpperCase() !== 'COMMITTEE_MEMBER';
+    return this.isMasterAdmin;
   }
 
   public get isCommitteeMember(): boolean {
-    return String(this.eventData?.currentCommitteeRole || 'NONE').toUpperCase() === 'COMMITTEE_MEMBER';
+    return String(this.eventData?.committeeRole || 'NONE').toUpperCase() === 'COMMITTEE_MEMBER';
   }
 
   public get isMasterAdmin(): boolean {
-    return String(this.eventData?.currentCommitteeRole || 'NONE').toUpperCase() === 'COMMITTEE_MASTER_ADMIN';
+    return String(this.eventData?.committeeRole || 'NONE').toUpperCase() === 'COMMITTEE_MASTER_ADMIN';
   }
 
   public get canReviewInterest(): boolean {

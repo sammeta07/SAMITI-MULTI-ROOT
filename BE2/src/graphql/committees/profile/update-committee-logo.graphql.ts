@@ -1,5 +1,7 @@
 import { RowDataPacket } from 'mysql2/promise';
 import { execute, query } from '../../../config/db';
+import { deleteLocalMediaFileIfExists } from '../../../media/image-cleanup';
+import { isCloudinaryStorageEnabled } from '../../../media/cloudinary-storage';
 
 type CommitteeLogoRow = RowDataPacket & {
   id: number;
@@ -69,13 +71,15 @@ export const updateCommitteeLogoResolvers = {
       }
 
       const committeeExists = await query<RowDataPacket[]>(
-        'SELECT id FROM committees WHERE id = ? LIMIT 1',
+        'SELECT id, logo FROM committees WHERE id = ? LIMIT 1',
         [committeeId]
       );
 
       if (committeeExists.length === 0) {
         throw new Error('Committee not found');
       }
+
+      const oldLogo: string | null = committeeExists[0].logo || null;
 
       const adminCheckRows = await query<RowDataPacket[]>(
         `SELECT committee_id
@@ -89,6 +93,17 @@ export const updateCommitteeLogoResolvers = {
 
       if (adminCheckRows.length === 0) {
         throw new Error('Only committee admins can update the committee logo');
+      }
+
+      // In Cloudinary mode the logo is uploaded with a fixed public id and overwrites the
+      // previous asset, so the old logo is already replaced. In local mode each upload gets a
+      // unique filename, so we must delete the previous file to avoid orphaned storage.
+      if (oldLogo && oldLogo !== logo.trim() && !isCloudinaryStorageEnabled()) {
+        try {
+          await deleteLocalMediaFileIfExists(oldLogo);
+        } catch {
+          // best-effort cleanup; do not fail the logo update
+        }
       }
 
       await execute(

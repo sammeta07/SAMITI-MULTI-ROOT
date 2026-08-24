@@ -27,8 +27,9 @@
       <button
         type="button"
         class="user-photo dynamic-profile-circle photo-edit-trigger"
+        [class.is-uploading]="isUploadingProfilePhoto()"
         (click)="avatarPhotoInput.click()"
-        [disabled]="isLoading()"
+        [disabled]="isLoading() || isUploadingProfilePhoto()"
         [attr.aria-label]="isEditMode ? 'Change and crop profile photo' : 'Change profile photo'"
       >
         @if (photoUrl()) {
@@ -42,7 +43,11 @@
         }
 
         <span class="photo-edit-overlay" aria-hidden="true">
-          <mat-icon>edit</mat-icon>
+          @if (isUploadingProfilePhoto()) {
+            <mat-progress-spinner mode="indeterminate" diameter="22" class="logo-upload-spinner"></mat-progress-spinner>
+          } @else {
+            <mat-icon>edit</mat-icon>
+          }
         </span>
       </button>
     </div>

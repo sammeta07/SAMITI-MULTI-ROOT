@@ -1,3 +1,8 @@
+export interface MyDesignation {
+  roleId: number | null;
+  name: string | null;
+}
+
 export interface EventOverviewMeta {
   id: number;
   eventId: number;
@@ -6,6 +11,7 @@ export interface EventOverviewMeta {
   eventName: string;
   eventDisplayName: string;
   eventBanner?: string | null;
+  eventLogo?: string | null;
   status: string;
   category?: string | null;
   visibility: string;
@@ -17,6 +23,8 @@ export interface EventOverviewMeta {
   createdBy: number;
   updatedBy?: number | null;
   createdAt?: string | null;
+  myDesignation?: MyDesignation | null;
+  committeeRole?: string;
 }
 
 export interface EventOverviewPayload extends EventOverviewMeta {

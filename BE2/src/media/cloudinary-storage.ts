@@ -24,6 +24,7 @@ export async function uploadImageBufferToCloudinary(params: {
   imageBuffer: Buffer;
   folderPath: string;
   publicIdSeed: string;
+  publicId?: string;
 }): Promise<{ secureUrl: string; publicId: string; bytes: number; width: number; height: number }> {
   if (!isConfigured) {
     throw new Error('Cloudinary is not configured. Missing CLOUDINARY_* environment variables.');
@@ -31,13 +32,14 @@ export async function uploadImageBufferToCloudinary(params: {
 
   const cleanedFolderPath = params.folderPath.replace(/^\/+|\/+$/g, '');
   const resolvedFolder = [cloudinaryFolderPrefix, cleanedFolderPath].filter(Boolean).join('/');
+  const resolvedPublicId = params.publicId || params.publicIdSeed;
 
   const uploadResult = await new Promise<any>((resolve, reject) => {
     const uploadStream = cloudinary.uploader.upload_stream(
       {
         resource_type: 'image',
         folder: resolvedFolder,
-        public_id: params.publicIdSeed,
+        public_id: resolvedPublicId,
         overwrite: true,
         format: 'webp'
       },

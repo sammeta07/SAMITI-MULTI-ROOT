@@ -218,7 +218,7 @@ export interface EventVotingPayload {
   myVotes?: MyEventVote[];
   canReviewInterest: boolean;
   canManageVotingRoles: boolean;
-  currentCommitteeRole: string;
+  committeeRole: string;
   votingPhaseState: number;
    votingMode?: 'VOTING' | 'DIRECT';
 }

@@ -78,6 +78,20 @@
     background: #f1f5f9;
   }
 
+  &:disabled {
+    opacity: 0.45;
+    cursor: not-allowed;
+    background: transparent;
+
+    .tab-icon {
+      color: #cbd5e1 !important;
+    }
+
+    .tab-label-text {
+      color: #94a3b8 !important;
+    }
+  }
+
   &.active {
     background: #f8fafc;
     border-top: 4px solid #767e80;

@@ -79,16 +79,16 @@
           <div class="tree-node-guide-stub-horizontal"></div>
 
           <div class="node-interactive-strip" (click)="onNodeClick(node)"
-            [ngClass]="['type-' + node.type, isNodeSelected(node) ? 'is-selected' : '']"
+            [ngClass]="['type-' + node.type, isNodeSelected(node) ? 'is-selected' : '', (node.type === 'event' && node.status ? 'status-container-' + node.status.toLowerCase() : '')]"
             [class.is-just-selected]="isNodeHighlighted(node)">
             
             <div class="node-logo-avatar-wrapper branch-leaf-avatar" [ngClass]="'color-' + node.type">
-              @if (node.type === 'group' && node.logo) {
+              @if ((node.type === 'group' || node.type === 'event') && node.logo) {
                 <img [src]="node.logo" [alt]="node.name" class="brand-image-node" (error)="node.logo = null" />
               } @else if (node.type === 'group') {
                 <span class="logo-fallback-initial">{{ getNodeInitial(node.name) }}</span>
               } @else if (node.type === 'event') {
-                <span class="type-letter-icon">E</span>
+                <span class="logo-fallback-initial">{{ getNodeInitial(node.name) }}</span>
               } @else if (node.type === 'program') {
                 <span class="type-letter-icon">P</span>
               } @else if (node.type === 'task') {
@@ -100,16 +100,22 @@
               }
             </div>
 
-            <div class="node-text-content">
-              <span class="node-label-txt">{{ node.name | titlecase }}</span>
-              @if (node.type === 'event' && node.roles?.length) {
-                <span class="event-role-subtitle">{{ node.roles[0] }}</span>
+                <div class="node-text-content">
+                  <div class="node-title-row">
+                    <span class="node-label-txt">{{ node.name | titlecase }}</span>
+                    @if (node.type === 'event' && shouldShowEventRole(node)) {
+                      <span class="event-role-subtitle event-role-inline">{{ node.roles[0] }}</span>
+                    }
+                  </div>
+              @if (node.type === 'event' && (node.startDate || node.endDate)) {
+                <span class="event-date-range-subtitle">
+                  @if (node.startDate) { {{ node.startDate | date: 'd MMM y' }} }
+                  @if (node.startDate && node.endDate) { &ndash; }
+                  @if (node.endDate) { {{ node.endDate | date: 'd MMM y' }} }
+                </span>
               }
             </div>
 
-            @if (node.status) {
-              <span class="status-badge-tag" [ngClass]="node.status.toLowerCase()">{{ node.status }}</span>
-            }
           </div>
 
           <div class="node-actions-right-aligned">
@@ -126,16 +132,16 @@
             <div class="tree-node-guide-stub-horizontal" *ngIf="node.type !== 'role'"></div>
 
             <div class="node-interactive-strip" (click)="onNodeClick(node)"
-              [ngClass]="['type-' + node.type, isNodeExpanded(node) ? 'is-active-expanded' : '', isNodeSelected(node) ? 'is-selected' : '']"
+              [ngClass]="['type-' + node.type, isNodeExpanded(node) ? 'is-active-expanded' : '', isNodeSelected(node) ? 'is-selected' : '', (node.type === 'event' && node.status ? 'status-container-' + node.status.toLowerCase() : '')]"
               [class.is-just-selected]="isNodeHighlighted(node)">
               
               <div class="node-logo-avatar-wrapper" [ngClass]="['type-' + node.type]">
-                @if (node.type === 'group' && node.logo) {
+                @if ((node.type === 'group' || node.type === 'event') && node.logo) {
                   <img [src]="node.logo" [alt]="node.name" class="brand-image-node" (error)="node.logo = null" />
                 } @else if (node.type === 'group') {
                   <span class="logo-fallback-initial">{{ getNodeInitial(node.name) }}</span>
                 } @else if (node.type === 'event') {
-                  <span class="type-letter-icon">E</span>
+                  <span class="logo-fallback-initial">{{ getNodeInitial(node.name) }}</span>
                 } @else if (node.type === 'program') {
                   <span class="type-letter-icon">P</span>
                 } @else if (node.type === 'task') {
@@ -152,9 +158,21 @@
               </div>
 
               <div class="node-text-content">
-                <span class="node-label-txt" [class.bold-text]="node.type !== 'role'">{{ node.name | titlecase }}</span>
-                @if (node.type === 'event' && node.roles?.length) {
-                  <span class="event-role-subtitle">{{ node.roles[0] }}</span>
+                <div class="node-title-row">
+                  <span class="node-label-txt" [class.bold-text]="node.type !== 'role'">{{ node.name | titlecase }}</span>
+                  @if (getNodeDesignation(node) && node.type !== 'role') {
+                    <span class="event-role-subtitle event-role-inline">{{ getNodeDesignation(node) }}</span>
+                  }
+                  @if (node.type === 'event' && shouldShowEventRole(node)) {
+                    <span class="event-role-subtitle event-role-inline">{{ node.roles[0] }}</span>
+                  }
+                </div>
+                @if (node.type === 'event' && (node.startDate || node.endDate)) {
+                  <span class="event-date-range-subtitle">
+                    @if (node.startDate) { {{ node.startDate | date: 'd MMM y' }} }
+                    @if (node.startDate && node.endDate) { &ndash; }
+                    @if (node.endDate) { {{ node.endDate | date: 'd MMM y' }} }
+                  </span>
                 }
               </div>
             </div>

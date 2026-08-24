@@ -1,18 +1,33 @@
 <div class="voting-tab-content">
   @if (isLoading()) {
-    <!-- Skeleton Loader -->
+    <!-- Skeleton Loader: 3 full-width cards, each split 20% (photo+name) / 80% (table list) -->
     <div class="voting-skeleton">
-      <div class="voting-skeleton-grid">
-        @for (i of [1, 2, 3, 4]; track i) {
-          <div class="voting-skeleton-card">
+      @for (i of [1, 2, 3]; track i) {
+        <div class="voting-skeleton-card">
+          <!-- LEFT 20%: circle photo + name -->
+          <div class="voting-skeleton-left">
             <div class="voting-skeleton-avatar skeleton-box circle"></div>
             <div class="voting-skeleton-lines">
               <div class="skeleton-box voting-skeleton-line lg"></div>
-              <div class="skeleton-box voting-skeleton-line"></div>
+              <div class="skeleton-box voting-skeleton-line sm"></div>
             </div>
           </div>
-        }
-      </div>
+
+          <!-- RIGHT 80%: table with list -->
+          <div class="voting-skeleton-right">
+            @for (r of [1, 2, 3, 4]; track r) {
+              <div class="voting-skeleton-row">
+                <div class="skeleton-box voting-skeleton-row-avatar circle"></div>
+                <div class="voting-skeleton-row-lines">
+                  <div class="skeleton-box voting-skeleton-line"></div>
+                  <div class="skeleton-box voting-skeleton-line sm"></div>
+                </div>
+                <div class="skeleton-box voting-skeleton-row-action"></div>
+              </div>
+            }
+          </div>
+        </div>
+      }
     </div>
   } @else {
   <!-- ========================================================================= -->
@@ -67,12 +82,14 @@
                   }}
                 </div>
               </div>
-              <input
-                type="checkbox"
-                [checked]="isRoleMapped(role.roleId)"
-                [disabled]="!canEditVotingRoles || !role.roleId"
-                (change)="onToggleVotingRole(role.roleId || 0, $any($event.target).checked)"
-              />
+              @if (isMasterAdmin) {
+                <input
+                  type="checkbox"
+                  [checked]="isRoleMapped(role.roleId)"
+                  [disabled]="!canEditVotingRoles || !role.roleId"
+                  (change)="onToggleVotingRole(role.roleId || 0, $any($event.target).checked)"
+                />
+              }
             </label>
           } @empty {
             <div class="table-empty-cell">No master roles available.</div>
@@ -272,8 +289,8 @@
                   </div>
                 }
 
-                <!-- CONDITION 3: Phase 2 Member Interest Toggle -->
                 @if (!isMasterAdmin && votingPhaseState === 2) {
+                  <!-- CONDITION 3: Phase 2 Member Interest Toggle -->
                   <div class="voting-card-interest-row">
                     @if (isInterestedInRole(card.role.roleId)) {
                       <button
@@ -755,20 +772,24 @@
                             [class.voting-card-icon-wrap-winner]="getAssignedMember(card.role.roleId)"
                           >
                             @if (getAssignedMember(card.role.roleId); as assigned) {
-                              @if (assigned.photo && !avatarLoadFailed().has(assigned.userId)) {
-                                <img
-                                  [src]="assigned.photo"
-                                  [alt]="assigned.name | titlecase"
-                                  class="voting-card-winner-photo"
-                                  (error)="onAvatarError(assigned.userId)"
-                                />
+                              @if (isMasterAdmin) {
+                                @if (assigned.photo && !avatarLoadFailed().has(assigned.userId)) {
+                                  <img
+                                    [src]="assigned.photo"
+                                    [alt]="assigned.name | titlecase"
+                                    class="voting-card-winner-photo"
+                                    (error)="onAvatarError(assigned.userId)"
+                                  />
+                                } @else {
+                                  <div class="voting-card-winner-fallback">
+                                    <mat-icon>emoji_events</mat-icon>
+                                    <span class="voting-card-winner-name">{{
+                                      assigned.name | titlecase
+                                    }}</span>
+                                  </div>
+                                }
                               } @else {
-                                <div class="voting-card-winner-fallback">
-                                  <mat-icon>emoji_events</mat-icon>
-                                  <span class="voting-card-winner-name">{{
-                                    assigned.name | titlecase
-                                  }}</span>
-                                </div>
+                                <mat-icon>{{ getVotingRoleIcon(card.role) }}</mat-icon>
                               }
                             } @else {
                               <mat-icon>{{ getVotingRoleIcon(card.role) }}</mat-icon>
@@ -934,6 +955,18 @@
                               }
                             </mat-autocomplete>
                           </mat-form-field>
+                        </div>
+                      } @else {
+                        <div class="voting-interest-empty-state">
+                          @if (votingPhaseState === 6) {
+                            <span class="empty-state-icon"><mat-icon>how_to_reg</mat-icon></span>
+                            <span class="empty-state-title">No assignment yet</span>
+                            <span class="empty-state-sub">No member has been assigned to this role.</span>
+                          } @else {
+                            <span class="empty-state-icon"><mat-icon>assignment_ind</mat-icon></span>
+                            <span class="empty-state-title">Direct assignment pending</span>
+                            <span class="empty-state-sub">An admin will assign a member to this role.</span>
+                          }
                         </div>
                       }
                     }

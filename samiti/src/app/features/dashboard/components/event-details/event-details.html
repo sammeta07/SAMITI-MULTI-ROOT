@@ -1,40 +1,40 @@
 <div class="event-details-workspace drawer-layout-shell">
   <div class="workspace-body scrollable-container">
     <!-- Navigation Menu styled like dashboard-sent-requests tabs -->
-    <nav class="inner-tabs">
-      <button type="button" class="tab-button" [class.active]="currentTab === 'voting'" (click)="navigateToTab('voting')">
-        <mat-icon class="tab-icon">how_to_vote</mat-icon>
-        <span class="tab-label-text">Voting</span>
-      </button>
+<nav class="inner-tabs">
+  <button type="button" class="tab-button" [class.active]="currentTab === 'voting'" (click)="navigateToTab('voting')">
+    <mat-icon class="tab-icon">how_to_vote</mat-icon>
+    <span class="tab-label-text">Voting</span>
+  </button>
 
-      <button type="button" class="tab-button" [class.active]="currentTab === 'overview'" (click)="navigateToTab('overview')">
-        <mat-icon class="tab-icon">info</mat-icon>
-        <span class="tab-label-text">Overview</span>
-      </button>
+  <button type="button" class="tab-button" [class.active]="currentTab === 'overview'" (click)="navigateToTab('overview')">
+    <mat-icon class="tab-icon">info</mat-icon>
+    <span class="tab-label-text">Overview</span>
+  </button>
 
-      <button type="button" class="tab-button" [class.active]="currentTab === 'programs'" (click)="navigateToTab('programs')">
-        <mat-icon class="tab-icon">event_note</mat-icon>
-        <span class="tab-label-text">Programs</span>
-      </button>
+  <button type="button" class="tab-button" [class.active]="currentTab === 'programs'" (click)="navigateToTab('programs')">
+    <mat-icon class="tab-icon">event_note</mat-icon>
+    <span class="tab-label-text">Programs</span>
+  </button>
 
-      <button type="button" class="tab-button" [class.active]="currentTab === 'people'" (click)="navigateToTab('people')">
-        <mat-icon class="tab-icon">groups</mat-icon>
-        <span class="tab-label-text">People</span>
-      </button>
+  <button type="button" class="tab-button" [class.active]="currentTab === 'people'" (click)="navigateToTab('people')">
+    <mat-icon class="tab-icon">groups</mat-icon>
+    <span class="tab-label-text">People</span>
+  </button>
 
-      @if (currentTab === 'voting') {
-      <div class="tab-mode-selector">
-        @if (isMasterAdmin && votingPhaseState < 6) {
-          <mat-select [(value)]="currentVotingMode" (selectionChange)="onVotingModeChange($event.value)" class="mode-dropdown" appearance="outline" hideRequiredMarker>
-            <mat-option value="VOTING">Voting</mat-option>
-            <mat-option value="DIRECT">Direct</mat-option>
-          </mat-select>
-        } @else {
-          <span class="mode-label-value">Mode : {{ currentVotingMode }}</span>
-        }
-      </div>
-      }
-    </nav>
+  @if (currentTab === 'voting') {
+  <div class="tab-mode-selector">
+    @if (isMasterAdmin && votingPhaseState < 6) {
+      <mat-select [(value)]="currentVotingMode" (selectionChange)="onVotingModeChange($event.value)" class="mode-dropdown" appearance="outline" hideRequiredMarker>
+        <mat-option value="VOTING">Voting</mat-option>
+        <mat-option value="DIRECT">Direct</mat-option>
+      </mat-select>
+    } @else {
+      <span class="mode-label-value">Mode : {{ currentVotingMode }}</span>
+    }
+  </div>
+  }
+</nav>
 
     <!-- Child route content -->
     <div class="event-child-content">

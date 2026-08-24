@@ -28,7 +28,7 @@ export class VoteHistoryDialogComponent {
   public readonly dialogData: VoteHistoryDialogData = inject(MAT_DIALOG_DATA);
   public readonly data: EventVoteHistory = this.dialogData.history;
 
-  public sortColumn: 'name' | 'role' | 'status' = 'name';
+  public sortColumn: 'name' | 'role' | 'status' = 'role';
   public sortDirection: 'asc' | 'desc' = 'asc';
 
   constructor(
@@ -108,7 +108,12 @@ export class VoteHistoryDialogComponent {
         };
         const aIdx = order[aVal] ?? 3;
         const bIdx = order[bVal] ?? 3;
-        return direction * (aIdx - bIdx);
+        if (aIdx !== bIdx) {
+          return direction * (aIdx - bIdx);
+        }
+        const aName = String(a.name || '').toLowerCase();
+        const bName = String(b.name || '').toLowerCase();
+        return direction * aName.localeCompare(bName);
       }
 
       if (this.sortColumn === 'status') {
