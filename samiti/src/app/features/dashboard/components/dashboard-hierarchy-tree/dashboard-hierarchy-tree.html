@@ -86,7 +86,8 @@
                 [ngClass]="['type-' + node.type, isNodeSelected(node) ? 'is-selected' : '', getCommitteeLogoRoleClass(node), (node.type === 'event' && node.status ? 'status-container-' + node.status.toLowerCase() : '')]"
                 [class.is-just-selected]="isNodeHighlighted(node)">
               
-              <div class="node-logo-avatar-wrapper branch-leaf-avatar" [ngClass]="['color-' + node.type, getCommitteeLogoRoleClass(node)]">
+              <div class="node-logo-avatar-wrapper branch-leaf-avatar" [ngClass]="['color-' + node.type, getCommitteeLogoRoleClass(node)]"
+                [ngStyle]="node.type === 'event' && node.id ? {'border-color': getEventDesignationColor(node.id)} : {}">
                 @if ((node.type === 'group' || node.type === 'event') && node.logo) {
                   <img [src]="node.logo" [alt]="node.name" class="brand-image-node" (error)="node.logo = null" />
                 } @else if (node.type === 'group' || node.type === 'event') {
@@ -137,7 +138,8 @@
                 [ngClass]="['type-' + node.type, isNodeExpanded(node) ? 'is-active-expanded' : '', isNodeSelected(node) ? 'is-selected' : '', getCommitteeLogoRoleClass(node), (node.type === 'event' && node.status ? 'status-container-' + node.status.toLowerCase() : '')]"
                 [class.is-just-selected]="isNodeHighlighted(node)">
                 
-                <div class="node-logo-avatar-wrapper" [ngClass]="['type-' + node.type, getCommitteeLogoRoleClass(node)]">
+                 <div class="node-logo-avatar-wrapper" [ngClass]="['type-' + node.type, getCommitteeLogoRoleClass(node)]"
+                   [ngStyle]="node.type === 'event' && node.id ? {'border-color': getEventDesignationColor(node.id)} : {}">
                   @if ((node.type === 'group' || node.type === 'event') && node.logo) {
                     <img [src]="node.logo" [alt]="node.name" class="brand-image-node" (error)="node.logo = null" />
                   } @else if (node.type === 'group' || node.type === 'event') {

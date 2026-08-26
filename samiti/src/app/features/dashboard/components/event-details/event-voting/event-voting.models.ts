@@ -4,6 +4,8 @@ export interface EventAvailableRole {
   roleCode?: string | null;
   hindiName?: string | null;
   englishName?: string | null;
+  color?: string | null;
+  icon?: string | null;
 }
 
 export interface EventMappedVotingRole {
@@ -11,6 +13,8 @@ export interface EventMappedVotingRole {
   roleName: string;
   hindiName?: string | null;
   englishName?: string | null;
+  color?: string | null;
+  icon?: string | null;
   sortOrder: number;
   winnerUserId?: number | null;
   winnerName?: string | null;
@@ -102,13 +106,15 @@ export interface ToggleEventVotingRolePayload {
     roleName: string;
     hindiName?: string | null;
     englishName?: string | null;
+    color?: string | null;
+    icon?: string | null;
     sortOrder: number;
     winnerUserId?: number | null;
     winnerName?: string | null;
     winnerPhoto?: string | null;
      winnerVoteCount?: number | null;
      winnerWonBy?: string | null;
-   }>;
+  }>;
 }
 
 export interface LockEventVotingRolesPayload {

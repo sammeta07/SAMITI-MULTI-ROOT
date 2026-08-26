@@ -6,7 +6,7 @@ import { hasEventsVotingModeColumn } from './voting/event-voting-mode-support';
 import { getEventVotingPhaseState, getMappedVotingRoles, throwEventError, getLoggedInUserId } from './voting/event-voting-core.graphql';
 import { getEventInterestApprovedPeople, getMyEventInterestRoleIds, getMyEventInterestStatuses } from './voting/event-interest.graphql';
 
-export async function getEventMasterRoles(): Promise<Array<{ roleId: number | null; roleName: string; roleCode: string | null; hindiName: string | null; englishName: string | null; isActive: boolean }>> {
+export async function getEventMasterRoles(): Promise<Array<{ roleId: number | null; roleName: string; roleCode: string | null; hindiName: string | null; englishName: string | null; isActive: boolean; color: string | null; icon: string | null }>> {
   const candidateTables = ['events_roles_master', 'event_roles_master'];
 
   for (const tableName of candidateTables) {
@@ -65,6 +65,14 @@ export async function getEventMasterRoles(): Promise<Array<{ roleId: number | nu
       ? 'english_name'
       : 'NULL';
 
+    const colorExpr = availableColumns.has('color')
+      ? 'color'
+      : 'NULL';
+
+    const iconExpr = availableColumns.has('icon')
+      ? 'icon'
+      : 'NULL';
+
     const isActiveExpr = availableColumns.has('is_active')
       ? 'is_active'
       : availableColumns.has('active')
@@ -82,6 +90,8 @@ export async function getEventMasterRoles(): Promise<Array<{ roleId: number | nu
       hindiName: string | null;
       englishName: string | null;
       isActive: number | string | null;
+      color: string | null;
+      icon: string | null;
     }>>(
       `SELECT
          ${roleIdExpr} AS roleId,
@@ -89,7 +99,9 @@ export async function getEventMasterRoles(): Promise<Array<{ roleId: number | nu
          ${roleCodeExpr} AS roleCode,
          ${hindiNameExpr} AS hindiName,
          ${englishNameExpr} AS englishName,
-         ${isActiveExpr} AS isActive
+         ${isActiveExpr} AS isActive,
+         ${colorExpr} AS color,
+         ${iconExpr} AS icon
        FROM ${tableName}
        ORDER BY ${orderByExpr}`
     );
@@ -106,7 +118,9 @@ export async function getEventMasterRoles(): Promise<Array<{ roleId: number | nu
           roleCode: row.roleCode ? String(row.roleCode).trim() : null,
           hindiName: row.hindiName ? String(row.hindiName).trim() : null,
           englishName: row.englishName ? String(row.englishName).trim() : null,
-          isActive
+          isActive,
+          color: row.color ? String(row.color).trim() : null,
+          icon: row.icon ? String(row.icon).trim() : null
         };
       })
       .filter((row) => row.roleName.length > 0 && row.isActive);
@@ -122,6 +136,8 @@ export const eventDetailsTypes = `
     roleCode: String
     hindiName: String
     englishName: String
+    color: String
+    icon: String
   }
 
   type EventParticipant {
@@ -411,7 +427,9 @@ export const eventDetailsResolvers = {
           roleName: roleRow.roleName,
           roleCode: roleRow.roleCode,
           hindiName: roleRow.hindiName,
-          englishName: roleRow.englishName
+          englishName: roleRow.englishName,
+          color: roleRow.color,
+          icon: roleRow.icon
         })),
         mappedVotingRoles: mappedVotingRoleRows,
         myInterestRoleIds: Array.from(myInterestRoleIds),

@@ -29,6 +29,7 @@ import { DashboardHierarchyTreeService } from '../dashboard-hierarchy-tree/dashb
 import { LoadingStateService } from '../../../../shared/services/loading-state.service';
 import { TextFormatPipe } from '../../../../shared/pipe/text-format-pipe.pipe';
 import { ImageAssetService } from '../../../../core/services/image-asset.service';
+import { AuthService } from '../../../../core/services/auth.service';
 import { ImageCropperDialogComponent } from '../../../../shared/components/image-cropper-dialog/image-cropper-dialog.component';
 
 @Component({
@@ -65,6 +66,7 @@ export class GroupDetailsComponent implements OnInit {
   private readonly loadingState = inject(LoadingStateService);
   private readonly cdr = inject(ChangeDetectorRef);
   private readonly imageAssetService = inject(ImageAssetService);
+  private readonly authService = inject(AuthService);
 
   public readonly isLoading = signal<boolean>(false);
   public readonly copiedCommitteeId = signal<string | null>(null);
@@ -216,6 +218,24 @@ export class GroupDetailsComponent implements OnInit {
 
   public getDesignationPhoto(eventId: number, role: number | string): string | undefined {
     return this.designationPhotos()[`${eventId}:${role}`];
+  }
+
+  public getEventDesignationColor(eventId: number): string {
+    const accountRoles = this.authService.getStoredUserData()?.accountRoles;
+    if (!accountRoles?.committees) return '#94a3b8';
+    for (const committee of accountRoles.committees) {
+      const event = committee.events?.find(e => e.eventId === eventId);
+      if (event?.designation) {
+        switch (event.designation.toUpperCase()) {
+          case 'ADHYAKSHA': return '#FF00FF';
+          case 'UPADHYAKSHA': return '#800080';
+          case 'KOSHADHYAKSHA': return '#ffa500';
+          case 'AANKSHAK': return '#000000';
+          default: return '#94a3b8';
+        }
+      }
+    }
+    return '#94a3b8';
   }
 
   public onDesignationPhotoSlotClicked(eventId: number, role: number | string, event: Event): void {

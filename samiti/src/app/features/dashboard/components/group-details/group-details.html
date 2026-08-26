@@ -406,6 +406,7 @@
                 <div class="event-meta-card">
                   <span class="event-logo-circle circle-shape event-logo-upload"
                     [class.can-upload]="isCurrentUserMasterAdmin() || isCurrentUserAdmin()"
+                    [ngStyle]="{'border-color': getEventDesignationColor(event.id)}"
                     matTooltip="Change Event Logo"
                     matTooltipPosition="above"
                     (click)="onEventLogoCircleClicked(event, $event)">
@@ -464,11 +465,14 @@
                       @for (role of event.mappedVotingRoles; track role.roleId) {
                         <div class="designation-item">
                           <div class="designation-header">
-                            <span class="designation-avatar circle-shape">
+                            <span class="designation-avatar circle-shape"
+                              [ngStyle]="role.color ? {'border-color': role.color} : {}">
                               @if (getDesignationPhoto(event.id, role.roleId); as photoUrl) {
                                 <img [src]="photoUrl" [alt]="role.roleName" />
                               } @else if (role.winnerPhoto) {
                                 <img [src]="role.winnerPhoto" [alt]="role.winnerName || role.roleName" />
+                              } @else if (role.icon) {
+                                <span class="designation-role-icon" [ngStyle]="{'color': role.color || '#64748b'}">{{ role.icon }}</span>
                               } @else {
                                 <span class="dummy-avatar-text">{{ (role.englishName || role.roleName || '?').charAt(0).toUpperCase() }}</span>
                               }

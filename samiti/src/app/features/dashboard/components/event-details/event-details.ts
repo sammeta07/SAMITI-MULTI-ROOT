@@ -46,8 +46,10 @@ export class EventDetailsComponent {
     // For events already in "Results Declared" (phase >= 6), the default tab
     // should be Overview instead of Voting. Once event data is loaded and the
     // user is on the default Voting tab, route them to Overview.
+    // Only auto-route when ALL roles have a winner AND no unresolved ties exist.
     effect(() => {
       const data = this.stateService.eventData();
+      const results = this.stateService.eventResults();
       if (!data) return;
       const eventId = Number(data.eventId);
       if (!eventId) return;
@@ -57,8 +59,25 @@ export class EventDetailsComponent {
       if (eventId === this.lastResolvedEventId) return;
 
       const phase = Number(data.votingPhaseState || 0);
-      this.lastResolvedEventId = eventId;
       if (phase < 6) return;
+
+      const mappedRoles = data.mappedVotingRoles || [];
+      const allHaveWinner = mappedRoles.length > 0 && mappedRoles.every((role) => {
+        const winnerId = Number(role.winnerUserId);
+        return Number.isInteger(winnerId) && winnerId > 0;
+      });
+
+      const noUnresolvedTies = mappedRoles.every((role) => {
+        const roleId = Number(role.roleId);
+        const roleResult = results?.roles?.find((r) => Number(r.roleId) === roleId);
+        if (!roleResult?.candidates?.length) return false;
+        const winners = roleResult.candidates.filter((c) => c.isWinner);
+        return winners.length === 1;
+      });
+
+      if (!allHaveWinner || !noUnresolvedTies) return;
+
+      this.lastResolvedEventId = eventId;
 
       const url = this.router.url;
       const baseEventUrl = `/dashboard/event/${eventId}`;
@@ -100,8 +119,29 @@ export class EventDetailsComponent {
     return this.votingPhaseState >= 6;
   }
 
+  public get allWinnersResolved(): boolean {
+    if (!this.isResultsDeclared) return false;
+    const mappedRoles = this.eventData?.mappedVotingRoles || [];
+    if (mappedRoles.length === 0) return false;
+    const rolesWithWinner = mappedRoles.filter((role) => {
+      const winnerId = Number(role.winnerUserId);
+      return Number.isInteger(winnerId) && winnerId > 0;
+    });
+    if (rolesWithWinner.length !== mappedRoles.length) return false;
+    const results = this.stateService.eventResults();
+    if (!results?.roles?.length) return false;
+    return mappedRoles.every((role) => {
+      const roleId = Number(role.roleId);
+      const roleResult = results.roles.find((r) => Number(r.roleId) === roleId);
+      if (!roleResult?.candidates?.length) return false;
+      const winners = roleResult.candidates.filter((c) => c.isWinner);
+      if (winners.length !== 1) return false;
+      return true;
+    });
+  }
+
   public get tabsEnabled(): boolean {
-    return this.isResultsDeclared;
+    return this.allWinnersResolved;
   }
 
   public get votingPhaseLabel(): string {
@@ -127,7 +167,7 @@ export class EventDetailsComponent {
   }
 
   public navigateToTab(tab: string): void {
-    if (tab !== 'voting' && !this.isResultsDeclared) {
+    if (tab !== 'voting' && !this.allWinnersResolved) {
       return;
     }
 

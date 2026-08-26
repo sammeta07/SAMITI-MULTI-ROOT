@@ -70,6 +70,8 @@ export class GroupDetailsService {
             roleName
             hindiName
             englishName
+            color
+            icon
             sortOrder
             winnerUserId
             winnerName
@@ -132,6 +134,8 @@ export class GroupDetailsService {
           roleName
           hindiName
           englishName
+          color
+          icon
           sortOrder
           winnerUserId
           winnerName

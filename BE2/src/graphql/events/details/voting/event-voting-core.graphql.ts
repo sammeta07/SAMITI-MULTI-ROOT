@@ -56,6 +56,8 @@ export async function getMappedVotingRoles(eventId: number): Promise<Array<{
   hindiName: string | null;
   englishName: string | null;
   sortOrder: number;
+  color: string | null;
+  icon: string | null;
   winnerUserId: number | null;
   winnerName: string | null;
   winnerPhoto: string | null;
@@ -68,13 +70,17 @@ export async function getMappedVotingRoles(eventId: number): Promise<Array<{
     hindiName: string | null;
     englishName: string | null;
     sortOrder: number;
+    color: string | null;
+    icon: string | null;
   }>>(
     `SELECT
        evr.role_id AS roleId,
        erm.role_name AS roleName,
        erm.hindi_name AS hindiName,
        erm.english_name AS englishName,
-       COALESCE(erm.sort_order, 0) AS sortOrder
+       COALESCE(erm.sort_order, 0) AS sortOrder,
+       erm.color AS color,
+       erm.icon AS icon
      FROM event_voting_roles evr
      INNER JOIN events_roles_master erm ON erm.role_id = evr.role_id
      WHERE evr.event_id = ?
@@ -130,6 +136,8 @@ export async function getMappedVotingRoles(eventId: number): Promise<Array<{
       roleName: String(mappedRoleRow.roleName || ''),
       hindiName: mappedRoleRow.hindiName ? String(mappedRoleRow.hindiName) : null,
       englishName: mappedRoleRow.englishName ? String(mappedRoleRow.englishName) : null,
+      color: mappedRoleRow.color ? String(mappedRoleRow.color).trim() : null,
+      icon: mappedRoleRow.icon ? String(mappedRoleRow.icon).trim() : null,
       sortOrder: Number(mappedRoleRow.sortOrder || 0),
       winnerUserId: winner?.userId ?? null,
       winnerName: winner?.name ?? null,
@@ -146,6 +154,8 @@ export const eventVotingTypes = `
     roleName: String!
     hindiName: String
     englishName: String
+    color: String
+    icon: String
     sortOrder: Int!
     winnerUserId: Int
     winnerName: String
@@ -263,7 +273,7 @@ export const eventVotingMutationFields = `
   allowEventVoting(eventId: Int!): AllowEventVotingPayload!
   stopEventVoting(eventId: Int!): StopEventVotingPayload!
   declareEventResults(eventId: Int!): DeclareEventResultsPayload!
-  resolveTieBreaker(eventId: Int!, roleId: Int!, winnerCandidateId: Int!, votingMode: String): ResolveTieBreakerPayload!
+  resolveTieBreaker(eventId: Int!, roleId: Int!, winnerCandidateId: Int!, winnerVoteCount: Int, votingMode: String): ResolveTieBreakerPayload!
   vacateVotingRole(eventId: Int!, roleId: Int!): VacateVotingRolePayload!
   assignWinningRole(eventId: Int!, roleId: Int!, newWinnerUserId: Int!, newWinnerName: String!, newWinnerPhoto: String, votingMode: String): AssignWinningRolePayload!
   directAssignWinner(eventId: Int!, roleId: Int!, userId: Int!): DirectAssignWinnerPayload!
@@ -1329,7 +1339,7 @@ export const eventVotingResolvers = {
       };
     },
 
-    async resolveTieBreaker(_: any, args: { eventId: number; roleId: number; winnerCandidateId: number; votingMode?: string }, context: any) {
+    async resolveTieBreaker(_: any, args: { eventId: number; roleId: number; winnerCandidateId: number; winnerVoteCount?: number; votingMode?: string }, context: any) {
       const eventId = Number(args?.eventId);
       const roleId = Number(args?.roleId);
       const winnerCandidateId = Number(args?.winnerCandidateId);

@@ -143,7 +143,9 @@ export const eventVotingDetailsResolvers = {
           roleName: roleRow.roleName,
           roleCode: roleRow.roleCode,
           hindiName: roleRow.hindiName,
-          englishName: roleRow.englishName
+          englishName: roleRow.englishName,
+          color: roleRow.color,
+          icon: roleRow.icon
         })),
         mappedVotingRoles: mappedVotingRoleRows,
         myInterestRoleIds: Array.from(myInterestRoleIds),

@@ -13,6 +13,7 @@ import { filter } from 'rxjs/operators';
 import { DashboardHierarchyTreeService } from './dashboard-hierarchy-tree.service';
 import { NotifierService } from '../../../../shared/notifier/notifier.service';
 import { LoadingStateService } from '../../../../shared/services/loading-state.service';
+import { AuthService } from '../../../../core/services/auth.service';
 import { AdminHierarchyTreeNode, RoleNode, TreeNode } from './dashboard-hierarchy-tree.models';
 import { sanitizeCloudinaryLogoUrl } from '../../../../shared/services/cloudinary-logo.util';
 import { SelectedYearService } from '../../../../shared/services/selected-year.service';
@@ -39,6 +40,7 @@ export class DashboardHierarchyTreeComponent implements OnInit {
   private readonly router = inject(Router);
   private readonly selectedYearService = inject(SelectedYearService);
   private readonly loadingState = inject(LoadingStateService);
+  private readonly authService = inject(AuthService);
   private readonly routeRefreshAttempts = new Set<string>();
 
   public readonly isLoading = signal<boolean>(false);
@@ -645,5 +647,23 @@ export class DashboardHierarchyTreeComponent implements OnInit {
       return 'committee-role-member';
     }
     return '';
+  }
+
+  public getEventDesignationColor(eventId: number): string {
+    const accountRoles = this.authService.getStoredUserData()?.accountRoles;
+    if (!accountRoles?.committees) return '#e2e8f0';
+    for (const committee of accountRoles.committees) {
+      const event = committee.events?.find(e => e.eventId === eventId);
+      if (event?.designation) {
+        switch (event.designation.toUpperCase()) {
+          case 'ADHYAKSHA': return '#FF00FF';
+          case 'UPADHYAKSHA': return '#800080';
+          case 'KOSHADHYAKSHA': return '#ffa500';
+          case 'AANKSHAK': return '#000000';
+          default: return '#e2e8f0';
+        }
+      }
+    }
+    return '#e2e8f0';
   }
 }

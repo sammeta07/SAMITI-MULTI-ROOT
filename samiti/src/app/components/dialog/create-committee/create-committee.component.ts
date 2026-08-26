@@ -133,6 +133,7 @@ export class CreateCommitteeDialogComponent implements OnInit {
 
     this.createCommitteeService.createCommittee(payload).subscribe({
       next: (response) => {
+        this.authService.refreshUserAccountRoles();
         const rawUserName = this.authService.getStoredUserData()?.name || 'User';
         const displayUserName = this.textFormatService.toTitleCase(rawUserName);
         const displayGroupName = this.textFormatService.toTitleCase(payload?.name || this.committeeName);

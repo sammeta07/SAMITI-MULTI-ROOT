@@ -44,12 +44,16 @@ export class EventVotingService {
           roleCode
           hindiName
           englishName
+          color
+          icon
         }
         mappedVotingRoles {
           roleId
           roleName
           hindiName
           englishName
+          color
+          icon
           sortOrder
           winnerUserId
           winnerName
@@ -120,6 +124,8 @@ export class EventVotingService {
           roleName
           hindiName
           englishName
+          color
+          icon
           sortOrder
           winnerUserId
           winnerName
@@ -406,9 +412,9 @@ export class EventVotingService {
     );
   }
 
-  public resolveTieBreaker(eventId: number, roleId: number, winnerCandidateId: number, votingMode?: string): Observable<ResolveTieBreakerPayload> {
-    const mutation = `mutation ResolveTieBreaker($eventId: Int!, $roleId: Int!, $winnerCandidateId: Int!, $votingMode: String) {
-      resolveTieBreaker(eventId: $eventId, roleId: $roleId, winnerCandidateId: $winnerCandidateId, votingMode: $votingMode) {
+  public resolveTieBreaker(eventId: number, roleId: number, winnerCandidateId: number, winnerVoteCount?: number, votingMode?: string): Observable<ResolveTieBreakerPayload> {
+    const mutation = `mutation ResolveTieBreaker($eventId: Int!, $roleId: Int!, $winnerCandidateId: Int!, $winnerVoteCount: Int, $votingMode: String) {
+      resolveTieBreaker(eventId: $eventId, roleId: $roleId, winnerCandidateId: $winnerCandidateId, winnerVoteCount: $winnerVoteCount, votingMode: $votingMode) {
         eventId
         roleId
         winnerUserId
@@ -422,7 +428,7 @@ export class EventVotingService {
       this.graphqlUrl,
       {
         query: mutation,
-        variables: { eventId, roleId, winnerCandidateId, votingMode }
+        variables: { eventId, roleId, winnerCandidateId, winnerVoteCount, votingMode }
       },
       { withCredentials: true }
     ).pipe(

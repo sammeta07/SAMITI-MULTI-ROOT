@@ -104,18 +104,7 @@ export class LoginDialogComponent implements OnInit {
         
         this.authService.startSession({ token, userData: userdata });
 
-        this.loginService.userAccountRoles().subscribe({
-          next: (accountRoles) => {
-            const updatedUserData = {
-              ...userdata,
-              accountRoles
-            };
-            this.authService.updateStoredUserData(updatedUserData);
-          },
-          error: () => {
-            // accountRoles fetch failed; continue with existing session
-          }
-        });
+        this.authService.refreshUserAccountRoles();
 
         this.dialogRef.close(true);
 

@@ -85,7 +85,6 @@ export class EventVotingComponent implements OnInit, AfterViewInit, OnDestroy {
     status: string;
     committeeRole?: string;
   }>>([]);
-  public readonly eventResults = signal<EventResultsPayload | null>(null);
   public readonly directAssignMembers = signal<EventDirectAssignMember[]>([]);
   public readonly committeeMemberRoles = signal<Map<number, string>>(new Map());
   public readonly selectedReassignMemberId = signal<number | null>(null);
@@ -185,13 +184,26 @@ export class EventVotingComponent implements OnInit, AfterViewInit, OnDestroy {
     return `At least one approved candidate is required for: ${names}`;
   }
 
+  public get declareResultsDisabledReason(): string {
+    if (this.votingPhaseState !== 5) return '';
+    if (!this.isVotingMode) return '';
+    if (!this.hasUnresolvedTies()) return '';
+    const tiedRoles = (this.eventData?.mappedVotingRoles || [])
+      .filter((role) => this.isTieRole(Number(role.roleId)))
+      .map((role) => (role.englishName || role.roleName || '').split('_').join(' ').replace(/\b\w/g, (c) => c.toUpperCase()));
+    return `Resolve tie breaker first for: ${tiedRoles.join(', ')}`;
+  }
+
   public get isStopVotingEnabled(): boolean {
     return this.votingPhaseState === 4;
   }
 
   public get isDeclareResultsEnabled(): boolean {
     if (this.votingPhaseState >= 6) return false;
-    if (this.isVotingMode) return this.votingPhaseState === 5;
+    if (this.isVotingMode) {
+      if (this.votingPhaseState !== 5) return false;
+      return !this.hasUnresolvedTies();
+    }
     const mappedRoles = this.eventData?.mappedVotingRoles || [];
     if (!mappedRoles.length) return false;
     return mappedRoles.every((role) => {
@@ -202,6 +214,12 @@ export class EventVotingComponent implements OnInit, AfterViewInit, OnDestroy {
       const winnerId = Number(role.winnerUserId);
       return Number.isInteger(winnerId) && winnerId > 0;
     });
+  }
+
+  public hasUnresolvedTies(): boolean {
+    if (this.votingPhaseState !== 5) return false;
+    const mappedRoles = this.eventData?.mappedVotingRoles || [];
+    return mappedRoles.some((role) => this.isTieRole(Number(role.roleId)));
   }
 
   public get canEditVotingRoles(): boolean {
@@ -413,7 +431,7 @@ export class EventVotingComponent implements OnInit, AfterViewInit, OnDestroy {
     });
   }
 
-  private initializeVotingState(eventId: number): void {
+  private initializeVotingState(eventId: number, forceRefreshResults: boolean = false): void {
     const data = this.stateService.eventData();
     if (!data) return;
     this.cancelReassign();
@@ -434,11 +452,8 @@ export class EventVotingComponent implements OnInit, AfterViewInit, OnDestroy {
         return acc;
       }, {} as Record<number, number | null>)
     );
-    if (data.votingPhaseState === 6) {
-      const currentResults = this.eventResults();
-      if (!currentResults || currentResults.eventId !== Number(data.eventId)) {
-        this.loadEventResults(Number(data.eventId));
-      }
+    if (data.votingPhaseState === 6 && (forceRefreshResults || !this.stateService.eventResults())) {
+      this.loadEventResults(Number(data.eventId));
     }
     this.directAssignInputText = (data.mappedVotingRoles || []).reduce((acc: Record<number, string>, role: EventMappedVotingRole) => {
       const rid = Number(role.roleId);
@@ -461,7 +476,7 @@ export class EventVotingComponent implements OnInit, AfterViewInit, OnDestroy {
     this.directAssignMembers.set(initialMembers);
     this.loadDirectAssignMembers(eventId);
     this.loadCommitteeMemberRoles(eventId);
-    if (Number(data.votingPhaseState || 0) === 6) {
+    if (Number(data.votingPhaseState || 0) === 6 && forceRefreshResults) {
       this.loadEventResults(eventId);
     }
   }
@@ -481,8 +496,8 @@ export class EventVotingComponent implements OnInit, AfterViewInit, OnDestroy {
 
   private loadEventResults(eventId: number): void {
     this.votingService.getEventResults(eventId).subscribe({
-      next: (payload) => this.eventResults.set(payload ?? null),
-      error: () => this.eventResults.set(null)
+      next: (payload) => this.stateService.eventResults.set(payload ?? null),
+      error: () => this.stateService.eventResults.set(null)
     });
   }
 
@@ -836,12 +851,13 @@ export class EventVotingComponent implements OnInit, AfterViewInit, OnDestroy {
   }
 
   public getWinnerForRole(roleId: number): EventResultCandidate | null {
-    const results = this.eventResults();
+    const results = this.stateService.eventResults();
     if (!results?.roles?.length) return null;
     const roleResult = results.roles.find((r) => Number(r.roleId) === Number(roleId));
     if (!roleResult?.candidates?.length) return null;
     const winner = roleResult.candidates.find((c) => c.isWinner);
     if (winner) return winner;
+    if (this.votingPhaseState >= 6) return null;
     const maxVotes = Math.max(...roleResult.candidates.map((c) => Number(c.voteCount || 0)));
     const hasSingleCandidate = roleResult.candidates.length === 1;
     if (maxVotes <= 0 && !hasSingleCandidate) return null;
@@ -897,7 +913,7 @@ export class EventVotingComponent implements OnInit, AfterViewInit, OnDestroy {
   }
 
   public getCandidatesForRole(roleId: number): EventResultCandidate[] {
-    const results = this.eventResults();
+    const results = this.stateService.eventResults();
     if (!results?.roles?.length) return [];
     const roleResult = results.roles.find((r) => Number(r.roleId) === Number(roleId));
     if (!roleResult?.candidates?.length) return [];
@@ -908,20 +924,52 @@ export class EventVotingComponent implements OnInit, AfterViewInit, OnDestroy {
     });
   }
 
+  public getVotePercentage(roleId: number, candidateVotes: number): number {
+    const results = this.stateService.eventResults();
+    if (!results?.roles?.length) return 0;
+    const roleResult = results.roles.find((r) => Number(r.roleId) === Number(roleId));
+    if (!roleResult?.candidates?.length) return 0;
+    const totalVotes = roleResult.candidates.reduce((sum, c) => sum + Number(c.voteCount || 0), 0);
+    if (totalVotes === 0) return 0;
+    return Math.round((Number(candidateVotes || 0) / totalVotes) * 100);
+  }
+
+  public getTotalVotes(roleId: number): number {
+    const results = this.stateService.eventResults();
+    if (!results?.roles?.length) return 0;
+    const roleResult = results.roles.find((r) => Number(r.roleId) === Number(roleId));
+    if (!roleResult?.candidates?.length) return 0;
+    return roleResult.candidates.reduce((sum, c) => sum + Number(c.voteCount || 0), 0);
+  }
+
+  public getOtherCandidatesForRole(roleId: number): EventResultCandidate[] {
+    const winner = this.getWinnerForRole(roleId);
+    if (!winner) return [];
+    return this.getCandidatesForRole(roleId).filter((c) => Number(c.userId) !== Number(winner.userId));
+  }
+
   public isTieRole(roleId: number): boolean {
-    const results = this.eventResults();
+    const results = this.stateService.eventResults();
     if (!results?.roles?.length) return false;
     const roleResult = results.roles.find((r) => Number(r.roleId) === Number(roleId));
     if (!roleResult?.candidates?.length) return false;
-    return roleResult.candidates.filter((c) => c.isWinner).length >= 2;
+    const declaredWinners = roleResult.candidates.filter((c) => c.isWinner);
+    if (declaredWinners.length >= 2) return true;
+    if (this.votingPhaseState < 6) return false;
+    const maxVotes = Math.max(...roleResult.candidates.map((c) => Number(c.voteCount || 0)));
+    return maxVotes > 0 && roleResult.candidates.filter((c) => Number(c.voteCount || 0) === maxVotes).length >= 2;
   }
 
   public getTiedCandidatesForRole(roleId: number): EventResultCandidate[] {
-    const results = this.eventResults();
+    const results = this.stateService.eventResults();
     if (!results?.roles?.length) return [];
     const roleResult = results.roles.find((r) => Number(r.roleId) === Number(roleId));
     if (!roleResult?.candidates?.length) return [];
-    return roleResult.candidates.filter((c) => c.isWinner);
+    const declaredWinners = roleResult.candidates.filter((c) => c.isWinner);
+    if (declaredWinners.length > 0) return declaredWinners;
+    if (this.votingPhaseState < 6) return [];
+    const maxVotes = Math.max(...roleResult.candidates.map((c) => Number(c.voteCount || 0)));
+    return roleResult.candidates.filter((c) => Number(c.voteCount || 0) === maxVotes && maxVotes > 0);
   }
 
   public onResolveTieBreaker(roleId: number, winnerCandidateId: number, winnerName?: string): void {
@@ -931,11 +979,14 @@ export class EventVotingComponent implements OnInit, AfterViewInit, OnDestroy {
     const normalizedWinnerId = Number(winnerCandidateId);
     if (!Number.isInteger(normalizedRoleId) || normalizedRoleId <= 0) { this.notifier.error('Invalid role'); return; }
     if (!Number.isInteger(normalizedWinnerId) || normalizedWinnerId <= 0) { this.notifier.error('Invalid candidate'); return; }
+    const tiedCandidates = this.getTiedCandidatesForRole(normalizedRoleId);
+    const selectedCandidate = tiedCandidates.find((c) => Number(c.userId) === normalizedWinnerId);
+    const winnerVoteCount = selectedCandidate ? Number(selectedCandidate.voteCount || 0) : 0;
     const dialogData: ConfirmDialogData = { title: 'Resolve Tie Breaker', message: 'Are you sure you want to declare this candidate as the winner?', confirmText: 'Declare Winner', cancelText: 'Cancel', iconType: 'warning', highlightText: winnerName ? String(winnerName) : '' };
     const dialogRef = this.confirmDialog.open(dialogData);
     dialogRef.afterClosed().subscribe((result) => {
       if (!result?.confirmed) return;
-      this.votingService.resolveTieBreaker(currentEvent.eventId, normalizedRoleId, normalizedWinnerId).subscribe({
+      this.votingService.resolveTieBreaker(currentEvent.eventId, normalizedRoleId, normalizedWinnerId, winnerVoteCount).subscribe({
         next: () => { this.notifier.success('Tie breaker resolved successfully'); this.loadEventResults(Number(currentEvent.eventId)); this.refreshVoting(); },
         error: (err: HttpErrorResponse) => { this.notifier.error(err?.error?.message || 'Failed to resolve tie breaker'); }
       });
@@ -1342,7 +1393,7 @@ export class EventVotingComponent implements OnInit, AfterViewInit, OnDestroy {
       this.votingService.getEventVotingDetails(String(currentEvent.eventId)).subscribe({
         next: (data) => {
           this.stateService.eventData.set(data ?? null);
-          this.initializeVotingState(Number(currentEvent.eventId));
+          this.initializeVotingState(Number(currentEvent.eventId), true);
           if (data?.pendingEventInterests?.pending) {
             this.interestReviewList.set(data.pendingEventInterests.pending.map((item) => ({
               id: Number(item.id),

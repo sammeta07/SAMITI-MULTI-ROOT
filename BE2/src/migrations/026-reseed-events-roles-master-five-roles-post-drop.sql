@@ -1,7 +1,9 @@
 -- Migration 026: Reseed events_roles_master after dropping role_code/description
--- Purpose: Ensure only approved five roles remain even after repeat migration runs.
--- NOTE: After migration 049, DELETE on this table is blocked by a trigger.
---       If re-running migrations, drop the trigger first or adjust accordingly.
+-- Purpose: Ensure only approved 4 roles remain even after repeat migration runs.
+-- NOTE: Migration 049 adds a DELETE-protection trigger. We drop it here
+--       so this DELETE is re-runnable; migration 049 recreates the trigger.
+
+DROP TRIGGER IF EXISTS trg_events_roles_master_block_delete;
 
 DELETE FROM events_roles_master;
 
@@ -17,6 +19,5 @@ INSERT INTO events_roles_master (
 VALUES
   ('adhyaksha', 'president', 'adhyaksha', 1, 10),
   ('upadhyaksha', 'vice_president', 'upadhyaksha', 1, 20),
-  ('sachiv', 'general_secretary', 'sachiv', 1, 30),
-  ('koshadhyaksha', 'treasurer', 'koshadhyaksha', 1, 40),
-  ('aankshak', 'auditor', 'aankshak', 1, 50);
+  ('koshadhyaksha', 'treasurer', 'koshadhyaksha', 1, 30),
+  ('aankshak', 'auditor', 'aankshak', 1, 40);

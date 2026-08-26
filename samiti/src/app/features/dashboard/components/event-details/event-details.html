@@ -2,7 +2,7 @@
   <div class="workspace-body scrollable-container">
     <!-- Navigation Menu styled like dashboard-sent-requests tabs -->
 <nav class="inner-tabs">
-  <button type="button" class="tab-button" [class.active]="currentTab === 'voting'" [disabled]="!tabsEnabled" (click)="navigateToTab('voting')">
+  <button type="button" class="tab-button" [class.active]="currentTab === 'voting'" [disabled]="false" (click)="navigateToTab('voting')">
     <mat-icon class="tab-icon">how_to_vote</mat-icon>
     <span class="tab-label-text">Voting</span>
   </button>

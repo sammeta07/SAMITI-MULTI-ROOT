@@ -443,8 +443,8 @@ export const eventVoteResolvers = {
           existingWinner.isWinner = true;
           // Ensure only the declared winner is flagged as winner.
           candidates.forEach((c) => { c.isWinner = c.userId === declaredWinnerId; });
-        } else {
-          // No declared winner yet - fall back to vote-based determination (pre-declaration view).
+        } else if (access.votingPhaseState < 6) {
+          // Before declaration, show the current vote leader(s) as provisional winners.
           const maxVotes = candidates.length > 0 ? Math.max(...candidates.map((c) => c.voteCount)) : 0;
           const hasSingleCandidate = candidates.length === 1;
           const winners = candidates.filter((c) => c.voteCount === maxVotes && (maxVotes > 0 || hasSingleCandidate));
