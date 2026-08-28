@@ -2,6 +2,7 @@ import { Component, computed, inject, signal } from "@angular/core";
 import { CommonModule } from "@angular/common";
 import { MatIconModule } from "@angular/material/icon";
 import { MatProgressSpinnerModule } from "@angular/material/progress-spinner";
+import { MatTooltipModule } from "@angular/material/tooltip";
 import { MembershipRequestsHistoryService, CommitteeMembershipRequestHistoryItem } from "./membership-requests-history.service";
 
 interface ExpandedRowState {
@@ -22,6 +23,7 @@ function expandedKey(userId: number, committeeId: number): ExpandedKey {
     CommonModule,
     MatIconModule,
     MatProgressSpinnerModule,
+    MatTooltipModule,
   ],
   templateUrl: "./membership-requests-history.component.html",
   styleUrls: ["./membership-requests-history.component.scss", "../../dashboard-received-requests/dashboard-received-requests.scss"],

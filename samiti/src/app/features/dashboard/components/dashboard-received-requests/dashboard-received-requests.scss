@@ -297,6 +297,30 @@
   align-items: center;
   gap: 8px;
   min-width: 0;
+
+  .committee-info {
+    display: flex;
+    flex-direction: column;
+    gap: 1px;
+    min-width: 0;
+  }
+
+  .committee-name {
+    font-weight: 700;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .user-name {
+    font-weight: 700;
+  }
+
+  .committee-address {
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
 }
 
 .table-avatar {
@@ -382,6 +406,7 @@
   top: 0;
   z-index: 10;
   background: #f8fafc;
+  text-align: left;
 }
 
 .modern-table td {

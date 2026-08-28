@@ -207,3 +207,340 @@
   h3 { margin: 0; font-size: 1.1rem; font-weight: 700; color: #64748b; }
   p { margin: 0; font-size: 0.82rem; color: #94a3b8; }
 }
+
+/* ========== EVENT OVERVIEW HEADER CARD (mirrors Overview, without Banner Images) ========== */
+.gd-committee-card {
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-left: 4px solid #cbd5e1;
+  border-radius: 12px;
+  padding: 12px 16px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+  transition: all 0.2s ease;
+  margin-bottom: 10px;
+}
+
+.committee-card-grid {
+  display: grid;
+  width: 100%;
+  grid-template-columns: 60px minmax(0, 1fr) auto;
+  grid-template-rows: auto auto auto;
+  row-gap: 6px;
+  column-gap: 16px;
+  align-items: center;
+}
+
+.card-logo-area { grid-column: 1; grid-row: 1 / 3; }
+
+.card-main-info-area {
+  grid-column: 2;
+  grid-row: 1 / 3;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.committee-display-name {
+  font-size: 1.25rem;
+  font-weight: 700;
+  color: #0f172a;
+  margin: 0;
+  line-height: 1.2;
+}
+
+.card-location-row {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  color: #64748b;
+  font-size: 0.88rem;
+
+  .location-icon {
+    font-size: 1rem;
+    width: 1rem;
+    height: 1rem;
+    color: #94a3b8;
+  }
+}
+
+.location-text-trim { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+/* AVATARS */
+.committee-avatar {
+  width: 56px;
+  height: 56px;
+  border-radius: 12px;
+  object-fit: cover;
+  box-sizing: border-box;
+  border: 4px solid var(--avatar-border, #cbd5e1);
+}
+
+.committee-avatar-fallback,
+.event-avatar-fallback {
+  width: 56px;
+  height: 56px;
+  border-radius: 12px;
+  box-sizing: border-box;
+  border: 4px solid var(--avatar-border, #cbd5e1);
+  background: #e2e8f0;
+  color: #475569;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.5rem;
+  font-weight: 700;
+}
+
+.committee-logo-edit-trigger {
+  position: relative;
+  display: inline-flex;
+  padding: 0;
+  border: none;
+  background: transparent;
+  border-radius: 12px;
+  cursor: pointer;
+  overflow: hidden;
+  transition: transform 0.2s ease;
+
+  &:hover:not(:disabled) { transform: scale(1.03); }
+  &:focus-visible { outline: 2px solid #f97316; outline-offset: 2px; }
+
+  .logo-edit-overlay {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: rgba(15, 23, 42, 0.5);
+    color: #ffffff;
+    opacity: 0;
+    transition: opacity 0.2s ease;
+
+    mat-icon { font-size: 1.25rem; width: 1.25rem; height: 1.25rem; }
+  }
+
+  &:hover:not(:disabled) .logo-edit-overlay,
+  &:focus-visible .logo-edit-overlay { opacity: 1; }
+
+  &.is-uploading .logo-edit-overlay {
+    opacity: 1;
+    background: rgba(15, 23, 42, 0.6);
+  }
+}
+
+/* IDENTITY PILLS */
+.card-identity-pills-area {
+  grid-column: 1 / 3;
+  grid-row: 3;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-top: 4px;
+}
+
+.meta-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  height: 24px;
+  padding: 0 10px;
+  border-radius: 999px;
+  white-space: nowrap;
+  font-size: 0.75rem;
+  font-weight: 600;
+  border: 1px solid #e2e8f0;
+  background: #f8fafc;
+  color: #475569;
+
+  mat-icon { font-size: 0.85rem; width: 0.85rem; height: 0.85rem; color: #64748b; }
+}
+
+.card-actions-identity-area {
+  grid-column: 3 / 4;
+  grid-row: 1 / 2;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 6px;
+}
+
+.user-role-badge {
+  display: inline-flex; align-items: center; gap: 4px; height: 24px;
+  padding: 0 10px; border-radius: 999px;
+  font-size: 0.75rem; font-weight: 700; letter-spacing: 0.3px; white-space: nowrap;
+  background: #f1f5f9; color: #475569; border: 1px solid transparent;
+
+  .role-badge-icon {
+    font-size: 0.85rem !important; width: 0.85rem !important; height: 0.85rem !important;
+  }
+}
+
+.event-role-highlight {
+  .role-badge-icon { color: currentColor; }
+}
+
+/* REDESIGNED ACTION BUTTONS & TOGGLE DECK */
+.action-buttons-area {
+  grid-column: 3;
+  grid-row: 3;
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 8px;
+  flex-wrap: nowrap;
+  white-space: nowrap;
+}
+
+.btn-action {
+  height: 34px !important;
+  padding: 0 14px !important;
+  font-size: 0.82rem !important;
+  font-weight: 600 !important;
+  border-radius: 8px !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center;
+  gap: 6px !important;
+  cursor: pointer;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1) !important;
+  border: 1px solid transparent !important;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.04);
+
+  mat-icon {
+    font-size: 1.15rem !important;
+    width: 1.15rem !important;
+    height: 1.15rem !important;
+  }
+
+  &:disabled {
+    opacity: 0.45 !important;
+    cursor: not-allowed !important;
+    box-shadow: none !important;
+    filter: grayscale(1) !important;
+  }
+
+  &:hover:not(:disabled) {
+    transform: translateY(-1.5px);
+  }
+}
+
+.btn-edit {
+  background: #f8fafc !important;
+  color: #334155 !important;
+  border-color: #cbd5e1 !important;
+
+  &:hover:not(:disabled) {
+    background: #ffffff !important;
+    color: #2563eb !important;
+    border-color: #93c5fd !important;
+    box-shadow: 0 4px 12px rgba(37, 99, 235, 0.12) !important;
+  }
+}
+
+.btn-delete {
+  background: #fef2f2 !important;
+  color: #dc2626 !important;
+  border-color: #fca5a5 !important;
+
+  &:hover:not(:disabled) {
+    background: #dc2626 !important;
+    color: #ffffff !important;
+    border-color: #dc2626 !important;
+    box-shadow: 0 4px 12px rgba(220, 38, 38, 0.25) !important;
+  }
+}
+
+/* REDESIGNED TOGGLE CAPSULE */
+.toggle-control-capsule {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  height: 34px;
+  padding: 0 8px 0 10px;
+  border-radius: 8px;
+  background: #f1f5f9;
+  border: 1px solid #cbd5e1;
+  transition: all 0.2s ease;
+
+  .toggle-status-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    font-size: 0.72rem;
+    font-weight: 700;
+    letter-spacing: 0.3px;
+    color: #64748b;
+
+    .status-dot {
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background: #94a3b8;
+      transition: background 0.2s ease;
+    }
+  }
+
+  &.is-visible {
+    background: #f0fdf4;
+    border-color: #bbf7d0;
+
+    .toggle-status-badge {
+      color: #15803d;
+
+      .status-dot {
+        background: #22c55e;
+        box-shadow: 0 0 6px rgba(34, 197, 94, 0.6);
+      }
+    }
+  }
+
+  .event-visibility-toggle {
+    transform: scale(0.75);
+    transform-origin: right center;
+    height: auto;
+  }
+}
+
+/* SKELETON LOADER */
+.skeleton-card { pointer-events: none; }
+
+.skeleton-box {
+  position: relative;
+  overflow: hidden;
+  background: #eef2f6;
+  border-radius: 6px;
+
+  &::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    transform: translateX(-100%);
+    background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.65), transparent);
+    animation: skeleton-shimmer 1.3s infinite;
+  }
+}
+
+.skeleton-avatar { width: 56px; height: 56px; border-radius: 12px; flex-shrink: 0; }
+.skeleton-line { height: 12px; &.lg { height: 18px; } &.sm { height: 11px; } }
+.skeleton-chip { width: 90px; height: 24px; border-radius: 999px; flex-shrink: 0; }
+
+@keyframes skeleton-shimmer {
+  100% { transform: translateX(100%); }
+}
+
+/* RESPONSIVE LAYOUT */
+@media (max-width: 600px) {
+  .committee-card-grid {
+    grid-template-columns: 50px 1fr;
+    grid-template-rows: auto auto auto auto;
+  }
+  .card-actions-identity-area { grid-column: 2; grid-row: 1; }
+  .action-buttons-area {
+    grid-column: 1 / -1;
+    grid-row: 4;
+    justify-content: flex-start;
+    margin-top: 8px;
+    flex-wrap: wrap;
+  }
+}

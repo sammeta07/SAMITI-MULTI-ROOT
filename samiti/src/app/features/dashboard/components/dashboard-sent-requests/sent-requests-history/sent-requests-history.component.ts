@@ -2,6 +2,7 @@ import { Component, computed, inject, signal } from "@angular/core";
 import { CommonModule } from "@angular/common";
 import { MatIconModule } from "@angular/material/icon";
 import { MatProgressSpinnerModule } from "@angular/material/progress-spinner";
+import { MatTooltipModule } from "@angular/material/tooltip";
 import { SentRequestsHistoryService, SentRequestsHistoryItem } from "./sent-requests-history.service";
 
 interface ExpandedRowState {
@@ -22,6 +23,7 @@ function expandedKey(userId: number, committeeId: number): ExpandedKey {
     CommonModule,
     MatIconModule,
     MatProgressSpinnerModule,
+    MatTooltipModule,
   ],
   templateUrl: "./sent-requests-history.component.html",
   styleUrls: ["../../dashboard-sent-requests/dashboard-sent-requests.scss"],

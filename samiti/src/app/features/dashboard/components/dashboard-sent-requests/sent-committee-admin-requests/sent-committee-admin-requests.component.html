@@ -51,8 +51,8 @@
 
         @if (request.status === 'PENDING') {
           <div class="request-card-actions">
-            <button mat-stroked-button class="btn-labeled btn-cancel" (click)="cancelRequest(request.committeeId, request.committeeName)">
-              <mat-icon>close</mat-icon> Cancel
+            <button mat-icon-button class="btn-cancel" matTooltip="CANCEL" (click)="cancelRequest(request.committeeId, request.committeeName)">
+              <mat-icon>close</mat-icon>
             </button>
           </div>
         }

@@ -38,7 +38,7 @@
             <td class="text-sm text-dark">{{ item.resolvedAtTime ? (item.resolvedAtTime | date: "d MMM y, h:mm a") : "—" }}</td>
             <td><span [ngClass]="'status-chip status-' + item.status.toLowerCase()">{{ item.status }}</span></td>
             <td class="col-expand">
-              <button class="expand-btn" type="button" (click)="toggleExpand($index); $event.stopPropagation()" aria-label="Toggle details">
+              <button class="expand-btn" type="button" (click)="toggleExpand($index); $event.stopPropagation()" aria-label="Toggle details" [matTooltip]="isExpanded($index) ? 'Collapse' : 'Expand'">
                 <mat-icon [class.expand-icon--open]="isExpanded($index)">expand_more</mat-icon>
               </button>
             </td>

@@ -1,31 +1,6 @@
 <div class="overview-tab-content">
-  @if (isLoading()) {
+  @if (!eventData) {
     <div class="skeleton-wrapper" aria-busy="true" aria-live="polite">
-      <section class="gd-committee-card skeleton-card">
-        <div class="committee-card-grid">
-        <div class="card-logo-area" [ngStyle]="{'--event-logo-border-color': designationColor}">
-            <div class="skeleton-box skeleton-avatar"></div>
-          </div>
-          <div class="card-main-info-area">
-            <div class="skeleton-box skeleton-line lg" style="width: 45%;"></div>
-            <div class="skeleton-box skeleton-line sm" style="width: 70%; margin-top: 8px;"></div>
-          </div>
-          <div class="card-identity-pills-area">
-            <div class="skeleton-box skeleton-chip"></div>
-            <div class="skeleton-box skeleton-chip" style="width: 90px;"></div>
-            <div class="skeleton-box skeleton-chip" style="width: 90px;"></div>
-          </div>
-          <div class="card-actions-identity-area">
-            <div class="skeleton-box skeleton-chip" style="width: 80px;"></div>
-          </div>
-          <div class="action-buttons-area directions-status-row">
-            <div class="skeleton-box" style="width: 90px; height: 34px; border-radius: 8px;"></div>
-            <div class="skeleton-box" style="width: 70px; height: 34px; border-radius: 8px;"></div>
-            <div class="skeleton-box" style="width: 70px; height: 34px; border-radius: 8px;"></div>
-          </div>
-        </div>
-      </section>
-
       <section class="banner-images-section skeleton-card">
         <div class="panel-card-header banner-header-bg">
           <div class="header-title-left">
@@ -43,113 +18,6 @@
       </section>
     </div>
   } @else {
-
-    <section class="gd-committee-card">
-      <div class="committee-card-grid">
-         <div class="card-logo-area">
-          <ng-template #eventLogoContent>
-            @if (eventData?.eventLogo; as eventLogo) {
-              <img [src]="eventLogo" alt="Event Logo" class="committee-avatar" 
-                   [ngStyle]="{'--avatar-border': designationColor, 'border': '4px solid ' + designationColor}"
-                   (error)="onEventLogoLoadError()" />
-            } @else {
-              <div class="committee-avatar-fallback event-avatar-fallback"
-                   [ngStyle]="{'--avatar-border': designationColor, 'border': '4px solid ' + designationColor}">
-                {{ fallbackInitial }}
-              </div>
-            }
-          </ng-template>
-
-          @if (canManageEvent) {
-            <input #eventLogoInput type="file" hidden accept="image/*" (change)="onEventLogoSelected($event)">
-            <button type="button" class="committee-logo-edit-trigger"
-              [class.is-uploading]="isUploadingEventLogo()"
-              (click)="eventLogoInput.click()" [disabled]="isUploadingEventLogo()"
-              matTooltip="Change Event Logo" matTooltipPosition="above"
-              aria-label="Change event logo">
-              <ng-container [ngTemplateOutlet]="eventLogoContent"></ng-container>
-              <span class="logo-edit-overlay" aria-hidden="true">
-                @if (isUploadingEventLogo()) {
-                  <mat-progress-spinner mode="indeterminate" diameter="22" class="logo-upload-spinner"></mat-progress-spinner>
-                } @else {
-                  <mat-icon>edit</mat-icon>
-                }
-              </span>
-            </button>
-          } @else {
-            <ng-container [ngTemplateOutlet]="eventLogoContent"></ng-container>
-          }
-        </div>
-        
-        <div class="card-main-info-area">
-          <div class="card-title-row">
-            <h3 class="committee-display-name">{{ (eventData?.eventDisplayName || eventData?.eventName || '') | titlecase }}</h3>
-          </div>
-          <div class="card-location-row">
-            <mat-icon class="location-icon">location_on</mat-icon>
-            <span class="location-text-trim">{{ (eventData?.committeeAddress || eventData?.category || 'General event') | titlecase }}</span>
-          </div>
-        </div>
-
-        <div class="card-identity-pills-area">
-          <span class="meta-pill category-pill">
-            <mat-icon>category</mat-icon>{{ eventData?.category || 'General' }}
-          </span>
-          @if (eventData?.startDate; as startDate) {
-            <span class="meta-pill date-pill">
-              <mat-icon>calendar_month</mat-icon> {{ startDate | date:'dd MMM yyyy' }}
-            </span>
-          }
-          @if (eventData?.endDate; as endDate) {
-            <span class="meta-pill date-pill">
-              <mat-icon>event_busy</mat-icon> {{ endDate | date:'dd MMM yyyy' }}
-            </span>
-          }
-        </div>
-
-        <div class="card-actions-identity-area">
-          @if (userEventRoleLabel) {
-            <span class="user-role-badge event-role-highlight"
-              [ngStyle]="{'background-color': designationColor ? designationColor + '1A' : '#fff7ed',
-                          'color': designationColor || '#c2410c',
-                          'border-color': designationColor ? designationColor + '33' : 'rgba(234, 88, 12, 0.2)'}">
-              @if (designationIcon) {
-                <mat-icon class="role-badge-icon">{{ designationIcon }}</mat-icon>
-              } @else {
-                <mat-icon class="role-badge-icon">verified</mat-icon>
-              }
-              {{ userEventRoleLabel }}
-            </span>
-          }
-        </div>
-
-        <!-- REDESIGNED ACTION BUTTONS & TOGGLE DECK -->
-        <div class="action-buttons-area directions-status-row">
-          
-          <div class="toggle-control-capsule" [class.is-visible]="eventData?.visibility === 'VISIBLE'">
-            <span class="toggle-status-badge">
-              <span class="status-dot"></span>
-              {{ eventData?.visibility === 'VISIBLE' ? 'VISIBLE' : 'HIDDEN' }}
-            </span>
-            <mat-slide-toggle class="event-visibility-toggle"
-              [checked]="eventData?.visibility === 'VISIBLE'"
-              [disabled]="!canManageEvent"
-              (change)="onEventVisibilityChange($event.checked)">
-            </mat-slide-toggle>
-          </div>
-
-          <button mat-button class="btn-action btn-edit" [disabled]="!canManageEvent" (click)="onEditEvent()">
-            <mat-icon>edit_note</mat-icon>
-            <span>Edit</span>
-          </button>
-
-          <button mat-button class="btn-action btn-delete" [disabled]="!canManageEvent" (click)="onDeleteEvent()">
-            <mat-icon>delete_forever</mat-icon>
-            <span>Delete</span>
-          </button>
-        </div>
-      </div>
-    </section>
 
     <!-- BANNER SECTION -->
     <section class="banner-images-section">
@@ -193,11 +61,12 @@
           </button>
         }
 
-        @for (imgUrl of eventData?.bannerImages || []; track imgUrl) {
+        @let banners = eventData.bannerImages || [];
+        @for (imgUrl of banners; track imgUrl) {
           <div class="banner-image-card"
                [class.selected]="isSelectionMode() && isBannerSelected(imgUrl)"
                (click)="isSelectionMode() ? toggleBannerSelection(imgUrl) : null">
-            <img [src]="imgUrl" [alt]="eventData?.eventName || 'Banner Image'" class="banner-img" />
+            <img [src]="imgUrl" [alt]="eventData.eventName || 'Banner Image'" class="banner-img" />
 
             @if (isSelectionMode()) {
               <div class="banner-select-overlay">
@@ -233,5 +102,4 @@
 
   <input #bannerFileInput type="file" accept="image/*" multiple hidden (change)="onBannerFilesSelected($event)" />
   <input #bannerSingleFileInput type="file" accept="image/*" hidden (change)="onSingleBannerFileSelected($event)" />
-  <input #eventLogoInput type="file" accept="image/*" hidden (change)="onEventLogoSelected($event)" />
 </div>
