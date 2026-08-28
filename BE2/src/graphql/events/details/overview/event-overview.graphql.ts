@@ -34,6 +34,8 @@ export const eventOverviewTypes = `
   type MyDesignation {
     roleId: Int
     name: String
+    color: String
+    icon: String
   }
 `;
 
@@ -101,13 +103,27 @@ export const eventOverviewResolvers = {
       const membership = committeeMembership[0];
 
       const myDesignationRows = await query<any[]>(
-        `SELECT ue.role_id AS roleId, UPPER(COALESCE(NULLIF(TRIM(ue.designation), ''), 'MEMBER')) AS name
-         FROM users_events ue
-         WHERE ue.event_id = ? AND ue.user_id = ?
-         LIMIT 1`,
+        `SELECT ue.role_id AS roleId,
+               UPPER(COALESCE(NULLIF(TRIM(ue.designation), ''), 'MEMBER')) AS name,
+               erm.color,
+               CASE
+                 WHEN erm.icon IS NOT NULL AND CHAR_LENGTH(erm.icon) > 0
+                 THEN CASE
+                        WHEN CHAR_LENGTH(erm.icon) = 1 THEN erm.icon
+                        ELSE CONVERT(CAST(erm.icon AS BINARY) USING utf8mb4)
+                      END
+                 ELSE NULL
+               END AS icon
+        FROM users_events ue
+        LEFT JOIN events_roles_master erm ON erm.role_id = ue.role_id
+        WHERE ue.event_id = ? AND ue.user_id = ?
+        LIMIT 1`,
         [eventId, loggedInUserId]
       ).catch(() => []);
       const myDesignation = myDesignationRows[0] || null;
+      if (myDesignation && Buffer.isBuffer(myDesignation.icon)) {
+        myDesignation.icon = myDesignation.icon.toString('utf8');
+      }
 
       const hasCommitteeAccess = Boolean(
         membership &&

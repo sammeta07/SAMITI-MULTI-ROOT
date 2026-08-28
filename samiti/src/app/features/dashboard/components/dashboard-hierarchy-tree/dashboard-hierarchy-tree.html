@@ -86,28 +86,33 @@
                 [ngClass]="['type-' + node.type, isNodeSelected(node) ? 'is-selected' : '', getCommitteeLogoRoleClass(node), (node.type === 'event' && node.status ? 'status-container-' + node.status.toLowerCase() : '')]"
                 [class.is-just-selected]="isNodeHighlighted(node)">
               
-              <div class="node-logo-avatar-wrapper branch-leaf-avatar" [ngClass]="['color-' + node.type, getCommitteeLogoRoleClass(node)]"
-                [ngStyle]="node.type === 'event' && node.id ? {'border-color': getEventDesignationColor(node.id)} : {}">
-                @if ((node.type === 'group' || node.type === 'event') && node.logo) {
-                  <img [src]="node.logo" [alt]="node.name" class="brand-image-node" (error)="node.logo = null" />
-                } @else if (node.type === 'group' || node.type === 'event') {
-                  <span class="logo-fallback-initial">{{ getNodeInitial(node.name) }}</span>
-                } @else if (node.type === 'program') {
-                  <span class="type-letter-icon">P</span>
-                } @else if (node.type === 'task') {
-                  <span class="type-letter-icon">T</span>
-                } @else {
-                  <mat-icon class="type-indicator-icon">assignment_turned_in</mat-icon>
-                }
-              </div>
+             <div class="node-logo-avatar-wrapper branch-leaf-avatar" [ngClass]="['color-' + node.type, getCommitteeLogoRoleClass(node)]"
+                 [ngStyle]="node.type === 'event' && node.id ? {'--node-border-color': getEventDesignationColor(node)} : {}">
+                 @if ((node.type === 'group' || node.type === 'event') && node.logo) {
+                   <img [src]="node.logo" [alt]="node.name" class="brand-image-node" (error)="node.logo = null" />
+                 } @else if (node.type === 'group' || node.type === 'event') {
+                   <span class="logo-fallback-initial">{{ getNodeInitial(node.name) }}</span>
+                 } @else if (node.type === 'program') {
+                   <span class="type-letter-icon">P</span>
+                 } @else if (node.type === 'task') {
+                   <span class="type-letter-icon">T</span>
+                 } @else {
+                   <mat-icon class="type-indicator-icon">assignment_turned_in</mat-icon>
+                 }
+               </div>
 
-              <div class="node-text-content">
-                <div class="node-title-row">
-                   <span class="node-label-txt" [class.bold-text]="isNodeSelected(node)">{{ node.name | titlecase }}</span>
-                  @if (node.type === 'event' && shouldShowEventRole(node)) {
-                    <span class="event-role-subtitle event-role-inline">{{ node.roles[0] }}</span>
-                  }
-                </div>
+               <div class="node-text-content">
+                 <div class="node-title-row">
+                    <span class="node-label-txt" [class.bold-text]="isNodeSelected(node)">{{ node.name | titlecase }}</span>
+                     @if (node.type === 'event' && shouldShowEventRole(node)) {
+                       <span class="event-role-subtitle event-role-inline">
+                         @if (getEventRoleIcon(node)) {
+                           <mat-icon class="event-role-designation-icon" [ngStyle]="{'color': getEventDesignationColor(node)}">{{ getEventRoleIcon(node) }}</mat-icon>
+                         }
+                         <span class="event-role-name">{{ getEventRoleName(node) }}</span>
+                       </span>
+                     }
+                 </div>
                 <!-- RESTORED: From & To Dates Range for Child Events -->
                 @if (node.type === 'event' && (node.startDate || node.endDate)) {
                   <span class="event-date-range-subtitle">
@@ -138,8 +143,8 @@
                 [ngClass]="['type-' + node.type, isNodeExpanded(node) ? 'is-active-expanded' : '', isNodeSelected(node) ? 'is-selected' : '', getCommitteeLogoRoleClass(node), (node.type === 'event' && node.status ? 'status-container-' + node.status.toLowerCase() : '')]"
                 [class.is-just-selected]="isNodeHighlighted(node)">
                 
-                 <div class="node-logo-avatar-wrapper" [ngClass]="['type-' + node.type, getCommitteeLogoRoleClass(node)]"
-                   [ngStyle]="node.type === 'event' && node.id ? {'border-color': getEventDesignationColor(node.id)} : {}">
+                  <div class="node-logo-avatar-wrapper" [ngClass]="['type-' + node.type, getCommitteeLogoRoleClass(node)]"
+                   [ngStyle]="node.type === 'event' && node.id ? {'--node-border-color': getEventDesignationColor(node)} : {}">
                   @if ((node.type === 'group' || node.type === 'event') && node.logo) {
                     <img [src]="node.logo" [alt]="node.name" class="brand-image-node" (error)="node.logo = null" />
                   } @else if (node.type === 'group' || node.type === 'event') {
@@ -165,9 +170,14 @@
                     @if (getNodeDesignation(node) && node.type !== 'role') {
                       <span class="event-role-subtitle event-role-inline">{{ getNodeDesignation(node) }}</span>
                     }
-                    @if (node.type === 'event' && shouldShowEventRole(node)) {
-                      <span class="event-role-subtitle event-role-inline">{{ node.roles[0] }}</span>
-                    }
+                     @if (node.type === 'event' && shouldShowEventRole(node)) {
+                       <span class="event-role-subtitle event-role-inline">
+                         @if (getEventRoleIcon(node)) {
+                           <mat-icon class="event-role-designation-icon" [ngStyle]="{'color': getEventDesignationColor(node)}">{{ getEventRoleIcon(node) }}</mat-icon>
+                         }
+                         <span class="event-role-name">{{ getEventRoleName(node) }}</span>
+                       </span>
+                     }
                   </div>
                   <!-- RESTORED: From & To Dates Range for Child Events -->
                   @if (node.type === 'event' && (node.startDate || node.endDate)) {

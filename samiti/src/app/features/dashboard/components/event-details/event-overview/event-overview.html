@@ -3,7 +3,7 @@
     <div class="skeleton-wrapper" aria-busy="true" aria-live="polite">
       <section class="gd-committee-card skeleton-card">
         <div class="committee-card-grid">
-          <div class="card-logo-area">
+        <div class="card-logo-area" [ngStyle]="{'--event-logo-border-color': designationColor}">
             <div class="skeleton-box skeleton-avatar"></div>
           </div>
           <div class="card-main-info-area">
@@ -46,12 +46,15 @@
 
     <section class="gd-committee-card">
       <div class="committee-card-grid">
-        <div class="card-logo-area">
+         <div class="card-logo-area">
           <ng-template #eventLogoContent>
             @if (eventData?.eventLogo; as eventLogo) {
-              <img [src]="eventLogo" alt="Event Logo" class="committee-avatar" (error)="onEventLogoLoadError()" />
+              <img [src]="eventLogo" alt="Event Logo" class="committee-avatar" 
+                   [ngStyle]="{'--avatar-border': designationColor, 'border': '4px solid ' + designationColor}"
+                   (error)="onEventLogoLoadError()" />
             } @else {
-              <div class="committee-avatar-fallback event-avatar-fallback">
+              <div class="committee-avatar-fallback event-avatar-fallback"
+                   [ngStyle]="{'--avatar-border': designationColor, 'border': '4px solid ' + designationColor}">
                 {{ fallbackInitial }}
               </div>
             }
@@ -106,8 +109,16 @@
 
         <div class="card-actions-identity-area">
           @if (userEventRoleLabel) {
-            <span class="user-role-badge event-role-highlight">
-              <mat-icon class="role-badge-icon">verified</mat-icon>{{ userEventRoleLabel }}
+            <span class="user-role-badge event-role-highlight"
+              [ngStyle]="{'background-color': designationColor ? designationColor + '1A' : '#fff7ed',
+                          'color': designationColor || '#c2410c',
+                          'border-color': designationColor ? designationColor + '33' : 'rgba(234, 88, 12, 0.2)'}">
+              @if (designationIcon) {
+                <mat-icon class="role-badge-icon">{{ designationIcon }}</mat-icon>
+              } @else {
+                <mat-icon class="role-badge-icon">verified</mat-icon>
+              }
+              {{ userEventRoleLabel }}
             </span>
           }
         </div>

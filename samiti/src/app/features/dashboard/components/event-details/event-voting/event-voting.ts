@@ -528,7 +528,7 @@ export class EventVotingComponent implements OnInit, AfterViewInit, OnDestroy {
       : currentIds.filter((id) => id !== normalizedRoleId);
     this.selectedVotingRoleIds.set(optimisticIds);
     this.votingService.toggleEventVotingRole(currentEvent.eventId, normalizedRoleId, checked).subscribe({
-      next: () => { this.notifier.success(checked ? 'Role added for voting.' : 'Role removed from voting.'); this.refreshVoting(); },
+      next: () => { this.refreshVoting(); },
       error: (err: HttpErrorResponse) => { this.selectedVotingRoleIds.set(currentIds); this.notifier.error(err?.error?.message || 'Failed to update voting role.'); }
     });
   }

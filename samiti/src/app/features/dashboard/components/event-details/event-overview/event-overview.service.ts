@@ -61,6 +61,8 @@ export class EventOverviewService {
         myDesignation {
           roleId
           name
+          color
+          icon
         }
         committeeRole
       }

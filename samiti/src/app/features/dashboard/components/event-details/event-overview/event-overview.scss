@@ -81,13 +81,17 @@
   height: 56px; 
   border-radius: 12px; 
   object-fit: cover; 
-  border: 1px solid #e2e8f0; 
+  box-sizing: border-box;
+  border: 4px solid var(--avatar-border, #cbd5e1);
 }
 
-.committee-avatar-fallback { 
+.committee-avatar-fallback,
+.event-avatar-fallback {
   width: 56px; 
   height: 56px; 
   border-radius: 12px; 
+  box-sizing: border-box;
+  border: 4px solid var(--avatar-border, #cbd5e1);
   background: #e2e8f0; 
   color: #475569; 
   display: flex; 
@@ -183,10 +187,7 @@
 }
 
 .event-role-highlight {
-  background: #fff7ed;
-  color: #c2410c;
-  border-color: rgba(234, 88, 12, 0.2);
-  .role-badge-icon { color: #ea580c; }
+  .role-badge-icon { color: currentColor; }
 }
 
 /* 🚀 REDESIGNED ACTION BUTTONS & TOGGLE DECK */

@@ -362,7 +362,6 @@ export class HomeComponent implements OnDestroy {
         this.isCommitteeListLoading = false;
         this.startupLoaderService.markCommitteesSettled();
         this.syncExpandedPanelState();
-        this.applyDefaultPreviewExpansion();
         this.applySmartDefaultTab();
         this.startCarouselAutoPlay();
         this.cdr.detectChanges();

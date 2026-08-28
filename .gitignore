@@ -2,3 +2,6 @@
 /BE2/.env
 /DATABASE_SCHEMA.md
 /images/
+/BE2/src/migrations/000-safe-consolidated-schema.sql
+/BE2/*.cjs
+/samiti/src/environments/environment.ts

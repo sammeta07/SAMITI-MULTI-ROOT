@@ -73,6 +73,28 @@ export class EventOverviewComponent implements OnInit, OnDestroy {
     return 'MEMBER';
   }
 
+  public get designationColor(): string {
+    const designation = this.eventData?.myDesignation;
+    if (designation?.name && designation.color) {
+      const normalized = designation.name.trim().toLowerCase();
+      if (normalized !== 'member' && normalized !== '') {
+        return designation.color;
+      }
+    }
+    return '#cbd5e1';
+  }
+
+  public get designationIcon(): string | null {
+    const designation = this.eventData?.myDesignation;
+    if (designation?.name && designation.icon) {
+      const normalized = designation.name.trim().toLowerCase();
+      if (normalized !== 'member' && normalized !== '') {
+        return designation.icon;
+      }
+    }
+    return null;
+  }
+
   public get isEventMasterAdmin(): boolean {
     return this.userEventRole === 'COMMITTEE_MASTER_ADMIN';
   }

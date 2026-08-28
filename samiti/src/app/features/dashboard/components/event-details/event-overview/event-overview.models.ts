@@ -1,6 +1,8 @@
 export interface MyDesignation {
   roleId: number | null;
   name: string | null;
+  color: string | null;
+  icon: string | null;
 }
 
 export interface EventOverviewMeta {

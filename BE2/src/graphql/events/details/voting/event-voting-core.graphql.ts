@@ -325,6 +325,76 @@ async function syncWinnersToUsersEvents(eventId: number): Promise<void> {
   }
 }
 
+async function recordSingleCandidateWinners(eventId: number): Promise<void> {
+  const mappedRoleRows = await query<Array<RowDataPacket & { roleId: number }>>(
+    `SELECT role_id AS roleId FROM event_voting_roles WHERE event_id = ?`,
+    [eventId]
+  );
+  const mappedRoleIds = mappedRoleRows.map((r) => Number(r.roleId)).filter((id) => Number.isInteger(id) && id > 0);
+  if (mappedRoleIds.length === 0) {
+    return;
+  }
+
+  const placeholders = mappedRoleIds.map(() => '?').join(',');
+  const approvedRows = await query<Array<RowDataPacket & { roleId: number; candidateId: number }>>(
+    `SELECT role_id AS roleId, user_id AS candidateId
+     FROM event_interest_expressions
+     WHERE event_id = ? AND role_id IN (${placeholders}) AND status = 'APPROVED'
+     GROUP BY role_id, user_id`,
+    [eventId, ...mappedRoleIds]
+  );
+
+  const approvedCount = new Map<number, number>();
+  approvedRows.forEach((row) => {
+    const roleId = Number(row.roleId);
+    approvedCount.set(roleId, (approvedCount.get(roleId) || 0) + 1);
+  });
+
+  const singleCandidateRoleIds = Array.from(approvedCount.entries())
+    .filter(([, count]) => count === 1)
+    .map(([roleId]) => roleId);
+
+  if (singleCandidateRoleIds.length === 0) {
+    return;
+  }
+
+  const singlePlaceholders = singleCandidateRoleIds.map(() => '?').join(',');
+  const singleCandidateRows = await query<Array<RowDataPacket & { roleId: number; userId: number; name: string; photo: string | null }>>(
+    `SELECT
+       eie.role_id AS roleId,
+       u.id AS userId,
+       u.name AS name,
+       u.profile_photo AS photo
+     FROM event_interest_expressions eie
+     INNER JOIN users u ON u.id = eie.user_id
+     WHERE eie.event_id = ? AND eie.role_id IN (${singlePlaceholders}) AND eie.status = 'APPROVED'
+     GROUP BY eie.role_id, u.id, u.name, u.profile_photo`,
+    [eventId, ...singleCandidateRoleIds]
+  );
+
+  for (const row of singleCandidateRows) {
+    await query(
+      `INSERT INTO event_winners
+         (event_id, role_id, winner_user_id, winner_name, winner_photo, winner_vote_count, declared_at, won_by)
+       VALUES (?, ?, ?, ?, ?, 0, NOW(), 'SINGLE_CANDIDATE')
+       ON DUPLICATE KEY UPDATE
+         winner_user_id = VALUES(winner_user_id),
+         winner_name = VALUES(winner_name),
+         winner_photo = VALUES(winner_photo),
+         winner_vote_count = VALUES(winner_vote_count),
+         declared_at = NOW(),
+         won_by = VALUES(won_by)`,
+      [
+        eventId,
+        Number(row.roleId),
+        Number(row.userId),
+        String(row.name || ''),
+        row.photo ? String(row.photo) : null
+      ]
+    );
+  }
+}
+
 export const eventVotingResolvers = {
   Query: {
     async eventCommitteeMembers(_: any, args: { eventId: number }, context: any) {
@@ -933,6 +1003,8 @@ export const eventVotingResolvers = {
         [loggedInUserId, eventId]
       );
 
+      await recordSingleCandidateWinners(eventId);
+
       return {
         eventId,
         votingPhaseState: 4
@@ -1319,7 +1391,7 @@ export const eventVotingResolvers = {
               winner.name,
               winner.photo,
               winner.voteCount,
-              'COUNT'
+              winner.isSingleCandidate ? 'SINGLE_CANDIDATE' : 'COUNT'
             ]
           );
         }
@@ -1529,6 +1601,11 @@ export const eventVotingResolvers = {
 
       await query(
         `DELETE FROM event_voting_roles WHERE event_id = ? AND role_id = ?`,
+        [eventId, roleId]
+      );
+
+      await query(
+        `DELETE FROM event_winners WHERE event_id = ? AND role_id = ?`,
         [eventId, roleId]
       );
 

@@ -446,50 +446,41 @@ body.resizing-col {
     overflow: hidden;
     transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
     border-left-width: 4px !important;
+    border-color: #cbd5e1 !important;
 
-    &.panel-role-admin {
-      border-color: #22c55e !important;
-      &:hover { border-color: #22c55e !important; }
-      &.mat-expanded {
-        border-color: #22c55e !important;
-        box-shadow: 0 4px 16px rgba(34, 197, 94, 0.08) !important;
-      }
-    }
-
-    &.panel-role-master-admin {
-      border-color: #ef4444 !important;
-      &:hover { border-color: #ef4444 !important; }
-      &.mat-expanded {
-        border-color: #ef4444 !important;
-        box-shadow: 0 4px 16px rgba(239, 68, 68, 0.06) !important;
-      }
-    }
-
-    &.panel-role-member {
-      border-color: #3b82f6 !important;
-      &:hover { border-color: #3b82f6 !important; }
-      &.mat-expanded {
-        border-color: #3b82f6 !important;
-        box-shadow: 0 4px 16px rgba(59, 130, 246, 0.06) !important;
-      }
-    }
-
-    &.panel-role-pending {
-      border-color: #f59e0b !important;
-      &:hover { border-color: #f59e0b !important; }
-      &.mat-expanded {
-        border-color: #f59e0b !important;
-        box-shadow: 0 4px 16px rgba(245, 158, 11, 0.06) !important;
-      }
-    }
-
+    &.panel-role-admin,
+    &.panel-role-master-admin,
+    &.panel-role-member,
+    &.panel-role-pending,
     &.panel-role-none {
       border-color: #cbd5e1 !important;
-      &:hover { border-color: #94a3b8 !important; }
-      &.mat-expanded {
-        border-color: #cbd5e1 !important;
-        box-shadow: 0 4px 16px rgba(249, 115, 22, 0.04) !important;
-      }
+    }
+
+    &:hover { border-color: #94a3b8 !important; }
+    &.mat-expanded {
+      border-color: #cbd5e1 !important;
+      box-shadow: 0 4px 16px rgba(15, 23, 42, 0.04) !important;
+    }
+
+    &.panel-role-master-admin .committee-avatar,
+    &.panel-role-master-admin .committee-avatar-fallback {
+      border-color: #ef4444 !important;
+    }
+    &.panel-role-admin .committee-avatar,
+    &.panel-role-admin .committee-avatar-fallback {
+      border-color: #22c55e !important;
+    }
+    &.panel-role-member .committee-avatar,
+    &.panel-role-member .committee-avatar-fallback {
+      border-color: #3b82f6 !important;
+    }
+    &.panel-role-pending .committee-avatar,
+    &.panel-role-pending .committee-avatar-fallback {
+      border-color: #f59e0b !important;
+    }
+    &.panel-role-none .committee-avatar,
+    &.panel-role-none .committee-avatar-fallback {
+      border-color: #cbd5e1 !important;
     }
   }
 
@@ -574,13 +565,14 @@ body.resizing-col {
   height: 54px;
   border-radius: 11px;
   object-fit: cover;
-  border: 1px solid #e2e8f0;
+  border: 4px solid #cbd5e1;
 }
 
 .committee-avatar-fallback {
   width: 54px;
   height: 54px;
   border-radius: 11px;
+  border: 4px solid #cbd5e1;
   background: linear-gradient(135deg, #f97316, #ea580c);
   color: #ffffff;
   display: flex;
