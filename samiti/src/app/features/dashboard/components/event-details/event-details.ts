@@ -251,7 +251,23 @@ export class EventDetailsComponent implements OnInit, OnDestroy {
         return designation.color;
       }
     }
-    return '#cbd5e1';
+    return '#64748b';
+  }
+
+  public get calculatedEventStatus(): string {
+    const now = new Date();
+    const startDate = this.overviewData?.startDate ? new Date(this.overviewData.startDate) : null;
+    const endDate = this.overviewData?.endDate ? new Date(this.overviewData.endDate) : null;
+
+    if (!startDate) return 'completed';
+
+    const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    const start = new Date(startDate.getFullYear(), startDate.getMonth(), startDate.getDate());
+    const end = endDate ? new Date(endDate.getFullYear(), endDate.getMonth(), endDate.getDate()) : null;
+
+    if (today < start) return 'upcoming';
+    if (end && today > end) return 'completed';
+    return 'started';
   }
 
   public get designationIcon(): string | null {

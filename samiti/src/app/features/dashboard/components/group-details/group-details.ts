@@ -222,7 +222,7 @@ export class GroupDetailsComponent implements OnInit {
 
   public getEventDesignationColor(eventId: number): string {
     const accountRoles = this.authService.getStoredUserData()?.accountRoles;
-    if (!accountRoles?.committees) return '#94a3b8';
+    if (!accountRoles?.committees) return '#64748b';
     for (const committee of accountRoles.committees) {
       const event = committee.events?.find(e => e.eventId === eventId);
       if (event?.designation) {
@@ -231,11 +231,11 @@ export class GroupDetailsComponent implements OnInit {
           case 'UPADHYAKSHA': return '#800080';
           case 'KOSHADHYAKSHA': return '#ffa500';
           case 'AANKSHAK': return '#000000';
-          default: return '#94a3b8';
+          default: return '#64748b';
         }
       }
     }
-    return '#94a3b8';
+    return '#64748b';
   }
 
   public onDesignationPhotoSlotClicked(eventId: number, role: number | string, event: Event): void {

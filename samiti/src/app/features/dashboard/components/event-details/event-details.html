@@ -28,7 +28,7 @@
         </div>
       </section>
     } @else if (overviewData; as evt) {
-      <section class="gd-committee-card">
+      <section class="gd-committee-card" [ngClass]="'status-container-' + calculatedEventStatus.toLowerCase()">
         <div class="committee-card-grid">
           <div class="card-logo-area">
             <ng-template #eventLogoContent>
@@ -94,9 +94,11 @@
           <div class="card-actions-identity-area">
             @if (userEventRoleLabel) {
               <span class="user-role-badge event-role-highlight"
-                [ngStyle]="{'background-color': designationColor ? designationColor + '1A' : '#fff7ed',
-                            'color': designationColor || '#c2410c',
-                            'border-color': designationColor ? designationColor + '33' : 'rgba(234, 88, 12, 0.2)'}">
+                [ngStyle]="{
+                  'background-color': (userEventRoleLabel || '').toLowerCase() === 'member' ? '#3b82f6' : (designationColor ? designationColor + '1A' : '#ffffff'),
+                  'color': (userEventRoleLabel || '').toLowerCase() === 'member' ? '#ffffff' : (designationColor || '#334155'),
+                  'border-color': (userEventRoleLabel || '').toLowerCase() === 'member' ? '#3b82f6' : (designationColor ? designationColor + '33' : '#e2e8f0')
+                }">
                 @if (designationIcon) {
                   <mat-icon class="role-badge-icon">{{ designationIcon }}</mat-icon>
                 } @else {

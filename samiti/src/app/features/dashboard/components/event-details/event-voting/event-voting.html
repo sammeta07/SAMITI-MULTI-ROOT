@@ -40,7 +40,7 @@
         <div class="panel-card-header voting-available-roles-header">
           <div class="header-title-left">
             <mat-icon class="icon-accent-voting">fact_check</mat-icon>
-            <span class="title-text">All Designations</span>
+            <span class="title-text">All Roles</span>
             <span class="count-pill">{{ eventData?.availableRoles?.length || 0 }}</span>
           </div>
           <div class="header-actions-right">
@@ -108,9 +108,9 @@
       <!-- Header Controls & Phase Lifecycle Triggers -->
       <div class="panel-card-header designations-header-bg">
         <div class="header-title-left">
-          <mat-icon class="icon-accent-designation">badge</mat-icon>
+          <mat-icon class="icon-accent-designation">group</mat-icon>
           <span class="title-text"
-            >Selected Designations {{ votingPhaseState ? '(' + votingPhaseState + ')' : '' }}</span
+            >Selected Roles {{ votingPhaseState ? '(' + votingPhaseState + ')' : '' }}</span
           >
           <span class="count-pill">{{ votingDisplayCards.length || 0 }}</span>
         </div>
@@ -303,7 +303,7 @@
                 @if (votingPhaseState === 0) {
                   <div class="voting-interest-empty-state">
                     <span class="empty-state-icon"><mat-icon>fact_check</mat-icon></span>
-                    <span class="empty-state-title">Roles mapped</span>
+                    <span class="empty-state-title">Mapped Roles</span>
                     <span class="empty-state-sub"
                       >Nominations and voting activity will appear here once roles are locked and
                       nominations open.</span
@@ -785,9 +785,39 @@
               </mat-card-content>
             </mat-card>
           } @empty {
-            <div class="voting-empty-state">
-              <mat-icon>how_to_vote</mat-icon>
-              <span>No voting roles mapped for this event yet.</span>
+            @if (!isMasterAdmin) {
+              <div class="available-roles-preview">
+                <div class="available-roles-preview-header">
+                  <mat-icon>badge</mat-icon>
+                  <span>Available Roles</span>
+                </div>
+                <div class="available-roles-preview-grid">
+                  @for (role of eventData?.availableRoles || []; track role.roleId || role.roleName) {
+                    <span class="available-role-chip" [ngStyle]="role.color ? {'border-color': role.color, 'color': role.color} : {}">
+                      @if (role.icon) {
+                        <span class="available-role-icon">{{ role.icon }}</span>
+                      }
+                      {{ (role.englishName || role.roleName || '').split('_').join(' ') | titlecase }}
+                      @if (role.hindiName) { <span class="available-role-hindi">/ {{ role.hindiName | uppercase }}</span> }
+                    </span>
+                  }
+                </div>
+              </div>
+            }
+            <div class="voting-empty-state-enhanced">
+              <div class="voting-empty-icon-wrap">
+                <mat-icon>how_to_vote</mat-icon>
+              </div>
+              <div class="voting-empty-content">
+                <span class="voting-empty-title">No voting roles mapped yet</span>
+                <span class="voting-empty-subtitle">
+                  @if (isMasterAdmin) {
+                    Please lock roles to start nomination.
+                  } @else {
+                    Waiting for MASTER ADMIN to lock roles.
+                  }
+                </span>
+              </div>
             </div>
           }
         </div>

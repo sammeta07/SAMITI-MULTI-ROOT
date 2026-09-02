@@ -649,17 +649,17 @@ export class DashboardHierarchyTreeComponent implements OnInit {
 
   public getEventDesignationColor(node: TreeNode): string {
     if (node.type !== 'event' || !node.roles?.length) {
-      return '#e2e8f0';
+      return '#64748b';
     }
     const firstRole = node.roles[0];
     if (!firstRole) {
-      return '#e2e8f0';
+      return '#64748b';
     }
     const normalized = firstRole.name.trim().toLowerCase();
     if (normalized === 'member' || normalized === '') {
-      return '#e2e8f0';
+      return '#64748b';
     }
-    return firstRole.color || '#e2e8f0';
+    return firstRole.color || '#64748b';
   }
 
   public getEventRoleIcon(node: TreeNode): string | null {
