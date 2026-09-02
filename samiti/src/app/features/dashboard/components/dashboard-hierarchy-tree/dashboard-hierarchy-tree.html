@@ -109,16 +109,22 @@
                          @if (getEventRoleIcon(node)) {
                            <mat-icon class="event-role-designation-icon" [ngStyle]="{'color': getEventDesignationColor(node)}">{{ getEventRoleIcon(node) }}</mat-icon>
                          }
-                         <span class="event-role-name">{{ getEventRoleName(node) }}</span>
+
                        </span>
                      }
                  </div>
                 <!-- RESTORED: From & To Dates Range for Child Events -->
                 @if (node.type === 'event' && (node.startDate || node.endDate)) {
                   <span class="event-date-range-subtitle">
-                    @if (node.startDate) { {{ node.startDate | date: 'd MMM y' }} }
-                    @if (node.startDate && node.endDate) { &ndash; }
-                    @if (node.endDate) { {{ node.endDate | date: 'd MMM y' }} }
+                    @if (node.startDate) {
+                      <span class="date-start">{{ node.startDate | date: 'd MMM y' }}</span>
+                    }
+                    @if (node.startDate && node.endDate) {
+                      <span class="date-separator"> – </span>
+                    }
+                    @if (node.endDate) {
+                      <span class="date-end">{{ node.endDate | date: 'd MMM y' }}</span>
+                    }
                   </span>
                 }
               </div>
@@ -175,7 +181,7 @@
                          @if (getEventRoleIcon(node)) {
                            <mat-icon class="event-role-designation-icon" [ngStyle]="{'color': getEventDesignationColor(node)}">{{ getEventRoleIcon(node) }}</mat-icon>
                          }
-                         <span class="event-role-name">{{ getEventRoleName(node) }}</span>
+
                        </span>
                      }
                   </div>

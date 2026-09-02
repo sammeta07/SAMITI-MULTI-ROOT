@@ -440,49 +440,62 @@
   flex-shrink: 0;
   display: inline-flex;
   align-items: center;
-  gap: 2px;
+  gap: 4px;
+  padding: 2px;
 }
 
 .event-role-designation-icon {
-  font-size: 0.72rem;
-  width: 0.72rem;
-  height: 0.72rem;
-  line-height: 0.72rem;
-  display: inline-flex;
+  font-size: 1rem;
+  width: 1rem;
+  height: 1rem;
+  line-height: 1rem;
+  display: inline-flex !important;
   align-items: center;
   justify-content: center;
-}
-
-.event-role-name {
-  font-size: 0.58rem;
-  font-weight: 600;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
+  color: #64748b;
 }
 
 .event-role-subtitle {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
   font-size: 0.6rem;
   font-weight: 600;
   color: #64748b;
   text-transform: uppercase;
   letter-spacing: 0.2px;
   white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
 }
+
+.status-container-started .event-role-designation-icon { color: #10b981; }
+
+.status-container-upcoming .event-role-designation-icon { color: #f59e0b; }
+
+.status-container-completed .event-role-designation-icon { color: #64748b; }
 
 /* Date subtitle styling */
 .event-date-range-subtitle {
-  display: block;
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
   font-size: 0.62rem;
   font-weight: 500;
-  color: #94a3b8;
-  margin-top: -1px;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+  color: #64748b;
 }
+
+.date-start { color: #10b981; }
+.date-separator { color: #94a3b8; }
+.date-end { color: #64748b; }
+
+.status-container-upcoming .date-start { color: #f59e0b; }
+.status-container-upcoming .date-end { color: #94a3b8; }
+.status-container-started .date-start { color: #10b981; }
+.status-container-started .date-end { color: #64748b; }
+.status-container-completed .date-start { color: #64748b; }
+.status-container-completed .date-end { color: #64748b; }
 
 ::ng-deep .samiti-compact-context-menu {
   min-width: 130px !important; 

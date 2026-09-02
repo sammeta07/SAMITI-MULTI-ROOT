@@ -97,12 +97,15 @@
           <div class="horizontal-list-container">
             @for (n of skeletonRows3; track n) {
               <div class="event-aligned-row skeleton-event-row">
-                <div class="event-col-info">
-                  <div class="skeleton-box skeleton-line lg" style="width:50%;"></div>
-                  <div class="skeleton-box skeleton-line sm" style="width:80%; margin-top:6px;"></div>
+                <div class="event-meta-card">
+                  <div class="skeleton-box skeleton-avatar" style="width:44px;height:44px;border-radius:10px;"></div>
+                  <div class="event-col-info">
+                    <div class="skeleton-box skeleton-line lg" style="width:50%;"></div>
+                    <div class="skeleton-box skeleton-line sm" style="width:80%; margin-top:6px;"></div>
+                  </div>
                 </div>
-                <div class="event-col-controls">
-                  <div class="skeleton-box" style="width:80px;height:18px;border-radius:999px;"></div>
+                <div class="event-designation-area">
+                  <div class="skeleton-box skeleton-line" style="height:100%; border-radius:12px;"></div>
                 </div>
               </div>
             }

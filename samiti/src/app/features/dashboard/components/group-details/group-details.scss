@@ -19,53 +19,26 @@
 }
 
 /* SCROLL CONTAINER */
-.scrollable-container {
+.workspace-body.scrollable-container {
   flex: 1;
-  overflow-y: auto;
+  overflow: hidden; /* Inner columns handle their respective scrolls */
   padding: 12px;
   display: flex;
   flex-direction: column;
   gap: 12px;
   box-sizing: border-box;
-
-  &::-webkit-scrollbar { 
-    width: 5px; 
-  }
-  &::-webkit-scrollbar-thumb { 
-    background: #cbd5e1; 
-    border-radius: 4px; 
-    &:hover { background: #94a3b8; }
-  }
+  height: 100%;
 }
 
 /* COMMITTEE CARD */
 .gd-committee-card {
   background: #ffffff;
   border: 1px solid #cbd5e1;
-  // border-left: 4px solid #cbd5e1;
   border-radius: 12px;
   padding: 8px 12px;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
   transition: all 0.2s ease;
-
-  /* Role-based coloring lives on the committee logo border, not the outer card
-     border, which stays neutral for every role. */
-  // &.role-master-admin {
-  //   box-shadow: 0 4px 14px rgba(239, 68, 68, 0.08);
-  //   border-left: 4px solid #ef4444;
-  // }
-  // &.role-admin {
-  //   border-left: 4px solid #22c55e;
-  // }
-  // &.role-member {
-  //   border-left: 4px solid #3b82f6;
-  // }
-  // &.role-pending {
-  //   border-left: 4px solid #eab308;
-  // }
-  // &.role-none {
-  //   border-left: 4px solid #cbd5e1;
-  // }
+  flex-shrink: 0;
 }
 
 .committee-card-grid {
@@ -183,7 +156,6 @@
     }
   }
 
-  /* Edit Profile */
   .edit-btn {
     background: #f1f5f9 !important;
     color: #334155 !important;
@@ -196,7 +168,6 @@
     }
   }
 
-  /* Delete Group */
   .delete-btn {
     background: #fef2f2 !important;
     color: #dc2626 !important;
@@ -209,7 +180,6 @@
     }
   }
 
-  /* Public Event Button */
   .create-event-btn {
     background: transparent !important;
     color: #f97316 !important;
@@ -272,7 +242,6 @@
   &.fb-pending { background: linear-gradient(135deg, #fef08a, #fde047); color: #a16207; }
   &.fb-none { background: linear-gradient(135deg, #e2e8f0, #cbd5e1); color: #475569; }
 
-  /* Role-colored border applied to the committee logo, driven by the outer card role */
   .gd-committee-card.role-master-admin & { border-color: #ef4444; }
   .gd-committee-card.role-admin & { border-color: #22c55e; }
   .gd-committee-card.role-member & { border-color: #3b82f6; }
@@ -280,7 +249,6 @@
   .gd-committee-card.role-none & { border-color: #cbd5e1; }
 }
 
-/* Role-colored border for the logo image (used when a logo is uploaded) */
 .gd-committee-card.role-master-admin .committee-avatar { border-color: #ef4444; }
 .gd-committee-card.role-admin .committee-avatar { border-color: #22c55e; }
 .gd-committee-card.role-member .committee-avatar { border-color: #3b82f6; }
@@ -427,9 +395,10 @@
 
 .events-full-height {
   flex: 1;
-  min-height: 400px;
+  min-height: 0;
   display: flex;
   flex-direction: column;
+  overflow: hidden;
 }
 
 /* CARDS & PANELS */
@@ -443,14 +412,13 @@
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.02);
 }
 
-/* ROSTER CONTAINERS HEIGHT FIXES */
 .roster-fixed-master {
   flex: 0 0 auto;
 }
 
 .compact-master-scroll {
   min-height: 52px;
-  max-height: 56px; /* Exactly 1 row height */
+  max-height: 56px;
   overflow-y: auto;
 }
 
@@ -458,10 +426,9 @@
   flex: 0 0 auto;
 }
 
-/* 🎯 Group Admins Exact 2-Rows Display */
 .admin-2rows-scroll {
   min-height: 104px;
-  max-height: 104px; /* Exactly 2 rows (46px height + gap) */
+  max-height: 104px;
   overflow-y: auto;
 }
 
@@ -471,7 +438,9 @@
   justify-content: space-between;
   padding: 8px 12px;
   min-height: 38px;
+  height: 38px;
   box-sizing: border-box;
+  flex-shrink: 0;
 
   .header-title-left {
     display: inline-flex;
@@ -529,7 +498,7 @@
   border-radius: 6px;
   transition: all 0.15s ease;
 
-   &:hover { background: #f8fafc; border-color: #e2e8f0; }
+  &:hover { background: #f8fafc; border-color: #e2e8f0; }
 }
 
 .row-avatar {
@@ -601,30 +570,40 @@
   .delete-btn { color: #ef4444; }
 }
 
-/* EVENTS LIST */
+/* =========================================================================
+   EVENTS SECTION: EXACTLY 2 ROWS VISIBLE + VERTICAL SCROLL
+   ========================================================================= */
 .horizontal-list-container {
   padding: 8px;
   display: flex;
   flex-direction: column;
   gap: 10px;
   flex: 1;
+  min-height: 0;
   overflow-y: auto;
-  align-items: stretch;
+  overflow-x: hidden;
+  box-sizing: border-box;
 
-  &::-webkit-scrollbar { width: 4px; }
-  &::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 2px; }
+  &::-webkit-scrollbar { width: 5px; }
+  &::-webkit-scrollbar-thumb { 
+    background: #cbd5e1; 
+    border-radius: 4px; 
+    &:hover { background: #94a3b8; }
+  }
 }
 
+/* Har event row exactly container ki 50% height (minus gap) occupy karegi */
 .event-aligned-row {
+  flex: 0 0 calc((100% - 10px) / 2);
+  min-height: 145px; /* Ensures sensible height on smaller desktop viewports */
   display: flex;
   flex-direction: column;
-  flex: 1 1 0;
-  min-height: 0;
-  padding: 10px;
+  padding: 8px 10px;
   background: #ffffff;
   border: 1px solid #e2e8f0;
   border-radius: 8px;
-  gap: 10px;
+  gap: 8px;
+  box-sizing: border-box;
   transition: border-color 0.15s ease;
 
   &:hover { border-color: #cbd5e1; }
@@ -652,24 +631,25 @@
   display: flex;
   align-items: center;
   gap: 8px;
-  padding: 6px 8px;
+  padding: 4px 8px;
   background: #f8fafc;
   border: 1px solid #e2e8f0;
   border-radius: 8px;
+  flex-shrink: 0;
 }
 
 .event-logo-circle {
-  width: 44px;
-  height: 44px;
-  border-radius: 10px;
-  border: 3px solid transparent;
+  width: 38px;
+  height: 38px;
+  border-radius: 8px;
+  border: 2px solid transparent;
   overflow: hidden;
   display: inline-flex;
   align-items: center;
   justify-content: center;
   background: #e2e8f0;
   color: #334155;
-  font-size: 1.1rem;
+  font-size: 1rem;
   font-weight: 700;
   flex-shrink: 0;
   position: relative;
@@ -688,14 +668,14 @@
     opacity: 0;
     transition: opacity 0.2s ease;
 
-    mat-icon { font-size: 1.1rem; width: 1.1rem; height: 1.1rem; }
+    mat-icon { font-size: 1rem; width: 1rem; height: 1rem; }
   }
 
   &:hover .photo-edit-overlay { opacity: 1; }
 }
 
 .event-col-info { flex: 1; min-width: 0; }
-.event-head-block { display: flex; flex-direction: column; gap: 4px; }
+.event-head-block { display: flex; flex-direction: column; gap: 2px; }
 
 .event-title-row {
   display: flex;
@@ -704,7 +684,7 @@
   gap: 6px;
 
   .event-main-title {
-    font-size: 0.88rem;
+    font-size: 0.84rem;
     font-weight: 700;
     color: #0f172a;
     white-space: nowrap;
@@ -716,15 +696,15 @@
 .event-col-controls {
   display: flex;
   align-items: center;
-  gap: 6px;
+  gap: 4px;
 
   .visibility-label {
-    font-size: 0.68rem;
+    font-size: 0.65rem;
     font-weight: 700;
     color: #64748b;
   }
 
-  .density-toggle { transform: scale(0.75); transform-origin: right center; }
+  .density-toggle { transform: scale(0.7); transform-origin: right center; }
 }
 
 .event-meta-row {
@@ -737,33 +717,33 @@
 .event-pill {
   display: inline-flex;
   align-items: center;
-  height: 20px;
+  height: 18px;
   padding: 0 6px;
   border-radius: 999px;
-  font-size: 0.66rem;
+  font-size: 0.64rem;
   font-weight: 600;
   background: #ffffff;
   color: #475569;
   border: 1px solid #cbd5e1;
 
-    &.status-tag {
-      text-transform: uppercase;
-      font-weight: 700;
-      &.tag-upcoming { background: #fefce8; color: #a16207; border-color: #fef08a; }
-      &.tag-started,
-      &.tag-ongoing { background: #f0fdf4; color: #15803d; border-color: #86efac; }
-      &.tag-completed { background: #f1f5f9; color: #475569; border-color: #cbd5e1; }
-    }
+  &.status-tag {
+    text-transform: uppercase;
+    font-weight: 700;
+    &.tag-upcoming { background: #fefce8; color: #a16207; border-color: #fef08a; }
+    &.tag-started,
+    &.tag-ongoing { background: #f0fdf4; color: #15803d; border-color: #86efac; }
+    &.tag-completed { background: #f1f5f9; color: #475569; border-color: #cbd5e1; }
+  }
 
   &.event-type-pill {
     &.type-public { background: #ffffff; color: #475569; border-color: #cbd5e1; }
     &.type-private { background: #fdf2f8; color: #be185d; border-color: #fbcfe8; }
   }
 
-  &.event-date-pill .label { color: #94a3b8; font-weight: 700; margin-right: 3px; }
+  &.event-date-pill .label { color: #94a3b8; font-weight: 700; margin-right: 2px; }
 }
 
-/* DESIGNATIONS & ROLES MAPPED */
+/* DESIGNATIONS CONTAINER */
 .event-designation-area {
   display: flex;
   flex-direction: column;
@@ -774,46 +754,54 @@
 .event-designation-placeholder {
   display: flex;
   align-items: stretch;
-  gap: 10px;
+  gap: 8px;
   overflow-x: auto;
-  padding: 12px;
-  border: 2px dashed #94a3b8;
-  border-radius: 14px;
+  overflow-y: hidden;
+  padding: 6px 8px;
+  border: 1px dashed #cbd5e1;
+  border-radius: 8px;
   background: linear-gradient(180deg, #ffffff 0%, #f8fafc 100%);
-  flex: 1 1 100%;
+  flex: 1;
   min-height: 0;
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.6), 0 4px 18px rgba(15, 23, 42, 0.04);
 
   &::-webkit-scrollbar { height: 4px; }
   &::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 2px; }
 }
 
-.designation-item { flex: 0 0 auto; }
+.designation-item { 
+  flex: 0 0 auto; 
+  height: 100%;
+}
 
 .designation-header {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 6px;
-  border-radius: 8px;
-  background: #f8fafc;
+  justify-content: center;
+  gap: 4px;
+  border-radius: 6px;
+  background: #ffffff;
   border: 1px solid #e2e8f0;
-  min-width: 90px;
+  min-width: 85px;
+  height: 100%;
+  padding: 4px 6px;
+  box-sizing: border-box;
 }
 
 .designation-avatar {
-  width: 38px;
-  height: 38px;
+  width: 32px;
+  height: 32px;
   border-radius: 50%;
   overflow: hidden;
   display: flex;
   align-items: center;
   justify-content: center;
-  background: #ffffff;
-  border: 4px solid;
-  color: #ffffff;
+  background: #f8fafc;
+  border: 3px solid #e2e8f0;
+  color: #475569;
   font-weight: 700;
-  font-size: 0.85rem;
+  font-size: 0.8rem;
+  flex-shrink: 0;
 
   img { width: 100%; height: 100%; object-fit: cover; }
 }
@@ -824,8 +812,7 @@
   justify-content: center;
   width: 100%;
   height: 100%;
-  font-size: 1.25rem;
-  font-family: "Segoe UI Symbol", "Arial", sans-serif;
+  font-size: 1.1rem;
   line-height: 1;
 }
 
@@ -834,40 +821,56 @@
   flex-direction: column;
   align-items: center;
   text-align: center;
-  gap: 2px;
+  gap: 1px;
 
-  .role-name-english { font-size: 0.72rem; font-weight: 700; color: #1e293b; }
-  .role-name-hindi { font-size: 0.68rem; font-weight: 600; color: #64748b; }
-  .winner-name { 
+  .role-name-english { 
+    font-size: 0.7rem; 
+    font-weight: 700; 
+    color: #1e293b; 
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 80px;
+  }
+  .role-name-hindi { 
     font-size: 0.65rem; 
+    font-weight: 600; 
+    color: #64748b; 
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 80px;
+  }
+  .winner-name { 
+    font-size: 0.62rem; 
     font-weight: 700; 
     color: #15803d; 
     background: #dcfce7; 
     padding: 1px 6px; 
     border-radius: 999px;
-    margin-top: 2px;
+    margin-top: 1px;
+    white-space: nowrap;
   }
 }
 
 .no-roles-mapped-message {
   display: flex;
-  flex: 1 1 100%;
+  flex: 1;
   min-height: 0;
-  flex-direction: column;
+  flex-direction: row;
   align-items: center;
   justify-content: center;
-  gap: 8px;
-  padding: 20px 16px;
-  border: 2px dashed #94a3b8;
-  border-radius: 14px;
-  background: linear-gradient(180deg, #ffffff 0%, #f8fafc 100%);
+  gap: 6px;
+  padding: 8px;
+  border: 1px dashed #cbd5e1;
+  border-radius: 8px;
+  background: #f8fafc;
   text-align: center;
-  color: #334155;
-  font-size: 0.85rem;
-  font-weight: 700;
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.6), 0 4px 18px rgba(15, 23, 42, 0.04);
+  color: #64748b;
+  font-size: 0.78rem;
+  font-weight: 600;
 
-  mat-icon { font-size: 1.5rem; width: 1.5rem; height: 1.5rem; color: #6366f1; }
+  mat-icon { font-size: 1.15rem; width: 1.15rem; height: 1.15rem; color: #94a3b8; }
 }
 
 /* SEARCH & EMPTY STATES */
@@ -913,6 +916,7 @@
   color: #94a3b8;
   font-size: 0.8rem;
   text-align: center;
+  margin: auto;
 
   .mini-empty-icon { font-size: 1.8rem; width: 1.8rem; height: 1.8rem; }
 }
@@ -934,12 +938,18 @@
 
 /* RESPONSIVE LAYOUT */
 @media (max-width: 900px) {
+  .workspace-body.scrollable-container {
+    overflow-y: auto;
+  }
   .workspace-roster-events-split {
     flex-direction: column;
   }
   .roster-stack-column {
     flex: 1;
     max-width: 100%;
+  }
+  .events-full-height {
+    min-height: 420px;
   }
 }
 
