@@ -161,6 +161,7 @@ export const eventVoteResolvers = {
           FROM users_committees c
           INNER JOIN users u ON u.id = c.user_id
           WHERE c.committee_id = ?
+            AND c.committee_role IS NOT NULL
           ORDER BY u.name ASC`,
         [access.committeeId]
       );

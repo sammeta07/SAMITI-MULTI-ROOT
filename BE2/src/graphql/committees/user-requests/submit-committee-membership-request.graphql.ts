@@ -139,13 +139,12 @@ export const submitCommitteeMembershipRequestResolvers = {
         [committeeId, loggedInUserId, requestRole]
       );
 
-      // Ensure a users_committees row exists (for favourite/state tracking)
-      await execute(
-        `INSERT INTO users_committees (committee_id, user_id, committee_role, is_favourite)
-         VALUES (?, ?, NULL, 0)
-         ON DUPLICATE KEY UPDATE committee_id = committee_id`,
-        [committeeId, loggedInUserId]
-      );
+      // Do NOT insert into users_committees here — the row with committee_role
+      // should only be created when an admin accepts the request (see
+      // takeActionOnCommitteeMembershipRequest) or when the user toggles
+      // favourite (see toggleCommitteeFavourite).  Creating a placeholder row
+      // with committee_role = NULL confuses consumers that expect a row to
+      // mean "active membership".
 
       return {
         committeeId,
