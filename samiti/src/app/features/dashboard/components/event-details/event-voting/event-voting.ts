@@ -175,6 +175,7 @@ export class EventVotingComponent implements OnInit, AfterViewInit, OnDestroy {
 
   public get startVotingDisabledReason(): string {
     if (this.votingPhaseState !== 3) return '';
+    if (!this.isMasterAdmin) return '';
     const mappedRoles = this.eventData?.mappedVotingRoles ?? [];
     const approvedPeople = this.eventData?.interestApprovedPeople ?? [];
     const approvedRoleIds = new Set(approvedPeople.filter((info) => (info.approvedPeople ?? []).length > 0).map((info) => Number(info.roleId)));

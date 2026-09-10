@@ -239,8 +239,12 @@ export class EventDetailsComponent implements OnInit, OnDestroy {
   }
 
   public get userEventRoleLabel(): string {
-    if (this.overviewData?.myDesignation?.name) return this.overviewData.myDesignation.name;
-    return 'MEMBER';
+    const designation = this.overviewData?.myDesignation;
+    // Only show event-level designations from events_roles_master (have roleId)
+    if (designation?.roleId && designation.name) {
+      return designation.name;
+    }
+    return '';
   }
 
   public get designationColor(): string {

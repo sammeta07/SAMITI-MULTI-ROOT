@@ -109,9 +109,9 @@ export class GroupDetailsComponent implements OnInit {
   });
 
   public readonly currentUserRoleLabel = computed(() => {
-    if (this.isCurrentUserMasterAdmin()) return 'Master Admin';
-    if (this.userCommitteeRole() === 'COMMITTEE_ADMIN') return 'Admin';
-    if (this.isCurrentUserMember()) return 'Member';
+    if (this.isCurrentUserMasterAdmin()) return 'Committee Master Admin';
+    if (this.userCommitteeRole() === 'COMMITTEE_ADMIN') return 'Committee Admin';
+    if (this.isCurrentUserMember()) return 'Committee Member';
     if (this.isCurrentUserPending()) return 'Pending Verification';
     return 'Guest User';
   });
