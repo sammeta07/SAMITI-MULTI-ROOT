@@ -870,7 +870,7 @@ export class EventVotingComponent implements OnInit, AfterViewInit, OnDestroy {
     if (!mappedRole?.winnerWonBy) return null;
     const wonBy = String(mappedRole.winnerWonBy || '').toUpperCase();
     switch (wonBy) {
-      case 'COUNT': return 'By Count';
+      case 'COUNT': return 'Count';
       case 'TIE_BREAKER': return 'Tie Breaker';
       case 'RE_ASSIGN': return 'Re-Assigned';
       case 'DIRECT_ASSIGN': return 'Direct Assign';
@@ -880,27 +880,11 @@ export class EventVotingComponent implements OnInit, AfterViewInit, OnDestroy {
   }
 
   public getVotingModeWonByDisplay(roleId: number): string {
-    const modeLabel = this.getVotingModeLabel();
-    const voteCount = this.getWinnerForRole(Number(roleId))?.voteCount ?? 0;
     const wonBy = this.getWinnerWonByForRole(Number(roleId));
-    const isDirectMode = modeLabel === 'Direct Assign';
-
-    if (voteCount === 0) {
-      return `${modeLabel} ${voteCount} votes`;
-    }
-
     if (!wonBy) {
-      if (isDirectMode) {
-        return modeLabel;
-      }
-      return `${modeLabel} ${voteCount} votes`;
+      return '';
     }
-
-    if (isDirectMode) {
-      return `${modeLabel} Won By ${wonBy}`;
-    }
-
-    return `${modeLabel} ${voteCount} votes Won By ${wonBy}`;
+    return `Won By - ${wonBy}`;
   }
 
   public getMappedRoleWinner(roleId: number): { userId: number; name: string; photo: string | null } | null {
