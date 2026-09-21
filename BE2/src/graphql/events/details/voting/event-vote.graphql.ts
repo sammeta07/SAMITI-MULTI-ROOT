@@ -68,6 +68,8 @@ export const eventVoteTypes = `
   type EventVoteHistory {
     eventId: Int!
     eventName: String!
+    eventLogo: String
+    eventAddress: String
     totalMembers: Int!
     votedCount: Int!
     notVotedCount: Int!
@@ -139,11 +141,13 @@ export const eventVoteResolvers = {
         throwEventError('FORBIDDEN', 'Only committee members can view vote history');
       }
 
-      const eventRows = await query<Array<RowDataPacket & { eventName: string }>>(
-        `SELECT name AS eventName FROM events WHERE id = ? LIMIT 1`,
+      const eventRows = await query<Array<RowDataPacket & { eventName: string; eventLogo: string | null; address: string | null }>>(
+        `SELECT name AS eventName, event_logo AS eventLogo, address FROM events WHERE id = ? LIMIT 1`,
         [eventId]
       );
       const eventName = eventRows[0]?.eventName ? String(eventRows[0].eventName) : '';
+      const eventLogo = eventRows[0]?.eventLogo ? String(eventRows[0].eventLogo) : null;
+      const eventAddress = eventRows[0]?.address ? String(eventRows[0].address) : null;
 
       const memberRows = await query<Array<RowDataPacket & {
         userId: number;
@@ -194,6 +198,8 @@ export const eventVoteResolvers = {
       return {
         eventId,
         eventName,
+        eventLogo,
+        eventAddress,
         totalMembers,
         votedCount,
         notVotedCount: totalMembers - votedCount,

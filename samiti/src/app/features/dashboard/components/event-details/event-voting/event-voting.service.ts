@@ -386,6 +386,8 @@ export class EventVotingService {
       eventVoteHistory(eventId: $eventId) {
         eventId
         eventName
+        eventLogo
+        eventAddress
         totalMembers
         votedCount
         notVotedCount

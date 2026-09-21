@@ -736,8 +736,8 @@
                                   <span class="da-opt-name">{{ member.name | titlecase }}</span>
                                   <span class="da-opt-email">{{ member.email }}</span>
                                 </div>
-                                @if (member.isWinner) {
-                                  <span class="da-opt-cup"><mat-icon>emoji_events</mat-icon></span>
+                                @if (member.isWinner && card.role.icon) {
+                                  <span class="da-opt-cup" [ngStyle]="{'color': card.role.color || '#16a34a'}">{{ card.role.icon }}</span>
                                 } @else if (member.committeeRole === 'COMMITTEE_MASTER_ADMIN') {
                                   <span class="da-opt-restricted">Restricted</span>
                                 }
@@ -1075,10 +1075,10 @@
                                       </div>
                                       <div class="done-icon">
                                         @if (
-                                          getAssignedMember(card.role.roleId)?.userId === member.userId
+                                          getAssignedMember(card.role.roleId)?.userId === member.userId && card.role.icon
                                         ) {
-                                          <div class="mat-auto-options-cup">
-                                            <mat-icon>done</mat-icon>
+                                          <div class="mat-auto-options-cup" [ngStyle]="{'color': card.role.color || '#16a34a'}">
+                                            {{ card.role.icon }}
                                           </div>
                                         }
                                       </div>

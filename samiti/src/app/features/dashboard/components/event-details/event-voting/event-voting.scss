@@ -1678,19 +1678,19 @@
     mat-option[disabled].da-opt-row,
     .mat-mdc-option[disabled],
     .mat-option[disabled] {
-      opacity: 0.85 !important;
+      opacity: 1 !important;
+      filter: none !important;
       cursor: not-allowed !important;
-      pointer-events: none !important;
+      pointer-events: auto !important;
 
       &, & * { 
         cursor: not-allowed !important; 
-        pointer-events: none !important;
       }
-      &:hover { background: #f1f5f9 !important; }
+      &:hover { background: #f1f5f9 !important; cursor: not-allowed !important; }
 
-      .da-opt-name { color: #94a3b8 !important; text-decoration: line-through !important; text-decoration-color: #cbd5e1 !important; }
-      .da-opt-email { color: #cbd5e1 !important; }
-      .da-opt-avatar { opacity: 0.6 !important; }
+      .da-opt-name { color: #94a3b8 !important; }
+      .da-opt-email { color: #94a3b8 !important; }
+      .da-opt-avatar { opacity: 1 !important; }
       .da-opt-cup mat-icon { color: #cbd5e1 !important; }
       .da-opt-restricted { background: #f1f5f9 !important; color: #94a3b8 !important; }
     }
@@ -1702,75 +1702,80 @@
   }
 
   .mat-auto-options {
-    display: flex;
+    display: grid;
+    grid-template-columns: auto 1fr auto;
+    grid-template-rows: auto auto;
     align-items: center;
-    justify-content: space-between;
     gap: 10px;
     width: 100%;
-  }
 
-  .mat-auto-options-avatar {
-    display: flex;
-    align-items: center;
-    flex-shrink: 0;
-  }
+    .da-opt-avatar {
+      grid-column: 1;
+      grid-row: 1 / span 2;
+      width: 30px;
+      height: 30px;
+      border-radius: 50%;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      background: #e2e8f0;
+      overflow: hidden;
+      flex-shrink: 0;
+      border: 4px solid transparent;
 
-  .da-opt-avatar {
-    width: 30px;
-    height: 30px;
-    border-radius: 50%;
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    background: #e2e8f0;
-    overflow: hidden;
-    flex-shrink: 0;
-  border: 4px solid transparent;
+      .da-opt-img { width: 100%; height: 100%; object-fit: cover; }
+      .da-opt-initials { font-size: 0.72rem; font-weight: 800; color: #475569; }
+    }
 
-    .da-opt-img { width: 100%; height: 100%; object-fit: cover; }
-    .da-opt-initials { font-size: 0.72rem; font-weight: 800; color: #475569; }
-  }
-
-  .mat-auto-options-name-email {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    width: 100%;
-    min-width: 0;
-
-    .da-opt-text-group {
+    .mat-auto-options-name-email {
+      grid-column: 2;
+      grid-row: 1 / span 2;
+      min-width: 0;
       display: flex;
       flex-direction: column;
-      min-width: 0;
-      flex: 1;
+      align-items: flex-start;
+      justify-content: start;
+      gap: 2px;
+      text-align: left;
+
+      .da-opt-name {
+        font-size: 0.82rem;
+        font-weight: 700;
+        color: #0f172a;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        text-align: left;
+      }
+
+      .da-opt-email {
+        font-size: 0.68rem;
+        color: #64748b;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        text-align: left;
+      }
     }
 
-    .da-opt-name {
-      font-size: 0.82rem;
-      font-weight: 700;
-      color: #0f172a;
-      white-space: nowrap;
-      overflow: hidden;
-      text-overflow: ellipsis;
-    }
-
-    .da-opt-email {
-      font-size: 0.68rem;
-      color: #64748b;
-      white-space: nowrap;
-      overflow: hidden;
-      text-overflow: ellipsis;
+    .da-opt-cup,
+    .da-opt-restricted {
+      grid-column: 3;
+      grid-row: 1 / span 2;
+      justify-self: end;
     }
 
     .done-icon {
-      flex-shrink: 0;
-      margin-left: 8px;
+      grid-column: 3;
+      grid-row: 1 / span 2;
+      justify-self: end;
+      display: flex;
+      align-items: center;
 
-      .mat-auto-options-cup mat-icon {
-        color: #16a34a;
-        font-size: 1.1rem;
-        width: 1.1rem;
-        height: 1.1rem;
+      .mat-auto-options-cup {
+        font-size: 1.4rem;
+        font-weight: 800;
+        line-height: 1;
       }
     }
   }
@@ -1790,6 +1795,26 @@
   .mat-mdc-option.role-default {
     border-left-color: #64748b;
     .da-opt-avatar { border-color: #64748b; background: #e2e8f0; }
+  }
+
+  .da-opt-row {
+    border-left: none !important;
+  }
+
+  .mat-mdc-option.da-opt-row.mdc-list-item--disabled:hover {
+    cursor: not-allowed !important;
+  }
+
+  .mat-mdc-option.da-opt-row[disabled],
+  .mat-option.da-opt-row[disabled] {
+    cursor: not-allowed !important;
+    pointer-events: auto !important;
+    &:hover {
+      cursor: not-allowed !important;
+    }
+    &, & * {
+      cursor: not-allowed !important;
+    }
   }
 }
 

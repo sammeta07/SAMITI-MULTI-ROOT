@@ -1065,9 +1065,18 @@ export class EventVotingComponent implements OnInit, AfterViewInit, OnDestroy {
   }
 
   public cancelReassign(): void {
+    const currentRoleId = this.openReassignForRoleId();
     this.openReassignForRoleId.set(null);
     this.selectedReassignMemberId.set(null);
     this.reassignMemberSearchQuery.set('');
+
+    if (currentRoleId != null && Number.isInteger(Number(currentRoleId))) {
+      const normalizedRoleId = Number(currentRoleId);
+      const winner = this.getMappedRoleWinner(normalizedRoleId);
+      this.directAssignInputText[normalizedRoleId] = winner
+        ? winner.name.toLowerCase().replace(/\b\w/g, (c) => c.toUpperCase())
+        : '';
+    }
   }
 
   public openVoteHistory(): void {
@@ -1084,7 +1093,7 @@ export class EventVotingComponent implements OnInit, AfterViewInit, OnDestroy {
     document.body.classList.add('dialog-open');
     const dialogRef = this.dialog.open(VoteHistoryDialogComponent, {
       position: { right: '0', top: '0' }, height: '100%', width: '50%', autoFocus: true, disableClose: true, hasBackdrop: true, panelClass: 'slide-in-dialog',
-      data: { history, eventLogo: null }
+      data: { history, eventLogo: history.eventLogo ?? null, eventAddress: history.eventAddress ?? null }
     });
     dialogRef.afterClosed().subscribe(() => document.body.classList.remove('dialog-open'));
   }

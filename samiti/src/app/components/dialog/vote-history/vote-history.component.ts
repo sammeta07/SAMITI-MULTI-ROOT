@@ -9,6 +9,7 @@ import { EventVoteHistory } from '../../../features/dashboard/components/event-d
 export interface VoteHistoryDialogData {
   history: EventVoteHistory;
   eventLogo?: string | null;
+  eventAddress?: string | null;
 }
 
 @Component({
@@ -28,7 +29,15 @@ export class VoteHistoryDialogComponent {
   public readonly dialogData: VoteHistoryDialogData = inject(MAT_DIALOG_DATA);
   public readonly data: EventVoteHistory = this.dialogData.history;
 
-  public sortColumn: 'name' | 'role' | 'status' = 'role';
+  public get eventLogo(): string | null {
+    return this.dialogData.eventLogo ?? null;
+  }
+
+  public get eventAddress(): string | null {
+    return this.dialogData.eventAddress ?? null;
+  }
+
+  public sortColumn: 'name' | 'status' = 'name';
   public sortDirection: 'asc' | 'desc' = 'asc';
 
   constructor(
@@ -77,8 +86,7 @@ export class VoteHistoryDialogComponent {
     }
     return Math.round((this.data.votedCount / total) * 100);
   }
-
-  public onSort(column: 'name' | 'role' | 'status'): void {
+  public onSort(column: 'name' | 'status'): void {
     if (this.sortColumn === column) {
       this.sortDirection = this.sortDirection === 'asc' ? 'desc' : 'asc';
     } else {
@@ -96,24 +104,6 @@ export class VoteHistoryDialogComponent {
         const aVal = String(a.name || '').toLowerCase();
         const bVal = String(b.name || '').toLowerCase();
         return direction * aVal.localeCompare(bVal);
-      }
-
-      if (this.sortColumn === 'role') {
-        const aVal = String(a.committeeRole || '').toUpperCase();
-        const bVal = String(b.committeeRole || '').toUpperCase();
-        const order: Record<string, number> = {
-          COMMITTEE_MASTER_ADMIN: 0,
-          COMMITTEE_ADMIN: 1,
-          COMMITTEE_MEMBER: 2,
-        };
-        const aIdx = order[aVal] ?? 3;
-        const bIdx = order[bVal] ?? 3;
-        if (aIdx !== bIdx) {
-          return direction * (aIdx - bIdx);
-        }
-        const aName = String(a.name || '').toLowerCase();
-        const bName = String(b.name || '').toLowerCase();
-        return direction * aName.localeCompare(bName);
       }
 
       if (this.sortColumn === 'status') {

@@ -53,6 +53,8 @@ export interface EventVoteMember {
 export interface EventVoteHistory {
   eventId: number;
   eventName: string;
+  eventLogo?: string | null;
+  eventAddress?: string | null;
   totalMembers: number;
   votedCount: number;
   notVotedCount: number;
