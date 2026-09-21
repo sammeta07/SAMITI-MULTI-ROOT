@@ -55,6 +55,7 @@ export interface EventVoteHistory {
   eventName: string;
   eventLogo?: string | null;
   eventAddress?: string | null;
+  eventLogoBorderColor?: string | null;
   totalMembers: number;
   votedCount: number;
   notVotedCount: number;

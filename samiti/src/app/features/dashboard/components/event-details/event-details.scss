@@ -151,6 +151,29 @@
     color: #334155;
     min-width: 110px;
     max-width: 130px;
+    cursor: pointer;
+
+    &[disabled],
+    &.mdc-select--disabled,
+    &.mat-mdc-select-disabled {
+      opacity: 0.6;
+      cursor: not-allowed !important;
+      pointer-events: auto !important;
+
+      ::ng-deep .mat-mdc-select-trigger {
+        cursor: not-allowed !important;
+        color: #94a3b8 !important;
+      }
+
+      ::ng-deep .mat-mdc-select-arrow {
+        cursor: not-allowed !important;
+        color: #94a3b8 !important;
+      }
+
+      ::ng-deep .mat-mdc-text-field-outline {
+        color: #e2e8f0 !important;
+      }
+    }
 
     ::ng-deep .mat-mdc-select-trigger {
       font-size: 0.7rem;
@@ -160,6 +183,11 @@
       padding-top: 0;
       padding-bottom: 0;
       height: 16px;
+      cursor: pointer;
+    }
+
+    ::ng-deep .mat-mdc-select-arrow {
+      cursor: pointer;
     }
 
     ::ng-deep .mat-mdc-form-field-focus-overlay {
@@ -172,6 +200,12 @@
 
     &:hover ::ng-deep .mat-mdc-text-field-outline {
       color: #94a3b8;
+    }
+
+    &[disabled]:hover ::ng-deep .mat-mdc-text-field-outline,
+    &.mdc-select--disabled:hover ::ng-deep .mat-mdc-text-field-outline,
+    &.mat-mdc-select-disabled:hover ::ng-deep .mat-mdc-text-field-outline {
+      color: #e2e8f0;
     }
   }
 
@@ -322,7 +356,7 @@
 .committee-avatar {
   width: 56px;
   height: 56px;
-  border-radius: 12px;
+  border-radius: 50%;
   object-fit: cover;
   box-sizing: border-box;
   border: 4px solid var(--avatar-border, #cbd5e1);
@@ -332,7 +366,7 @@
 .event-avatar-fallback {
   width: 56px;
   height: 56px;
-  border-radius: 12px;
+  border-radius: 50%;
   box-sizing: border-box;
   border: 4px solid var(--avatar-border, #cbd5e1);
   background: #e2e8f0;
@@ -350,7 +384,7 @@
   padding: 0;
   border: none;
   background: transparent;
-  border-radius: 12px;
+  border-radius: 50%;
   cursor: pointer;
   overflow: hidden;
   transition: transform 0.2s ease;

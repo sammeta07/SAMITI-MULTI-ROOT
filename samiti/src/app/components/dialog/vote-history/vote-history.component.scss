@@ -55,24 +55,27 @@
   .toolbar-event-logo {
     width: 32px;
     height: 32px;
-    border-radius: 8px;
+    border-radius: 50%;
     object-fit: cover;
     flex-shrink: 0;
-    border: 1px solid #e2e8f0;
+    border: 3px solid #e2e8f0;
+    box-sizing: border-box;
   }
 
   .toolbar-event-logo-fallback {
     width: 32px;
     height: 32px;
-    border-radius: 8px;
+    border-radius: 50%;
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    background: #f97316;
-    color: #fff;
+    background: transparent;
+    color: #1e293b;
     font-weight: 800;
     font-size: 0.9rem;
     flex-shrink: 0;
+    border: 3px solid transparent;
+    box-sizing: border-box;
   }
 
   .toolbar-title-text {
@@ -298,24 +301,26 @@
 .vote-history-row {
   border-top: 1px solid #f1f5f9;
 
+  &:last-child {
+    border-bottom: 1px solid #f1f5f9;
+  }
+
   &.voted {
     background: #f0fdf4;
   }
 
-  &.role-master {
-    border-left: 3px solid #ef4444;
-    border-right: 3px solid #ef4444;
+  &.role-master .vh-avatar {
+    border: 3px solid #ef4444 !important;
   }
 
-  &.role-admin {
-    border-left: 3px solid #22c55e;
-    border-right: 3px solid #22c55e;
+  &.role-admin .vh-avatar {
+    border: 3px solid #22c55e !important;
   }
 
-  &.role-member {
-    border-left: 3px solid #3b82f6;
-    border-right: 3px solid #3b82f6;
+  &.role-member .vh-avatar {
+    border: 3px solid #3b82f6 !important;
   }
+}
 
   .vh-col-name {
     display: flex;
@@ -330,7 +335,6 @@
     color: #64748b;
     text-align: center;
   }
-}
 
 .vh-avatar {
   width: 32px;
@@ -338,6 +342,9 @@
   border-radius: 999px;
   object-fit: cover;
   flex-shrink: 0;
+  border: 3px solid transparent;
+  box-sizing: border-box;
+  overflow: hidden;
 
   &.vh-avatar-fallback {
     display: inline-flex;

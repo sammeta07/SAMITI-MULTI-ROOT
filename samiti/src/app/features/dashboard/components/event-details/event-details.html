@@ -161,12 +161,10 @@
   @if (currentTab === 'voting') {
   <div class="tab-mode-selector">
     @if (isMasterAdmin && votingPhaseState < 6) {
-      <mat-select [(value)]="currentVotingMode" (selectionChange)="onVotingModeChange($event.value)" class="mode-dropdown" appearance="outline" hideRequiredMarker>
+      <mat-select [disabled]="votingPhaseState < 1" [value]="currentVotingMode" (selectionChange)="onVotingModeChange($event.value)" class="mode-dropdown" appearance="outline" hideRequiredMarker>
         <mat-option value="VOTING">Voting</mat-option>
         <mat-option value="DIRECT">Direct</mat-option>
       </mat-select>
-    } @else {
-      <span class="mode-label-value">Mode : {{ currentVotingMode }}</span>
     }
   </div>
   }

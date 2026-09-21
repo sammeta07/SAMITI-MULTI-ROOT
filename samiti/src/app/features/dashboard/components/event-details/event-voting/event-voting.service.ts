@@ -388,6 +388,7 @@ export class EventVotingService {
         eventName
         eventLogo
         eventAddress
+        eventLogoBorderColor
         totalMembers
         votedCount
         notVotedCount

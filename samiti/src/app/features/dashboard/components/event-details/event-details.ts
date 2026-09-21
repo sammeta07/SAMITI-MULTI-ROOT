@@ -66,11 +66,18 @@ export class EventDetailsComponent implements OnInit, OnDestroy {
   // auto-default only runs once per distinct event open (not on every data
   // refresh). Reopening a different event re-evaluates the default tab.
   private lastResolvedEventId: number | null = null;
+  private currentEventId: number | null = null;
 
   public ngOnInit(): void {
     this.overviewSub = this.route.params.subscribe((params) => {
       const id = params['id'];
       if (id) {
+        const eventId = Number(id);
+        if (eventId !== this.currentEventId) {
+          this.currentEventId = eventId;
+          this.lastResolvedEventId = null;
+          this.stateService.reset();
+        }
         this.loadOverview(String(id));
       }
     });
@@ -81,51 +88,6 @@ export class EventDetailsComponent implements OnInit, OnDestroy {
   }
 
   constructor() {
-    // For events already in "Results Declared" (phase >= 6), the default tab
-    // should be Overview instead of Voting. Once event data is loaded and the
-    // user is on the default Voting tab, route them to Overview.
-    // Only auto-route when ALL roles have a winner AND no unresolved ties exist.
-    effect(() => {
-      const data = this.stateService.eventData();
-      const results = this.stateService.eventResults();
-      if (!data) return;
-      const eventId = Number(data.eventId);
-      if (!eventId) return;
-
-      // Skip re-evaluation when the same event's data merely refreshes
-      // (e.g. declaring results), but re-run when a different event is opened.
-      if (eventId === this.lastResolvedEventId) return;
-
-      const phase = Number(data.votingPhaseState || 0);
-      if (phase < 6) return;
-
-      const mappedRoles = data.mappedVotingRoles || [];
-      const allHaveWinner = mappedRoles.length > 0 && mappedRoles.every((role) => {
-        const winnerId = Number(role.winnerUserId);
-        return Number.isInteger(winnerId) && winnerId > 0;
-      });
-
-      const noUnresolvedTies = mappedRoles.every((role) => {
-        const roleId = Number(role.roleId);
-        const roleResult = results?.roles?.find((r) => Number(r.roleId) === roleId);
-        if (!roleResult?.candidates?.length) return false;
-        const winners = roleResult.candidates.filter((c) => c.isWinner);
-        return winners.length === 1;
-      });
-
-      if (!allHaveWinner || !noUnresolvedTies) return;
-
-      this.lastResolvedEventId = eventId;
-
-      const url = this.router.url;
-      const baseEventUrl = `/dashboard/event/${eventId}`;
-      const isDefaultVoting =
-        url.endsWith('/voting') || url === baseEventUrl || url.endsWith(`/event/${eventId}`);
-
-      if (isDefaultVoting) {
-        this.router.navigate(['/dashboard', 'event', eventId, 'overview']);
-      }
-    });
   }
 
   public get eventData(): EventVotingPayload | null {
@@ -311,13 +273,16 @@ export class EventDetailsComponent implements OnInit, OnDestroy {
   }
 
   private loadOverview(id: string): void {
+    const requestedEventId = Number(id);
     this.isLoadingOverview.set(true);
     this.overviewService.getEventOverview(id).subscribe({
       next: (data) => {
+        if (requestedEventId !== this.currentEventId) return;
         this.stateService.eventOverview.set(data ?? null);
         this.isLoadingOverview.set(false);
       },
       error: (err: HttpErrorResponse) => {
+        if (requestedEventId !== this.currentEventId) return;
         this.notifier.error(err?.error?.message || 'Failed to load event overview.');
         this.stateService.eventOverview.set(null);
         this.isLoadingOverview.set(false);
@@ -328,8 +293,11 @@ export class EventDetailsComponent implements OnInit, OnDestroy {
   private refreshOverview(): void {
     const currentEvent = this.overviewData;
     if (currentEvent?.eventId) {
+      const requestedEventId = Number(currentEvent.eventId);
       this.overviewService.getEventOverview(String(currentEvent.eventId)).subscribe({
-        next: (data) => this.stateService.eventOverview.set(data ?? null)
+        next: (data) => {
+          if (requestedEventId === this.currentEventId) this.stateService.eventOverview.set(data ?? null);
+        }
       });
     }
   }

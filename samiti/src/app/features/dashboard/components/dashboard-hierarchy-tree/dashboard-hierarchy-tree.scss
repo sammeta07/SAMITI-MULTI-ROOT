@@ -274,6 +274,11 @@
   &.color-program { background: #ecfeff; color: #0891b2; border-color: rgba(6, 182, 212, 0.25); }
   &.color-task { background: #ecfdf5; color: #059669; border-color: rgba(16, 185, 129, 0.25); }
 
+.node-logo-avatar-wrapper.type-event,
+.node-logo-avatar-wrapper.color-event {
+  border-radius: 50% !important;
+}
+
   &.static-avatar {
     width: 24px !important;
     height: 24px !important;

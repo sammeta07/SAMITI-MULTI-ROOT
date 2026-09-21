@@ -10,6 +10,7 @@ export interface VoteHistoryDialogData {
   history: EventVoteHistory;
   eventLogo?: string | null;
   eventAddress?: string | null;
+  eventLogoBorderColor?: string | null;
 }
 
 @Component({
@@ -35,6 +36,10 @@ export class VoteHistoryDialogComponent {
 
   public get eventAddress(): string | null {
     return this.dialogData.eventAddress ?? null;
+  }
+
+  public get eventLogoBorderColor(): string | null {
+    return this.dialogData.eventLogoBorderColor ?? null;
   }
 
   public sortColumn: 'name' | 'status' = 'name';

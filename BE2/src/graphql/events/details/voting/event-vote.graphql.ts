@@ -70,6 +70,7 @@ export const eventVoteTypes = `
     eventName: String!
     eventLogo: String
     eventAddress: String
+    eventLogoBorderColor: String
     totalMembers: Int!
     votedCount: Int!
     notVotedCount: Int!
@@ -149,6 +150,16 @@ export const eventVoteResolvers = {
       const eventLogo = eventRows[0]?.eventLogo ? String(eventRows[0].eventLogo) : null;
       const eventAddress = eventRows[0]?.address ? String(eventRows[0].address) : null;
 
+      const winnerColorRows = await query<Array<RowDataPacket & { color: string | null }>>(
+        `SELECT erm.color
+           FROM event_winners ew
+           INNER JOIN events_roles_master erm ON erm.role_id = ew.role_id
+          WHERE ew.event_id = ? AND ew.winner_user_id = ?
+          LIMIT 1`,
+        [eventId, loggedInUserId]
+      );
+      const eventLogoBorderColor = winnerColorRows[0]?.color ? String(winnerColorRows[0].color) : '#64748b';
+
       const memberRows = await query<Array<RowDataPacket & {
         userId: number;
         name: string;
@@ -200,6 +211,7 @@ export const eventVoteResolvers = {
         eventName,
         eventLogo,
         eventAddress,
+        eventLogoBorderColor,
         totalMembers,
         votedCount,
         notVotedCount: totalMembers - votedCount,

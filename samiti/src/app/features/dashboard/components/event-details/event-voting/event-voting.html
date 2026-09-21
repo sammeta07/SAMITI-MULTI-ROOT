@@ -1008,9 +1008,6 @@
                             appearance="fill"
                             subscriptSizing="dynamic"
                           >
-                            <span matPrefix class="da-input-icon"
-                              ><mat-icon>emoji_events</mat-icon></span
-                            >
                             <input
                               type="text"
                               matInput
@@ -1049,41 +1046,39 @@
                                     onDirectAssignOptionSelection(card.role.roleId, $event)
                                   "
                                 >
-                                  <div class="mat-auto-options">
-                                    <div class="mat-auto-options-avatar">
-                                      <span
-                                        class="da-opt-avatar"
-                                        [ngClass]="getRoleColorClass(member.committeeRole)"
-                                      >
-                                        @if (member.photo) {
-                                          <img
-                                            [src]="member.photo"
-                                            [alt]="member.name"
-                                            class="da-opt-img"
-                                          />
-                                        } @else {
-                                          <span class="da-opt-initials">{{
-                                            getInitials(member.name)
-                                          }}</span>
-                                        }
-                                      </span>
-                                    </div>
-                                    <div class="mat-auto-options-name-email">
-                                      <div class="da-opt-text-group">
-                                        <div class="da-opt-name">{{ member.name | titlecase }}</div>
-                                        <div class="da-opt-email">{{ member.email }}</div>
-                                      </div>
+                                   <div class="mat-auto-options">
+                                     <div class="mat-auto-options-avatar">
+                                       <span
+                                         class="da-opt-avatar"
+                                         [ngClass]="getRoleColorClass(member.committeeRole)"
+                                       >
+                                         @if (member.photo) {
+                                           <img
+                                             [src]="member.photo"
+                                             [alt]="member.name"
+                                             class="da-opt-img"
+                                           />
+                                         } @else {
+                                           <span class="da-opt-initials">{{
+                                             getInitials(member.name)
+                                           }}</span>
+                                         }
+                                       </span>
+                                     </div>
+                                     <div class="mat-auto-options-details">
+                                       <div class="da-opt-name">{{ member.name | titlecase }}</div>
+                                       <div class="da-opt-email">{{ member.email }}</div>
+                                     </div>
                                       <div class="done-icon">
                                         @if (
-                                          getAssignedMember(card.role.roleId)?.userId === member.userId && card.role.icon
+                                          isMemberAssignedToAnyRole(member.userId) && card.role.icon
                                         ) {
-                                          <div class="mat-auto-options-cup" [ngStyle]="{'color': card.role.color || '#16a34a'}">
-                                            {{ card.role.icon }}
+                                          <div class="mat-auto-options-cup" [ngStyle]="{'color': isMemberAssignedToAnyRole(member.userId)?.roleColor || card.role.color || '#16a34a'}">
+                                            {{ isMemberAssignedToAnyRole(member.userId)?.roleIcon || card.role.icon }}
                                           </div>
                                         }
                                       </div>
-                                    </div>
-                                  </div>
+                                   </div>
                                 </mat-option>
                               } @empty {
                                 <mat-option disabled class="da-opt-empty">No members found</mat-option>

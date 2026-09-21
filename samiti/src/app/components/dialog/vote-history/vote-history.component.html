@@ -3,14 +3,14 @@
   <mat-toolbar class="drawer-synchronized-header">
     <div class="drawer-title-group">
       @if (eventLogo) {
-        <img class="toolbar-event-logo" [src]="eventLogo" [alt]="data.eventName" />
+        <img class="toolbar-event-logo" [ngStyle]="eventLogoBorderColor ? {'border-color': eventLogoBorderColor} : {}" [src]="eventLogo" [alt]="data.eventName" />
       } @else {
-        <span class="toolbar-event-logo toolbar-event-logo-fallback">{{ data.eventName.charAt(0).toUpperCase() }}</span>
+        <span class="toolbar-event-logo toolbar-event-logo-fallback" [ngStyle]="eventLogoBorderColor ? {'border-color': eventLogoBorderColor} : {}">{{ data.eventName.charAt(0).toUpperCase() }}</span>
       }
       <div class="toolbar-title-text">
         <span class="toolbar-event-name">{{ titleCaseName(data.eventName) }}</span>
         @if (eventAddress) {
-          <span class="toolbar-event-address">{{ eventAddress }}</span>
+          <span class="toolbar-event-address">{{ eventAddress | titlecase }}</span>
         }
       </div>
     </div>

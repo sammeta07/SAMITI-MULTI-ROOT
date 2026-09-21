@@ -60,6 +60,8 @@ export class EventVotingComponent implements OnInit, AfterViewInit, OnDestroy {
 
   private paramSub?: Subscription;
   private readonly resizeSub = new Subscription();
+  private currentEventId: number | null = null;
+  private loadRequestId = 0;
   public readonly votingCardHeight = signal<number>(555);
   public readonly isBannerUploading = signal<boolean>(false);
   public readonly isVisibilityUpdating = signal<boolean>(false);
@@ -360,7 +362,13 @@ export class EventVotingComponent implements OnInit, AfterViewInit, OnDestroy {
     this.paramSub = parentParams$.subscribe(params => {
       const eventId = params['id'];
       if (!eventId) return;
-      this.loadEventVotingDetails(String(eventId));
+      const normalizedEventId = Number(eventId);
+      if (normalizedEventId !== this.currentEventId) {
+        this.currentEventId = normalizedEventId;
+        this.loadRequestId += 1;
+        this.resetEventState();
+      }
+      this.loadEventVotingDetails(String(normalizedEventId), this.loadRequestId);
     });
   }
 
@@ -394,7 +402,23 @@ export class EventVotingComponent implements OnInit, AfterViewInit, OnDestroy {
     this.votingCardHeight.set(Math.min(640, availableHeight));
   }
 
-  private loadEventVotingDetails(id: string): void {
+  private resetEventState(): void {
+    this.stateService.eventData.set(null);
+    this.stateService.eventResults.set(null);
+    this.selectedVotingRoleIds.set([]);
+    this.myInterestRoleIds.set([]);
+    this.myInterestStatuses.set([]);
+    this.interestReviewList.set([]);
+    this.directAssignMembers.set([]);
+    this.committeeMemberRoles.set(new Map());
+    this.myVotes.set({});
+    this.directAssignSelected.set({});
+    this.directAssignInputText = {};
+    this.isDirectAssignLoading.set({});
+    this.cancelReassign();
+  }
+
+  private loadEventVotingDetails(id: string, requestId: number): void {
     this.isLoading.set(true);
     this.loadingState.begin();
     this.votingService.getEventVotingDetails(id).pipe(
@@ -404,6 +428,7 @@ export class EventVotingComponent implements OnInit, AfterViewInit, OnDestroy {
       })
     ).subscribe({
       next: (data) => {
+        if (requestId !== this.loadRequestId || Number(data?.eventId) !== Number(id)) return;
         this.stateService.eventData.set(data ?? null);
         if (data?.eventId) {
           this.initializeVotingState(Number(data.eventId));
@@ -426,6 +451,7 @@ export class EventVotingComponent implements OnInit, AfterViewInit, OnDestroy {
         }
       },
       error: (err: HttpErrorResponse) => {
+        if (requestId !== this.loadRequestId) return;
         this.notifier.error(err?.error?.message || 'Failed to load event details.');
         this.stateService.eventData.set(null);
       }
@@ -453,9 +479,19 @@ export class EventVotingComponent implements OnInit, AfterViewInit, OnDestroy {
         return acc;
       }, {} as Record<number, number | null>)
     );
+    this.memberSearchQuery.set('');
+    this.reassignMemberSearchQuery.set('');
+    this.openReassignForRoleId.set(null);
+    this.selectedReassignMemberId.set(null);
+    this.reassignMembersLoaded.set(new Set());
+    this.avatarLoadFailed.set(new Set());
+    this.directAssignMembers.set([]);
+    this.committeeMemberRoles.set(new Map());
+    this.isDirectAssignLoading.set({});
     if (data.votingPhaseState === 6 && (forceRefreshResults || !this.stateService.eventResults())) {
       this.loadEventResults(Number(data.eventId));
     }
+    this.directAssignInputText = {};
     this.directAssignInputText = (data.mappedVotingRoles || []).reduce((acc: Record<number, string>, role: EventMappedVotingRole) => {
       const rid = Number(role.roleId);
       if (Number.isInteger(rid) && rid > 0) {
@@ -485,6 +521,7 @@ export class EventVotingComponent implements OnInit, AfterViewInit, OnDestroy {
   private loadCommitteeMemberRoles(eventId: number): void {
     this.votingService.getCommitteeMembers(eventId).subscribe({
       next: (members) => {
+        if (eventId !== this.currentEventId) return;
         const map = new Map<number, string>();
         for (const m of members) map.set(Number(m.userId), m.committeeRole);
         this.committeeMemberRoles.set(map);
@@ -497,8 +534,12 @@ export class EventVotingComponent implements OnInit, AfterViewInit, OnDestroy {
 
   private loadEventResults(eventId: number): void {
     this.votingService.getEventResults(eventId).subscribe({
-      next: (payload) => this.stateService.eventResults.set(payload ?? null),
-      error: () => this.stateService.eventResults.set(null)
+      next: (payload) => {
+        if (eventId === this.currentEventId) this.stateService.eventResults.set(payload ?? null);
+      },
+      error: () => {
+        if (eventId === this.currentEventId) this.stateService.eventResults.set(null);
+      }
     });
   }
 
@@ -1093,7 +1134,7 @@ export class EventVotingComponent implements OnInit, AfterViewInit, OnDestroy {
     document.body.classList.add('dialog-open');
     const dialogRef = this.dialog.open(VoteHistoryDialogComponent, {
       position: { right: '0', top: '0' }, height: '100%', width: '50%', autoFocus: true, disableClose: true, hasBackdrop: true, panelClass: 'slide-in-dialog',
-      data: { history, eventLogo: history.eventLogo ?? null, eventAddress: history.eventAddress ?? null }
+      data: { history, eventLogo: history.eventLogo ?? null, eventAddress: history.eventAddress ?? null, eventLogoBorderColor: history.eventLogoBorderColor ?? null }
     });
     dialogRef.afterClosed().subscribe(() => document.body.classList.remove('dialog-open'));
   }
@@ -1214,6 +1255,36 @@ export class EventVotingComponent implements OnInit, AfterViewInit, OnDestroy {
     return null;
   }
 
+  public isMemberAssignedToAnyRole(userId: number): { roleId: number; roleIcon: string; roleColor?: string } | null {
+    const selected = this.directAssignSelected();
+    const mappedRoles = this.eventData?.mappedVotingRoles || [];
+    
+    for (const [rid, uid] of Object.entries(selected)) {
+      if (Number(uid) === Number(userId)) {
+        const role = mappedRoles.find((r) => Number(r.roleId) === Number(rid));
+        if (role) {
+          return {
+            roleId: Number(rid),
+            roleIcon: role.icon || 'emoji_events',
+            roleColor: role.color || '#16a34a'
+          };
+        }
+      }
+    }
+    
+    for (const role of mappedRoles) {
+      if (role.winnerUserId && Number(role.winnerUserId) === Number(userId)) {
+        return {
+          roleId: role.roleId,
+          roleIcon: role.icon || 'emoji_events',
+          roleColor: role.color || '#16a34a'
+        };
+      }
+    }
+    
+    return null;
+  }
+
   public getRoleColorClass(role?: string | null): string {
     const cls = (() => {
       switch ((role || '').toUpperCase()) {
@@ -1224,6 +1295,14 @@ export class EventVotingComponent implements OnInit, AfterViewInit, OnDestroy {
       }
     })();
     return cls;
+  }
+
+  public getCommitteeRoleDisplayName(committeeRole?: string | null): string {
+    const role = String(committeeRole || '').toUpperCase();
+    if (role === 'COMMITTEE_MASTER_ADMIN') return 'MASTER ADMIN';
+    if (role === 'COMMITTEE_ADMIN') return 'ADMIN';
+    if (role === 'COMMITTEE_MEMBER') return 'MEMBER';
+    return role ? role.replace(/^COMMITTEE_/, '').replace(/_/g, ' ') : 'MEMBER';
   }
 
   public getAssignedRoleClass(roleId: number): string {
@@ -1343,6 +1422,7 @@ export class EventVotingComponent implements OnInit, AfterViewInit, OnDestroy {
     if (phase < 1 || phase >= 6) return;
     this.votingService.getDirectAssignMembers(eventId).subscribe({
       next: (members) => {
+        if (eventId !== this.currentEventId) return;
         const currentEvent = this.eventData;
         const mappedRoles = currentEvent?.mappedVotingRoles || [];
         const winnerRoleIds = new Set(mappedRoles.filter(r => r.winnerUserId).map(r => r.winnerUserId as number));
@@ -1383,11 +1463,13 @@ export class EventVotingComponent implements OnInit, AfterViewInit, OnDestroy {
   private refreshVoting(): void {
     const currentEvent = this.stateService.eventData();
     if (currentEvent?.eventId) {
+      const requestedEventId = Number(currentEvent.eventId);
       this.isLoading.set(true);
-      this.votingService.getEventVotingDetails(String(currentEvent.eventId)).subscribe({
+      this.votingService.getEventVotingDetails(String(requestedEventId)).subscribe({
         next: (data) => {
+          if (requestedEventId !== this.currentEventId || Number(data?.eventId) !== requestedEventId) return;
           this.stateService.eventData.set(data ?? null);
-          this.initializeVotingState(Number(currentEvent.eventId), true);
+          this.initializeVotingState(requestedEventId, true);
           if (data?.pendingEventInterests?.pending) {
             this.interestReviewList.set(data.pendingEventInterests.pending.map((item) => ({
               id: Number(item.id),
@@ -1407,7 +1489,9 @@ export class EventVotingComponent implements OnInit, AfterViewInit, OnDestroy {
           this.myVotes.set(myVotes);
           this.isLoading.set(false);
         },
-        error: () => { this.isLoading.set(false); }
+        error: () => {
+          if (requestedEventId === this.currentEventId) this.isLoading.set(false);
+        }
       });
     }
   }
