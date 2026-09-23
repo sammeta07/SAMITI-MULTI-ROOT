@@ -509,6 +509,10 @@ export class DashboardHierarchyTreeComponent implements OnInit {
       return;
     }
 
+    if (this.isNodeSelected(node)) {
+      return;
+    }
+
     if (this.isNavigating()) {
       return;
     }

@@ -247,6 +247,8 @@ export interface EventDirectAssignMember {
   photo?: string | null;
   committeeRole: string;
   isWinner: boolean;
+  roleIcon?: string;
+  roleColor?: string;
 }
 
 export interface DirectAssignWinnerPayload {

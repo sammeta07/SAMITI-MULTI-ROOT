@@ -1644,13 +1644,20 @@ export const eventVotingResolvers = {
 
       const newWinnerPhoto = args?.newWinnerPhoto ? String(args.newWinnerPhoto) : null;
       const supportsVotingPhaseState = await hasEventsVotingPhaseStateColumn();
+      const supportsVotingMode = await hasEventsVotingModeColumn();
       const loggedInUserId = await getLoggedInUserId(context);
 
-      const eventRows = await query<any[]>(
+      const eventRows = await query<Array<RowDataPacket & {
+        id: number;
+        committeeId: number;
+        votingPhaseState: number;
+        votingMode?: string;
+      }>>(
         `SELECT
            id,
            committee_id AS committeeId,
            ${supportsVotingPhaseState ? 'COALESCE(voting_phase_state, 0)' : '0'} AS votingPhaseState
+           ${supportsVotingMode ? ", voting_mode AS votingMode" : ", 'VOTING' AS votingMode"}
          FROM events
          WHERE id = ?
          LIMIT 1`,
@@ -1662,6 +1669,7 @@ export const eventVotingResolvers = {
       }
 
       const event = eventRows[0];
+  const votingMode = String(event.votingMode || 'VOTING').toUpperCase();
 
       const membershipRows = await query<any[]>(
         `SELECT committee_role
@@ -1693,16 +1701,18 @@ export const eventVotingResolvers = {
         throwEventError('BAD_REQUEST', 'Role is not mapped for this event');
       }
 
-      const approvedRows = await query<Array<RowDataPacket & { userId: number }>>(
-        `SELECT user_id AS userId
-         FROM event_interest_expressions
-         WHERE event_id = ? AND role_id = ? AND status = 'APPROVED'
-         LIMIT 1`,
-        [eventId, roleId, newWinnerUserId]
-      );
+      if (votingMode !== 'DIRECT') {
+        const approvedRows = await query<Array<RowDataPacket & { userId: number }>>(
+          `SELECT user_id AS userId
+           FROM event_interest_expressions
+           WHERE event_id = ? AND role_id = ? AND user_id = ? AND status = 'APPROVED'
+           LIMIT 1`,
+          [eventId, roleId, newWinnerUserId]
+        );
 
-      if (!approvedRows.length) {
-        throwEventError('BAD_REQUEST', 'Selected user is not an approved nominee for this role');
+        if (!approvedRows.length) {
+          throwEventError('BAD_REQUEST', 'Selected user is not an approved nominee for this role');
+        }
       }
 
       const voteCountRows = await query<Array<RowDataPacket & { voteCount: number }>>(
@@ -1731,8 +1741,8 @@ export const eventVotingResolvers = {
 
       await syncWinnersToUsersEvents(eventId);
       await query(
-        `UPDATE events SET voting_mode = 'VOTING', voting_phase_state = 6, updated_by = ? WHERE id = ?`,
-        [loggedInUserId, eventId]
+        `UPDATE events SET voting_mode = ?, voting_phase_state = 6, updated_by = ? WHERE id = ?`,
+        [votingMode === 'DIRECT' ? 'DIRECT' : 'VOTING', loggedInUserId, eventId]
       );
 
       return {
