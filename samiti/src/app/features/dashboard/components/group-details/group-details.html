@@ -402,7 +402,7 @@
             </div>
           </div>
 
-          <div class="horizontal-list-container">
+          <div class="horizontal-list-container" #eventsScrollContainer>
             @for (event of committeeEvents(); track event.id) {
               <div class="event-aligned-row" [ngClass]="'status-container-' + (event.status || 'UPCOMING').toLowerCase()">
                 
@@ -446,16 +446,22 @@
                       </div>
                       
                       <div class="event-meta-row">
-                        <span class="event-pill event-category-pill">{{ (event.category || 'Standard') | titlecase }}</span>
-                        <span class="event-pill status-tag tag-{{event.status.toLowerCase() || 'upcoming'}}">{{ event.status }}</span>
-                        <span class="event-pill event-type-pill" [ngClass]="event.type === 'PUBLIC' ? 'type-public' : 'type-private'">
-                          {{ event.type }}
+                        <span class="event-pill status-tag tag-{{event.status.toLowerCase() || 'upcoming'}}">
+                          <mat-icon>fiber_manual_record</mat-icon>{{ event.status }}
                         </span>
                         <span class="event-pill event-date-pill">
+                          <mat-icon>calendar_month</mat-icon>
                           <span class="label">Start:</span> {{ event.startDate ? (event.startDate | date:'dd MMM yyyy') : 'N/A' }}
                         </span>
                         <span class="event-pill event-date-pill">
+                          <mat-icon>event_busy</mat-icon>
                           <span class="label">End:</span> {{ event.endDate ? (event.endDate | date:'dd MMM yyyy') : 'N/A' }}
+                        </span>
+                        <span class="event-pill event-category-pill">
+                          <mat-icon>category</mat-icon>{{ (event.category || 'Standard') | titlecase }}
+                        </span>
+                        <span class="event-pill event-type-pill" [ngClass]="event.type === 'PUBLIC' ? 'type-public' : 'type-private'">
+                          <mat-icon>{{ event.type === 'PUBLIC' ? 'public' : 'lock' }}</mat-icon>{{ event.type }}
                         </span>
                       </div>
                     </div>
@@ -483,9 +489,9 @@
                             <div class="designation-info">
                               <span class="role-name-hindi">{{ role.hindiName ? role.hindiName.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase()) : '' }}</span>
                               <span class="role-name-english">{{ (role.englishName || role.roleName || '').replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase()) }}</span>
-                              @if (role.winnerName) {
-                                <span class="winner-name">{{ role.winnerName | titlecase }}</span>
-                              }
+                                @if (role.winnerName) {
+                                  <span class="winner-name" [style.color]="role.color || '#15803d'">{{ role.winnerName | titlecase }}</span>
+                                }
                             </div>
                           </div>
                         </div>

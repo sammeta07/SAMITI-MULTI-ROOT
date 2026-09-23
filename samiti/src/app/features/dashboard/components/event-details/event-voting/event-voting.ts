@@ -283,6 +283,7 @@ export class EventVotingComponent implements OnInit, AfterViewInit, OnDestroy {
   }
 
   public get votingGridLayoutClass(): string {
+    if (this.votingPhaseState === 0) return 'voting-nomination-grid-phase-0';
     if (this.votingPhaseState === 1 || this.votingPhaseState === 6) return 'voting-nomination-grid-compact';
     if (this.currentEventMappedRoleCount <= 1) return 'voting-nomination-grid-single';
     if (this.currentEventMappedRoleCount === 2) return 'voting-nomination-grid-double';
@@ -381,6 +382,7 @@ export class EventVotingComponent implements OnInit, AfterViewInit, OnDestroy {
     runInInjectionContext(this.injector, () => {
       effect(() => {
         this.votingCardHeight();
+        this.votingPhaseState;
         this.applyVotingCardHeight();
       });
     });
@@ -391,7 +393,7 @@ export class EventVotingComponent implements OnInit, AfterViewInit, OnDestroy {
     this.votingCards.forEach((cardRef) => {
       const el = cardRef?.nativeElement;
       if (!el) return;
-      this.renderer.setStyle(el, 'height', `${height}px`);
+      this.renderer.setStyle(el, 'height', this.votingPhaseState === 0 ? 'auto' : `${height}px`);
     });
   }
 
@@ -907,6 +909,15 @@ export class EventVotingComponent implements OnInit, AfterViewInit, OnDestroy {
     return approved.length === 1;
   }
 
+  public hasMultiCandidateRole(): boolean {
+    const mappedRoles = this.eventData?.mappedVotingRoles || [];
+    return mappedRoles.some((role) => {
+      const list = this.pendingInterestForRole(Number(role.roleId));
+      const approved = list.filter((item) => String(item.status).toUpperCase() === 'APPROVED');
+      return approved.length > 1;
+    });
+  }
+
   public getWinnerForRole(roleId: number): EventResultCandidate | null {
     const results = this.stateService.eventResults();
     if (!results?.roles?.length) return null;
@@ -996,6 +1007,7 @@ export class EventVotingComponent implements OnInit, AfterViewInit, OnDestroy {
     if (!roleResult?.candidates?.length) return false;
     const declaredWinners = roleResult.candidates.filter((c) => c.isWinner);
     if (declaredWinners.length >= 2) return true;
+    if (declaredWinners.length > 0) return false;
     if (this.votingPhaseState < 6) return false;
     const maxVotes = Math.max(...roleResult.candidates.map((c) => Number(c.voteCount || 0)));
     return maxVotes > 0 && roleResult.candidates.filter((c) => Number(c.voteCount || 0) === maxVotes).length >= 2;
@@ -1192,7 +1204,27 @@ export class EventVotingComponent implements OnInit, AfterViewInit, OnDestroy {
     if (!currentEvent?.eventId || !mode) return;
     this.isUpdatingVotingMode.set(true);
     this.votingService.updateEventVotingMode(currentEvent.eventId, mode).subscribe({
-      next: () => { this.notifier.success(`Mode changed to ${mode === 'VOTING' ? 'Voting' : 'Direct Assign'} successfully.`); this.isUpdatingVotingMode.set(false); },
+      next: () => {
+        this.notifier.success(`Mode changed to ${mode === 'VOTING' ? 'Voting' : 'Direct Assign'} successfully.`);
+        this.isUpdatingVotingMode.set(false);
+        const prev = this.stateService.eventData();
+        if (prev) {
+          const updated = { ...prev, votingMode: mode };
+          if (mode === 'DIRECT') {
+            updated.mappedVotingRoles = (prev.mappedVotingRoles || []).map((role) => ({
+              ...role,
+              winnerUserId: null,
+              winnerName: null,
+              winnerPhoto: null,
+              winnerVoteCount: null,
+              winnerWonBy: null
+            }));
+            this.directAssignSelected.set({});
+            this.directAssignInputText = {};
+          }
+          this.stateService.eventData.set(updated);
+        }
+      },
       error: (err: HttpErrorResponse) => { this.notifier.error(err?.error?.message || 'Failed to update voting mode.'); this.isUpdatingVotingMode.set(false); }
     });
   }

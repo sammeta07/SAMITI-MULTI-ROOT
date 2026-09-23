@@ -639,10 +639,10 @@
 }
 
 .event-logo-circle {
-  width: 38px;
-  height: 38px;
-  border-radius: 8px;
-  border: 2px solid transparent;
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  border: 3px solid transparent;
   overflow: hidden;
   display: inline-flex;
   align-items: center;
@@ -726,22 +726,48 @@
   color: #475569;
   border: 1px solid #cbd5e1;
 
+  mat-icon { font-size: 0.85rem; width: 0.85rem; height: 0.85rem; color: #64748b; }
+
   &.status-tag {
     text-transform: uppercase;
     font-weight: 700;
-    &.tag-upcoming { background: #fefce8; color: #a16207; border-color: #fef08a; }
+    &.tag-upcoming { background: #fefce8; color: #f59e0b; border-color: #fde68a; }
     &.tag-started,
-    &.tag-ongoing { background: #f0fdf4; color: #15803d; border-color: #86efac; }
-    &.tag-completed { background: #f1f5f9; color: #475569; border-color: #cbd5e1; }
+    &.tag-ongoing { background: #f0fdf4; color: #10b981; border-color: #6ee7b7; }
+    &.tag-completed { background: #f1f5f9; color: #64748b; border-color: #cbd5e1; }
   }
+
+  .status-container-upcoming & { color: #f59e0b; border-color: #fde68a; }
+  .status-container-upcoming & mat-icon { color: #f59e0b; }
+  .status-container-started & { color: #10b981; border-color: #6ee7b7; }
+  .status-container-started & mat-icon { color: #10b981; }
+  .status-container-completed & { color: #64748b; border-color: #cbd5e1; }
+  .status-container-completed & mat-icon { color: #64748b; }
+
+  &.event-type-pill mat-icon { color: #64748b !important; }
 
   &.event-type-pill {
     &.type-public { background: #ffffff; color: #475569; border-color: #cbd5e1; }
     &.type-private { background: #fdf2f8; color: #be185d; border-color: #fbcfe8; }
   }
 
+  &.event-category-pill {
+    color: #475569 !important;
+    background: #f8fafc !important;
+    border-color: #cbd5e1 !important;
+    mat-icon { color: #64748b !important; }
+  }
+
   &.event-date-pill .label { color: #94a3b8; font-weight: 700; margin-right: 2px; }
 }
+
+.status-container-started .event-date-pill { color: #10b981; border-color: #6ee7b7; }
+.status-container-upcoming .event-date-pill { color: #f59e0b; border-color: #fde68a; }
+.status-container-completed .event-date-pill { color: #64748b; border-color: #cbd5e1; }
+
+.status-container-started .event-date-pill .label { color: #10b981; }
+.status-container-upcoming .event-date-pill .label { color: #f59e0b; }
+.status-container-completed .event-date-pill .label { color: #64748b; }
 
 /* DESIGNATIONS CONTAINER */
 .event-designation-area {
@@ -789,8 +815,8 @@
 }
 
 .designation-avatar {
-  width: 32px;
-  height: 32px;
+  width: 60px;
+  height: 60px;
   border-radius: 50%;
   overflow: hidden;
   display: flex;
@@ -800,7 +826,7 @@
   border: 3px solid #e2e8f0;
   color: #475569;
   font-weight: 700;
-  font-size: 0.8rem;
+  font-size: 1.05rem;
   flex-shrink: 0;
 
   img { width: 100%; height: 100%; object-fit: cover; }
@@ -812,7 +838,7 @@
   justify-content: center;
   width: 100%;
   height: 100%;
-  font-size: 1.1rem;
+  font-size: 2.5rem;
   line-height: 1;
 }
 
@@ -844,7 +870,6 @@
   .winner-name { 
     font-size: 0.62rem; 
     font-weight: 700; 
-    color: #15803d; 
     background: #dcfce7; 
     padding: 1px 6px; 
     border-radius: 999px;

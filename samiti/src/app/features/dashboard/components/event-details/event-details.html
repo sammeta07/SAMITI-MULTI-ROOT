@@ -34,11 +34,11 @@
             <ng-template #eventLogoContent>
               @if (evt.eventLogo; as eventLogo) {
                 <img [src]="eventLogo" alt="Event Logo" class="committee-avatar"
-                     [ngStyle]="{'--avatar-border': designationColor, 'border': '4px solid ' + designationColor}"
+                     [ngStyle]="{'--avatar-border': designationColor, 'border': '3px solid ' + designationColor}"
                      (error)="onEventLogoLoadError()" />
               } @else {
                 <div class="committee-avatar-fallback event-avatar-fallback"
-                     [ngStyle]="{'--avatar-border': designationColor, 'border': '4px solid ' + designationColor}">
+                     [ngStyle]="{'--avatar-border': designationColor, 'border': '3px solid ' + designationColor}">
                   {{ fallbackInitial }}
                 </div>
               }
@@ -76,8 +76,8 @@
           </div>
 
           <div class="card-identity-pills-area">
-            <span class="meta-pill category-pill">
-              <mat-icon>category</mat-icon>{{ evt.category || 'General' }}
+            <span class="meta-pill status-pill">
+              <mat-icon>fiber_manual_record</mat-icon>{{ calculatedEventStatus | titlecase }}
             </span>
             @if (evt.startDate; as startDate) {
               <span class="meta-pill date-pill">
@@ -89,6 +89,12 @@
                 <mat-icon>event_busy</mat-icon> {{ endDate | date:'dd MMM yyyy' }}
               </span>
             }
+            <span class="meta-pill category-pill">
+              <mat-icon>category</mat-icon>{{ evt.category || 'General' }}
+            </span>
+            <span class="meta-pill type-pill" [class.type-private]="evt.type !== 'PUBLIC'">
+              <mat-icon>{{ evt.type === 'PUBLIC' ? 'public' : 'lock' }}</mat-icon>{{ evt.type || 'PUBLIC' }}
+            </span>
           </div>
 
           <div class="card-actions-identity-area">

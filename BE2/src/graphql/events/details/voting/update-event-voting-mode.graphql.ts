@@ -74,7 +74,7 @@ export const updateEventVotingModeResolvers = {
       }
 
       const eventRows = await query<any[]>(
-        `SELECT id, committee_id AS committeeId
+        `SELECT id, committee_id AS committeeId, voting_mode AS votingMode
          FROM events
          WHERE id = ?
          LIMIT 1`,
@@ -86,6 +86,7 @@ export const updateEventVotingModeResolvers = {
       }
 
       const event = eventRows[0];
+      const previousMode = String(event.votingMode || 'VOTING').trim().toUpperCase();
 
       const membershipRows = await query<any[]>(
         `SELECT committee_role
@@ -112,6 +113,15 @@ export const updateEventVotingModeResolvers = {
          WHERE id = ?`,
         [mode, loggedInUserId, eventId]
       );
+
+      if (previousMode === 'VOTING' && mode === 'DIRECT') {
+        await execute(
+          `DELETE FROM event_winners
+           WHERE event_id = ?
+             AND (won_by IS NULL OR won_by <> 'DIRECT_ASSIGN')`,
+          [eventId]
+        );
+      }
 
       return {
         eventId,

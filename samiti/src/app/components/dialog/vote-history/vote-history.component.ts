@@ -42,8 +42,8 @@ export class VoteHistoryDialogComponent {
     return this.dialogData.eventLogoBorderColor ?? null;
   }
 
-  public sortColumn: 'name' | 'status' = 'name';
-  public sortDirection: 'asc' | 'desc' = 'asc';
+  public sortColumn: 'name' | 'status' = 'status';
+  public sortDirection: 'asc' | 'desc' = 'desc';
 
   constructor(
     public dialogRef: MatDialogRef<VoteHistoryDialogComponent>
@@ -112,9 +112,14 @@ export class VoteHistoryDialogComponent {
       }
 
       if (this.sortColumn === 'status') {
-        const aVal = a.hasVoted ? 1 : 0;
-        const bVal = b.hasVoted ? 1 : 0;
-        return direction * (aVal - bVal);
+        const aStatus = a.hasVoted ? 1 : 0;
+        const bStatus = b.hasVoted ? 1 : 0;
+        if (aStatus !== bStatus) {
+          return direction * (aStatus - bStatus);
+        }
+        const aVal = String(a.name || '').toLowerCase();
+        const bVal = String(b.name || '').toLowerCase();
+        return direction * aVal.localeCompare(bVal);
       }
 
       return 0;

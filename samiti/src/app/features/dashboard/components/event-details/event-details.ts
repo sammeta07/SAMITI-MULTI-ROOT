@@ -182,7 +182,23 @@ export class EventDetailsComponent implements OnInit, OnDestroy {
     if (!currentEvent?.eventId || !mode) return;
     this.votingService.updateEventVotingMode(currentEvent.eventId, mode).subscribe({
       next: () => {
-        this.stateService.eventData.update((prev) => prev ? { ...prev, votingMode: mode } : prev);
+        this.stateService.eventData.update((prev) => {
+          if (!prev) return prev;
+          if (mode !== 'DIRECT') return { ...prev, votingMode: mode };
+
+          return {
+            ...prev,
+            votingMode: mode,
+            mappedVotingRoles: (prev.mappedVotingRoles || []).map((role) => ({
+              ...role,
+              winnerUserId: null,
+              winnerName: null,
+              winnerPhoto: null,
+              winnerVoteCount: null,
+              winnerWonBy: null
+            }))
+          };
+        });
         this.notifier.success(`Mode changed to ${mode === 'VOTING' ? 'Voting' : 'Direct Assign'} successfully.`);
       },
       error: (err: HttpErrorResponse) => {

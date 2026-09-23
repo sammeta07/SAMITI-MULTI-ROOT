@@ -116,6 +116,13 @@
         </div>
 
         <div class="header-actions-right">
+          @if (!isStartVotingEnabled && startVotingDisabledReason) {
+            <div class="voting-disabled-hint">
+              <mat-icon>info</mat-icon>
+              <span>{{ startVotingDisabledReason }}</span>
+            </div>
+          }
+
           @if (isMasterAdmin) {
             <div class="voting-controls-actions-row voting-controls-header-actions">
               <!-- Condition 2: Phase 1 (Roles Locked -> Start Nominations) -->
@@ -196,8 +203,6 @@
             </div>
           }
 
-          
-
           @if (votingPhaseState === 2 && !isMasterAdmin) {
             <div class="voting-info-hint">
               <mat-icon>info</mat-icon>
@@ -212,7 +217,7 @@
             </div>
           }
 
-          @if (votingPhaseState === 4 && !isMasterAdmin) {
+          @if (votingPhaseState === 4 && !isMasterAdmin && hasMultiCandidateRole()) {
             <div class="voting-info-hint">
               <mat-icon>info</mat-icon>
               <span>Voting for the selected roles is started</span>
@@ -238,12 +243,6 @@
               <mat-icon>history</mat-icon>
               <span>History</span>
             </button>
-          }
-          @if (!isStartVotingEnabled && startVotingDisabledReason) {
-            <div class="voting-disabled-hint">
-              <mat-icon>info</mat-icon>
-              <span>{{ startVotingDisabledReason }}</span>
-            </div>
           }
         </div>
       </div>
@@ -476,9 +475,9 @@
                                   <td class="pending-col-vote">
                                     @if (item.status.toUpperCase() === 'APPROVED') {
                                       @if (isSingleCandidateRole(card.role.roleId)) {
-                                        <span class="auto-winner-badge">
+                                        <span class="expected-winner-badge">
                                           <mat-icon>emoji_events</mat-icon>
-                                          <span>WINNER</span>
+                                          <span>EXPECTED WINNER</span>
                                         </span>
                                       } @else if (hasVotedFor(card.role.roleId, item.userId)) {
                                         <button

@@ -1003,8 +1003,6 @@ export const eventVotingResolvers = {
         [loggedInUserId, eventId]
       );
 
-      await recordSingleCandidateWinners(eventId);
-
       return {
         eventId,
         votingPhaseState: 4
@@ -1165,7 +1163,21 @@ export const eventVotingResolvers = {
             const winnerName = String(userRows[0]?.name || role.winnerName || '').trim();
             const winnerPhoto = userRows[0]?.profilePhoto || role.winnerPhoto || null;
 
-            const voteCountRows = await query<Array<RowDataPacket & { voteCount: number }>>(
+      if (votingMode !== 'DIRECT') {
+        const approvedRows = await query<Array<RowDataPacket & { userId: number }>>(
+          `SELECT user_id AS userId
+           FROM event_interest_expressions
+           WHERE event_id = ? AND role_id = ? AND user_id = ? AND status = 'APPROVED'
+           LIMIT 1`,
+          [eventId, roleId, winnerUserId]
+        );
+
+        if (!approvedRows.length) {
+          throwEventError('BAD_REQUEST', 'Selected user is not an approved nominee for this role');
+        }
+      }
+
+      const voteCountRows = await query<Array<RowDataPacket & { voteCount: number }>>(
               `SELECT COUNT(*) AS voteCount
                 FROM event_votes
                 WHERE event_id = ? AND role_id = ? AND candidate_id = ?`,
@@ -1699,20 +1711,6 @@ export const eventVotingResolvers = {
 
       if (!roleRows.length) {
         throwEventError('BAD_REQUEST', 'Role is not mapped for this event');
-      }
-
-      if (votingMode !== 'DIRECT') {
-        const approvedRows = await query<Array<RowDataPacket & { userId: number }>>(
-          `SELECT user_id AS userId
-           FROM event_interest_expressions
-           WHERE event_id = ? AND role_id = ? AND user_id = ? AND status = 'APPROVED'
-           LIMIT 1`,
-          [eventId, roleId, newWinnerUserId]
-        );
-
-        if (!approvedRows.length) {
-          throwEventError('BAD_REQUEST', 'Selected user is not an approved nominee for this role');
-        }
       }
 
       const voteCountRows = await query<Array<RowDataPacket & { voteCount: number }>>(

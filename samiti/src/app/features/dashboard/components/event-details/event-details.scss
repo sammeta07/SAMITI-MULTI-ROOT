@@ -445,18 +445,30 @@
 
 .status-container-started .date-pill { color: #10b981; border-color: #10b981; }
 .status-container-started .date-pill mat-icon { color: #10b981; }
-.status-container-started .date-end-pill { color: #475569; border-color: #e2e8f0; }
-.status-container-started .date-end-pill mat-icon { color: #64748b; }
+.status-container-started .date-end-pill { color: #10b981; border-color: #10b981; }
+.status-container-started .date-end-pill mat-icon { color: #10b981; }
 
 .status-container-upcoming .date-pill { color: #f59e0b; border-color: #f59e0b; }
 .status-container-upcoming .date-pill mat-icon { color: #f59e0b; }
-.status-container-upcoming .date-end-pill { color: #475569; border-color: #e2e8f0; }
-.status-container-upcoming .date-end-pill mat-icon { color: #64748b; }
+.status-container-upcoming .date-end-pill { color: #f59e0b; border-color: #f59e0b; }
+.status-container-upcoming .date-end-pill mat-icon { color: #f59e0b; }
 
 .status-container-completed .date-pill { color: #64748b; border-color: #64748b; }
 .status-container-completed .date-pill mat-icon { color: #64748b; }
-.status-container-completed .date-end-pill { color: #475569; border-color: #e2e8f0; }
+.status-container-completed .date-end-pill { color: #64748b; border-color: #64748b; }
 .status-container-completed .date-end-pill mat-icon { color: #64748b; }
+
+.status-container-started .status-pill { color: #10b981; border-color: #10b981; background: #f0fdf4; }
+.status-container-started .status-pill mat-icon { color: #10b981; }
+.status-container-upcoming .status-pill { color: #f59e0b; border-color: #f59e0b; background: #fffbeb; }
+.status-container-upcoming .status-pill mat-icon { color: #f59e0b; }
+.status-container-completed .status-pill { color: #64748b; border-color: #64748b; background: #f8fafc; }
+.status-container-completed .status-pill mat-icon { color: #64748b; }
+
+.meta-pill.type-pill { color: #475569; border-color: #e2e8f0; background: #f8fafc; }
+.meta-pill.type-pill mat-icon { color: #64748b; }
+.meta-pill.type-pill.type-private { color: #be185d; border-color: #fbcfe8; background: #fdf2f8; }
+.meta-pill.type-pill.type-private mat-icon { color: #be185d; }
 
 .card-actions-identity-area {
   grid-column: 3 / 4;

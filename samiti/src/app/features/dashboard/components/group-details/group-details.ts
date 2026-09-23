@@ -1,4 +1,4 @@
-import { Component, inject, OnInit, signal, computed } from '@angular/core';
+import { Component, inject, OnInit, signal, computed, ViewChild, ElementRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
@@ -67,6 +67,8 @@ export class GroupDetailsComponent implements OnInit {
   private readonly cdr = inject(ChangeDetectorRef);
   private readonly imageAssetService = inject(ImageAssetService);
   private readonly authService = inject(AuthService);
+
+  @ViewChild('eventsScrollContainer') eventsScrollContainer!: ElementRef<HTMLDivElement>;
 
   public readonly isLoading = signal<boolean>(false);
   public readonly copiedCommitteeId = signal<string | null>(null);
@@ -503,21 +505,22 @@ export class GroupDetailsComponent implements OnInit {
               UPCOMING: 2
             };
 
-            const sortedEvents = [...safeEvents].sort((a, b) => {
-              const statusA = String(a.status || '').toUpperCase();
-              const statusB = String(b.status || '').toUpperCase();
-              const orderA = statusSortOrder[statusA] ?? 99;
-              const orderB = statusSortOrder[statusB] ?? 99;
+              const sortedEvents = [...safeEvents].sort((a, b) => {
+                const statusA = String(a.status || '').toUpperCase();
+                const statusB = String(b.status || '').toUpperCase();
+                const orderA = statusSortOrder[statusA] ?? 99;
+                const orderB = statusSortOrder[statusB] ?? 99;
 
-              if (orderA !== orderB) {
-                return orderA - orderB;
-              }
+                if (orderA !== orderB) {
+                  return orderA - orderB;
+                }
 
-              const dateA = a.startDate ? new Date(a.startDate).getTime() : Infinity;
-              const dateB = b.startDate ? new Date(b.startDate).getTime() : Infinity;
-              return dateA - dateB;
-            });
-            this.committeeEvents.set(sortedEvents);
+                const dateA = a.startDate ? new Date(a.startDate).getTime() : Infinity;
+                const dateB = b.startDate ? new Date(b.startDate).getTime() : Infinity;
+                return dateA - dateB;
+              });
+              this.committeeEvents.set(sortedEvents);
+              setTimeout(() => this.scrollToActiveEvent(), 50);
           } else {
             this.committeeEvents.set([]);
           }
@@ -763,9 +766,39 @@ export class GroupDetailsComponent implements OnInit {
     });
   }
 
-public onDeleteCommitteeWorkspace(): void {
+  public onDeleteCommitteeWorkspace(): void {
     if (!this.isCurrentUserMasterAdmin()) return;
     this.notifier.warn('Delete committee flow will be enabled after committee delete GraphQL API is restored.');
+  }
+
+  private scrollToActiveEvent(retries = 5): void {
+    const container = this.eventsScrollContainer?.nativeElement;
+    if (!container || !container.isConnected || retries === 0) return;
+
+    const events = this.committeeEvents();
+    if (!events.length) return;
+
+    const targetEvent = events.find(e => String(e.status).toUpperCase() === 'STARTED') ||
+                        events.find(e => String(e.status).toUpperCase() === 'UPCOMING');
+
+    if (!targetEvent) return;
+
+    const eventElements = container.querySelectorAll('.event-aligned-row');
+    if (eventElements.length === 0) {
+      setTimeout(() => this.scrollToActiveEvent(retries - 1), 50);
+      return;
+    }
+
+    for (let i = 0; i < eventElements.length; i++) {
+      if (events[i]?.eventId === targetEvent.eventId) {
+        const element = eventElements[i] as HTMLElement;
+        const containerRect = container.getBoundingClientRect();
+        const elementRect = element.getBoundingClientRect();
+        const scrollTop = container.scrollTop + (elementRect.top - containerRect.top) - 10;
+        container.scrollTo({ top: scrollTop, behavior: 'smooth' });
+        break;
+      }
+    }
   }
 
   async copyCommitteeId(committeeId: string, event: Event, tooltip: MatTooltip): Promise<void> {
