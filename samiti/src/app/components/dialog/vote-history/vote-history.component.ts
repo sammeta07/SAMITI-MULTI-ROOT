@@ -9,6 +9,8 @@ import { EventVoteHistory } from '../../../features/dashboard/components/event-d
 export interface VoteHistoryDialogData {
   history: EventVoteHistory;
   eventLogo?: string | null;
+  eventAddress?: string | null;
+  eventLogoBorderColor?: string | null;
 }
 
 @Component({
@@ -28,8 +30,20 @@ export class VoteHistoryDialogComponent {
   public readonly dialogData: VoteHistoryDialogData = inject(MAT_DIALOG_DATA);
   public readonly data: EventVoteHistory = this.dialogData.history;
 
-  public sortColumn: 'name' | 'role' | 'status' = 'name';
-  public sortDirection: 'asc' | 'desc' = 'asc';
+  public get eventLogo(): string | null {
+    return this.dialogData.eventLogo ?? null;
+  }
+
+  public get eventAddress(): string | null {
+    return this.dialogData.eventAddress ?? null;
+  }
+
+  public get eventLogoBorderColor(): string | null {
+    return this.dialogData.eventLogoBorderColor ?? null;
+  }
+
+  public sortColumn: 'name' | 'status' = 'status';
+  public sortDirection: 'asc' | 'desc' = 'desc';
 
   constructor(
     public dialogRef: MatDialogRef<VoteHistoryDialogComponent>
@@ -77,8 +91,7 @@ export class VoteHistoryDialogComponent {
     }
     return Math.round((this.data.votedCount / total) * 100);
   }
-
-  public onSort(column: 'name' | 'role' | 'status'): void {
+  public onSort(column: 'name' | 'status'): void {
     if (this.sortColumn === column) {
       this.sortDirection = this.sortDirection === 'asc' ? 'desc' : 'asc';
     } else {
@@ -98,23 +111,15 @@ export class VoteHistoryDialogComponent {
         return direction * aVal.localeCompare(bVal);
       }
 
-      if (this.sortColumn === 'role') {
-        const aVal = String(a.committeeRole || '').toUpperCase();
-        const bVal = String(b.committeeRole || '').toUpperCase();
-        const order: Record<string, number> = {
-          COMMITTEE_MASTER_ADMIN: 0,
-          COMMITTEE_ADMIN: 1,
-          COMMITTEE_MEMBER: 2,
-        };
-        const aIdx = order[aVal] ?? 3;
-        const bIdx = order[bVal] ?? 3;
-        return direction * (aIdx - bIdx);
-      }
-
       if (this.sortColumn === 'status') {
-        const aVal = a.hasVoted ? 1 : 0;
-        const bVal = b.hasVoted ? 1 : 0;
-        return direction * (aVal - bVal);
+        const aStatus = a.hasVoted ? 1 : 0;
+        const bStatus = b.hasVoted ? 1 : 0;
+        if (aStatus !== bStatus) {
+          return direction * (aStatus - bStatus);
+        }
+        const aVal = String(a.name || '').toLowerCase();
+        const bVal = String(b.name || '').toLowerCase();
+        return direction * aVal.localeCompare(bVal);
       }
 
       return 0;

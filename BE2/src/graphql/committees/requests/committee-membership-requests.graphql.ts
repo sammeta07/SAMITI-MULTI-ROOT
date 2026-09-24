@@ -362,27 +362,27 @@ export const committeeMembershipRequestsResolvers = {
           await execute(
             `INSERT INTO users_committees (committee_id, user_id, committee_role, is_favourite)
              VALUES (?, ?, 'COMMITTEE_ADMIN', 0)
-             ON DUPLICATE KEY UPDATE
-               is_favourite = 0,
-               committee_role = CASE
-                 WHEN committee_role = 'COMMITTEE_MASTER_ADMIN' THEN 'COMMITTEE_MASTER_ADMIN'
-                 ELSE 'COMMITTEE_ADMIN'
-               END`,
-            [committeeId, targetUserId]
-          );
-        } else {
-          await execute(
-            `INSERT INTO users_committees (committee_id, user_id, committee_role, is_favourite)
-             VALUES (?, ?, 'COMMITTEE_MEMBER', 0)
-             ON DUPLICATE KEY UPDATE
-               is_favourite = 0,
-               committee_role = CASE
-                 WHEN committee_role = 'COMMITTEE_MASTER_ADMIN' THEN 'COMMITTEE_MASTER_ADMIN'
-                 WHEN committee_role = 'COMMITTEE_ADMIN' THEN 'COMMITTEE_ADMIN'
-                 ELSE 'COMMITTEE_MEMBER'
-               END`,
-            [committeeId, targetUserId]
-          );
+              ON DUPLICATE KEY UPDATE
+                is_favourite = is_favourite,
+                committee_role = CASE
+                  WHEN committee_role = 'COMMITTEE_MASTER_ADMIN' THEN 'COMMITTEE_MASTER_ADMIN'
+                  ELSE 'COMMITTEE_ADMIN'
+                END`,
+             [committeeId, targetUserId]
+           );
+         } else {
+           await execute(
+             `INSERT INTO users_committees (committee_id, user_id, committee_role, is_favourite)
+              VALUES (?, ?, 'COMMITTEE_MEMBER', 0)
+              ON DUPLICATE KEY UPDATE
+                is_favourite = is_favourite,
+                committee_role = CASE
+                  WHEN committee_role = 'COMMITTEE_MASTER_ADMIN' THEN 'COMMITTEE_MASTER_ADMIN'
+                  WHEN committee_role = 'COMMITTEE_ADMIN' THEN 'COMMITTEE_ADMIN'
+                  ELSE 'COMMITTEE_MEMBER'
+                END`,
+             [committeeId, targetUserId]
+           );
         }
       } else {
         // REJECTED — ensure row exists but not promoted

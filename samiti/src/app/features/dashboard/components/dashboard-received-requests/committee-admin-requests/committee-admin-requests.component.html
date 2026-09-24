@@ -34,7 +34,7 @@
             </span>
             <span *ngIf="!element.userDetails.photo" class="table-avatar table-avatar--photo table-avatar--fallback">{{ getInitials(element.userDetails.name) }}</span>
             <div class="committee-info">
-              <span class="committee-name">{{ element.userDetails.name | titlecase }}</span>
+              <span class="committee-name user-name">{{ element.userDetails.name | titlecase }}</span>
               <span class="committee-address">{{ element.userDetails.email }}</span>
             </div>
           </div>
@@ -76,11 +76,11 @@
           <div class="action-cell">
             @if (element.status === 'PENDING') {
               <div class="action-btn-group">
-                <button mat-stroked-button class="btn-labeled btn-reject" (click)="rejectRequest(element.committeeId, element.userDetails.userId)">
-                  <mat-icon>close</mat-icon> Reject
+                <button mat-icon-button class="btn-reject" matTooltip="REJECT" (click)="rejectRequest(element.committeeId, element.userDetails.userId)">
+                  <mat-icon>close</mat-icon>
                 </button>
-                <button mat-stroked-button class="btn-labeled btn-approve" (click)="approveRequest(element.committeeId, element.userDetails.userId)">
-                  <mat-icon>check</mat-icon> Accept
+                <button mat-icon-button class="btn-approve" matTooltip="ACCEPT" (click)="approveRequest(element.committeeId, element.userDetails.userId)">
+                  <mat-icon>check</mat-icon>
                 </button>
               </div>
             } @else {

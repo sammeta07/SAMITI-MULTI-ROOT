@@ -1,40 +1,176 @@
 <div class="event-details-workspace drawer-layout-shell">
   <div class="workspace-body scrollable-container">
+
+    <!-- Event details header (mirrors the Overview committee card, without Banner Images) -->
+    @if (isLoadingOverview()) {
+      <section class="gd-committee-card skeleton-card" aria-busy="true">
+        <div class="committee-card-grid">
+          <div class="card-logo-area">
+            <div class="skeleton-box skeleton-avatar"></div>
+          </div>
+          <div class="card-main-info-area">
+            <div class="skeleton-box skeleton-line lg" style="width: 45%;"></div>
+            <div class="skeleton-box skeleton-line sm" style="width: 70%; margin-top: 8px;"></div>
+          </div>
+          <div class="card-identity-pills-area">
+            <div class="skeleton-box skeleton-chip"></div>
+            <div class="skeleton-box skeleton-chip" style="width: 90px;"></div>
+            <div class="skeleton-box skeleton-chip" style="width: 90px;"></div>
+          </div>
+          <div class="card-actions-identity-area">
+            <div class="skeleton-box skeleton-chip" style="width: 80px;"></div>
+          </div>
+          <div class="action-buttons-area directions-status-row">
+            <div class="skeleton-box" style="width: 90px; height: 34px; border-radius: 8px;"></div>
+            <div class="skeleton-box" style="width: 70px; height: 34px; border-radius: 8px;"></div>
+            <div class="skeleton-box" style="width: 70px; height: 34px; border-radius: 8px;"></div>
+          </div>
+        </div>
+      </section>
+    } @else if (overviewData; as evt) {
+      <section class="gd-committee-card" [ngClass]="'status-container-' + calculatedEventStatus.toLowerCase()">
+        <div class="committee-card-grid">
+          <div class="card-logo-area">
+            <ng-template #eventLogoContent>
+              @if (evt.eventLogo; as eventLogo) {
+                <img [src]="eventLogo" alt="Event Logo" class="committee-avatar"
+                     [ngStyle]="{'--avatar-border': designationColor, 'border': '3px solid ' + designationColor}"
+                     (error)="onEventLogoLoadError()" />
+              } @else {
+                <div class="committee-avatar-fallback event-avatar-fallback"
+                     [ngStyle]="{'--avatar-border': designationColor, 'border': '3px solid ' + designationColor}">
+                  {{ fallbackInitial }}
+                </div>
+              }
+            </ng-template>
+
+            @if (canManageEvent) {
+              <input #eventLogoInput type="file" hidden accept="image/*" (change)="onEventLogoSelected($event)">
+              <button type="button" class="committee-logo-edit-trigger"
+                [class.is-uploading]="isUploadingEventLogo()"
+                (click)="eventLogoInput.click()" [disabled]="isUploadingEventLogo()"
+                matTooltip="Change Event Logo" matTooltipPosition="above"
+                aria-label="Change event logo">
+                <ng-container [ngTemplateOutlet]="eventLogoContent"></ng-container>
+                <span class="logo-edit-overlay" aria-hidden="true">
+                  @if (isUploadingEventLogo()) {
+                    <mat-progress-spinner mode="indeterminate" diameter="22" class="logo-upload-spinner"></mat-progress-spinner>
+                  } @else {
+                    <mat-icon>edit</mat-icon>
+                  }
+                </span>
+              </button>
+            } @else {
+              <ng-container [ngTemplateOutlet]="eventLogoContent"></ng-container>
+            }
+          </div>
+
+          <div class="card-main-info-area">
+            <div class="card-title-row">
+              <h3 class="committee-display-name">{{ (evt.eventDisplayName || evt.eventName || '') | titlecase }}</h3>
+            </div>
+            <div class="card-location-row">
+              <mat-icon class="location-icon">location_on</mat-icon>
+              <span class="location-text-trim">{{ (evt.committeeAddress || evt.category || 'General event') | titlecase }}</span>
+            </div>
+          </div>
+
+          <div class="card-identity-pills-area">
+            <span class="meta-pill status-pill">
+              <mat-icon>fiber_manual_record</mat-icon>{{ calculatedEventStatus | titlecase }}
+            </span>
+            @if (evt.startDate; as startDate) {
+              <span class="meta-pill date-pill">
+                <mat-icon>calendar_month</mat-icon> {{ startDate | date:'dd MMM yyyy' }}
+              </span>
+            }
+            @if (evt.endDate; as endDate) {
+              <span class="meta-pill date-pill date-end-pill">
+                <mat-icon>event_busy</mat-icon> {{ endDate | date:'dd MMM yyyy' }}
+              </span>
+            }
+            <span class="meta-pill category-pill">
+              <mat-icon>category</mat-icon>{{ evt.category || 'General' }}
+            </span>
+            <span class="meta-pill type-pill" [class.type-private]="evt.type !== 'PUBLIC'">
+              <mat-icon>{{ evt.type === 'PUBLIC' ? 'public' : 'lock' }}</mat-icon>{{ evt.type || 'PUBLIC' }}
+            </span>
+          </div>
+
+          <div class="card-actions-identity-area">
+            @if (userEventRoleLabel) {
+              <span class="user-role-badge event-role-highlight"
+                [ngStyle]="{
+                  'background-color': (userEventRoleLabel || '').toLowerCase() === 'member' ? '#3b82f6' : (designationColor ? designationColor + '1A' : '#ffffff'),
+                  'color': (userEventRoleLabel || '').toLowerCase() === 'member' ? '#ffffff' : (designationColor || '#334155'),
+                  'border-color': (userEventRoleLabel || '').toLowerCase() === 'member' ? '#3b82f6' : (designationColor ? designationColor + '33' : '#e2e8f0')
+                }">
+                @if (designationIcon) {
+                  <mat-icon class="role-badge-icon">{{ designationIcon }}</mat-icon>
+                } @else {
+                  <mat-icon class="role-badge-icon">verified</mat-icon>
+                }
+                {{ userEventRoleLabel }}
+              </span>
+            }
+          </div>
+
+          <div class="action-buttons-area directions-status-row">
+            <div class="toggle-control-capsule" [class.is-visible]="evt.visibility === 'VISIBLE'">
+              <span class="toggle-status-badge">
+                <span class="status-dot"></span>
+                {{ evt.visibility === 'VISIBLE' ? 'VISIBLE' : 'HIDDEN' }}
+              </span>
+              <mat-slide-toggle class="event-visibility-toggle"
+                [checked]="evt.visibility === 'VISIBLE'"
+                [disabled]="!canManageEvent"
+                (change)="onEventVisibilityChange($event.checked)">
+              </mat-slide-toggle>
+            </div>
+
+            <button mat-button class="btn-action btn-edit" [disabled]="!canManageEvent" (click)="onEditEvent()">
+              <mat-icon>edit_note</mat-icon>
+              <span>Edit</span>
+            </button>
+
+            <button mat-button class="btn-action btn-delete" [disabled]="!canManageEvent" (click)="onDeleteEvent()">
+              <mat-icon>delete_forever</mat-icon>
+              <span>Delete</span>
+            </button>
+          </div>
+        </div>
+      </section>
+    }
+
     <!-- Navigation Menu styled like dashboard-sent-requests tabs -->
-    <nav class="inner-tabs">
-      <button type="button" class="tab-button" [class.active]="currentTab === 'voting'" (click)="navigateToTab('voting')">
-        <mat-icon class="tab-icon">how_to_vote</mat-icon>
-        <span class="tab-label-text">Voting</span>
-      </button>
+<nav class="inner-tabs">
+  <button type="button" class="tab-button" [class.active]="currentTab === 'voting'" [disabled]="false" (click)="navigateToTab('voting')">
+    <mat-icon class="tab-icon">how_to_vote</mat-icon>
+    <span class="tab-label-text">Voting</span>
+  </button>
 
-      <button type="button" class="tab-button" [class.active]="currentTab === 'overview'" (click)="navigateToTab('overview')">
-        <mat-icon class="tab-icon">info</mat-icon>
-        <span class="tab-label-text">Overview</span>
-      </button>
+  <button type="button" class="tab-button" [class.active]="currentTab === 'overview'" [disabled]="!tabsEnabled" (click)="navigateToTab('overview')">
+    <mat-icon class="tab-icon">info</mat-icon>
+    <span class="tab-label-text">Overview</span>
+  </button>
 
-      <button type="button" class="tab-button" [class.active]="currentTab === 'programs'" (click)="navigateToTab('programs')">
-        <mat-icon class="tab-icon">event_note</mat-icon>
-        <span class="tab-label-text">Programs</span>
-      </button>
+  <button type="button" class="tab-button" [class.active]="currentTab === 'programs'" [disabled]="!tabsEnabled" (click)="navigateToTab('programs')">
+    <mat-icon class="tab-icon">event_note</mat-icon>
+    <span class="tab-label-text">Programs</span>
+  </button>
 
-      <button type="button" class="tab-button" [class.active]="currentTab === 'people'" (click)="navigateToTab('people')">
-        <mat-icon class="tab-icon">groups</mat-icon>
-        <span class="tab-label-text">People</span>
-      </button>
+  <button type="button" class="tab-button" [class.active]="currentTab === 'people'" [disabled]="!tabsEnabled" (click)="navigateToTab('people')">
+    <mat-icon class="tab-icon">groups</mat-icon>
+    <span class="tab-label-text">People</span>
+  </button>
 
-      @if (currentTab === 'voting') {
-      <div class="tab-mode-selector">
-        @if (isMasterAdmin && votingPhaseState < 6) {
-          <mat-select [(value)]="currentVotingMode" (selectionChange)="onVotingModeChange($event.value)" class="mode-dropdown" appearance="outline" hideRequiredMarker>
-            <mat-option value="VOTING">Voting</mat-option>
-            <mat-option value="DIRECT">Direct</mat-option>
-          </mat-select>
-        } @else {
-          <span class="mode-label-value">Mode : {{ currentVotingMode }}</span>
-        }
-      </div>
-      }
-    </nav>
+  <div class="tab-mode-selector">
+    <mat-select [disabled]="votingPhaseState > 5 || votingPhaseState < 1 || !isMasterAdmin" [value]="currentVotingMode" (selectionChange)="onVotingModeChange($event.value)" class="mode-dropdown" appearance="outline" hideRequiredMarker>
+      <mat-option value="VOTING">Voting</mat-option>
+      <mat-option value="DIRECT">Direct</mat-option>
+    </mat-select>
+  </div>
+</nav>
 
     <!-- Child route content -->
     <div class="event-child-content">

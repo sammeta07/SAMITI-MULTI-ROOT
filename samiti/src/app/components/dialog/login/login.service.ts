@@ -32,26 +32,6 @@ export class LoginService {
           baseRole
           profilePhoto
           fcmToken
-          accountRoles {
-            committees {
-              committeeId
-              committeeName
-              committeeLogo
-              committeeRole
-              roleLabel
-              events {
-                eventId
-                eventName
-                committeeId
-                committeeName
-                committeeLogo
-                designation
-                membershipStatus
-                eventStatus
-                eventVisibility
-              }
-            }
-          }
         }
       }
     }`;
@@ -67,4 +47,5 @@ export class LoginService {
       map(res => res.data.login)
     );
   }
+
 }

@@ -1,4 +1,4 @@
-import { Component, inject, OnInit, signal, computed } from '@angular/core';
+import { Component, inject, OnInit, signal, computed, ViewChild, ElementRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
@@ -13,7 +13,7 @@ import { MatSlideToggleModule } from '@angular/material/slide-toggle';
 import { MatTooltipModule, MatTooltip } from '@angular/material/tooltip';
 import { ChangeDetectorRef } from '@angular/core';
 import { HttpErrorResponse } from '@angular/common/http';
-import { firstValueFrom } from 'rxjs';
+import { firstValueFrom, finalize } from 'rxjs';
 import { GroupDetailsService } from './group-details.service';
 import { NotifierService } from '../../../../shared/notifier/notifier.service';
 import { CancelCommitteeMembershipRequestPayload, CommitteeEventListItem, CommitteeProfileMeta, CommitteeRosterMember, CommitteeDetailsPayload, SubmitCommitteeMembershipRequestPayload } from './group-details.models';
@@ -26,8 +26,10 @@ import { PromoteMemberDialogService } from '../../../../components/dialog/promot
 import { DemoteMemberDialogService } from '../../../../components/dialog/demote-member/demote-member.service';
 import { RemoveMemberDialogService } from '../../../../components/dialog/remove-member/remove-member.service';
 import { DashboardHierarchyTreeService } from '../dashboard-hierarchy-tree/dashboard-hierarchy-tree.service';
+import { LoadingStateService } from '../../../../shared/services/loading-state.service';
 import { TextFormatPipe } from '../../../../shared/pipe/text-format-pipe.pipe';
 import { ImageAssetService } from '../../../../core/services/image-asset.service';
+import { AuthService } from '../../../../core/services/auth.service';
 import { ImageCropperDialogComponent } from '../../../../shared/components/image-cropper-dialog/image-cropper-dialog.component';
 
 @Component({
@@ -61,8 +63,12 @@ export class GroupDetailsComponent implements OnInit {
   private readonly demoteMemberDialog = inject(DemoteMemberDialogService);
   private readonly removeMemberDialog = inject(RemoveMemberDialogService);
   private readonly hierarchyTreeService = inject(DashboardHierarchyTreeService);
+  private readonly loadingState = inject(LoadingStateService);
   private readonly cdr = inject(ChangeDetectorRef);
   private readonly imageAssetService = inject(ImageAssetService);
+  private readonly authService = inject(AuthService);
+
+  @ViewChild('eventsScrollContainer') eventsScrollContainer!: ElementRef<HTMLDivElement>;
 
   public readonly isLoading = signal<boolean>(false);
   public readonly copiedCommitteeId = signal<string | null>(null);
@@ -105,9 +111,9 @@ export class GroupDetailsComponent implements OnInit {
   });
 
   public readonly currentUserRoleLabel = computed(() => {
-    if (this.isCurrentUserMasterAdmin()) return 'Master Admin';
-    if (this.userCommitteeRole() === 'COMMITTEE_ADMIN') return 'Admin';
-    if (this.isCurrentUserMember()) return 'Member';
+    if (this.isCurrentUserMasterAdmin()) return 'Committee Master Admin';
+    if (this.userCommitteeRole() === 'COMMITTEE_ADMIN') return 'Committee Admin';
+    if (this.isCurrentUserMember()) return 'Committee Member';
     if (this.isCurrentUserPending()) return 'Pending Verification';
     return 'Guest User';
   });
@@ -165,7 +171,7 @@ export class GroupDetailsComponent implements OnInit {
 
     try {
       const uploadedLogoMetadata = await firstValueFrom(
-        this.imageAssetService.uploadSingleImageForCommitteeLogo(selectedOrCroppedFile)
+        this.imageAssetService.uploadSingleImageForCommitteeLogo(selectedOrCroppedFile, `committee-logo-${committee.committeeId}`)
       );
 
       const updatedCommittee = await firstValueFrom(
@@ -216,6 +222,24 @@ export class GroupDetailsComponent implements OnInit {
     return this.designationPhotos()[`${eventId}:${role}`];
   }
 
+  public getEventDesignationColor(eventId: number): string {
+    const accountRoles = this.authService.getStoredUserData()?.accountRoles;
+    if (!accountRoles?.committees) return '#64748b';
+    for (const committee of accountRoles.committees) {
+      const event = committee.events?.find(e => e.eventId === eventId);
+      if (event?.designation) {
+        switch (event.designation.toUpperCase()) {
+          case 'ADHYAKSHA': return '#FF00FF';
+          case 'UPADHYAKSHA': return '#800080';
+          case 'KOSHADHYAKSHA': return '#ffa500';
+          case 'AANKSHAK': return '#000000';
+          default: return '#64748b';
+        }
+      }
+    }
+    return '#64748b';
+  }
+
   public onDesignationPhotoSlotClicked(eventId: number, role: number | string, event: Event): void {
     event.stopPropagation();
     const host = (event.currentTarget as HTMLElement).querySelector('input[type="file"]') as HTMLInputElement | null;
@@ -239,7 +263,7 @@ export class GroupDetailsComponent implements OnInit {
 
     try {
       const uploadedMetadata = await firstValueFrom(
-        this.imageAssetService.uploadSingleImageForCommitteeLogo(selectedOrCroppedFile)
+        this.imageAssetService.uploadSingleImageForCommitteeLogo(selectedOrCroppedFile, `designation-${eventId}-${role}`)
       );
 
       const key = `${eventId}:${role}`;
@@ -302,7 +326,7 @@ export class GroupDetailsComponent implements OnInit {
 
     try {
       const uploadedMetadata = await firstValueFrom(
-        this.imageAssetService.uploadSingleImageForCommitteeLogo(selectedOrCroppedFile)
+        this.imageAssetService.uploadSingleImageForCommitteeLogo(selectedOrCroppedFile, `event-logo-${eventItem.eventId}`)
       );
 
       const updated = await firstValueFrom(
@@ -317,6 +341,7 @@ export class GroupDetailsComponent implements OnInit {
       );
 
       const formattedEventName = this.toTitleCase(eventItem.eventName || 'Event');
+      this.hierarchyTreeService.triggerHierarchyTreeRefresh();
       this.notifier.success(`Logo for **${formattedEventName}** has been updated successfully.`);
     } catch (error: any) {
       this.notifier.error(error?.message || 'Failed to update event logo.');
@@ -425,8 +450,14 @@ export class GroupDetailsComponent implements OnInit {
 
   private fetchCommitteeDetailsPayload(id: string): void {
     this.isLoading.set(true);
-    
-    this.groupDetailsService.getCommitteeDetails(id).subscribe({
+    this.loadingState.begin();
+
+    this.groupDetailsService.getCommitteeDetails(id).pipe(
+      finalize(() => {
+        this.isLoading.set(false);
+        this.loadingState.end();
+      })
+    ).subscribe({
       next: (data: CommitteeDetailsPayload) => {
         if (data && data.committeeId) {
           const committeeInfo: CommitteeProfileMeta = {
@@ -468,7 +499,28 @@ export class GroupDetailsComponent implements OnInit {
               ...event,
               id: event.id || Number(event.eventId || 0)
             }));
-            this.committeeEvents.set(safeEvents);
+            const statusSortOrder: Record<string, number> = {
+              COMPLETED: 0,
+              STARTED: 1,
+              UPCOMING: 2
+            };
+
+              const sortedEvents = [...safeEvents].sort((a, b) => {
+                const statusA = String(a.status || '').toUpperCase();
+                const statusB = String(b.status || '').toUpperCase();
+                const orderA = statusSortOrder[statusA] ?? 99;
+                const orderB = statusSortOrder[statusB] ?? 99;
+
+                if (orderA !== orderB) {
+                  return orderA - orderB;
+                }
+
+                const dateA = a.startDate ? new Date(a.startDate).getTime() : Infinity;
+                const dateB = b.startDate ? new Date(b.startDate).getTime() : Infinity;
+                return dateA - dateB;
+              });
+              this.committeeEvents.set(sortedEvents);
+              setTimeout(() => this.scrollToActiveEvent(), 50);
           } else {
             this.committeeEvents.set([]);
           }
@@ -476,11 +528,9 @@ export class GroupDetailsComponent implements OnInit {
         } else {
           this.notifier.error('Failed to parse committee details.');
         }
-        this.isLoading.set(false);
       },
       error: (err: HttpErrorResponse) => {
         this.notifier.error(err?.error?.message || 'Transaction error loading group rows.');
-        this.isLoading.set(false);
       }
     });
   }
@@ -716,9 +766,39 @@ export class GroupDetailsComponent implements OnInit {
     });
   }
 
-public onDeleteCommitteeWorkspace(): void {
+  public onDeleteCommitteeWorkspace(): void {
     if (!this.isCurrentUserMasterAdmin()) return;
     this.notifier.warn('Delete committee flow will be enabled after committee delete GraphQL API is restored.');
+  }
+
+  private scrollToActiveEvent(retries = 5): void {
+    const container = this.eventsScrollContainer?.nativeElement;
+    if (!container || !container.isConnected || retries === 0) return;
+
+    const events = this.committeeEvents();
+    if (!events.length) return;
+
+    const targetEvent = events.find(e => String(e.status).toUpperCase() === 'STARTED') ||
+                        events.find(e => String(e.status).toUpperCase() === 'UPCOMING');
+
+    if (!targetEvent) return;
+
+    const eventElements = container.querySelectorAll('.event-aligned-row');
+    if (eventElements.length === 0) {
+      setTimeout(() => this.scrollToActiveEvent(retries - 1), 50);
+      return;
+    }
+
+    for (let i = 0; i < eventElements.length; i++) {
+      if (events[i]?.eventId === targetEvent.eventId) {
+        const element = eventElements[i] as HTMLElement;
+        const containerRect = container.getBoundingClientRect();
+        const elementRect = element.getBoundingClientRect();
+        const scrollTop = container.scrollTop + (elementRect.top - containerRect.top) - 10;
+        container.scrollTo({ top: scrollTop, behavior: 'smooth' });
+        break;
+      }
+    }
   }
 
   async copyCommitteeId(committeeId: string, event: Event, tooltip: MatTooltip): Promise<void> {

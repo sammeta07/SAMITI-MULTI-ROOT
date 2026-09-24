@@ -17,6 +17,7 @@ export interface ProcessAndStoreImageAssetInput {
   usageContext: ImageAssetUsageContext;
   preferredResizeMode?: ImageResizeMode;
   compressionQuality?: number;
+  publicId?: string;
 }
 
 export interface StoredImageAssetMetadata {
@@ -117,7 +118,8 @@ export async function processAndStoreImageAsset(
     const uploadResult = await uploadImageBufferToCloudinary({
       imageBuffer: processedBuffer,
       folderPath,
-      publicIdSeed: generatedFileName.replace('.webp', '')
+      publicIdSeed: generatedFileName.replace('.webp', ''),
+      publicId: input.publicId
     });
 
     return {

@@ -20,7 +20,7 @@ export const eventVotingDetailsTypes = `
     myVotes: [MyEventVote!]
     canReviewInterest: Boolean!
     canManageVotingRoles: Boolean!
-    currentCommitteeRole: String!
+    committeeRole: String!
     votingPhaseState: Int!
     votingMode: String
   }
@@ -115,7 +115,7 @@ export const eventVotingDetailsResolvers = {
       );
       const canSelfNominate = Boolean(membership && String(membership.committee_role || '') === 'COMMITTEE_MEMBER');
       const isCurrentUserMasterAdmin = Boolean(membership && String(membership.committee_role || '') === 'COMMITTEE_MASTER_ADMIN');
-      const currentCommitteeRole = isCurrentUserMasterAdmin
+      const committeeRole = isCurrentUserMasterAdmin
         ? 'COMMITTEE_MASTER_ADMIN'
         : canManageVotingRoles
           ? 'COMMITTEE_ADMIN'
@@ -143,7 +143,9 @@ export const eventVotingDetailsResolvers = {
           roleName: roleRow.roleName,
           roleCode: roleRow.roleCode,
           hindiName: roleRow.hindiName,
-          englishName: roleRow.englishName
+          englishName: roleRow.englishName,
+          color: roleRow.color,
+          icon: roleRow.icon
         })),
         mappedVotingRoles: mappedVotingRoleRows,
         myInterestRoleIds: Array.from(myInterestRoleIds),
@@ -153,7 +155,7 @@ export const eventVotingDetailsResolvers = {
         myVotes: await getEventVotingMyVotes(eventId, context),
         canReviewInterest: isCurrentUserMasterAdmin,
         canManageVotingRoles,
-        currentCommitteeRole,
+        committeeRole,
         votingPhaseState: getEventVotingPhaseState(event, supportsVotingPhaseState),
         votingMode: supportsVotingMode ? event?.votingMode || 'VOTING' : 'VOTING'
       };

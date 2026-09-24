@@ -199,20 +199,49 @@ body.dialog-open {
 .cdk-overlay-container,
 .mat-mdc-autocomplete-panel {
   .mat-auto-options {
-    display: flex !important;
+    display: grid !important;
+    grid-template-columns: auto 1fr auto !important;
+    grid-template-rows: auto auto !important;
     align-items: center !important;
-    justify-content: space-between !important;
     gap: 10px !important;
     width: 100% !important;
     position: relative !important;
   }
 
-  .mat-auto-options-name-email {
-    flex: 1 1 auto !important;
+  .mat-auto-options .da-opt-avatar {
+    grid-column: 1 !important;
+    grid-row: 1 / span 2 !important;
+    width: 30px !important;
+    height: 30px !important;
+    border-radius: 50% !important;
+    display: inline-flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    background: #e2e8f0 !important;
+    overflow: hidden !important;
+    flex-shrink: 0 !important;
+    border: 4px solid transparent !important;
+  }
+
+  .mat-auto-options .mat-auto-options-name-email {
+    grid-column: 2 !important;
+    grid-row: 1 / span 2 !important;
     min-width: 0 !important;
     display: flex !important;
-    align-items: center !important;
-    justify-content: space-between !important;
+    flex-direction: column !important;
+    align-items: flex-start !important;
+    justify-content: start !important;
+    gap: 2px !important;
+    text-align: left !important;
+  }
+
+  .mat-auto-options .da-opt-cup,
+  .mat-auto-options .mat-auto-options-cup,
+  .mat-auto-options .da-opt-restricted,
+  .mat-auto-options .done-icon {
+    grid-column: 3 !important;
+    grid-row: 1 / span 2 !important;
+    justify-self: end !important;
   }
 
   .da-opt-cup,
@@ -220,20 +249,13 @@ body.dialog-open {
     display: inline-flex !important;
     align-items: center !important;
     justify-content: center !important;
-    margin-left: auto !important;
     flex: 0 0 auto !important;
-    color: #16a34a !important;
-
-    mat-icon {
-      font-size: 1rem !important;
-      width: 1rem !important;
-      height: 1rem !important;
-      line-height: 1 !important;
-    }
+    font-size: 1.4rem !important;
+    font-weight: 800 !important;
+    line-height: 1 !important;
   }
 
   .done-icon {
-    flex: 0 0 auto !important;
     display: flex !important;
     align-items: center !important;
   }
@@ -256,5 +278,37 @@ body.dialog-open {
       border-left: 3px solid #64748b !important;
       .da-opt-avatar { border-color: #64748b !important; background: #e2e8f0 !important; }
     }
+  }
+
+  /* Remove left border from reassign autocomplete options */
+  .mat-mdc-option.da-opt-row {
+    border-left: none !important;
+  }
+
+  /* Make disabled reassign options clearer while keeping them disabled */
+  .mat-mdc-option.da-opt-row.mdc-list-item--disabled,
+  .mat-mdc-option.da-opt-row[disabled] {
+    opacity: 1 !important;
+    filter: none !important;
+    cursor: not-allowed !important;
+    pointer-events: auto !important;
+
+    *, & * {
+      opacity: 1 !important;
+      filter: none !important;
+      cursor: not-allowed !important;
+    }
+
+    &:hover { background: #f1f5f9 !important; cursor: not-allowed !important; }
+
+    .da-opt-name { color: #94a3b8 !important; }
+    .da-opt-email { color: #94a3b8 !important; }
+    .da-opt-avatar { opacity: 1 !important; }
+    .da-opt-cup mat-icon { color: #cbd5e1 !important; }
+    .da-opt-restricted { background: #f1f5f9 !important; color: #94a3b8 !important; }
+  }
+
+  .mat-mdc-option.da-opt-row.mdc-list-item--disabled:hover {
+    cursor: not-allowed !important;
   }
 }

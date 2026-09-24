@@ -65,59 +65,84 @@
           <span class="title-text">Banner Images</span>
           <span class="count-pill">{{ bannerCount }}/{{ MAX_BANNERS }}</span>
         </div>
-        <button mat-stroked-button class="banner-add-btn"
-                [disabled]="!canUploadMoreBanners || isBannerUploading()"
-                (click)="onAddProgramBannerClick()"
-                [matTooltip]="canUploadMoreBanners ? 'Upload up to ' + (MAX_BANNERS - bannerCount) + ' more image(s)' : 'Maximum ' + MAX_BANNERS + ' banners reached'">
-          @if (isBannerUploading()) {
-            <mat-progress-spinner mode="indeterminate" diameter="14" strokeWidth="2"></mat-progress-spinner>
-          } @else {
-            <mat-icon>add_photo_alternate</mat-icon>
+        <div class="banner-header-actions">
+          @if (bannerCount > 0) {
+            @if (isSelectionMode()) {
+              <button mat-stroked-button class="banner-cancel-btn" type="button" (click)="toggleSelectionMode()" [disabled]="isDeletingBanners()">
+                <mat-icon>close</mat-icon>
+                <span>Cancel</span>
+              </button>
+              <button mat-stroked-button class="banner-delete-selected-btn" type="button" (click)="deleteSelectedBanners()" [disabled]="selectedBannerCount === 0 || isDeletingBanners()">
+                @if (isDeletingBanners()) {
+                  <mat-progress-spinner mode="indeterminate" diameter="14" strokeWidth="2"></mat-progress-spinner>
+                } @else {
+                  <mat-icon>delete</mat-icon>
+                }
+                <span>Delete Selected ({{ selectedBannerCount }})</span>
+              </button>
+            } @else {
+              <button mat-stroked-button class="banner-select-btn" type="button" (click)="toggleSelectionMode()">
+                <mat-icon>check_box</mat-icon>
+                <span>Select</span>
+              </button>
+            }
           }
-          <span>Add</span>
-        </button>
+        </div>
       </div>
 
-      @if (bannerCount > 0) {
       <div class="banner-grid">
-        @for (imgUrl of programData()!.bannerImages; track imgUrl) {
-        <div class="banner-image-card">
-          <img [src]="imgUrl" [alt]="programData()?.programName" class="banner-img" />
-          <button mat-icon-button class="banner-delete-btn" title="Delete banner"
-                  (click)="onDeleteProgramBanner(imgUrl)">
-            <mat-icon>delete</mat-icon>
+        @if (bannerCount === 0 && canUploadMoreBanners && !isSelectionMode()) {
+          <button type="button" class="banner-upload-tile"
+                  [disabled]="isBannerUploading()"
+                  (click)="onAddProgramBannerClick()">
+            @if (isBannerUploading()) {
+              <mat-progress-spinner mode="indeterminate" diameter="20" strokeWidth="2"></mat-progress-spinner>
+            } @else {
+              <mat-icon>add_photo_alternate</mat-icon>
+              <span>Add Banner</span>
+            }
           </button>
+        }
+
+        @for (imgUrl of programData()!.bannerImages; track imgUrl) {
+        <div class="banner-image-card"
+             [class.selected]="isSelectionMode() && isBannerSelected(imgUrl)"
+             (click)="isSelectionMode() ? toggleBannerSelection(imgUrl) : null">
+          <img [src]="imgUrl" [alt]="programData()?.programName" class="banner-img" />
+
+          @if (isSelectionMode()) {
+            <div class="banner-select-overlay">
+              <mat-checkbox [checked]="isBannerSelected(imgUrl)" (click)="$event.stopPropagation()" (change)="toggleBannerSelection(imgUrl)"></mat-checkbox>
+            </div>
+          } @else {
+            <button mat-icon-button class="banner-delete-btn" title="Delete banner"
+                    (click)="onDeleteProgramBanner(imgUrl)">
+              <mat-icon>delete</mat-icon>
+            </button>
+          }
         </div>
         }
-        @if (canUploadMoreBanners) {
-        <button type="button" class="banner-upload-tile"
-                [disabled]="isBannerUploading()"
-                (click)="onAddProgramBannerClick()">
-          @if (isBannerUploading()) {
-            <mat-progress-spinner mode="indeterminate" diameter="20" strokeWidth="2"></mat-progress-spinner>
-          } @else {
-            <mat-icon>add_photo_alternate</mat-icon>
-            <span>Add Banner</span>
-          }
-        </button>
+
+        @if (bannerCount > 0 && canUploadMoreBanners && !isSelectionMode()) {
+          <button type="button" class="banner-upload-tile"
+                  [disabled]="isBannerUploading()"
+                  (click)="onAddProgramBannerClick()">
+            @if (isBannerUploading()) {
+              <mat-progress-spinner mode="indeterminate" diameter="20" strokeWidth="2"></mat-progress-spinner>
+            } @else {
+              <mat-icon>add_photo_alternate</mat-icon>
+              <span>Add Banner</span>
+            }
+          </button>
+        }
+
+        @if (bannerCount === 0 && !(canUploadMoreBanners && !isSelectionMode())) {
+          <div class="banner-empty-state">
+            <mat-icon>image_not_supported</mat-icon>
+            <p>No banner images uploaded yet.</p>
+          </div>
         }
       </div>
-      } @else {
-      <div class="banner-empty-state">
-        <mat-icon>image_not_supported</mat-icon>
-        <p>No banner images uploaded yet.</p>
-        <button mat-flat-button class="banner-empty-upload-btn"
-                [disabled]="isBannerUploading()"
-                (click)="onAddProgramBannerClick()">
-          @if (isBannerUploading()) {
-            <mat-progress-spinner mode="indeterminate" diameter="14" strokeWidth="2"></mat-progress-spinner>
-          } @else {
-            <mat-icon>add_photo_alternate</mat-icon>
-          }
-          <span>Upload Banner</span>
-        </button>
-      </div>
-      }
     </section>
 
     <input

@@ -3,6 +3,7 @@ import { CommonModule } from "@angular/common";
 import { MatButtonModule } from "@angular/material/button";
 import { MatIconModule } from "@angular/material/icon";
 import { MatProgressSpinnerModule } from "@angular/material/progress-spinner";
+import { MatTooltipModule } from "@angular/material/tooltip";
 import { SentCommitteeMemberRequestsService, SentCommitteeMemberRequestItem } from "./sent-committee-member-requests.service";
 import { ConfirmDialogData } from "../../../../../components/dialog/confirm/confirm-dialog.models";
 import { ConfirmDialogService } from "../../../../../components/dialog/confirm/confirm-dialog.service";
@@ -15,6 +16,7 @@ import { ConfirmDialogService } from "../../../../../components/dialog/confirm/c
     MatButtonModule,
     MatIconModule,
     MatProgressSpinnerModule,
+    MatTooltipModule,
   ],
   templateUrl: "./sent-committee-member-requests.component.html",
   styleUrls: ["../../dashboard-sent-requests/dashboard-sent-requests.scss"],

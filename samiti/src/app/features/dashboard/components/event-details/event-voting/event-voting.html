@@ -1,18 +1,33 @@
 <div class="voting-tab-content">
   @if (isLoading()) {
-    <!-- Skeleton Loader -->
+    <!-- Skeleton Loader: 3 full-width cards, each split 20% (photo+name) / 80% (table list) -->
     <div class="voting-skeleton">
-      <div class="voting-skeleton-grid">
-        @for (i of [1, 2, 3, 4]; track i) {
-          <div class="voting-skeleton-card">
+      @for (i of [1, 2, 3]; track i) {
+        <div class="voting-skeleton-card">
+          <!-- LEFT 20%: circle photo + name -->
+          <div class="voting-skeleton-left">
             <div class="voting-skeleton-avatar skeleton-box circle"></div>
             <div class="voting-skeleton-lines">
               <div class="skeleton-box voting-skeleton-line lg"></div>
-              <div class="skeleton-box voting-skeleton-line"></div>
+              <div class="skeleton-box voting-skeleton-line sm"></div>
             </div>
           </div>
-        }
-      </div>
+
+          <!-- RIGHT 80%: table with list -->
+          <div class="voting-skeleton-right">
+            @for (r of [1, 2, 3, 4]; track r) {
+              <div class="voting-skeleton-row">
+                <div class="skeleton-box voting-skeleton-row-avatar circle"></div>
+                <div class="voting-skeleton-row-lines">
+                  <div class="skeleton-box voting-skeleton-line"></div>
+                  <div class="skeleton-box voting-skeleton-line sm"></div>
+                </div>
+                <div class="skeleton-box voting-skeleton-row-action"></div>
+              </div>
+            }
+          </div>
+        </div>
+      }
     </div>
   } @else {
   <!-- ========================================================================= -->
@@ -25,7 +40,7 @@
         <div class="panel-card-header voting-available-roles-header">
           <div class="header-title-left">
             <mat-icon class="icon-accent-voting">fact_check</mat-icon>
-            <span class="title-text">All Designations</span>
+            <span class="title-text">All Roles</span>
             <span class="count-pill">{{ eventData?.availableRoles?.length || 0 }}</span>
           </div>
           <div class="header-actions-right">
@@ -50,11 +65,15 @@
               class="role-picker-card"
               [class.role-picker-card-selected]="isRoleMapped(role.roleId)"
               [class.role-picker-card-locked]="isVotingRolesLocked"
+              [ngStyle]="isRoleMapped(role.roleId) && role.color ? {'border-color': role.color} : {}"
             >
-              @if (isRoleMapped(role.roleId)) {
-                <span class="role-selected-badge" aria-hidden="true">
-                  <mat-icon>check_circle</mat-icon>
-                </span>
+              @if (role.icon) {
+                <span
+                  class="role-icon-badge"
+                  [ngStyle]="{'background-color': role.color || '#cbd5e1'}"
+                  aria-hidden="true"
+                  >{{ role.icon }}</span
+                >
               }
               <div class="role-picker-text">
                 <div class="role-name-primary">
@@ -67,12 +86,15 @@
                   }}
                 </div>
               </div>
-              <input
-                type="checkbox"
-                [checked]="isRoleMapped(role.roleId)"
-                [disabled]="!canEditVotingRoles || !role.roleId"
-                (change)="onToggleVotingRole(role.roleId || 0, $any($event.target).checked)"
-              />
+              @if (isMasterAdmin) {
+                <input
+                  type="checkbox"
+                  [checked]="isRoleMapped(role.roleId)"
+                  [disabled]="!canEditVotingRoles || !role.roleId"
+                  [ngStyle]="{'accent-color': isRoleMapped(role.roleId) && role.color ? role.color : '#16a34a'}"
+                  (change)="onToggleVotingRole(role.roleId || 0, $any($event.target).checked)"
+                />
+              }
             </label>
           } @empty {
             <div class="table-empty-cell">No master roles available.</div>
@@ -86,14 +108,21 @@
       <!-- Header Controls & Phase Lifecycle Triggers -->
       <div class="panel-card-header designations-header-bg">
         <div class="header-title-left">
-          <mat-icon class="icon-accent-designation">badge</mat-icon>
+          <mat-icon class="icon-accent-designation">group</mat-icon>
           <span class="title-text"
-            >Selected Designations {{ votingPhaseState ? '(' + votingPhaseState + ')' : '' }}</span
+            >Selected Roles {{ votingPhaseState ? '(' + votingPhaseState + ')' : '' }}</span
           >
           <span class="count-pill">{{ votingDisplayCards.length || 0 }}</span>
         </div>
 
         <div class="header-actions-right">
+          @if (!isStartVotingEnabled && startVotingDisabledReason) {
+            <div class="voting-disabled-hint">
+              <mat-icon>info</mat-icon>
+              <span>{{ startVotingDisabledReason }}</span>
+            </div>
+          }
+
           @if (isMasterAdmin) {
             <div class="voting-controls-actions-row voting-controls-header-actions">
               <!-- Condition 2: Phase 1 (Roles Locked -> Start Nominations) -->
@@ -148,16 +177,64 @@
               }
 
               <!-- Condition 6: Phase 5 (Voting Stopped -> Declare Results) -->
-              @if (votingPhaseState === 5 && isDeclareResultsEnabled) {
-                <button
-                  mat-stroked-button
-                  class="action-btn voting-declare-btn voting-phase-btn"
-                  (click)="onDeclareResults()"
-                >
-                  <mat-icon>emoji_events</mat-icon>
-                  <span>Declare Results</span>
-                </button>
+              @if (votingPhaseState === 5) {
+                @if (isDeclareResultsEnabled) {
+                  <button
+                    mat-stroked-button
+                    class="action-btn voting-declare-btn voting-phase-btn"
+                    (click)="onDeclareResults()"
+                  >
+                    <mat-icon>emoji_events</mat-icon>
+                    <span>Declare Results</span>
+                  </button>
+                } @else {
+                  <span class="tooltip-wrapper" [matTooltip]="declareResultsDisabledReason">
+                    <button
+                      mat-stroked-button
+                      class="action-btn voting-declare-btn voting-phase-btn"
+                      disabled
+                    >
+                      <mat-icon>emoji_events</mat-icon>
+                      <span>Declare Results</span>
+                    </button>
+                  </span>
+                }
               }
+            </div>
+          }
+
+          @if (votingPhaseState === 2 && !isMasterAdmin) {
+            <div class="voting-info-hint">
+              <mat-icon>info</mat-icon>
+              <span>Nomination for the selected roles are started</span>
+            </div>
+          }
+
+          @if (votingPhaseState === 3 && !isMasterAdmin) {
+            <div class="voting-muted-hint">
+              <mat-icon>info</mat-icon>
+              <span>Nomination for the selected roles are stopped</span>
+            </div>
+          }
+
+          @if (votingPhaseState === 4 && !isMasterAdmin && hasMultiCandidateRole()) {
+            <div class="voting-info-hint">
+              <mat-icon>info</mat-icon>
+              <span>Voting for the selected roles is started</span>
+            </div>
+          }
+
+          @if (votingPhaseState === 5 && !isMasterAdmin) {
+            <div class="voting-muted-hint">
+              <mat-icon>info</mat-icon>
+              <span>Voting for the selected roles are stopped</span>
+            </div>
+          }
+
+          @if (votingPhaseState === 6 && !isMasterAdmin) {
+            <div class="voting-muted-hint">
+              <mat-icon>info</mat-icon>
+              <span>Results are declared based on your voting</span>
             </div>
           }
 
@@ -166,13 +243,6 @@
               <mat-icon>history</mat-icon>
               <span>History</span>
             </button>
-          }
-
-          @if (!isStartVotingEnabled && startVotingDisabledReason) {
-            <div class="voting-disabled-hint">
-              <mat-icon>info</mat-icon>
-              <span>{{ startVotingDisabledReason }}</span>
-            </div>
           }
         </div>
       </div>
@@ -199,25 +269,23 @@
                       [class.voting-card-icon-wrap-winner]="
                         votingPhaseState === 6 && getWinnerForRole(card.role.roleId)
                       "
+                      [ngStyle]="card.role.color ? {'--role-color': card.role.color} : {}"
                     >
-                      @if (
-                        votingPhaseState === 6 &&
-                        getWinnerForRole(card.role.roleId) &&
-                        !isTieRole(card.role.roleId)
-                      ) {
-                        @if (getWinnerForRole(card.role.roleId)!.photo) {
-                          <img
-                            [src]="getWinnerForRole(card.role.roleId)!.photo!"
-                            [alt]="getWinnerForRole(card.role.roleId)!.name | titlecase"
-                            class="voting-card-winner-photo"
-                          />
-                        } @else {
-                          <div class="voting-card-winner-fallback">
-                            <mat-icon>emoji_events</mat-icon>
-                          </div>
-                        }
+                    @if (
+                      votingPhaseState === 6 &&
+                      getWinnerForRole(card.role.roleId)
+                    ) {
+                      @if (card.role.icon) {
+                        <span class="voting-card-role-icon" [ngStyle]="{'color': card.role.color || '#d97706'}">{{ card.role.icon }}</span>
                       } @else {
-                        <mat-icon>{{ getVotingRoleIcon(card.role) }}</mat-icon>
+                        <mat-icon class="winner-fallback-icon">{{ getVotingRoleIcon(card.role) }}</mat-icon>
+                      }
+                    } @else {
+                        @if (card.role.icon) {
+                          <span class="voting-card-role-icon" [ngStyle]="{'color': card.role.color || '#64748b'}">{{ card.role.icon }}</span>
+                        } @else {
+                          <mat-icon>{{ getVotingRoleIcon(card.role) }}</mat-icon>
+                        }
                       }
                     </div>
 
@@ -264,7 +332,7 @@
                 @if (votingPhaseState === 0) {
                   <div class="voting-interest-empty-state">
                     <span class="empty-state-icon"><mat-icon>fact_check</mat-icon></span>
-                    <span class="empty-state-title">Roles mapped</span>
+                    <span class="empty-state-title">Mapped Roles</span>
                     <span class="empty-state-sub"
                       >Nominations and voting activity will appear here once roles are locked and
                       nominations open.</span
@@ -272,8 +340,8 @@
                   </div>
                 }
 
-                <!-- CONDITION 3: Phase 2 Member Interest Toggle -->
                 @if (!isMasterAdmin && votingPhaseState === 2) {
+                  <!-- CONDITION 3: Phase 2 Member Interest Toggle -->
                   <div class="voting-card-interest-row">
                     @if (isInterestedInRole(card.role.roleId)) {
                       <button
@@ -407,9 +475,9 @@
                                   <td class="pending-col-vote">
                                     @if (item.status.toUpperCase() === 'APPROVED') {
                                       @if (isSingleCandidateRole(card.role.roleId)) {
-                                        <span class="auto-winner-badge">
+                                        <span class="expected-winner-badge">
                                           <mat-icon>emoji_events</mat-icon>
-                                          <span>WINNER</span>
+                                          <span>EXPECTED WINNER</span>
                                         </span>
                                       } @else if (hasVotedFor(card.role.roleId, item.userId)) {
                                         <button
@@ -470,195 +538,278 @@
                 }
 
                 <!-- CONDITION 6: Phase 5 Tie Breaker Panel -->
-                @if (votingPhaseState === 5 && isTieRole(card.role.roleId)) {
-                  <div class="voting-card-tie-breaker">
-                    <div class="tie-breaker-label">
-                      <mat-icon>casino</mat-icon>
-                      <span>Tie Breaker: Committee Decision Required</span>
+                @if (votingPhaseState >= 5 && isTieRole(card.role.roleId)) {
+                  <div class="voting-card-tie-breaker" [ngStyle]="card.role.color ? {'--role-color': card.role.color} : {}">
+                    <div class="tie-breaker-header">
+                      <div class="tie-breaker-badge">
+                        <mat-icon>casino</mat-icon>
+                        <span>TIE BREAKER</span>
+                      </div>
+                      <div class="tie-breaker-equal-votes">
+                        <span class="tie-vote-value">{{ getTiedCandidatesForRole(card.role.roleId)[0]?.voteCount || 0 }}</span>
+                        <span class="tie-vote-label">votes each</span>
+                      </div>
                     </div>
-                    <div class="tie-breaker-actions">
-                      <span class="tie-breaker-hint">Select winner:</span>
+                    <div class="tie-breaker-subtitle">
+                      <mat-icon>gavel</mat-icon>
+                      <span>Committee Decision Required — Select a winner to proceed</span>
+                    </div>
+                    <div class="tie-breaker-candidates">
                       @for (
                         candidate of getTiedCandidatesForRole(card.role.roleId);
                         track candidate.userId
                       ) {
                         <button
-                          mat-stroked-button
-                          class="tie-breaker-btn"
+                          type="button"
+                          class="tie-breaker-candidate-card"
                           (click)="
                             onResolveTieBreaker(card.role.roleId, candidate.userId, candidate.name)
                           "
                           [disabled]="!isMasterAdmin"
                         >
-                          <span class="tie-breaker-candidate-name"
-                            >{{ candidate.name + ' - ' | titlecase }}
-                          </span>
-                          <span class="tie-breaker-vote-count">{{ candidate.voteCount }}</span>
+                          <div class="tie-candidate-avatar">
+                            @if (candidate.photo) {
+                              <img
+                                [src]="candidate.photo"
+                                [alt]="candidate.name | titlecase"
+                                class="tie-candidate-photo"
+                                (error)="candidate.photo = null"
+                              />
+                            } @else {
+                              <span class="tie-candidate-initial">{{
+                                candidate.name.charAt(0).toUpperCase()
+                              }}</span>
+                            }
+                          </div>
+                          <span class="tie-candidate-name">{{ candidate.name | titlecase }}</span>
+                          <span class="tie-candidate-votes">{{ candidate.voteCount }} votes</span>
+                          @if (isMasterAdmin) {
+                            <span class="tie-select-indicator">SELECT</span>
+                          }
                         </button>
                       }
                     </div>
+                    @if (!isMasterAdmin) {
+                      <div class="tie-breaker-admin-only">
+                        <mat-icon>lock</mat-icon>
+                        <span>Only Master Admin can resolve tie breakers</span>
+                      </div>
+                    }
                   </div>
                 }
 
                 <!-- CONDITION 7: Phase 6 Final Voting Results View -->
                 @if (
                   votingPhaseState === 6 &&
-                  getWinnerForRole(card.role.roleId) &&
-                  !isTieRole(card.role.roleId)
+                  getWinnerForRole(card.role.roleId)
                 ) {
-                  <div class="voting-card-footer">
-                    <div class="result-candidates-scroll">
-                      @for (
-                        candidate of getCandidatesForRole(card.role.roleId);
-                        track candidate.userId
-                      ) {
-                        <div
-                          class="result-candidate-row"
-                          [class.result-winner-row]="
-                            candidate.userId === getWinnerForRole(card.role.roleId)!.userId
-                          "
-                        >
-                          <div class="result-candidate-top">
-                            <div class="result-candidate-avatar">
-                              @if (candidate.photo) {
-                                <img
-                                  [src]="candidate.photo"
-                                  [alt]="candidate.name | titlecase"
-                                  class="avatar-img"
-                                  (error)="candidate.photo = null"
-                                />
-                              } @else {
-                                <span class="avatar-fallback">{{
-                                  candidate.name.charAt(0).toUpperCase()
-                                }}</span>
-                              }
-                            </div>
-                            <div class="result-candidate-name">
-                              <span class="result-candidate-name-text">
-                                {{ candidate.name | titlecase }}
-                                @if (
-                                  candidate.userId === getWinnerForRole(card.role.roleId)!.userId
-                                ) {
-                                  <mat-icon class="result-winner-cup">emoji_events</mat-icon>
-                                }
-                              </span>
-                              <span class="result-candidate-email">{{ candidate.email }}</span>
-                            </div>
-
-                            @if (
-                              candidate.userId === getWinnerForRole(card.role.roleId)!.userId &&
-                              isMasterAdmin
-                            ) {
-                              <button
-                                type="button"
-                                class="assign-winner-btn center-reassign-btn"
-                                (click)="onAssignWinningRole(card.role.roleId)"
-                                matTooltip="Emergency reassign winner"
-                                matTooltipPosition="above"
-                              >
-                                <span class="assign-winner-icon" aria-hidden="true">⇄</span>
-                              </button>
-                            }
-
-                            <div class="result-vote-count">
-                              {{ candidate.voteCount }} votes
-                              @if (
-                                candidate.userId === getWinnerForRole(card.role.roleId)!.userId
-                              ) {
-                                <span class="voting-mode-chip">{{
+                  <div class="results-container results-split-layout" [ngStyle]="card.role.color ? {'--role-color': card.role.color} : {}">
+                    <div class="results-left-wrapper">
+                      <div class="results-winner-col">
+                        <!-- Winner Card -->
+                        @for (
+                          candidate of [getWinnerForRole(card.role.roleId)!];
+                          track candidate.userId
+                        ) {
+                          <div class="result-winner-card">
+                            <div class="results-header">
+                              @if (getVotingModeWonByDisplay(card.role.roleId)) {
+                                <div class="results-won-by">{{
                                   getVotingModeWonByDisplay(card.role.roleId)
-                                }}</span>
+                                }}</div>
                               }
+                              @if (isMasterAdmin) {
+                                <button
+                                  type="button"
+                                  class="result-reassign-btn"
+                                  (click)="onAssignWinningRole(card.role.roleId)"
+                                  matTooltip="Emergency reassign winner"
+                                  matTooltipPosition="above"
+                                >
+                                  <mat-icon>swap_horiz</mat-icon>
+                                </button>
+                              }
+                            </div>
+
+                            <div class="result-winner-body">
+                              <div class="result-winner-top">
+                                <div class="result-winner-avatar">
+                                  @let mappedWinner = getMappedRoleWinner(card.role.roleId);
+                                  @let winnerName = candidate.name || mappedWinner?.name || '';
+                                  @let winnerEmail = candidate.email || getCommitteeMemberEmail(candidate.userId) || '';
+                                  @let winnerPhoto = candidate.photo || mappedWinner?.photo || null;
+                                  @if (winnerPhoto) {
+                                    <img
+                                      [src]="winnerPhoto"
+                                      [alt]="winnerName | titlecase"
+                                      class="result-winner-photo"
+                                      (error)="candidate.photo = null"
+                                    />
+                                  } @else {
+                                    <span class="result-winner-initial">{{
+                                      winnerName.charAt(0).toUpperCase()
+                                    }}</span>
+                                  }
+                                </div>
+                                <div class="result-winner-details">
+                                  <span class="result-winner-name">{{ winnerName | titlecase }}</span>
+                                  <span class="result-winner-email">{{ winnerEmail }}</span>
+                                </div>
+                              </div>
+                              <div class="result-winner-stats">
+                                <span class="result-winner-stat-left">
+                                  <span class="result-winner-votes">{{ candidate.voteCount }}</span>
+                                  <span class="result-winner-vote-label">of {{ getTotalVotes(card.role.roleId) }} votes</span>
+                                </span>
+                                <span class="result-winner-percentage">{{ getVotePercentage(card.role.roleId, candidate.voteCount) }}%</span>
+                              </div>
                             </div>
                           </div>
-                        </div>
-                      }
+                        }
+                      </div>
+
+
                     </div>
-                  </div>
-                }
 
-                <!-- Emergency Reassign Panel (Phase 6 Admin Override) -->
-                @if (isReassignOpenForRole(card.role.roleId)) {
-                  <div class="reassign-select-row">
-                    <mat-form-field class="reassign-select-field" appearance="fill">
-                      <span matPrefix class="da-input-icon"><mat-icon>swap_horiz</mat-icon></span>
-                      <input
-                        type="text"
-                        matInput
-                        autocomplete="off"
-                        [(ngModel)]="directAssignInputText[card.role.roleId]"
-                        (input)="onReassignSearch(card.role.roleId, $any($event.target).value)"
-                        placeholder="Search member to reassign..."
-                        [matAutocomplete]="autoReassign"
-                      />
-                      <span matSuffix class="da-input-icon"><mat-icon>expand_more</mat-icon></span>
-
-                      <mat-autocomplete
-                        #autoReassign="matAutocomplete"
-                        hideSingleSelectionIndicator
-                        (optionSelected)="onReassignSelect(card.role.roleId, $event)"
-                      >
-                        @for (member of getReassignOptions(card.role.roleId); track member.userId) {
-                          <mat-option
-                            [value]="member.userId"
-                            class="da-opt-row"
-                            [ngClass]="getRoleColorClass(member.committeeRole)"
-                            [disabled]="
-                              member.isWinner || member.committeeRole === 'COMMITTEE_MASTER_ADMIN'
-                            "
-                            (onSelectionChange)="
-                              onReassignOptionSelection(card.role.roleId, $event)
-                            "
-                          >
-                            <div class="mat-auto-options">
-                              <span
-                                class="da-opt-avatar"
-                                [ngClass]="getRoleColorClass(member.committeeRole)"
-                              >
-                                @if (member.photo) {
+                    @if (getCandidatesForRole(card.role.roleId).length > 1 && !isReassignOpenForRole(card.role.roleId)) {
+                      <div class="results-others-col">
+                        <div class="results-others-header">
+                          <div class="results-others-label">Other Candidates</div>
+                        </div>
+                        <div class="results-others">
+                          @for (
+                            candidate of getOtherCandidatesForRole(card.role.roleId);
+                            track candidate.userId
+                          ) {
+                            <div class="result-other-row" [class]="getRoleColorClass(candidate.committeeRole)">
+                              <div class="result-other-avatar">
+                                @if (candidate.photo) {
                                   <img
-                                    [src]="member.photo"
-                                    [alt]="member.name"
-                                    class="da-opt-img"
+                                    [src]="candidate.photo"
+                                    [alt]="candidate.name | titlecase"
+                                    class="result-other-photo"
+                                    (error)="candidate.photo = null"
                                   />
                                 } @else {
-                                  <span class="da-opt-initials">{{
-                                    getInitials(member.name)
+                                  <span class="result-other-initial">{{
+                                    candidate.name.charAt(0).toUpperCase()
                                   }}</span>
                                 }
-                              </span>
-                              <div class="mat-auto-options-name-email">
-                                <span class="da-opt-name">{{ member.name | titlecase }}</span>
-                                <span class="da-opt-email">{{ member.email }}</span>
                               </div>
-                              @if (member.isWinner) {
-                                <span class="da-opt-cup"><mat-icon>emoji_events</mat-icon></span>
-                              } @else if (member.committeeRole === 'COMMITTEE_MASTER_ADMIN') {
-                                <span class="da-opt-restricted">Restricted</span>
-                              }
+                              <div class="result-other-details">
+                                <span class="result-other-name">{{ candidate.name | titlecase }}</span>
+                                <span class="result-other-email">{{ candidate.email }}</span>
+                              </div>
+                              <div class="result-other-bar-track">
+                                <div
+                                  class="result-other-bar-fill"
+                                  [style.width.%]="getVotePercentage(card.role.roleId, candidate.voteCount)"
+                                ></div>
+                              </div>
+                              <div class="result-other-votes">
+                                <span class="result-other-vote-count">{{ candidate.voteCount }}</span>
+                                <span class="result-other-vote-pct">{{ getVotePercentage(card.role.roleId, candidate.voteCount) }}%</span>
+                              </div>
                             </div>
-                          </mat-option>
-                        } @empty {
-                          <mat-option disabled class="da-opt-empty">No members found</mat-option>
-                        }
-                      </mat-autocomplete>
-                    </mat-form-field>
+                          }
+                        </div>
+                      </div>
+                    }
 
-                    <button
-                      mat-stroked-button
-                      class="action-btn reassign-confirm-btn"
-                      (click)="onConfirmReassign(card.role.roleId)"
-                      [disabled]="!selectedReassignMemberId()"
-                    >
-                      Reassign
-                    </button>
-                    <button
-                      mat-stroked-button
-                      class="action-btn reassign-cancel-btn"
-                      (click)="cancelReassign()"
-                    >
-                      Cancel
-                    </button>
+                    @if (isReassignOpenForRole(card.role.roleId)) {
+                      <div class="reassign-select-row" [ngStyle]="card.role.color ? {'--role-color': card.role.color} : {}">
+                        <div class="reassign-panel-header">
+                          <div class="reassign-panel-badge">
+                            <span>EMERGENCY REASSIGN</span>
+                          </div>
+                          <div class="reassign-panel-actions">
+                            <button
+                              mat-icon-button
+                              class="reassign-confirm-btn"
+                              (click)="onConfirmReassign(card.role.roleId)"
+                              [disabled]="!selectedReassignMemberId()"
+                              matTooltip="Confirm"
+                              matTooltipPosition="above"
+                            >
+                              <mat-icon>check</mat-icon>
+                            </button>
+                            <button
+                              mat-icon-button
+                              class="reassign-cancel-btn"
+                              (click)="cancelReassign()"
+                              matTooltip="Cancel"
+                              matTooltipPosition="above"
+                            >
+                              <mat-icon>close</mat-icon>
+                            </button>
+                          </div>
+                        </div>
+                        <div class="reassign-panel-body">
+                          <mat-form-field class="reassign-select-field" appearance="fill" subscriptSizing="dynamic">
+                            <span matPrefix class="da-input-icon"><mat-icon>search</mat-icon></span>
+                            <input
+                              type="text"
+                              matInput
+                              autocomplete="off"
+                              [(ngModel)]="directAssignInputText[card.role.roleId]"
+                              (input)="onReassignSearch(card.role.roleId, $any($event.target).value)"
+                              (focus)="onDropdownOpen()"
+                              placeholder="Search member by name..."
+                              [matAutocomplete]="autoReassign"
+                            />
+                            <span matSuffix class="da-input-icon"><mat-icon>expand_more</mat-icon></span>
+
+                            <mat-autocomplete
+                              #autoReassign="matAutocomplete"
+                              hideSingleSelectionIndicator
+                              (optionSelected)="onReassignSelect(card.role.roleId, $event)"
+                            >
+                              @for (member of getCommitteeMembersForReassign(); track member.userId) {
+                                <mat-option
+                                  [value]="member.userId"
+                                  class="da-opt-row"
+                                  [ngClass]="getRoleColorClass(member.committeeRole)"
+                                  [disabled]="member.isWinner"
+                                  (onSelectionChange)="
+                                    onReassignOptionSelection(card.role.roleId, $event)
+                                  "
+                                >
+                                  <div class="mat-auto-options">
+                                    <span
+                                      class="da-opt-avatar"
+                                      [ngClass]="getRoleColorClass(member.committeeRole)"
+                                    >
+                                      @if (member.photo) {
+                                        <img
+                                          [src]="member.photo"
+                                          [alt]="member.name"
+                                          class="da-opt-img"
+                                        />
+                                      } @else {
+                                        <span class="da-opt-initials">{{
+                                          getInitials(member.name)
+                                        }}</span>
+                                      }
+                                    </span>
+                                    <div class="mat-auto-options-name-email">
+                                      <span class="da-opt-name">{{ member.name | titlecase }}</span>
+                                      <span class="da-opt-email">{{ member.email }}</span>
+                                    </div>
+                                    @if (member.isWinner && member.roleIcon) {
+                                      <span class="da-opt-cup" [ngStyle]="{'color': member.roleColor || '#16a34a'}">{{ member.roleIcon }}</span>
+                                    }
+                                  </div>
+                                </mat-option>
+                              }
+
+                              @if (getCommitteeMembersForReassign().length === 0) {
+                                <mat-option disabled class="da-opt-empty">No members found</mat-option>
+                              }
+                            </mat-autocomplete>
+                          </mat-form-field>
+                        </div>
+                      </div>
+                    }
                   </div>
                 }
 
@@ -667,9 +818,39 @@
               </mat-card-content>
             </mat-card>
           } @empty {
-            <div class="voting-empty-state">
-              <mat-icon>how_to_vote</mat-icon>
-              <span>No voting roles mapped for this event yet.</span>
+            @if (!isMasterAdmin) {
+              <div class="available-roles-preview">
+                <div class="available-roles-preview-header">
+                  <mat-icon>badge</mat-icon>
+                  <span>Available Roles</span>
+                </div>
+                <div class="available-roles-preview-grid">
+                  @for (role of eventData?.availableRoles || []; track role.roleId || role.roleName) {
+                    <span class="available-role-chip" [ngStyle]="role.color ? {'border-color': role.color, 'color': role.color} : {}">
+                      @if (role.icon) {
+                        <span class="available-role-icon">{{ role.icon }}</span>
+                      }
+                      {{ (role.englishName || role.roleName || '').split('_').join(' ') | titlecase }}
+                      @if (role.hindiName) { <span class="available-role-hindi">/ {{ role.hindiName | uppercase }}</span> }
+                    </span>
+                  }
+                </div>
+              </div>
+            }
+            <div class="voting-empty-state-enhanced">
+              <div class="voting-empty-icon-wrap">
+                <mat-icon>how_to_vote</mat-icon>
+              </div>
+              <div class="voting-empty-content">
+                <span class="voting-empty-title">No voting roles mapped yet</span>
+                <span class="voting-empty-subtitle">
+                  @if (isMasterAdmin) {
+                    Please lock roles to start nomination.
+                  } @else {
+                    Waiting for MASTER ADMIN to lock roles.
+                  }
+                </span>
+              </div>
             </div>
           }
         </div>
@@ -686,7 +867,7 @@
       <div class="panel-card-header designations-header-bg">
         <div class="header-title-left">
           <mat-icon class="icon-accent-designation">badge</mat-icon>
-          <span class="title-text">Direct Committee Assignment</span>
+          <span class="title-text">Direct Role Assignment</span>
           <span class="count-pill">{{ votingDisplayCards.length || 0 }}</span>
         </div>
 
@@ -701,7 +882,7 @@
                   (click)="onDeclareResults()"
                 >
                   <mat-icon>emoji_events</mat-icon>
-                  <span>Finalize Assignments</span>
+                  <span>Declare</span>
                 </button>
               }
             </div>
@@ -715,224 +896,321 @@
           @for (card of votingDisplayCards; track card.slot) {
             <mat-card class="voting-nomination-card" #votingCard>
               <mat-card-content>
-                <!-- CONDITION 8: Direct Mode Finalized Results View (Phase 6) -->
-                @if (votingPhaseState === 6 && getWinnerForRole(card.role.roleId)) {
-                  <div class="voting-card-header">
-                    <div class="voting-card-head">
-                      <div class="voting-card-icon-wrap voting-card-icon-wrap-winner">
-                        @if (getWinnerForRole(card.role.roleId)!.photo) {
-                          <img
-                            [src]="getWinnerForRole(card.role.roleId)!.photo!"
-                            [alt]="getWinnerForRole(card.role.roleId)!.name | titlecase"
-                            class="voting-card-winner-photo"
-                          />
-                        } @else {
-                          <div class="voting-card-winner-fallback">
-                            <mat-icon>emoji_events</mat-icon>
-                          </div>
-                        }
-                      </div>
-                      <div class="voting-card-names">
-                        <div class="voting-card-role-primary">
-                          {{
-                            (card.role.englishName || card.role.roleName || '').split('_').join(' ')
-                              | titlecase
-                          }}
-                        </div>
-                        <div class="voting-card-role-secondary">
-                          {{ card.role.hindiName || card.role.roleName | uppercase }}
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-
-                  <div class="voting-card-footer">
-                    <div class="result-candidates-scroll">
-                      @for (
-                        candidate of getCandidatesForRole(card.role.roleId);
-                        track candidate.userId
-                      ) {
-                        <div class="result-candidate-row result-winner-row">
-                          <div class="result-candidate-top">
-                            <div class="result-candidate-avatar">
-                              @if (candidate.photo) {
-                                <img
-                                  [src]="candidate.photo"
-                                  [alt]="candidate.name | titlecase"
-                                  class="avatar-img"
-                                />
+                  <div class="voting-card-split">
+                    <!-- LEFT: Photo, Role Name, Vacate -->
+                    <div class="voting-card-left">
+                      @if (votingPhaseState === 6 && getWinnerForRole(card.role.roleId)) {
+                        <div class="voting-card-header">
+                          <div class="voting-card-head">
+                            <div
+                              class="voting-card-icon-wrap voting-card-icon-wrap-winner"
+                              [ngStyle]="card.role.color ? {'--role-color': card.role.color} : {}"
+                            >
+                              @if (card.role.icon) {
+                                <span class="voting-card-role-icon" [ngStyle]="{'color': card.role.color || '#d97706'}">{{ card.role.icon }}</span>
                               } @else {
-                                <span class="avatar-fallback">{{
-                                  candidate.name.charAt(0).toUpperCase()
-                                }}</span>
+                                <mat-icon class="winner-fallback-icon">{{ getVotingRoleIcon(card.role) }}</mat-icon>
                               }
                             </div>
-                            <div class="result-candidate-name">
-                              <span class="result-candidate-name-text"
-                                >{{ candidate.name | titlecase }}
-                                <mat-icon class="result-winner-cup">emoji_events</mat-icon></span
-                              >
-                              <span class="result-candidate-email">{{ candidate.email }}</span>
-                            </div>
-                            <div class="result-vote-count">
-                              <span class="voting-mode-chip">DIRECT ASSIGN</span>
+                            <div class="voting-card-names">
+                              <div class="voting-card-role-primary">
+                                {{
+                                  (card.role.englishName || card.role.roleName || '').split('_').join(' ')
+                                    | titlecase
+                                }}
+                              </div>
+                              <div class="voting-card-role-secondary">
+                                {{ card.role.hindiName || card.role.roleName | uppercase }}
+                              </div>
                             </div>
                           </div>
                         </div>
-                      }
-                    </div>
-                  </div>
-                }
+                       } @else {
+                       <div class="voting-card-header">
+                         <div class="voting-card-head">
+                           <div
+                             class="voting-card-icon-wrap"
+                             [class.voting-card-icon-wrap-winner]="getAssignedMember(card.role.roleId)"
+                             [ngStyle]="card.role.color ? {'--role-color': card.role.color} : {}"
+                           >
+                             @if (card.role.icon) {
+                               <span class="voting-card-role-icon" [ngStyle]="{'color': card.role.color || '#64748b'}">{{ card.role.icon }}</span>
+                             } @else {
+                               <mat-icon>{{ getVotingRoleIcon(card.role) }}</mat-icon>
+                             }
+                           </div>
+                           <div class="voting-card-names">
+                             <div class="voting-card-role-primary">
+                               {{
+                                 (card.role.englishName || card.role.roleName || '').split('_').join(' ')
+                                   | titlecase
+                               }}
+                             </div>
+                             <div class="voting-card-role-secondary">
+                               {{ card.role.hindiName || card.role.roleName | uppercase }}
+                             </div>
+                           </div>
+                         </div>
+                       </div>
+                     }
 
-                <!-- CONDITION 7: Direct Mode Active Assignment Controls (Phase 0) -->
-                @else {
-                  <div class="voting-card-header">
-                    <div class="voting-card-head">
-                      <div
-                        class="voting-card-icon-wrap"
-                        [class.voting-card-icon-wrap-winner]="getAssignedMember(card.role.roleId)"
-                      >
-                        @if (getAssignedMember(card.role.roleId); as assigned) {
-                          @if (assigned.photo && !avatarLoadFailed().has(assigned.userId)) {
-                            <img
-                              [src]="assigned.photo"
-                              [alt]="assigned.name | titlecase"
-                              class="voting-card-winner-photo"
-                              (error)="onAvatarError(assigned.userId)"
-                            />
-                          } @else {
-                            <div class="voting-card-winner-fallback">
-                              <mat-icon>emoji_events</mat-icon>
-                              <span class="voting-card-winner-name">{{
-                                assigned.name | titlecase
-                              }}</span>
-                            </div>
-                          }
-                        } @else {
-                          <mat-icon>{{ getVotingRoleIcon(card.role) }}</mat-icon>
-                        }
+                    @if (isMasterAdmin && canVacateRole) {
+                      <div class="voting-card-vacate-action">
+                        <button
+                          mat-stroked-button
+                          class="vacate-role-btn"
+                          [disabled]="isVacatingVotingRole()"
+                          (click)="onVacateRole(card.role.roleId)"
+                        >
+                          <mat-icon>delete_outline</mat-icon>
+                          <span>Vacate Role</span>
+                        </button>
                       </div>
-                      <div class="voting-card-names">
-                        <div class="voting-card-role-primary">
-                          {{
-                            (card.role.englishName || card.role.roleName || '').split('_').join(' ')
-                              | titlecase
-                          }}
-                        </div>
-                        <div class="voting-card-role-secondary">
-                          {{ card.role.hindiName || card.role.roleName | uppercase }}
-                        </div>
-                      </div>
-                    </div>
-                  </div>
+                    }
+                  </div><!-- /voting-card-left -->
 
-                  <!-- Admin Member Autocomplete Picker -->
-                  @if (isMasterAdmin && votingPhaseState < 6) {
-                    <div class="direct-assign-body">
-                      <mat-form-field
-                        class="direct-assign-select-field"
-                        appearance="fill"
-                        subscriptSizing="dynamic"
-                      >
-                        <span matPrefix class="da-input-icon"
-                          ><mat-icon>emoji_events</mat-icon></span
-                        >
-                        <input
-                          type="text"
-                          matInput
-                          autocomplete="off"
-                          [(ngModel)]="directAssignInputText[card.role.roleId]"
-                          (input)="
-                            onDirectAssignSearch(card.role.roleId, $any($event.target).value)
-                          "
-                          (focus)="onDropdownOpen()"
-                          placeholder="Search member by name..."
-                          [matAutocomplete]="autoAssign"
-                        />
-                        <span matSuffix class="da-input-icon"
-                          ><mat-icon>expand_more</mat-icon></span
-                        >
-
-                        <mat-autocomplete
-                          #autoAssign="matAutocomplete"
-                          hideSingleSelectionIndicator
-                          (optionSelected)="onDirectAssignSelect(card.role.roleId, $event)"
-                        >
-                          @for (
-                            member of getDirectAssignOptions(card.role.roleId);
-                            track member.userId
-                          ) {
-                            <mat-option
-                              [value]="member.userId"
-                              class="da-opt-row"
-                              [ngClass]="getRoleColorClass(member.committeeRole)"
-                              [disabled]="
-                                member.committeeRole === 'COMMITTEE_MASTER_ADMIN' ||
-                                getAssignedMember(card.role.roleId)?.userId === member.userId ||
-                                isUserAssignedToOtherRole(member.userId, card.role.roleId)
-                              "
-                              (onSelectionChange)="
-                                onDirectAssignOptionSelection(card.role.roleId, $event)
-                              "
-                            >
-                              <div class="mat-auto-options">
-                                <div class="mat-auto-options-avatar">
-                                  <span
-                                    class="da-opt-avatar"
-                                    [ngClass]="getRoleColorClass(member.committeeRole)"
-                                  >
-                                    @if (member.photo) {
-                                      <img
-                                        [src]="member.photo"
-                                        [alt]="member.name"
-                                        class="da-opt-img"
-                                      />
-                                    } @else {
-                                      <span class="da-opt-initials">{{
-                                        getInitials(member.name)
-                                      }}</span>
+                   <!-- RIGHT: Winner Results / Direct Assign Picker -->
+                    <div class="voting-card-right">
+                      @if (votingPhaseState === 6 && getWinnerForRole(card.role.roleId)) {
+                        @let winner = getWinnerForRole(card.role.roleId)!;
+                        <div class="results-container results-split-layout direct-results-container" [ngStyle]="card.role.color ? {'--role-color': card.role.color} : {}">
+                          <div class="results-winner-col">
+                            @if (directAssignMembers(); as members) {
+                              @let matchedMember = members.find((m) => m.userId === winner.userId);
+                              @if (matchedMember) {
+                                <div class="result-winner-card">
+                                  <div class="results-header">
+                                    @if (getVotingModeWonByDisplay(card.role.roleId)) {
+                                      <div class="results-won-by">{{
+                                        getVotingModeWonByDisplay(card.role.roleId)
+                                      }}</div>
                                     }
-                                  </span>
-                                </div>
-                                <div class="mat-auto-options-name-email">
-                                  <div class="da-opt-text-group">
-                                    <div class="da-opt-name">{{ member.name | titlecase }}</div>
-                                    <div class="da-opt-email">{{ member.email }}</div>
+                                    @if (isMasterAdmin) {
+                                      <button
+                                        type="button"
+                                        class="result-reassign-btn"
+                                        (click)="onAssignWinningRole(card.role.roleId)"
+                                        matTooltip="Emergency reassign winner"
+                                        matTooltipPosition="above"
+                                      >
+                                        <mat-icon>swap_horiz</mat-icon>
+                                      </button>
+                                    }
                                   </div>
-                                  <div class="done-icon">
-                                    @if (
-                                      getAssignedMember(card.role.roleId)?.userId === member.userId
-                                    ) {
-                                      <div class="mat-auto-options-cup">
-                                        <mat-icon>done</mat-icon>
+                                  <div class="result-winner-body">
+                                    <div class="result-winner-top">
+                                      <div class="result-winner-avatar">
+                                        @if (matchedMember.photo) {
+                                          <img
+                                            [src]="matchedMember.photo"
+                                            [alt]="matchedMember.name | titlecase"
+                                            class="result-winner-photo"
+                                          />
+                                        } @else {
+                                          <span class="result-winner-initial">{{
+                                            matchedMember.name.charAt(0).toUpperCase()
+                                          }}</span>
+                                        }
                                       </div>
-                                    }
+                                      <div class="result-winner-details">
+                                        <span class="result-winner-name">{{ matchedMember.name | titlecase }}</span>
+                                        <span class="result-winner-email">{{ matchedMember.email }}</span>
+                                      </div>
+                                    </div>
                                   </div>
+                                </div>
+                              }
+                            }
+                          </div>
+                          <div class="direct-results-reassign-col">
+                            @if (isReassignOpenForRole(card.role.roleId)) {
+                              <div class="reassign-select-row" [ngStyle]="card.role.color ? {'--role-color': card.role.color} : {}">
+                                <div class="reassign-panel-header">
+                                  <div class="reassign-panel-badge">
+                                    <span>EMERGENCY REASSIGN</span>
+                                  </div>
+                                  <div class="reassign-panel-actions">
+                                    <button
+                                      mat-icon-button
+                                      class="reassign-confirm-btn"
+                                      (click)="onConfirmReassign(card.role.roleId)"
+                                      [disabled]="!selectedReassignMemberId()"
+                                      matTooltip="Confirm"
+                                      matTooltipPosition="above"
+                                    >
+                                      <mat-icon>check</mat-icon>
+                                    </button>
+                                    <button
+                                      mat-icon-button
+                                      class="reassign-cancel-btn"
+                                      (click)="cancelReassign()"
+                                      matTooltip="Cancel"
+                                      matTooltipPosition="above"
+                                    >
+                                      <mat-icon>close</mat-icon>
+                                    </button>
+                                  </div>
+                                </div>
+                                <div class="reassign-panel-body">
+                                  <mat-form-field class="reassign-select-field" appearance="fill" subscriptSizing="dynamic">
+                                    <span matPrefix class="da-input-icon"><mat-icon>search</mat-icon></span>
+                                    <input
+                                      type="text"
+                                      matInput
+                                      autocomplete="off"
+                                      [(ngModel)]="directAssignInputText[card.role.roleId]"
+                                      (input)="onReassignSearch(card.role.roleId, $any($event.target).value)"
+                                      (focus)="onDropdownOpen()"
+                                      placeholder="Search member by name..."
+                                      [matAutocomplete]="autoDirectReassign"
+                                    />
+                                    <span matSuffix class="da-input-icon"><mat-icon>expand_more</mat-icon></span>
+
+                                    <mat-autocomplete
+                                      #autoDirectReassign="matAutocomplete"
+                                      hideSingleSelectionIndicator
+                                      (optionSelected)="onReassignSelect(card.role.roleId, $event)"
+                                    >
+                                      @for (member of getCommitteeMembersForReassign(); track member.userId) {
+                                        <mat-option
+                                          [value]="member.userId"
+                                          class="da-opt-row"
+                                          [ngClass]="getRoleColorClass(member.committeeRole)"
+                                          [disabled]="member.isWinner"
+                                          (onSelectionChange)="onReassignOptionSelection(card.role.roleId, $event)"
+                                        >
+                                          <div class="mat-auto-options">
+                                            <span class="da-opt-avatar" [ngClass]="getRoleColorClass(member.committeeRole)">
+                                              @if (member.photo) {
+                                                <img [src]="member.photo" [alt]="member.name" class="da-opt-img" />
+                                              } @else {
+                                                <span class="da-opt-initials">{{ getInitials(member.name) }}</span>
+                                              }
+                                            </span>
+                                            <div class="mat-auto-options-name-email">
+                                              <span class="da-opt-name">{{ member.name | titlecase }}</span>
+                                              <span class="da-opt-email">{{ member.email }}</span>
+                                            </div>
+                                            @if (member.isWinner && member.roleIcon) {
+                                              <span class="da-opt-cup" [ngStyle]="{'color': member.roleColor || '#16a34a'}">{{ member.roleIcon }}</span>
+                                            }
+                                          </div>
+                                        </mat-option>
+                                      }
+
+                                      @if (getCommitteeMembersForReassign().length === 0) {
+                                        <mat-option disabled class="da-opt-empty">No members found</mat-option>
+                                      }
+                                    </mat-autocomplete>
+                                  </mat-form-field>
                                 </div>
                               </div>
-                            </mat-option>
-                          } @empty {
-                            <mat-option disabled class="da-opt-empty">No members found</mat-option>
-                          }
-                        </mat-autocomplete>
-                      </mat-form-field>
-                    </div>
-                  }
+                            }
+                          </div>
+                        </div>
+                      } @else {
+                      <!-- Admin Member Autocomplete Picker -->
+                      @if (isMasterAdmin && votingPhaseState < 6) {
+                        <div class="direct-assign-body">
+                          <mat-form-field
+                            class="direct-assign-select-field"
+                            appearance="fill"
+                            subscriptSizing="dynamic"
+                          >
+                            <input
+                              type="text"
+                              matInput
+                              autocomplete="off"
+                              [(ngModel)]="directAssignInputText[card.role.roleId]"
+                              (input)="
+                                onDirectAssignSearch(card.role.roleId, $any($event.target).value)
+                              "
+                              (focus)="onDropdownOpen()"
+                              placeholder="Search member by name..."
+                              [matAutocomplete]="autoAssign"
+                            />
+                            <span matSuffix class="da-input-icon"
+                              ><mat-icon>expand_more</mat-icon></span
+                            >
 
-                  @if (isMasterAdmin && canVacateRole) {
-                    <div class="voting-card-vacate-action">
-                      <button
-                        mat-stroked-button
-                        class="vacate-role-btn"
-                        [disabled]="isVacatingVotingRole()"
-                        (click)="onVacateRole(card.role.roleId)"
-                      >
-                        <mat-icon>delete_outline</mat-icon>
-                        <span>Vacate Role</span>
-                      </button>
-                    </div>
-                  }
-                }
+                            <mat-autocomplete
+                              #autoAssign="matAutocomplete"
+                              hideSingleSelectionIndicator
+                              (optionSelected)="onDirectAssignSelect(card.role.roleId, $event)"
+                            >
+                              @for (
+                                member of getDirectAssignOptions(card.role.roleId);
+                                track member.userId
+                              ) {
+                                <mat-option
+                                  [value]="member.userId"
+                                  class="da-opt-row"
+                                  [ngClass]="getRoleColorClass(member.committeeRole)"
+                                  [disabled]="
+                                    member.committeeRole === 'COMMITTEE_MASTER_ADMIN' ||
+                                    getAssignedMember(card.role.roleId)?.userId === member.userId ||
+                                    isUserAssignedToOtherRole(member.userId, card.role.roleId)
+                                  "
+                                  (onSelectionChange)="
+                                    onDirectAssignOptionSelection(card.role.roleId, $event)
+                                  "
+                                >
+                                   <div class="mat-auto-options">
+                                     <div class="mat-auto-options-avatar">
+                                       <span
+                                         class="da-opt-avatar"
+                                         [ngClass]="getRoleColorClass(member.committeeRole)"
+                                       >
+                                         @if (member.photo) {
+                                           <img
+                                             [src]="member.photo"
+                                             [alt]="member.name"
+                                             class="da-opt-img"
+                                           />
+                                         } @else {
+                                           <span class="da-opt-initials">{{
+                                             getInitials(member.name)
+                                           }}</span>
+                                         }
+                                       </span>
+                                     </div>
+                                     <div class="mat-auto-options-details">
+                                       <div class="da-opt-name">{{ member.name | titlecase }}</div>
+                                       <div class="da-opt-email">{{ member.email }}</div>
+                                     </div>
+                                      <div class="done-icon">
+                                        @if (
+                                          isMemberAssignedToAnyRole(member.userId) && card.role.icon
+                                        ) {
+                                          <div class="mat-auto-options-cup" [ngStyle]="{'color': isMemberAssignedToAnyRole(member.userId)?.roleColor || card.role.color || '#16a34a'}">
+                                            {{ isMemberAssignedToAnyRole(member.userId)?.roleIcon || card.role.icon }}
+                                          </div>
+                                        }
+                                      </div>
+                                   </div>
+                                </mat-option>
+                              } @empty {
+                                <mat-option disabled class="da-opt-empty">No members found</mat-option>
+                              }
+                            </mat-autocomplete>
+                          </mat-form-field>
+                        </div>
+                      } @else {
+                        <div class="voting-interest-empty-state">
+                          @if (votingPhaseState === 6) {
+                            <span class="empty-state-icon"><mat-icon>how_to_reg</mat-icon></span>
+                            <span class="empty-state-title">No assignment yet</span>
+                            <span class="empty-state-sub">No member has been assigned to this role.</span>
+                          } @else {
+                            <span class="empty-state-icon"><mat-icon>assignment_ind</mat-icon></span>
+                            <span class="empty-state-title">Direct assignment pending</span>
+                            <span class="empty-state-sub">An admin will assign a member to this role.</span>
+                          }
+                        </div>
+                      }
+                    }
+                  </div><!-- /voting-card-right -->
+                </div><!-- /voting-card-split -->
               </mat-card-content>
             </mat-card>
           } @empty {

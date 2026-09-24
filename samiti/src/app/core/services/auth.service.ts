@@ -1,4 +1,6 @@
-import { Injectable, signal } from '@angular/core';
+import { Injectable, inject, signal } from '@angular/core';
+import { HttpClient } from '@angular/common/http';
+import { environment } from '../../../environments/environment';
 
 export interface AuthDashboardTreeNode {
   id: string;
@@ -67,6 +69,7 @@ export class AuthService {
   private static readonly REMEMBER_KEY = 'remember_login';
 
   public isLoggedIn = signal<boolean>(this.readLoginStateFromStorage());
+  private readonly http = inject(HttpClient);
 
   private readLoginStateFromStorage(): boolean {
     const hasLoginFlag = localStorage.getItem(AuthService.LOGGED_IN_KEY) === 'true';
@@ -142,6 +145,50 @@ export class AuthService {
 
     this.writeUserData(nextUserData);
     return nextUserData;
+  }
+
+  public refreshUserAccountRoles(): void {
+    if (!this.getToken() || !this.getStoredUserData()) {
+      return;
+    }
+
+    const query = `query UserAccountRoles {
+      userAccountRoles {
+        committees {
+          committeeId
+          committeeName
+          committeeLogo
+          committeeRole
+          roleLabel
+          events {
+            eventId
+            eventName
+            committeeId
+            committeeName
+            committeeLogo
+            designation
+            membershipStatus
+            eventStatus
+            eventVisibility
+          }
+        }
+      }
+    }`;
+
+    this.http.post<{ data: { userAccountRoles: AuthAccountRoles } }>(
+      environment.graphqlUrl,
+      { query },
+      { withCredentials: true }
+    ).subscribe({
+      next: ({ data }) => {
+        if (data?.userAccountRoles) {
+          this.updateStoredUserData({ accountRoles: data.userAccountRoles });
+        }
+      },
+      error: () => {
+        // Keep the current session and cached roles if refresh is unavailable.
+      }
+    });
   }
 
   public clearSession(): void {

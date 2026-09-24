@@ -16,11 +16,13 @@ interface ImageAssetUploadItemInput {
   dataUrl: string;
   preferredResizeMode?: ImageResizeModeType;
   compressionQuality?: number;
+  publicId?: string;
 }
 
 interface ImageAssetBatchUploadInput {
   usageContext: ImageAssetUsageContextType;
   files: ImageAssetUploadItemInput[];
+  publicId?: string;
 }
 
 interface UploadedImageAssetMetadata {
@@ -73,14 +75,14 @@ export class ImageAssetService {
     }
   }`;
 
-  uploadSingleImageForUserProfilePhoto(file: File): Observable<UploadedImageAssetMetadata> {
-    return this.prepareAndUploadImageAssetBatch('USER_PROFILE_PHOTO', [file]).pipe(
+  uploadSingleImageForUserProfilePhoto(file: File, publicId?: string): Observable<UploadedImageAssetMetadata> {
+    return this.prepareAndUploadImageAssetBatch('USER_PROFILE_PHOTO', [file], publicId).pipe(
       map((uploadedAssets) => uploadedAssets[0])
     );
   }
 
-  uploadSingleImageForCommitteeLogo(file: File): Observable<UploadedImageAssetMetadata> {
-    return this.prepareAndUploadImageAssetBatch('COMMITTEE_LOGO', [file]).pipe(
+  uploadSingleImageForCommitteeLogo(file: File, publicId?: string): Observable<UploadedImageAssetMetadata> {
+    return this.prepareAndUploadImageAssetBatch('COMMITTEE_LOGO', [file], publicId).pipe(
       map((uploadedAssets) => uploadedAssets[0])
     );
   }
@@ -91,7 +93,8 @@ export class ImageAssetService {
 
   private prepareAndUploadImageAssetBatch(
     usageContext: ImageAssetUsageContextType,
-    files: File[]
+    files: File[],
+    publicId?: string
   ): Observable<UploadedImageAssetMetadata[]> {
     if (!files.length) {
       throw new Error('At least one file is required for image upload.');
@@ -110,6 +113,7 @@ export class ImageAssetService {
     ).pipe(
       switchMap((optimizedDataUrls) => this.executeImageBatchUploadMutation({
         usageContext,
+        publicId,
         files: optimizedDataUrls.map((optimizedDataUrl) => ({
           dataUrl: optimizedDataUrl,
           preferredResizeMode: optimizationPlan.preferredResizeMode,

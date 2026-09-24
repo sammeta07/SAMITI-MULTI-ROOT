@@ -7,6 +7,7 @@ import { HeaderService } from './components/header/header.service';
 import { MatIconModule } from '@angular/material/icon';
 import { MatButtonModule } from '@angular/material/button';
 import { StartupLoaderService } from './core/services/startup-loader.service';
+import { AuthService } from './core/services/auth.service';
 
 @Component({
   selector: 'app-root',
@@ -24,6 +25,7 @@ export class App implements OnInit {
   private destroyRef = inject(DestroyRef);
   private readonly headerService = inject(HeaderService);
   private readonly startupLoaderService = inject(StartupLoaderService);
+  private readonly authService = inject(AuthService);
 
   readonly isGeolocationDenied = this.headerService.isGeolocationDenied;
   readonly isGeolocationChecking = this.headerService.isGeolocationChecking;
@@ -31,7 +33,11 @@ export class App implements OnInit {
   readonly startupErrorMessage = this.startupLoaderService.startupErrorMessage;
   readonly isStartupRetrying = this.startupLoaderService.isCommitteesRetrying;
 
-  ngOnInit() {}
+  ngOnInit(): void {
+    if (this.authService.isLoggedIn()) {
+      this.authService.refreshUserAccountRoles();
+    }
+  }
 
   reloadPage(): void {
     window.location.reload();

@@ -1,6 +1,7 @@
 import { RowDataPacket } from 'mysql2/promise';
 import { execute, query } from '../../config/db';
 import { deleteLocalMediaFileIfExists } from '../../media/image-cleanup';
+import { isCloudinaryStorageEnabled } from '../../media/cloudinary-storage';
 
 const MOBILE_PATTERN = /^\d{10}$/;
 
@@ -42,9 +43,35 @@ export const accountTypes = `
     mobile: String!
     photo: String
   }
+
+  type UserAccountRole {
+    committeeId: Int!
+    committeeName: String!
+    committeeLogo: String
+    committeeRole: String!
+    roleLabel: String!
+    events: [UserAccountEventRole!]!
+  }
+
+  type UserAccountEventRole {
+    eventId: Int!
+    eventName: String!
+    committeeId: Int!
+    committeeName: String!
+    committeeLogo: String
+    designation: String!
+    membershipStatus: String!
+    eventStatus: String
+    eventVisibility: String
+  }
+
+  type UserAccountRolesPayload {
+    committees: [UserAccountRole!]!
+  }
 `;
 
 export const accountQueryFields = `
+  userAccountRoles: UserAccountRolesPayload!
 `;
 
 export const accountMutationFields = `
@@ -94,6 +121,86 @@ async function fetchAccountPayloadByUserId(userId: number): Promise<AccountRow> 
 
 export const accountResolvers = {
   Query: {
+    async userAccountRoles(_: unknown, __: unknown, context: any) {
+      const loggedInUserId = await getLoggedInUserId(context);
+
+      const committeeRoleRows = await query(
+        `SELECT
+          c.id AS committee_id,
+          c.committee_name,
+          c.logo AS committee_logo,
+          cm.committee_role
+         FROM users_committees cm
+         INNER JOIN committees c ON c.id = cm.committee_id
+         WHERE cm.user_id = ?
+           AND cm.committee_role IN ('COMMITTEE_MEMBER', 'COMMITTEE_ADMIN', 'COMMITTEE_MASTER_ADMIN')
+         ORDER BY c.committee_name ASC`,
+        [loggedInUserId]
+      ).catch(() => []);
+
+      const eventRoleRows = await query(
+        `SELECT
+          e.id AS event_id,
+          e.name AS event_name,
+          c.id AS committee_id,
+          c.committee_name,
+          c.logo AS committee_logo,
+          UPPER(COALESCE(NULLIF(TRIM(ue.designation), ''), 'MEMBER')) AS designation,
+          UPPER(COALESCE(NULLIF(TRIM(ue.status), ''), 'ACTIVE')) AS membership_status,
+          e.status AS event_status,
+          e.visibility AS event_visibility
+         FROM users_events ue
+         INNER JOIN events e ON e.id = ue.event_id
+         INNER JOIN committees c ON c.id = e.committee_id
+         WHERE ue.user_id = ?
+           AND e.voting_phase_state = 6
+         ORDER BY c.committee_name ASC, e.name ASC`,
+        [loggedInUserId]
+      ).catch(() => []);
+
+      const eventsByCommitteeId = new Map<number, typeof eventRoleRows>();
+      for (const row of eventRoleRows) {
+        const cid = Number(row.committee_id);
+        const list = eventsByCommitteeId.get(cid) || [];
+        list.push(row);
+        eventsByCommitteeId.set(cid, list);
+      }
+
+      return {
+        committees: committeeRoleRows.map((row) => {
+          const cid = Number(row.committee_id);
+          const committeeEvents = (eventsByCommitteeId.get(cid) || []).map((ev) => {
+            const eid = Number(ev.event_id);
+            const usersEventsDesignation = String(ev.designation || '').trim().toUpperCase();
+            const designation = usersEventsDesignation || 'MEMBER';
+            return {
+              eventId: eid,
+              eventName: ev.event_name,
+              committeeId: cid,
+              committeeName: ev.committee_name,
+              committeeLogo: ev.committee_logo || null,
+              designation,
+              membershipStatus: ev.membership_status || 'ACTIVE',
+              eventStatus: ev.event_status || null,
+              eventVisibility: ev.event_visibility || null
+            };
+          });
+
+          return {
+            committeeId: cid,
+            committeeName: row.committee_name,
+            committeeLogo: row.committee_logo || null,
+            committeeRole: row.committee_role || 'COMMITTEE_MEMBER',
+            roleLabel: String(row.committee_role || 'COMMITTEE_MEMBER')
+              .replace(/^COMMITTEE_/, '')
+              .replace(/_/g, ' ')
+              .toLowerCase()
+              .replace(/\b\w/g, (ch) => ch.toUpperCase()),
+            events: committeeEvents
+          };
+        })
+      };
+    }
   },
   Mutation: {
     async updateAccount(
@@ -127,7 +234,12 @@ export const accountResolvers = {
         [name.trim(), normalizedMobile, nextProfilePhotoUrl, loggedInUserId]
       );
 
+      // In Cloudinary mode the profile photo is uploaded with a fixed public id
+      // (user-profile-<id>) and overwrites the previous asset, so the old photo is
+      // already replaced. In local mode each upload gets a unique filename, so we
+      // must delete the previous file to avoid orphaned storage.
       if (
+        !isCloudinaryStorageEnabled() &&
         normalizedIncomingPhoto &&
         existingAccount.profile_photo &&
         existingAccount.profile_photo !== normalizedIncomingPhoto

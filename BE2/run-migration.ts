@@ -62,12 +62,21 @@ async function executeSqlStatementsFromFile(connection: mysql.Connection, migrat
   const statements = parseSqlStatements(sql);
 
   for (const statement of statements) {
+    const isDestructiveStatement =
+      /\bDROP\s+(TABLE|TRIGGER|VIEW|DATABASE)\b/i.test(statement) ||
+      /\bTRUNCATE\s+TABLE\b/i.test(statement) ||
+      /\bDELETE\s+FROM\b/i.test(statement) ||
+      /\bALTER\s+TABLE\b[\s\S]*\bDROP\b/i.test(statement);
+    if (isDestructiveStatement) {
+      throw new Error(`Refusing destructive migration statement in ${path.basename(migrationFilePath)}`);
+    }
+
     console.log(`\n📝 Executing: ${statement.substring(0, 100)}...`);
     try {
       await connection.query(statement);
       console.log('✅ Query executed successfully');
     } catch (error: any) {
-      const safeErrorCodes = ['ER_DUP_FIELDNAME', 'ER_DUP_KEYNAME', 'ER_TABLE_EXISTS_ERROR', 'ER_FK_DUP_NAME', 'ER_DUP_CONSTRAINT', 'ER_CANT_DROP_FIELD_OR_KEY', 'ER_BAD_FIELD_ERROR'];
+      const safeErrorCodes = ['ER_DUP_FIELDNAME', 'ER_DUP_KEYNAME', 'ER_TABLE_EXISTS_ERROR', 'ER_FK_DUP_NAME', 'ER_DUP_CONSTRAINT', 'ER_CANT_DROP_FIELD_OR_KEY', 'ER_BAD_FIELD_ERROR', 'ER_TRG_ALREADY_EXISTS'];
       const duplicateCheckConstraintMessage = typeof error?.message === 'string' && error.message.includes('Duplicate check constraint name');
       const missingCheckConstraintMessage = typeof error?.message === 'string' && error.message.includes('Check constraint') && error.message.includes('is not found in the table');
       const legacyForeignKeyMessage = typeof error?.message === 'string' && error.message.includes('Missing column') && error.message.includes('foreign key constraint');
@@ -87,10 +96,14 @@ async function runMigration() {
     console.log('✅ Connected to MySQL database');
 
     const migrationDirectoryPath = path.join(process.cwd(), 'src/migrations');
+    const requestedMigration = process.env.MIGRATION_FILE?.trim() || '000-safe-consolidated-schema.sql';
     const migrationFiles = fs
       .readdirSync(migrationDirectoryPath)
-      .filter((fileName) => fileName.endsWith('.sql'))
-      .sort((leftFileName, rightFileName) => leftFileName.localeCompare(rightFileName));
+      .filter((fileName) => fileName === requestedMigration);
+
+    if (migrationFiles.length === 0) {
+      throw new Error(`Migration file not found: ${requestedMigration}`);
+    }
 
     if (!migrationFiles.length) {
       console.log('ℹ️ No migration files found under src/migrations');

@@ -51,6 +51,56 @@
   .mode-indicator-icon {
     color: #f97316;
   }
+
+  .toolbar-event-logo {
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    object-fit: cover;
+    flex-shrink: 0;
+    border: 3px solid #e2e8f0;
+    box-sizing: border-box;
+  }
+
+  .toolbar-event-logo-fallback {
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    background: transparent;
+    color: #1e293b;
+    font-weight: 800;
+    font-size: 0.9rem;
+    flex-shrink: 0;
+    border: 3px solid transparent;
+    box-sizing: border-box;
+  }
+
+  .toolbar-title-text {
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+    line-height: 1.2;
+  }
+
+  .toolbar-event-name {
+    font-size: 1.05rem;
+    font-weight: 700;
+    color: #0f172a;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .toolbar-event-address {
+    font-size: 0.75rem;
+    color: #64748b;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
 }
 
 .drawer-close-btn {
@@ -215,7 +265,7 @@
 .vote-history-list-head,
 .vote-history-row {
   display: grid;
-  grid-template-columns: 1fr 110px 110px;
+  grid-template-columns: 40px 1fr 110px;
   align-items: center;
   gap: 8px;
   padding: 8px 12px;
@@ -251,24 +301,26 @@
 .vote-history-row {
   border-top: 1px solid #f1f5f9;
 
+  &:last-child {
+    border-bottom: 1px solid #f1f5f9;
+  }
+
   &.voted {
     background: #f0fdf4;
   }
 
-  &.role-master {
-    border-left: 3px solid #ef4444;
-    border-right: 3px solid #ef4444;
+  &.role-master .vh-avatar {
+    border: 3px solid #ef4444 !important;
   }
 
-  &.role-admin {
-    border-left: 3px solid #22c55e;
-    border-right: 3px solid #22c55e;
+  &.role-admin .vh-avatar {
+    border: 3px solid #22c55e !important;
   }
 
-  &.role-member {
-    border-left: 3px solid #3b82f6;
-    border-right: 3px solid #3b82f6;
+  &.role-member .vh-avatar {
+    border: 3px solid #3b82f6 !important;
   }
+}
 
   .vh-col-name {
     display: flex;
@@ -276,7 +328,13 @@
     gap: 10px;
     min-width: 0;
   }
-}
+
+  .vh-col-serial {
+    font-size: 0.8rem;
+    font-weight: 700;
+    color: #64748b;
+    text-align: center;
+  }
 
 .vh-avatar {
   width: 32px;
@@ -284,6 +342,9 @@
   border-radius: 999px;
   object-fit: cover;
   flex-shrink: 0;
+  border: 3px solid transparent;
+  box-sizing: border-box;
+  overflow: hidden;
 
   &.vh-avatar-fallback {
     display: inline-flex;
@@ -317,12 +378,6 @@
     overflow: hidden;
     text-overflow: ellipsis;
   }
-}
-
-.vh-col-role {
-  font-size: 0.74rem;
-  font-weight: 600;
-  color: #475569;
 }
 
 .vh-status {

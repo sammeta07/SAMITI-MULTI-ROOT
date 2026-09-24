@@ -1,9 +1,18 @@
+export interface EventRoleInfo {
+  name: string;
+  color: string | null;
+  icon: string | null;
+}
+
 export interface AdminHierarchyTreeNode {
   id: string;
   name: string;
   type: string;
   logo?: string | null;
-  roles: string[];
+  roles: EventRoleInfo[];
+  startDate?: string | null;
+  endDate?: string | null;
+  status?: string | null;
   children: AdminHierarchyTreeNode[];
 }
 
@@ -43,5 +52,7 @@ export interface TreeNode {
   status?: string;
   logo?: string | null;
   roleScope?: 'master_admin' | 'admin' | 'member';
-  roles?: string[];
+  roles?: EventRoleInfo[];
+  startDate?: string | null;
+  endDate?: string | null;
 }

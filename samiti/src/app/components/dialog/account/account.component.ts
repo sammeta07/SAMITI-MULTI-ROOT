@@ -240,7 +240,7 @@ export class AccountDialogComponent implements OnInit {
 
     try {
       const uploadedProfilePhotoMetadata = await firstValueFrom(
-        this.imageAssetService.uploadSingleImageForUserProfilePhoto(selectedOrCroppedFile)
+        this.imageAssetService.uploadSingleImageForUserProfilePhoto(selectedOrCroppedFile, `user-profile-${this.getLocalUserData()?.id}`)
       );
 
       const updateResponse = await firstValueFrom(
@@ -289,7 +289,8 @@ export class AccountDialogComponent implements OnInit {
           file,
           title: 'Crop Profile Photo',
           maintainAspectRatio: true,
-          aspectRatio: 1
+          aspectRatio: 1,
+          roundCropper: true
         }
       }).afterClosed()
     );
@@ -305,7 +306,7 @@ export class AccountDialogComponent implements OnInit {
       try {
         this.isUploadingProfilePhoto.set(true);
         const uploadedProfilePhotoMetadata = await firstValueFrom(
-          this.imageAssetService.uploadSingleImageForUserProfilePhoto(selectedProfilePhoto)
+          this.imageAssetService.uploadSingleImageForUserProfilePhoto(selectedProfilePhoto, `user-profile-${this.getLocalUserData()?.id}`)
         );
         uploadedProfilePhotoUrl = uploadedProfilePhotoMetadata.publicAbsoluteUrl;
       } catch (uploadError: unknown) {

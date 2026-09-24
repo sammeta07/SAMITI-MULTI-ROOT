@@ -4,6 +4,8 @@ export interface EventAvailableRole {
   roleCode?: string | null;
   hindiName?: string | null;
   englishName?: string | null;
+  color?: string | null;
+  icon?: string | null;
 }
 
 export interface EventMappedVotingRole {
@@ -11,6 +13,8 @@ export interface EventMappedVotingRole {
   roleName: string;
   hindiName?: string | null;
   englishName?: string | null;
+  color?: string | null;
+  icon?: string | null;
   sortOrder: number;
   winnerUserId?: number | null;
   winnerName?: string | null;
@@ -49,6 +53,9 @@ export interface EventVoteMember {
 export interface EventVoteHistory {
   eventId: number;
   eventName: string;
+  eventLogo?: string | null;
+  eventAddress?: string | null;
+  eventLogoBorderColor?: string | null;
   totalMembers: number;
   votedCount: number;
   notVotedCount: number;
@@ -102,13 +109,15 @@ export interface ToggleEventVotingRolePayload {
     roleName: string;
     hindiName?: string | null;
     englishName?: string | null;
+    color?: string | null;
+    icon?: string | null;
     sortOrder: number;
     winnerUserId?: number | null;
     winnerName?: string | null;
     winnerPhoto?: string | null;
      winnerVoteCount?: number | null;
      winnerWonBy?: string | null;
-   }>;
+  }>;
 }
 
 export interface LockEventVotingRolesPayload {
@@ -218,7 +227,7 @@ export interface EventVotingPayload {
   myVotes?: MyEventVote[];
   canReviewInterest: boolean;
   canManageVotingRoles: boolean;
-  currentCommitteeRole: string;
+  committeeRole: string;
   votingPhaseState: number;
    votingMode?: 'VOTING' | 'DIRECT';
 }
@@ -238,6 +247,8 @@ export interface EventDirectAssignMember {
   photo?: string | null;
   committeeRole: string;
   isWinner: boolean;
+  roleIcon?: string;
+  roleColor?: string;
 }
 
 export interface DirectAssignWinnerPayload {

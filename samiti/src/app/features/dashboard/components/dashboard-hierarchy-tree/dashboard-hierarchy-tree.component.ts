@@ -12,8 +12,10 @@ import { HttpErrorResponse } from '@angular/common/http';
 import { filter } from 'rxjs/operators';
 import { DashboardHierarchyTreeService } from './dashboard-hierarchy-tree.service';
 import { NotifierService } from '../../../../shared/notifier/notifier.service';
+import { LoadingStateService } from '../../../../shared/services/loading-state.service';
 import { AdminHierarchyTreeNode, RoleNode, TreeNode } from './dashboard-hierarchy-tree.models';
 import { sanitizeCloudinaryLogoUrl } from '../../../../shared/services/cloudinary-logo.util';
+import { SelectedYearService } from '../../../../shared/services/selected-year.service';
 
 @Component({
   selector: 'app-dashboard-hierarchy-tree',
@@ -35,19 +37,45 @@ export class DashboardHierarchyTreeComponent implements OnInit {
   private readonly treeService = inject(DashboardHierarchyTreeService);
   private readonly notifier = inject(NotifierService);
   private readonly router = inject(Router);
+  private readonly selectedYearService = inject(SelectedYearService);
+  private readonly loadingState = inject(LoadingStateService);
   private readonly routeRefreshAttempts = new Set<string>();
 
   public readonly isLoading = signal<boolean>(false);
-  public readonly selectedNode = signal<TreeNode | null>(null);
-  public readonly highlightedNodeToken = signal<string>('');
+  public readonly isNavigating = signal<boolean>(false);
+  private awaitingDestinationLoad = false;
+  private destinationLoadBegun = false;
+  private navigateTimeout: ReturnType<typeof setTimeout> | null = null;
+  private static readonly NAVIGATING_GUARD_TIMEOUT_MS = 12000;
+
+  private readonly releaseNavigatingGuard = effect(() => {
+    const loading = this.loadingState.isLoading();
+    if (this.awaitingDestinationLoad) {
+      if (loading) {
+        this.destinationLoadBegun = true;
+        this.isNavigating.set(true);
+      } else if (this.destinationLoadBegun) {
+        this.isNavigating.set(false);
+        this.awaitingDestinationLoad = false;
+        this.destinationLoadBegun = false;
+        if (this.navigateTimeout) {
+          clearTimeout(this.navigateTimeout);
+          this.navigateTimeout = null;
+        }
+      }
+    }
+    return loading;
+  });
+
+  private readonly selectedNode = signal<TreeNode | null>(null);
+  private readonly highlightedNodeToken = signal<string>('');
 
   private readonly currentYear = new Date().getFullYear();
   public readonly availableYears = signal<number[]>(
     Array.from({ length: 10 }, (_, i) => this.currentYear - i)
   );
-  public readonly selectedYear = signal<number>(this.currentYear);
-  
-  // 🚀 FIXED: Dynamic signal tracking static navigation items from old dashboard
+  public readonly selectedYear = this.selectedYearService.selectedYear;
+
   public readonly activeStaticMenu = signal<string | null>('home');
   public readonly isRequestsMenuOpen = signal<boolean>(true);
   public readonly hasCommitteesHierarchy = signal<boolean>(false);
@@ -132,8 +160,8 @@ export class DashboardHierarchyTreeComponent implements OnInit {
           type: 'role',
           roleScope: roleScope ?? undefined,
           children: (role.committees || [])
-          .map((committeeNode) => this.mapAdminNodeToTreeNode(committeeNode, roleScope))
-          .filter((treeNode): treeNode is TreeNode => Boolean(treeNode))
+            .map((committeeNode) => this.mapAdminNodeToTreeNode(committeeNode, roleScope))
+            .filter((treeNode): treeNode is TreeNode => Boolean(treeNode))
         };
       })
       .filter((roleNode) => (roleNode.children?.length || 0) > 0)
@@ -153,13 +181,18 @@ export class DashboardHierarchyTreeComponent implements OnInit {
       .map((childNode) => this.mapAdminNodeToTreeNode(childNode, roleScope))
       .filter((childNode): childNode is TreeNode => Boolean(childNode));
 
+    this.sortTreeChildren(mappedChildren);
+
     return {
       name: node.name,
       type: mappedType,
       id: this.extractNumericId(node.id),
-      logo: mappedType === 'group' ? sanitizeCloudinaryLogoUrl(node.logo || null) : null,
+      logo: (mappedType === 'group' || mappedType === 'event') ? sanitizeCloudinaryLogoUrl(node.logo || null) : null,
       roleScope: roleScope ?? undefined,
       roles: node.roles || undefined,
+      startDate: node.startDate ?? undefined,
+      endDate: node.endDate ?? undefined,
+      status: node.status ?? undefined,
       children: mappedChildren.length > 0 ? mappedChildren : undefined
     };
   }
@@ -209,10 +242,47 @@ export class DashboardHierarchyTreeComponent implements OnInit {
       return directNumeric;
     }
 
-    const idParts = rawId.split('_');
-    const trailingSegment = idParts[idParts.length - 1];
+    const idParts = rawId.split('_') as string[];
+    const trailingSegment = idParts[idParts.length - 1] as string;
     const parsedId = Number(trailingSegment);
     return Number.isNaN(parsedId) ? undefined : parsedId;
+  }
+
+  private sortTreeChildren(nodes: TreeNode[]): void {
+    const statusOrder: Record<string, number> = {
+      COMPLETED: 0,
+      STARTED: 1,
+      UPCOMING: 2
+    };
+
+    nodes.sort((left, right) => {
+      const isLeftEvent = left.type === 'event';
+      const isRightEvent = right.type === 'event';
+
+      if (isLeftEvent && isRightEvent) {
+        const leftStatus = String(left.status || '').toUpperCase();
+        const rightStatus = String(right.status || '').toUpperCase();
+        const leftOrder = statusOrder[leftStatus] ?? 99;
+        const rightOrder = statusOrder[rightStatus] ?? 99;
+
+        if (leftOrder !== rightOrder) {
+          return leftOrder - rightOrder;
+        }
+
+        const leftDate = left.startDate ?? '';
+        const rightDate = right.startDate ?? '';
+
+        if (leftDate !== rightDate) {
+          if (!leftDate) return 1;
+          if (!rightDate) return -1;
+          return leftDate < rightDate ? -1 : 1;
+        }
+
+        return left.name.localeCompare(right.name);
+      }
+
+      return left.name.localeCompare(right.name);
+    });
   }
 
   private syncActiveNodeFromRawUrl(): void {
@@ -267,7 +337,7 @@ export class DashboardHierarchyTreeComponent implements OnInit {
       const routeSelectionKey = `${typeParam}:${targetId}`;
 
       if (matchedNode) {
-        this.activeStaticMenu.set(null); // Deselect static menus if tree item is matched
+        this.activeStaticMenu.set(null);
         this.selectedNode.set(matchedNode);
         this.triggerNodeHighlight(matchedNode);
         this.expandAncestorsChain(this.dataSource.data, matchedNode);
@@ -284,14 +354,12 @@ export class DashboardHierarchyTreeComponent implements OnInit {
       }
     }
 
-    // Default system landing node behavior definition
     if (this.dataSource.data.length > 0 && !this.selectedNode() && !this.activeStaticMenu()) {
       if (shouldAutoOpenFirstNode && this.tryOpenFirstHierarchyNode()) {
         this.isLoading.set(false);
         return;
       }
 
-      // Only auto-redirect on bare /dashboard route; keep current group/event route untouched.
       if (this.isDashboardRootRoute(urlSegments)) {
         this.onSelectStaticMenu('home');
       }
@@ -407,7 +475,6 @@ export class DashboardHierarchyTreeComponent implements OnInit {
     }
   }
 
-  // 🚀 FIXED: Static Menu selection handling logic to switch route viewports cleanly
   public onSelectStaticMenu(menuType: 'home' | 'requests' | 'requests-sent' | 'requests-received'): void {
     if (menuType === 'requests') return;
 
@@ -418,9 +485,7 @@ export class DashboardHierarchyTreeComponent implements OnInit {
 
     const segments = menuType === 'home' ? ['home'] : ['requests', menuType.replace('requests-', '')];
 
-    this.router.navigate(['/dashboard', ...segments]).then(() => {
-      console.log(`Successfully shifted application context viewport to static hub: [${menuType.replace('requests-', '').toUpperCase()}]`);
-    });
+    this.router.navigate(['/dashboard', ...segments]);
   }
 
   public toggleRequestsMenu(): void {
@@ -441,11 +506,18 @@ export class DashboardHierarchyTreeComponent implements OnInit {
 
   public onNodeClick(node: TreeNode): void {
     if (node.type === 'role') {
-      // this.treeNodeSelected.emit(node);
       return;
     }
 
-    this.activeStaticMenu.set(null); // Clear static highlights when tree node gets selected
+    if (this.isNodeSelected(node)) {
+      return;
+    }
+
+    if (this.isNavigating()) {
+      return;
+    }
+
+    this.activeStaticMenu.set(null);
     this.selectedNode.set(node);
     this.triggerNodeHighlight(node);
 
@@ -456,9 +528,38 @@ export class DashboardHierarchyTreeComponent implements OnInit {
         return;
       }
 
+      this.isNavigating.set(true);
+      this.awaitingDestinationLoad = true;
+      this.destinationLoadBegun = false;
+      if (this.navigateTimeout) {
+        clearTimeout(this.navigateTimeout);
+      }
+      this.navigateTimeout = setTimeout(() => {
+        if (this.isNavigating()) {
+          this.isNavigating.set(false);
+          this.awaitingDestinationLoad = false;
+          this.destinationLoadBegun = false;
+        }
+        this.navigateTimeout = null;
+      }, DashboardHierarchyTreeComponent.NAVIGATING_GUARD_TIMEOUT_MS);
       this.router.navigate(['/dashboard', node.type, node.id]).then((success) => {
         if (!success) {
           this.notifier.error(`Unable to open ${node.type} details.`);
+          this.isNavigating.set(false);
+          this.awaitingDestinationLoad = false;
+          this.destinationLoadBegun = false;
+          if (this.navigateTimeout) {
+            clearTimeout(this.navigateTimeout);
+            this.navigateTimeout = null;
+          }
+        }
+      }).catch(() => {
+        this.isNavigating.set(false);
+        this.awaitingDestinationLoad = false;
+        this.destinationLoadBegun = false;
+        if (this.navigateTimeout) {
+          clearTimeout(this.navigateTimeout);
+          this.navigateTimeout = null;
         }
       });
       this.treeNodeSelected.emit(node);
@@ -507,5 +608,91 @@ export class DashboardHierarchyTreeComponent implements OnInit {
 
   public getNodeInitial(name: string | undefined): string {
     return String(name || '').trim().charAt(0).toUpperCase() || '?';
+  }
+
+  public getNodeDesignation(node: TreeNode): string | null {
+    if (!node.roleScope || node.roleScope === 'member') {
+      return null;
+    }
+    if (node.type === 'group') {
+      return null;
+    }
+    return node.roleScope === 'master_admin' ? 'Master Admin' : 'Admin';
+  }
+
+  public shouldShowEventRole(node: TreeNode): boolean {
+    if (node.type !== 'event' || !node.roles?.length) {
+      return false;
+    }
+    const firstRole = node.roles[0];
+    if (!firstRole) {
+      return false;
+    }
+    const normalized = firstRole.name.trim().toLowerCase();
+    return !(normalized === 'member' || normalized === '');
+  }
+
+  public getCommitteeLogoRoleClass(node: TreeNode): string {
+    if (node.type !== 'group' || !node.roles?.length) {
+      return '';
+    }
+    const roleSet = new Set(
+      node.roles.map((role) => String(role?.name || '').trim().toUpperCase()).filter(Boolean)
+    );
+    if (roleSet.has('COMMITTEE_MASTER_ADMIN')) {
+      return 'committee-role-master_admin';
+    }
+    if (roleSet.has('COMMITTEE_ADMIN')) {
+      return 'committee-role-admin';
+    }
+    if (roleSet.has('COMMITTEE_MEMBER')) {
+      return 'committee-role-member';
+    }
+    return '';
+  }
+
+  public getEventDesignationColor(node: TreeNode): string {
+    if (node.type !== 'event' || !node.roles?.length) {
+      return '#64748b';
+    }
+    const firstRole = node.roles[0];
+    if (!firstRole) {
+      return '#64748b';
+    }
+    const normalized = firstRole.name.trim().toLowerCase();
+    if (normalized === 'member' || normalized === '') {
+      return '#64748b';
+    }
+    return firstRole.color || '#64748b';
+  }
+
+  public getEventRoleIcon(node: TreeNode): string | null {
+    if (node.type !== 'event' || !node.roles?.length) {
+      return null;
+    }
+    const firstRole = node.roles[0];
+    if (!firstRole) {
+      return null;
+    }
+    const normalized = firstRole.name.trim().toLowerCase();
+    if (normalized === 'member' || normalized === '') {
+      return null;
+    }
+    return firstRole.icon || null;
+  }
+
+  public getEventRoleName(node: TreeNode): string | null {
+    if (node.type !== 'event' || !node.roles?.length) {
+      return null;
+    }
+    const firstRole = node.roles[0];
+    if (!firstRole) {
+      return null;
+    }
+    const normalized = firstRole.name.trim().toLowerCase();
+    if (normalized === 'member' || normalized === '') {
+      return null;
+    }
+    return firstRole.name;
   }
 }

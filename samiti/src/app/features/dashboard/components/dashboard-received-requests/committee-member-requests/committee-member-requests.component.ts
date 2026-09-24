@@ -5,6 +5,7 @@ import { MatButtonModule } from "@angular/material/button";
 import { MatIconModule } from "@angular/material/icon";
 import { MatProgressSpinnerModule } from "@angular/material/progress-spinner";
 import { MatSortModule, Sort } from "@angular/material/sort";
+import { MatTooltipModule } from "@angular/material/tooltip";
 import { CommitteeMemberRequestsService, ReceivedCommitteeMembershipRequestItem, TakeActionOnCommitteeMembershipRequestBody } from "./committee-member-requests.service";
 import { ConfirmDialogData } from "../../../../../components/dialog/confirm/confirm-dialog.models";
 import { ConfirmDialogService } from "../../../../../components/dialog/confirm/confirm-dialog.service";
@@ -20,6 +21,7 @@ import { ConfirmDialogService } from "../../../../../components/dialog/confirm/c
     MatIconModule,
     MatProgressSpinnerModule,
     MatSortModule,
+    MatTooltipModule,
   ],
   templateUrl: "./committee-member-requests.component.html",
   styleUrls: ["./committee-member-requests.component.scss", "../../dashboard-received-requests/dashboard-received-requests.scss"],

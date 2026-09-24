@@ -68,6 +68,9 @@ export const eventVoteTypes = `
   type EventVoteHistory {
     eventId: Int!
     eventName: String!
+    eventLogo: String
+    eventAddress: String
+    eventLogoBorderColor: String
     totalMembers: Int!
     votedCount: Int!
     notVotedCount: Int!
@@ -139,11 +142,23 @@ export const eventVoteResolvers = {
         throwEventError('FORBIDDEN', 'Only committee members can view vote history');
       }
 
-      const eventRows = await query<Array<RowDataPacket & { eventName: string }>>(
-        `SELECT name AS eventName FROM events WHERE id = ? LIMIT 1`,
+      const eventRows = await query<Array<RowDataPacket & { eventName: string; eventLogo: string | null; address: string | null }>>(
+        `SELECT name AS eventName, event_logo AS eventLogo, address FROM events WHERE id = ? LIMIT 1`,
         [eventId]
       );
       const eventName = eventRows[0]?.eventName ? String(eventRows[0].eventName) : '';
+      const eventLogo = eventRows[0]?.eventLogo ? String(eventRows[0].eventLogo) : null;
+      const eventAddress = eventRows[0]?.address ? String(eventRows[0].address) : null;
+
+      const winnerColorRows = await query<Array<RowDataPacket & { color: string | null }>>(
+        `SELECT erm.color
+           FROM event_winners ew
+           INNER JOIN events_roles_master erm ON erm.role_id = ew.role_id
+          WHERE ew.event_id = ? AND ew.winner_user_id = ?
+          LIMIT 1`,
+        [eventId, loggedInUserId]
+      );
+      const eventLogoBorderColor = winnerColorRows[0]?.color ? String(winnerColorRows[0].color) : '#64748b';
 
       const memberRows = await query<Array<RowDataPacket & {
         userId: number;
@@ -161,6 +176,7 @@ export const eventVoteResolvers = {
           FROM users_committees c
           INNER JOIN users u ON u.id = c.user_id
           WHERE c.committee_id = ?
+            AND c.committee_role IS NOT NULL
           ORDER BY u.name ASC`,
         [access.committeeId]
       );
@@ -193,6 +209,9 @@ export const eventVoteResolvers = {
       return {
         eventId,
         eventName,
+        eventLogo,
+        eventAddress,
+        eventLogoBorderColor,
         totalMembers,
         votedCount,
         notVotedCount: totalMembers - votedCount,
@@ -443,8 +462,8 @@ export const eventVoteResolvers = {
           existingWinner.isWinner = true;
           // Ensure only the declared winner is flagged as winner.
           candidates.forEach((c) => { c.isWinner = c.userId === declaredWinnerId; });
-        } else {
-          // No declared winner yet - fall back to vote-based determination (pre-declaration view).
+        } else if (access.votingPhaseState < 6) {
+          // Before declaration, show the current vote leader(s) as provisional winners.
           const maxVotes = candidates.length > 0 ? Math.max(...candidates.map((c) => c.voteCount)) : 0;
           const hasSingleCandidate = candidates.length === 1;
           const winners = candidates.filter((c) => c.voteCount === maxVotes && (maxVotes > 0 || hasSingleCandidate));

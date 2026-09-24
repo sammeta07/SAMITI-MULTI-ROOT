@@ -6,6 +6,7 @@ export interface CommitteeListRequestBackend {
   distanceKm: number;
   latitude: number;
   longitude: number;
+  year: number;
 }
 
 // Matches GraphQL type Committee (guest — limited fields)

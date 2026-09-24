@@ -99,11 +99,12 @@ export class LoginDialogComponent implements OnInit {
           baseRole: u.baseRole,
           photo: u.profilePhoto,
           fcmToken: u.fcmToken,
-          dashboardTree: [],
-          accountRoles: u.accountRoles || null
+          dashboardTree: []
         };
         
         this.authService.startSession({ token, userData: userdata });
+
+        this.authService.refreshUserAccountRoles();
 
         this.dialogRef.close(true);
 

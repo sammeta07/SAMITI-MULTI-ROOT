@@ -1,7 +1,9 @@
--- Migration 024: Reset events_roles_master to required 5 bilingual roles
+-- Migration 024: Reset events_roles_master to 4 canonical bilingual roles
 -- Purpose: Keep only the explicitly approved role set.
--- NOTE: After migration 049, DELETE on this table is blocked by a trigger.
---       If re-running migrations, drop the trigger first or adjust accordingly.
+-- NOTE: Migration 049 adds a DELETE-protection trigger. We drop it here
+--       so this DELETE is re-runnable; migration 049 recreates the trigger.
+
+DROP TRIGGER IF EXISTS trg_events_roles_master_block_delete;
 
 DELETE FROM events_roles_master;
 
@@ -18,6 +20,5 @@ INSERT INTO events_roles_master (
 VALUES
   ('adhyaksha', 'president', 'adhyaksha', 'PRESIDENT', 1, 10),
   ('upadhyaksha', 'vice_president', 'upadhyaksha', 'VICE_PRESIDENT', 1, 20),
-  ('sachiv', 'general_secretary', 'sachiv', 'GENERAL_SECRETARY', 1, 30),
-  ('koshadhyaksha', 'treasurer', 'koshadhyaksha', 'TREASURER', 1, 40),
-  ('aankshak', 'auditor', 'aankshak', 'AUDITOR', 1, 50);
+  ('koshadhyaksha', 'treasurer', 'koshadhyaksha', 'TREASURER', 1, 30),
+  ('aankshak', 'auditor', 'aankshak', 'AUDITOR', 1, 40);

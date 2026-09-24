@@ -85,49 +85,54 @@ export class HeaderComponent implements OnInit {
     this.isLoading.set(true);
     this.locationName.set('Locating...');
 
-    if (navigator.geolocation) {
-      navigator.geolocation.getCurrentPosition(
-        (position) => {
-          const body: LocationCoords = {
-            lat: position.coords.latitude,
-            long: position.coords.longitude
-          };
-          this.headerService.userLocationCords.set(body);
-          this.headerService.isGeolocationDenied.set(false);
-          this.headerService.isGeolocationChecking.set(false);
-          this.headerService.getUserLocation(body).subscribe({
-            next: (data) => {
-              const place = data.address?.state_district || 'Location';
-              this.locationName.set(place);
-              this.isLoading.set(false);
-              this.startupLoaderService.markReverseGeocodeSettled();
-            },
-            error: () => {
-              this.locationName.set('Location unavailable');
-              this.isLoading.set(false);
-              this.startupLoaderService.markReverseGeocodeSettled();
-              this.notifier.error('Could not fetch location details.');
-            }
-          });
-        },
-        (error) => {
-          console.error('Error getting location:', error);
-          this.locationName.set('Location denied');
-          this.isLoading.set(false);
-          this.headerService.isGeolocationDenied.set(true);
-          this.headerService.isGeolocationChecking.set(false);
-          this.startupLoaderService.markAllSettled();
-        }
-      );
-    } else {
-      console.error('Geolocation is not supported by this browser.');
-      this.locationName.set('Not supported');
-      this.isLoading.set(false);
-      this.headerService.isGeolocationDenied.set(true);
-      this.headerService.isGeolocationChecking.set(false);
-      this.startupLoaderService.markAllSettled();
+    if (!navigator.geolocation) {
+      this.handleLocationError('Geolocation is not supported by this browser.');
       this.notifier.info('Geolocation is not supported by this browser.');
+      return;
     }
+
+    navigator.geolocation.getCurrentPosition(
+      (position) => {
+        const body: LocationCoords = {
+          lat: position.coords.latitude,
+          long: position.coords.longitude
+        };
+        this.applyLocation(body);
+      },
+      (error) => {
+        console.error('Error getting location:', error);
+        this.handleLocationError('Error getting location.');
+      }
+    );
+  }
+
+  private applyLocation(location: LocationCoords): void {
+    this.headerService.userLocationCords.set(location);
+    this.headerService.isGeolocationDenied.set(false);
+    this.headerService.isGeolocationChecking.set(false);
+    this.headerService.getUserLocation(location).subscribe({
+      next: (data) => {
+        const place = data.address?.state_district || 'Location';
+        this.locationName.set(place);
+        this.isLoading.set(false);
+        this.startupLoaderService.markReverseGeocodeSettled();
+      },
+      error: () => {
+        this.locationName.set('Location unavailable');
+        this.isLoading.set(false);
+        this.startupLoaderService.markReverseGeocodeSettled();
+        this.notifier.error('Could not fetch location details.');
+      }
+    });
+  }
+
+  private handleLocationError(message: string): void {
+    console.error(message);
+    this.locationName.set('Location denied');
+    this.isLoading.set(false);
+    this.headerService.isGeolocationDenied.set(true);
+    this.headerService.isGeolocationChecking.set(false);
+    this.startupLoaderService.markAllSettled();
   }
 
   onSearchFocus() {

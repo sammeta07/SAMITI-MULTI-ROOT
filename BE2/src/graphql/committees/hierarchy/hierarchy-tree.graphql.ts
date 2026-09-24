@@ -2,12 +2,21 @@ import { query } from '../../../config/db';
 import { hasEventsDisplayNameColumn } from '../../events/details/event-display-name-support';
 
 export const hierarchyTreeTypes = `
+  type HierarchyEventRole {
+    name: String!
+    color: String
+    icon: String
+  }
+
   type HierarchyTreeNode {
     id: String!
     name: String!
     type: String!
     logo: String
-    roles: [String!]!
+    roles: [HierarchyEventRole!]!
+    startDate: String
+    endDate: String
+    status: String
     children: [HierarchyTreeNode!]!
   }
 
@@ -27,8 +36,17 @@ type InternalTreeNode = {
   type: string;
   logo: string | null;
   roles: Set<string>;
+  startDate?: string | null;
+  endDate?: string | null;
+  status?: string | null;
   children: InternalTreeNode[];
   childIds: Set<string>;
+};
+
+type EventRoleInfo = {
+  name: string;
+  color: string | null;
+  icon: string | null;
 };
 
 const committeeRolePriority: Record<string, number> = {
@@ -37,12 +55,40 @@ const committeeRolePriority: Record<string, number> = {
   COMMITTEE_MASTER_ADMIN: 3
 };
 
+const parseLocalDate = (value: string | null): Date | null => {
+  if (!value) return null;
+  const [year, month, day] = String(value).split('-').map(Number);
+  if (!year || !month || !day) return null;
+  return new Date(year, month - 1, day);
+};
+
+const deriveEventStatusFromDates = (startDate: string | null, endDate: string | null): string => {
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+
+  const start = parseLocalDate(startDate);
+  const end = parseLocalDate(endDate);
+
+  if (end && end.getTime() < today.getTime()) {
+    return 'COMPLETED';
+  }
+
+  if (start && start.getTime() <= today.getTime()) {
+    return 'STARTED';
+  }
+
+  return 'UPCOMING';
+};
+
 export type SerializedHierarchyTreeNode = {
   id: string;
   name: string;
   type: string;
   logo: string | null;
-  roles: string[];
+  roles: EventRoleInfo[];
+  startDate: string | null;
+  endDate: string | null;
+  status: string | null;
   children: SerializedHierarchyTreeNode[];
 };
 
@@ -93,6 +139,7 @@ export const hierarchyTreeResolvers = {
       const memberCommitteeIds = new Set<number>();
       const eventNodeById = new Map<number, InternalTreeNode>();
       const eventRoleSetById = new Map<number, Set<string>>();
+      const roleInfoByName = new Map<string, { color: string | null; icon: string | null }>();
 
       const attachChild = (parentNode: InternalTreeNode, childNode: InternalTreeNode) => {
         if (!parentNode.childIds.has(childNode.id)) {
@@ -148,16 +195,19 @@ export const hierarchyTreeResolvers = {
       const committeePlaceholders = committeeIds.map(() => '?').join(',');
       const supportsEventDisplayName = await hasEventsDisplayNameColumn();
 
-      const eventRows = await query<any[]>(
-        `SELECT
-           id AS event_id,
-           committee_id,
-           ${supportsEventDisplayName ? "COALESCE(NULLIF(TRIM(display_name), ''), LEFT(name, 20))" : 'LEFT(name, 20)'} AS event_name
-         FROM events
-         WHERE committee_id IN (${committeePlaceholders})
-         ORDER BY name ASC`,
-        committeeIds
-      );
+        const eventRows = await query<any[]>(
+          `SELECT
+             id AS event_id,
+             committee_id,
+             event_logo,
+             DATE_FORMAT(start_date, '%Y-%m-%d') AS start_date,
+             DATE_FORMAT(end_date, '%Y-%m-%d') AS end_date,
+             ${supportsEventDisplayName ? "COALESCE(NULLIF(TRIM(display_name), ''), LEFT(name, 20))" : 'LEFT(name, 20)'} AS event_name
+          FROM events
+          WHERE committee_id IN (${committeePlaceholders})
+          ORDER BY start_date ASC, name ASC`,
+          committeeIds
+        );
 
       const eventIds = eventRows.map((eventRow) => Number(eventRow.event_id));
 
@@ -184,7 +234,7 @@ export const hierarchyTreeResolvers = {
         if (winnerRoleIds.size > 0) {
           const roleIdPlaceholders = Array.from(winnerRoleIds).map(() => '?').join(',');
           const roleRows = await query<any[]>(
-            `SELECT role_id, role_name
+            `SELECT role_id, role_name, color, icon
              FROM events_roles_master
              WHERE role_id IN (${roleIdPlaceholders})`,
             Array.from(winnerRoleIds)
@@ -194,7 +244,12 @@ export const hierarchyTreeResolvers = {
             const roleId = Number(roleRow.role_id);
             const roleName = String(roleRow.role_name || '').trim();
             if (roleName) {
-              roleNameByRoleId.set(roleId, roleName.toUpperCase());
+              const normalizedRoleName = roleName.toUpperCase();
+              roleNameByRoleId.set(roleId, normalizedRoleName);
+              roleInfoByName.set(normalizedRoleName, {
+                color: roleRow.color ? String(roleRow.color) : null,
+                icon: roleRow.icon ? (Buffer.isBuffer(roleRow.icon) ? roleRow.icon.toString('utf8') : String(roleRow.icon)) : null
+              });
             }
           }
         }
@@ -220,8 +275,11 @@ export const hierarchyTreeResolvers = {
             id: `event_${eventId}`,
             name: String(eventRow.event_name),
             type: 'EVENT',
-            logo: null,
+            logo: eventRow.event_logo ? String(eventRow.event_logo) : null,
             roles: eventRoles,
+            startDate: eventRow.start_date ? String(eventRow.start_date) : null,
+            endDate: eventRow.end_date ? String(eventRow.end_date) : null,
+            status: deriveEventStatusFromDates(eventRow.start_date, eventRow.end_date),
             children: [],
             childIds: new Set<string>()
           };
@@ -328,8 +386,43 @@ export const hierarchyTreeResolvers = {
         }
       }
 
+      const compareNodes = (leftNode: InternalTreeNode, rightNode: InternalTreeNode): number => {
+        const isLeftEvent = leftNode.type === 'EVENT';
+        const isRightEvent = rightNode.type === 'EVENT';
+
+        if (isLeftEvent && isRightEvent) {
+          const statusOrder: Record<string, number> = {
+            COMPLETED: 0,
+            STARTED: 1,
+            UPCOMING: 2
+          };
+
+          const leftStatus = String(leftNode.status || '').toUpperCase();
+          const rightStatus = String(rightNode.status || '').toUpperCase();
+          const leftOrder = statusOrder[leftStatus] ?? 99;
+          const rightOrder = statusOrder[rightStatus] ?? 99;
+
+          if (leftOrder !== rightOrder) {
+            return leftOrder - rightOrder;
+          }
+
+          const leftDate = leftNode.startDate ?? '';
+          const rightDate = rightNode.startDate ?? '';
+
+          if (leftDate !== rightDate) {
+            if (!leftDate) return 1;
+            if (!rightDate) return -1;
+            return leftDate < rightDate ? -1 : 1;
+          }
+
+          return leftNode.name.localeCompare(rightNode.name);
+        }
+
+        return leftNode.name.localeCompare(rightNode.name);
+      };
+
       const sortNodesByName = (nodes: InternalTreeNode[]) => {
-        nodes.sort((leftNode, rightNode) => leftNode.name.localeCompare(rightNode.name));
+        nodes.sort(compareNodes);
         for (const node of nodes) {
           if (node.children.length > 0) {
             sortNodesByName(node.children);
@@ -342,7 +435,17 @@ export const hierarchyTreeResolvers = {
         name: node.name,
         type: node.type,
         logo: node.logo,
-        roles: Array.from(node.roles),
+        roles: Array.from(node.roles).map((roleName): EventRoleInfo => {
+          const info = roleInfoByName.get(roleName);
+          return {
+            name: roleName,
+            color: info?.color ?? null,
+            icon: info?.icon ?? null
+          };
+        }),
+        startDate: node.startDate ?? null,
+        endDate: node.endDate ?? null,
+        status: node.status ?? null,
         children: node.children.map((childNode) => serializeNode(childNode))
       });
 

@@ -10,6 +10,7 @@ interface ImageCropperDialogData {
   title?: string;
   maintainAspectRatio?: boolean;
   aspectRatio?: number;
+  roundCropper?: boolean;
   cropperMinWidth?: number;
   cropperMinHeight?: number;
 }

@@ -35,7 +35,7 @@
               </span>
               <span *ngIf="!item.userDetails.photo" class="table-avatar table-avatar--photo table-avatar--fallback">{{ getInitials(item.userDetails.name) }}</span>
               <div class="committee-info">
-                <span class="committee-name">{{ item.userDetails.name | titlecase }}</span>
+                <span class="committee-name user-name">{{ item.userDetails.name | titlecase }}</span>
                 <span class="committee-address">{{ item.userDetails.email }}</span>
               </div>
             </div>
@@ -45,7 +45,7 @@
           <td class="text-sm text-dark">{{ item.resolvedAtTime ? (item.resolvedAtTime | date: "d MMM y, h:mm a") : "—" }}</td>
           <td><span [ngClass]="'status-chip status-' + item.status.toLowerCase()">{{ item.status }}</span></td>
           <td class="col-expand">
-            <button class="expand-btn" type="button" (click)="toggleExpand(i); $event.stopPropagation()" aria-label="Toggle details">
+            <button class="expand-btn" type="button" (click)="toggleExpand(i); $event.stopPropagation()" aria-label="Toggle details" [matTooltip]="isExpanded(i) ? 'Collapse' : 'Expand'">
               <mat-icon [class.expand-icon--open]="isExpanded(i)">expand_more</mat-icon>
             </button>
           </td>

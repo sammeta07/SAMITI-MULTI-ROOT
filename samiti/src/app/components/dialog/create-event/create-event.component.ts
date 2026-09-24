@@ -15,6 +15,7 @@ import { NotifierService } from '../../../shared/notifier/notifier.service';
 import { TextFormatService } from '../../../shared/services/text-format-service.service';
 import { AuthService } from '../../../core/services/auth.service';
 import { HeaderService } from '../../header/header.service';
+import { DashboardHierarchyTreeService } from '../../../features/dashboard/components/dashboard-hierarchy-tree/dashboard-hierarchy-tree.service';
 
 @Component({
   selector: 'app-create-event-dialog',
@@ -42,6 +43,7 @@ export class CreateEventDialogComponent implements OnInit {
   private readonly textFormatService = inject(TextFormatService);
   private readonly authService = inject(AuthService);
   private readonly headerService = inject(HeaderService);
+  private readonly hierarchyTreeService = inject(DashboardHierarchyTreeService);
 
   public readonly injectedData = inject(MAT_DIALOG_DATA, { optional: true });
 
@@ -222,6 +224,10 @@ export class CreateEventDialogComponent implements OnInit {
     request$.subscribe({
       next: (response) => {
         this.isSubmitting.set(false);
+        if (!this.isEditMode()) {
+          this.authService.refreshUserAccountRoles();
+          this.hierarchyTreeService.triggerHierarchyTreeRefresh();
+        }
         const rawUserName = this.authService.getStoredUserData()?.name || 'User';
         const displayUserName = this.textFormatService.toTitleCase(rawUserName);
         const displayEventName = this.textFormatService.toTitleCase(response.eventName || this.eventName);

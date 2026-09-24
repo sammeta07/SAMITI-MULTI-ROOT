@@ -56,6 +56,8 @@ export async function getMappedVotingRoles(eventId: number): Promise<Array<{
   hindiName: string | null;
   englishName: string | null;
   sortOrder: number;
+  color: string | null;
+  icon: string | null;
   winnerUserId: number | null;
   winnerName: string | null;
   winnerPhoto: string | null;
@@ -68,13 +70,17 @@ export async function getMappedVotingRoles(eventId: number): Promise<Array<{
     hindiName: string | null;
     englishName: string | null;
     sortOrder: number;
+    color: string | null;
+    icon: string | null;
   }>>(
     `SELECT
        evr.role_id AS roleId,
        erm.role_name AS roleName,
        erm.hindi_name AS hindiName,
        erm.english_name AS englishName,
-       COALESCE(erm.sort_order, 0) AS sortOrder
+       COALESCE(erm.sort_order, 0) AS sortOrder,
+       erm.color AS color,
+       erm.icon AS icon
      FROM event_voting_roles evr
      INNER JOIN events_roles_master erm ON erm.role_id = evr.role_id
      WHERE evr.event_id = ?
@@ -130,6 +136,8 @@ export async function getMappedVotingRoles(eventId: number): Promise<Array<{
       roleName: String(mappedRoleRow.roleName || ''),
       hindiName: mappedRoleRow.hindiName ? String(mappedRoleRow.hindiName) : null,
       englishName: mappedRoleRow.englishName ? String(mappedRoleRow.englishName) : null,
+      color: mappedRoleRow.color ? String(mappedRoleRow.color).trim() : null,
+      icon: mappedRoleRow.icon ? String(mappedRoleRow.icon).trim() : null,
       sortOrder: Number(mappedRoleRow.sortOrder || 0),
       winnerUserId: winner?.userId ?? null,
       winnerName: winner?.name ?? null,
@@ -146,6 +154,8 @@ export const eventVotingTypes = `
     roleName: String!
     hindiName: String
     englishName: String
+    color: String
+    icon: String
     sortOrder: Int!
     winnerUserId: Int
     winnerName: String
@@ -263,7 +273,7 @@ export const eventVotingMutationFields = `
   allowEventVoting(eventId: Int!): AllowEventVotingPayload!
   stopEventVoting(eventId: Int!): StopEventVotingPayload!
   declareEventResults(eventId: Int!): DeclareEventResultsPayload!
-  resolveTieBreaker(eventId: Int!, roleId: Int!, winnerCandidateId: Int!, votingMode: String): ResolveTieBreakerPayload!
+  resolveTieBreaker(eventId: Int!, roleId: Int!, winnerCandidateId: Int!, winnerVoteCount: Int, votingMode: String): ResolveTieBreakerPayload!
   vacateVotingRole(eventId: Int!, roleId: Int!): VacateVotingRolePayload!
   assignWinningRole(eventId: Int!, roleId: Int!, newWinnerUserId: Int!, newWinnerName: String!, newWinnerPhoto: String, votingMode: String): AssignWinningRolePayload!
   directAssignWinner(eventId: Int!, roleId: Int!, userId: Int!): DirectAssignWinnerPayload!
@@ -311,6 +321,76 @@ async function syncWinnersToUsersEvents(eventId: number): Promise<void> {
        VALUES (?, ?, ?, ?, 'ACTIVE', NOW(), NOW())
        ON DUPLICATE KEY UPDATE role_id = VALUES(role_id), designation = VALUES(designation), updated_at = NOW()`,
       [eventId, userId, roleId, designation]
+    );
+  }
+}
+
+async function recordSingleCandidateWinners(eventId: number): Promise<void> {
+  const mappedRoleRows = await query<Array<RowDataPacket & { roleId: number }>>(
+    `SELECT role_id AS roleId FROM event_voting_roles WHERE event_id = ?`,
+    [eventId]
+  );
+  const mappedRoleIds = mappedRoleRows.map((r) => Number(r.roleId)).filter((id) => Number.isInteger(id) && id > 0);
+  if (mappedRoleIds.length === 0) {
+    return;
+  }
+
+  const placeholders = mappedRoleIds.map(() => '?').join(',');
+  const approvedRows = await query<Array<RowDataPacket & { roleId: number; candidateId: number }>>(
+    `SELECT role_id AS roleId, user_id AS candidateId
+     FROM event_interest_expressions
+     WHERE event_id = ? AND role_id IN (${placeholders}) AND status = 'APPROVED'
+     GROUP BY role_id, user_id`,
+    [eventId, ...mappedRoleIds]
+  );
+
+  const approvedCount = new Map<number, number>();
+  approvedRows.forEach((row) => {
+    const roleId = Number(row.roleId);
+    approvedCount.set(roleId, (approvedCount.get(roleId) || 0) + 1);
+  });
+
+  const singleCandidateRoleIds = Array.from(approvedCount.entries())
+    .filter(([, count]) => count === 1)
+    .map(([roleId]) => roleId);
+
+  if (singleCandidateRoleIds.length === 0) {
+    return;
+  }
+
+  const singlePlaceholders = singleCandidateRoleIds.map(() => '?').join(',');
+  const singleCandidateRows = await query<Array<RowDataPacket & { roleId: number; userId: number; name: string; photo: string | null }>>(
+    `SELECT
+       eie.role_id AS roleId,
+       u.id AS userId,
+       u.name AS name,
+       u.profile_photo AS photo
+     FROM event_interest_expressions eie
+     INNER JOIN users u ON u.id = eie.user_id
+     WHERE eie.event_id = ? AND eie.role_id IN (${singlePlaceholders}) AND eie.status = 'APPROVED'
+     GROUP BY eie.role_id, u.id, u.name, u.profile_photo`,
+    [eventId, ...singleCandidateRoleIds]
+  );
+
+  for (const row of singleCandidateRows) {
+    await query(
+      `INSERT INTO event_winners
+         (event_id, role_id, winner_user_id, winner_name, winner_photo, winner_vote_count, declared_at, won_by)
+       VALUES (?, ?, ?, ?, ?, 0, NOW(), 'SINGLE_CANDIDATE')
+       ON DUPLICATE KEY UPDATE
+         winner_user_id = VALUES(winner_user_id),
+         winner_name = VALUES(winner_name),
+         winner_photo = VALUES(winner_photo),
+         winner_vote_count = VALUES(winner_vote_count),
+         declared_at = NOW(),
+         won_by = VALUES(won_by)`,
+      [
+        eventId,
+        Number(row.roleId),
+        Number(row.userId),
+        String(row.name || ''),
+        row.photo ? String(row.photo) : null
+      ]
     );
   }
 }
@@ -1083,7 +1163,21 @@ export const eventVotingResolvers = {
             const winnerName = String(userRows[0]?.name || role.winnerName || '').trim();
             const winnerPhoto = userRows[0]?.profilePhoto || role.winnerPhoto || null;
 
-            const voteCountRows = await query<Array<RowDataPacket & { voteCount: number }>>(
+      if (votingMode !== 'DIRECT') {
+        const approvedRows = await query<Array<RowDataPacket & { userId: number }>>(
+          `SELECT user_id AS userId
+           FROM event_interest_expressions
+           WHERE event_id = ? AND role_id = ? AND user_id = ? AND status = 'APPROVED'
+           LIMIT 1`,
+          [eventId, roleId, winnerUserId]
+        );
+
+        if (!approvedRows.length) {
+          throwEventError('BAD_REQUEST', 'Selected user is not an approved nominee for this role');
+        }
+      }
+
+      const voteCountRows = await query<Array<RowDataPacket & { voteCount: number }>>(
               `SELECT COUNT(*) AS voteCount
                 FROM event_votes
                 WHERE event_id = ? AND role_id = ? AND candidate_id = ?`,
@@ -1309,7 +1403,7 @@ export const eventVotingResolvers = {
               winner.name,
               winner.photo,
               winner.voteCount,
-              'COUNT'
+              winner.isSingleCandidate ? 'SINGLE_CANDIDATE' : 'COUNT'
             ]
           );
         }
@@ -1329,7 +1423,7 @@ export const eventVotingResolvers = {
       };
     },
 
-    async resolveTieBreaker(_: any, args: { eventId: number; roleId: number; winnerCandidateId: number; votingMode?: string }, context: any) {
+    async resolveTieBreaker(_: any, args: { eventId: number; roleId: number; winnerCandidateId: number; winnerVoteCount?: number; votingMode?: string }, context: any) {
       const eventId = Number(args?.eventId);
       const roleId = Number(args?.roleId);
       const winnerCandidateId = Number(args?.winnerCandidateId);
@@ -1523,6 +1617,11 @@ export const eventVotingResolvers = {
       );
 
       await query(
+        `DELETE FROM event_winners WHERE event_id = ? AND role_id = ?`,
+        [eventId, roleId]
+      );
+
+      await query(
         `UPDATE users_events SET role_id = NULL WHERE event_id = ? AND role_id = ?`,
         [eventId, roleId]
       );
@@ -1557,13 +1656,20 @@ export const eventVotingResolvers = {
 
       const newWinnerPhoto = args?.newWinnerPhoto ? String(args.newWinnerPhoto) : null;
       const supportsVotingPhaseState = await hasEventsVotingPhaseStateColumn();
+      const supportsVotingMode = await hasEventsVotingModeColumn();
       const loggedInUserId = await getLoggedInUserId(context);
 
-      const eventRows = await query<any[]>(
+      const eventRows = await query<Array<RowDataPacket & {
+        id: number;
+        committeeId: number;
+        votingPhaseState: number;
+        votingMode?: string;
+      }>>(
         `SELECT
            id,
            committee_id AS committeeId,
            ${supportsVotingPhaseState ? 'COALESCE(voting_phase_state, 0)' : '0'} AS votingPhaseState
+           ${supportsVotingMode ? ", voting_mode AS votingMode" : ", 'VOTING' AS votingMode"}
          FROM events
          WHERE id = ?
          LIMIT 1`,
@@ -1575,6 +1681,7 @@ export const eventVotingResolvers = {
       }
 
       const event = eventRows[0];
+  const votingMode = String(event.votingMode || 'VOTING').toUpperCase();
 
       const membershipRows = await query<any[]>(
         `SELECT committee_role
@@ -1606,18 +1713,6 @@ export const eventVotingResolvers = {
         throwEventError('BAD_REQUEST', 'Role is not mapped for this event');
       }
 
-      const approvedRows = await query<Array<RowDataPacket & { userId: number }>>(
-        `SELECT user_id AS userId
-         FROM event_interest_expressions
-         WHERE event_id = ? AND role_id = ? AND status = 'APPROVED'
-         LIMIT 1`,
-        [eventId, roleId, newWinnerUserId]
-      );
-
-      if (!approvedRows.length) {
-        throwEventError('BAD_REQUEST', 'Selected user is not an approved nominee for this role');
-      }
-
       const voteCountRows = await query<Array<RowDataPacket & { voteCount: number }>>(
         `SELECT COUNT(*) AS voteCount
          FROM event_votes
@@ -1644,8 +1739,8 @@ export const eventVotingResolvers = {
 
       await syncWinnersToUsersEvents(eventId);
       await query(
-        `UPDATE events SET voting_mode = 'VOTING', voting_phase_state = 6, updated_by = ? WHERE id = ?`,
-        [loggedInUserId, eventId]
+        `UPDATE events SET voting_mode = ?, voting_phase_state = 6, updated_by = ? WHERE id = ?`,
+        [votingMode === 'DIRECT' ? 'DIRECT' : 'VOTING', loggedInUserId, eventId]
       );
 
       return {

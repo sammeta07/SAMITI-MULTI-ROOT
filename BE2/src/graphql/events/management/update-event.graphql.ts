@@ -1,5 +1,7 @@
 import { execute, query } from '../../../config/db';
 import { hasEventsDisplayNameColumn } from '../details/event-display-name-support';
+import { deleteLocalMediaFileIfExists } from '../../../media/image-cleanup';
+import { isCloudinaryStorageEnabled } from '../../../media/cloudinary-storage';
 
 const ALLOWED_EVENT_STATUSES = new Set(['UPCOMING', 'ONGOING', 'COMPLETED', 'CANCELLED']);
 const ALLOWED_EVENT_VISIBILITIES = new Set(['VISIBLE', 'HIDDEN']);
@@ -381,7 +383,7 @@ export const updateEventResolvers = {
       }
 
       const existingEventRows = await query<any[]>(
-        `SELECT id, committee_id AS committeeId
+        `SELECT id, committee_id AS committeeId, event_logo AS eventLogo
          FROM events
          WHERE id = ?
          LIMIT 1`,
@@ -407,6 +409,18 @@ export const updateEventResolvers = {
 
       if (adminCheck.length === 0) {
         throwEventError('FORBIDDEN', 'Only committee admins can update event logo');
+      }
+
+      const oldEventLogo: string | null = existingEvent.eventLogo || null;
+      // In Cloudinary mode the logo is uploaded with a fixed public id and overwrites the
+      // previous asset, so the old logo is already replaced. In local mode each upload gets a
+      // unique filename, so we must delete the previous file to avoid orphaned storage.
+      if (oldEventLogo && oldEventLogo !== eventLogo && !isCloudinaryStorageEnabled()) {
+        try {
+          await deleteLocalMediaFileIfExists(oldEventLogo);
+        } catch {
+          // best-effort cleanup; do not fail the logo update
+        }
       }
 
       await execute(
