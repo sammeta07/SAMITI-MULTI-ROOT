@@ -17,9 +17,9 @@ export class DashboardHierarchyTreeService {
     this.refreshHierarchyTree.update((value) => value + 1);
   }
 
-  public getAdminHierarchyTree(): Observable<RoleNode[]> {
-    const query = `query {
-      adminHierarchyTree {
+  public getAdminHierarchyTree(year?: number): Observable<RoleNode[]> {
+    const query = `query AdminHierarchyTree($year: Int) {
+      adminHierarchyTree(year: $year) {
         roleName
         committees {
           id
@@ -92,7 +92,10 @@ export class DashboardHierarchyTreeService {
       }
     }`;
 
-    return this.http.post<{ data: { adminHierarchyTree: RoleNode[] } }>(this.graphqlUrl, { query }, { withCredentials: true }).pipe(
+    return this.http.post<{ data: { adminHierarchyTree: RoleNode[] } }>(this.graphqlUrl, {
+      query,
+      variables: { year: year ?? null }
+    }, { withCredentials: true }).pipe(
       map(res => res.data.adminHierarchyTree)
     );
   }

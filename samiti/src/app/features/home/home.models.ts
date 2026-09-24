@@ -7,6 +7,7 @@ export interface CommitteeListRequestBackend {
   latitude: number;
   longitude: number;
   year: number;
+  committeeId?: number;
 }
 
 // Matches GraphQL type Committee (guest — limited fields)
@@ -22,6 +23,11 @@ export interface CommitteeEvent {
   bannerImages: string[];
 }
 
+export interface CommitteeYearInfo {
+  year: number;
+  hasEvents: boolean;
+}
+
 export interface CommitteeGuestItem {
   id: number;
   address: string;
@@ -31,6 +37,7 @@ export interface CommitteeGuestItem {
   committeeLogo: string | null;
   establishYear: number;
   events: CommitteeEvent[];
+  availableYears: CommitteeYearInfo[];
 }
 
 // Matches GraphQL type CommitteeAuth (logged-in — full fields)

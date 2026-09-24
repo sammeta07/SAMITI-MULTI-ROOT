@@ -2,7 +2,7 @@ import { HttpClient, HttpContext } from '@angular/common/http';
 import { inject, Injectable, signal } from '@angular/core';
 import { Observable } from 'rxjs';
 import { map } from 'rxjs/operators';
-import { CommitteeListResponseGuestUser, CommitteeListRequestBackend, JoinCommitteeApiResponse, CancelRequestApiResponse, ToggleCommitteeFavouriteResponse, SubmitCommitteeMembershipRequestInput } from './home.models';
+import { CommitteeListResponseGuestUser, CommitteeListRequestBackend, JoinCommitteeApiResponse, CancelRequestApiResponse, ToggleCommitteeFavouriteResponse, SubmitCommitteeMembershipRequestInput, CommitteeYearInfo } from './home.models';
 import { environment } from '../../../environments/environment';
 import { JoinCommitteeRequestBody } from './home.models';
 import { CommitteeMembershipRequestService } from '../../core/services/committee-membership-request.service';
@@ -19,8 +19,32 @@ interface GraphQLResponseEnvelope<TData> {
 }
 
 interface CommitteeListGraphQLPayload {
-  committeesListGuestUser: CommitteeListResponseGuestUser;
-  committeesListAuthUser: CommitteeListResponseGuestUser;
+  committeesListGuestUser: Array<{
+    id: number;
+    address: string;
+    committeeName: string;
+    contactNumbers: string[];
+    distanceMeters: number;
+    committeeLogo: string | null;
+    establishYear: number;
+    events: any[];
+    availableYears: CommitteeYearInfo[];
+  }>;
+  committeesListAuthUser: Array<{
+    id: number;
+    address: string;
+    committeeName: string;
+    contactNumbers: string[];
+    distanceMeters: number;
+    committeeLogo: string | null;
+    establishYear: number;
+    committeeRole: string | null;
+    pendingRequestRole: string | null;
+    status: string | null;
+    isFavourite: number;
+    events: any[];
+    availableYears: CommitteeYearInfo[];
+  }>;
 }
 
 
@@ -35,8 +59,8 @@ export class HomeService {
 
     getCommitteesListGuestByDistanceKm(body: CommitteeListRequestBackend) {
         const url = this.graphqlUrl;
-        const query = `query committeesListGuestUser($latitude: Float!, $longitude: Float!, $distanceKm: Float!, $year: Int!) {
-          committeesListGuestUser(latitude: $latitude, longitude: $longitude, distanceKm: $distanceKm, year: $year) {
+        const query = `query committeesListGuestUser($latitude: Float!, $longitude: Float!, $distanceKm: Float!, $year: Int, $committeeId: Int) {
+          committeesListGuestUser(latitude: $latitude, longitude: $longitude, distanceKm: $distanceKm, year: $year, committeeId: $committeeId) {
             id
             address
             committeeName
@@ -55,6 +79,10 @@ export class HomeService {
               eventBanner
               bannerImages
             }
+            availableYears {
+              year
+              hasEvents
+            }
           }
         }`;
 
@@ -66,7 +94,8 @@ export class HomeService {
               latitude: body.latitude,
               longitude: body.longitude,
               distanceKm: body.distanceKm,
-              year: body.year
+              year: body.year,
+              committeeId: body.committeeId ?? null
             }
           },
           {
@@ -87,8 +116,8 @@ export class HomeService {
 
     getCommitteesListAuthUserByDistanceKm(body: CommitteeListRequestBackend) {
         const url = this.graphqlUrl;
-        const query = `query CommitteesListAuthUser($latitude: Float!, $longitude: Float!, $distanceKm: Float!, $year: Int!) {
-          committeesListAuthUser(latitude: $latitude, longitude: $longitude, distanceKm: $distanceKm, year: $year) {
+        const query = `query CommitteesListAuthUser($latitude: Float!, $longitude: Float!, $distanceKm: Float!, $year: Int, $committeeId: Int) {
+          committeesListAuthUser(latitude: $latitude, longitude: $longitude, distanceKm: $distanceKm, year: $year, committeeId: $committeeId) {
             id
             address
             committeeName
@@ -111,6 +140,10 @@ export class HomeService {
               eventBanner
               bannerImages
             }
+            availableYears {
+              year
+              hasEvents
+            }
           }
         }`;
 
@@ -120,7 +153,8 @@ export class HomeService {
             latitude: body.latitude,
             longitude: body.longitude,
             distanceKm: body.distanceKm,
-            year: body.year
+            year: body.year,
+            committeeId: body.committeeId ?? null
           }
         }).pipe(
           map((res) => {

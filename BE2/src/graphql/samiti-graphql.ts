@@ -39,11 +39,13 @@ import { uploadProgramBannerImagesTypes, uploadProgramBannerImagesMutationFields
 import { programDetailsTypes, programDetailsQueryFields, programDetailsResolvers } from './programs/program-details-by-id.graphql';
 import { authCommitteeTypes, authCommitteeQueryFields, authCommitteesResolvers } from './committees/committees-list/auth-user-committees-list.graphql';
 import { guestCommitteeTypes, guestCommitteeQueryFields, guestCommitteesResolvers } from './committees/committees-list/guest-user-committees-list.graphql';
+import { committeeYearInfoTypes } from './committees/committees-list/committee-year-info.graphql';
 import { cancelCommitteeMembershipRequestTypes, cancelCommitteeMembershipRequestMutationFields, cancelCommitteeMembershipRequestResolvers } from './committees/user-requests/cancel-committee-membership-request.graphql';
 import { submitCommitteeMembershipRequestTypes, submitCommitteeMembershipRequestMutationFields, submitCommitteeMembershipRequestResolvers } from './committees/user-requests/submit-committee-membership-request.graphql';
 
 // Single schema — one Query block, one Mutation block
 export const typeDefs = `
+  ${committeeYearInfoTypes}
   ${guestCommitteeTypes}
   ${authCommitteeTypes}
   ${createCommitteeTypes}

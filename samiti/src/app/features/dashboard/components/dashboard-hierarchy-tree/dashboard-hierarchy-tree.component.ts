@@ -134,7 +134,7 @@ export class DashboardHierarchyTreeComponent implements OnInit {
   private fetchAdminNavigationTree(): void {
     this.isLoading.set(true);
     
-    this.treeService.getAdminHierarchyTree().subscribe({
+    this.treeService.getAdminHierarchyTree(this.selectedYear()).subscribe({
       next: (treeData) => {
         const transformedTree = this.transformBackendToTreeNode(treeData || []);
         this.dataSource.data = transformedTree;

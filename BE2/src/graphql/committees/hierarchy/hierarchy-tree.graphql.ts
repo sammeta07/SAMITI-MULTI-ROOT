@@ -27,7 +27,7 @@ export const hierarchyTreeTypes = `
 `;
 
 export const hierarchyTreeQueryFields = `
-    adminHierarchyTree: [HierarchyRole!]!
+    adminHierarchyTree(year: Int): [HierarchyRole!]!
 `;
 
 type InternalTreeNode = {
@@ -94,7 +94,10 @@ export type SerializedHierarchyTreeNode = {
 
 export const hierarchyTreeResolvers = {
   Query: {
-    async adminHierarchyTree(_: any, __: any, context: any) {
+    async adminHierarchyTree(_: any, args: { year?: number }, context: any) {
+      const { year } = args || {};
+      const selectedYear = year ?? new Date().getFullYear();
+
       const authHeader = context.headers?.authorization;
       const tokenFromCookie = context.cookies?.token;
       let accessToken: string | null = null;
@@ -205,8 +208,9 @@ export const hierarchyTreeResolvers = {
              ${supportsEventDisplayName ? "COALESCE(NULLIF(TRIM(display_name), ''), LEFT(name, 20))" : 'LEFT(name, 20)'} AS event_name
           FROM events
           WHERE committee_id IN (${committeePlaceholders})
+            AND YEAR(start_date) = ?
           ORDER BY start_date ASC, name ASC`,
-          committeeIds
+          [...committeeIds, selectedYear]
         );
 
       const eventIds = eventRows.map((eventRow) => Number(eventRow.event_id));

@@ -43,7 +43,6 @@
       </div>
 
       <div class="committees-tabs-shell">
-
         <ng-template #committeeSkeletonTpl>
           <div class="home-skeleton-list">
             @for (row of [1,2,3,4]; track row) {
@@ -67,13 +66,15 @@
         <ng-template #committeeCardTemplate let-committee let-isAuth="isAuth" let-panelPrefix="panelPrefix">
           <mat-expansion-panel id="{{ panelPrefix }}-committee-{{ committee.id }}" [hideToggle]="false"
             [expanded]="isPanelExpanded(panelPrefix, committee.id)"
-            (opened)="updatePanelExpandedState(panelPrefix, committee.id, true)"
+            (opened)="onCommitteePanelOpened(committee); updatePanelExpandedState(panelPrefix, committee.id, true)"
             (closed)="updatePanelExpandedState(panelPrefix, committee.id, false)"
             [class.panel-role-master-admin]="isAuth && committee.committeeRole === 'COMMITTEE_MASTER_ADMIN'"
             [class.panel-role-admin]="committee.committeeRole === 'COMMITTEE_ADMIN'"
             [class.panel-role-member]="committee.committeeRole === 'COMMITTEE_MEMBER'"
             [class.panel-role-pending]="committee.status === 'PENDING' && !committee.committeeRole"
-            [class.panel-role-none]="!isAuth">
+            [class.panel-role-none]="!isAuth"
+            [class.panel-activity-active]="isCommitteeActive(committee)"
+            [class.panel-activity-inactive]="!isCommitteeActive(committee)">
 
             <mat-expansion-panel-header>
               <div class="panel-header-inner">
@@ -189,11 +190,11 @@
                          </button>
                         }
                          @if (!committee.committeeRole && committee.status !== 'PENDING') {
-                          <button mat-flat-button type="button" class="join-committee-btn"
-                            (click)="onRequestMemberRole(committee.id, $event)">
-                            <mat-icon>group_add</mat-icon>
-                            <span>Join</span>
-                          </button>
+                           <button mat-button type="button" class="join-committee-btn"
+                             (click)="onRequestMemberRole(committee.id, $event)">
+                             <mat-icon>group_add</mat-icon>
+                             <span>Join</span>
+                           </button>
                         }
                       }
                     </div>
@@ -215,7 +216,7 @@
             <div class="expansion-inner-content-wrapper">
               <mat-tab-group class="committee-year-tabs" animationDuration="200ms"
                 [selectedIndex]="getDefaultYearTabIndex(committee)">
-                @for (year of getCommitteeEventYears(committee); track year) {
+                @for (year of getCommitteeYearTabs(committee); track year) {
                 <mat-tab>
                   <ng-template mat-tab-label>
                     <mat-icon class="year-tab-icon">calendar_month</mat-icon>
@@ -229,9 +230,6 @@
                         <div class="event-card-banner"
                              role="button"
                              tabindex="0"
-                             [ngStyle]="(event.bannerImages.length || event.eventBanner)
-                               ? {'background-image': 'url(' + (event.bannerImages.length ? event.bannerImages[getBannerIndex(event.eventId)] : event.eventBanner) + ')'}
-                               : null"
                              (click)="openEventDetails(event.eventId, $event)">
                           @if (event.bannerImages.length > 1) {
                             <div class="banner-carousel">
@@ -306,6 +304,10 @@
 
         @if (!isLoggedIn) {
         <div class="committees-tabs-header-actions">
+          <button mat-button type="button" class="active-filter-toggle-btn" [class.is-active-mode]="isActiveFilterModeActive()" (click)="activeFilterMode.update(mode => mode === 'ACTIVE' ? 'ALL' : 'ACTIVE')">
+            <mat-icon>{{ activeFilterMode() === 'ACTIVE' ? 'check_circle' : 'list' }}</mat-icon>
+            <span>{{ activeFilterMode() === 'ACTIVE' ? 'Active' : 'All' }}</span>
+          </button>
           <button mat-button type="button" class="expand-collapse-btn" (click)="expandNearby()">Expand All</button>
           <button mat-button type="button" class="expand-collapse-btn" (click)="collapseNearby()">Collapse All</button>
         </div>
@@ -342,6 +344,10 @@
         </mat-tab-group>
         } @else {
         <div class="committees-tabs-header-actions">
+          <button mat-button type="button" class="active-filter-toggle-btn" [class.is-active-mode]="isActiveFilterModeActive()" (click)="activeFilterMode.update(mode => mode === 'ACTIVE' ? 'ALL' : 'ACTIVE')">
+            <mat-icon>{{ activeFilterMode() === 'ACTIVE' ? 'check_circle' : 'list' }}</mat-icon>
+            <span>{{ activeFilterMode() === 'ACTIVE' ? 'Active' : 'All' }}</span>
+          </button>
           @if (selectedTabIndex === 0) {
           <button mat-button type="button" class="expand-collapse-btn" (click)="expandNearby()">Expand All</button>
           <button mat-button type="button" class="expand-collapse-btn" (click)="collapseNearby()">Collapse All</button>

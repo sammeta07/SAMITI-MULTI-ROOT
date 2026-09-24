@@ -85,6 +85,11 @@ export class HomeComponent implements OnDestroy {
   public clearProgramSearch(): void { this.programSearchQuery.set(''); }
 
   public readonly committeesWidth = signal<number>(70);
+  public readonly activeFilterMode = signal<'ACTIVE' | 'ALL'>('ACTIVE');
+
+  public isActiveFilterModeActive(): boolean {
+    return this.activeFilterMode() === 'ACTIVE';
+  }
 
   public onResizeStart(event: MouseEvent): void {
     event.preventDefault();
@@ -113,8 +118,11 @@ export class HomeComponent implements OnDestroy {
   public readonly filteredNearbyGroups = computed(() => {
     const query = this.committeeSearchQuery().toLowerCase().trim();
     const source = this.nearbyGroups;
-    if (!query) return source;
-    return source.filter(c =>
+    const filtered = this.activeFilterMode() === 'ACTIVE'
+      ? source.filter(c => this.isCommitteeActive(c))
+      : source;
+    if (!query) return filtered;
+    return filtered.filter(c =>
       c.committeeName.toLowerCase().includes(query) ||
       (c.address || '').toLowerCase().includes(query)
     );
@@ -123,8 +131,11 @@ export class HomeComponent implements OnDestroy {
   public readonly filteredPreviewGroups = computed(() => {
     const query = this.committeeSearchQuery().toLowerCase().trim();
     const source = this.previewGroups;
-    if (!query) return source;
-    return source.filter(c =>
+    const filtered = this.activeFilterMode() === 'ACTIVE'
+      ? source.filter(c => this.isCommitteeActive(c))
+      : source;
+    if (!query) return filtered;
+    return filtered.filter(c =>
       c.committeeName.toLowerCase().includes(query) ||
       (c.address || '').toLowerCase().includes(query)
     );
@@ -133,8 +144,11 @@ export class HomeComponent implements OnDestroy {
   public readonly filteredFavouriteGroups = computed(() => {
     const query = this.committeeSearchQuery().toLowerCase().trim();
     const source = this.favouriteGroups;
-    if (!query) return source;
-    return source.filter(c =>
+    const filtered = this.activeFilterMode() === 'ACTIVE'
+      ? source.filter(c => this.isCommitteeActive(c))
+      : source;
+    if (!query) return filtered;
+    return filtered.filter(c =>
       c.committeeName.toLowerCase().includes(query) ||
       (c.address || '').toLowerCase().includes(query)
     );
@@ -204,20 +218,25 @@ export class HomeComponent implements OnDestroy {
     return Number.isNaN(year) ? null : year;
   }
 
-  getCommitteeEventYears(committee: CommitteesList): number[] {
-    const years = new Set<number>([this.currentYear()]);
-    for (const event of committee.events) {
-      const year = this.extractEventYear(event);
-      if (year) years.add(year);
+  getCommitteeYearTabs(committee: CommitteesList): number[] {
+    const establishYear = committee.establishYear || this.currentYear();
+    const maxYear = this.currentYear();
+    if (establishYear > maxYear) return [maxYear];
+
+    const years: number[] = [];
+    for (let y = maxYear; y >= establishYear; y--) {
+      if (this.hasEventsInYear(committee, y)) {
+        years.push(y);
+      }
     }
-    const collected = Array.from(years);
-    const maxYear = Math.max(...collected);
-    const minYear = Math.min(...collected);
-    const continuousYears: number[] = [];
-    for (let year = maxYear; year >= minYear; year--) {
-      continuousYears.push(year);
+    return years;
+  }
+
+  private hasEventsInYear(committee: CommitteesList, year: number): boolean {
+    if ('availableYears' in committee && Array.isArray(committee.availableYears)) {
+      return committee.availableYears.some((yearInfo) => yearInfo.year === year && yearInfo.hasEvents);
     }
-    return continuousYears;
+    return committee.events.some((event) => this.extractEventYear(event) === year);
   }
 
   getEventsByYear(committee: CommitteesList, year: number): CommitteeEvent[] {
@@ -225,9 +244,55 @@ export class HomeComponent implements OnDestroy {
   }
 
   getDefaultYearTabIndex(committee: CommitteesList): number {
-    const years = this.getCommitteeEventYears(committee);
+    const years = this.getCommitteeYearTabs(committee);
     const index = years.indexOf(this.currentYear());
     return index >= 0 ? index : 0;
+  }
+
+  hasFullCommitteeData(committee: CommitteesList): boolean {
+    if ('availableYears' in committee && Array.isArray(committee.availableYears)) {
+      const years = committee.availableYears.map((y) => y.year);
+      return years.length > 1 || (years.length === 1 && years[0] !== this.currentYear());
+    }
+    return false;
+  }
+
+  onCommitteePanelOpened(committee: CommitteesList): void {
+    if (this.hasFullCommitteeData(committee)) {
+      return;
+    }
+    this.fetchCommitteeDetail(committee.id);
+  }
+
+  private fetchCommitteeDetail(committeeId: number): void {
+    const locationCoords = this.userLocationCords();
+    if (!locationCoords) return;
+
+    const body: CommitteeListRequestBackend = {
+      latitude: locationCoords.lat,
+      longitude: locationCoords.long,
+      distanceKm: this.selectedCommitteeRadius,
+      year: this.selectedYearService.selectedYear(),
+      committeeId
+    };
+
+    const fetch$ = this.isLoggedIn
+      ? this.homeService.getCommitteesListAuthUserByDistanceKm(body)
+      : this.homeService.getCommitteesListGuestByDistanceKm(body);
+
+    fetch$.subscribe({
+      next: (res) => {
+        if (res.length > 0) {
+          const updatedCommittee = res[0];
+          this.committeeList.update((list) =>
+            list.map((c) => (c.id === committeeId ? updatedCommittee : c))
+          );
+        }
+      },
+      error: (error) => {
+        console.error('Failed to fetch committee detail:', error);
+      }
+    });
   }
 
   // ─── Open committee location in Google Maps for navigation ─────────
@@ -657,6 +722,15 @@ export class HomeComponent implements OnDestroy {
     if (!this.isAuthItem(committee)) return false;
     const role = String(committee.committeeRole || '').toUpperCase();
     return role === 'COMMITTEE_MASTER_ADMIN';
+  }
+
+  isCommitteeActive(committee: CommitteesList): boolean {
+    const currentYear = this.selectedYearService.selectedYear();
+    return committee.events.some((event) => {
+      if (!event.startDate) return false;
+      const eventYear = new Date(event.startDate).getFullYear();
+      return eventYear === currentYear;
+    });
   }
 
   isUploadingCommitteeLogo(committeeId: number): boolean {
