@@ -66,7 +66,7 @@
         <ng-template #committeeCardTemplate let-committee let-isAuth="isAuth" let-panelPrefix="panelPrefix">
           <mat-expansion-panel id="{{ panelPrefix }}-committee-{{ committee.id }}" [hideToggle]="false"
             [expanded]="isPanelExpanded(panelPrefix, committee.id)"
-            (opened)="onCommitteePanelOpened(committee); updatePanelExpandedState(panelPrefix, committee.id, true)"
+            (opened)="onCommitteePanelOpened(committee, panelPrefix); updatePanelExpandedState(panelPrefix, committee.id, true)"
             (closed)="updatePanelExpandedState(panelPrefix, committee.id, false)"
             [class.panel-role-master-admin]="isAuth && committee.committeeRole === 'COMMITTEE_MASTER_ADMIN'"
             [class.panel-role-admin]="committee.committeeRole === 'COMMITTEE_ADMIN'"
@@ -215,7 +215,8 @@
 
             <div class="expansion-inner-content-wrapper">
               <mat-tab-group class="committee-year-tabs" animationDuration="200ms"
-                [selectedIndex]="getDefaultYearTabIndex(committee)">
+                [selectedIndex]="getDefaultYearTabIndex(committee)"
+                (selectedIndexChange)="onYearTabClick(committee, getCommitteeYearTabs(committee)[$event])">
                 @for (year of getCommitteeYearTabs(committee); track year) {
                 <mat-tab>
                   <ng-template mat-tab-label>
@@ -223,9 +224,9 @@
                     <span>{{ year }}</span>
                   </ng-template>
                   @if (getEventsByYear(committee, year).length > 0) {
-                  <div class="committee-events-shell">
-                    @for (event of getEventsByYear(committee, year); track event.eventId) {
-                    <div class="event-card">
+                   <div class="committee-events-shell" #eventsShell [attr.data-committee-id]="committee.id">
+                     @for (event of getEventsByYear(committee, year); track event.eventId) {
+                     <div class="event-card" [class.event-card-ongoing]="getEventComputedStatus(event) === 'ongoing'">
                       <div class="event-card-surface">
                         <div class="event-card-banner"
                              role="button"
@@ -261,26 +262,26 @@
                           }
                           <div class="event-banner-overlay">
                             <span class="event-status-badge event-status-{{ event.status | lowercase }}">{{ event.status }}</span>
-                            <span class="event-visibility-badge">21st year</span>
+                            <span class="event-visibility-badge">{{ getYearOrdinal(year) }} year</span>
                           </div>
                         </div>
 
                         <div class="event-card-body">
                           <div class="event-card-topline">
                             <h4 class="event-card-title">{{ event.eventName | titlecase }}</h4>
-                            <button mat-icon-button type="button" class="event-open-btn" title="Open event" (click)="openEventDetails(event.eventId, $event)">
-                              <mat-icon>open_in_new</mat-icon>
-                            </button>
                           </div>
                           <div class="event-card-meta">
-                            @if (event.startDate) {
-                            <span class="event-meta-chip">
-                              <mat-icon>calendar_today</mat-icon>{{ event.startDate | date:'dd MMM yyyy' }}
-                            </span>
-                            }
-                            @if (event.endDate) {
-                            <span class="event-meta-chip">
-                              <mat-icon>event_available</mat-icon>{{ event.endDate | date:'dd MMM yyyy' }}
+                            @if (event.startDate || event.endDate) {
+                            <span class="event-meta-chip" [class]="getDateColorClass(event)">
+                              @if (event.startDate) {
+                                <mat-icon>calendar_today</mat-icon>{{ event.startDate | date:'dd MMM yyyy' }}
+                              }
+                              @if (event.startDate && event.endDate) {
+                                <span class="date-separator">To</span>
+                              }
+                              @if (event.endDate) {
+                                <mat-icon>event_available</mat-icon>{{ event.endDate | date:'dd MMM yyyy' }}
+                              }
                             </span>
                             }
                           </div>

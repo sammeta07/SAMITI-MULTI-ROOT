@@ -1,4 +1,4 @@
-import { Component, inject, effect, ChangeDetectorRef, OnDestroy, signal, computed } from '@angular/core';
+import { Component, inject, effect, ChangeDetectorRef, OnDestroy, signal, computed, ViewChildren, QueryList, ElementRef, AfterViewChecked } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
@@ -43,7 +43,7 @@ import { SelectedYearService } from '../../shared/services/selected-year.service
   templateUrl: './home.component.html',
   styleUrl: './home.component.scss',
 })
-export class HomeComponent implements OnDestroy {
+export class HomeComponent implements OnDestroy, AfterViewChecked {
   private readonly headerService = inject(HeaderService);
   private readonly homeService = inject(HomeService);
   private readonly notifier = inject(NotifierService);
@@ -74,6 +74,8 @@ export class HomeComponent implements OnDestroy {
   copiedCommitteeId: string | null = null;
   isCommitteeListLoading: boolean = true;
   private hasAppliedDefaultPreviewExpansion = false;
+  @ViewChildren('eventsShell') eventsShells!: QueryList<ElementRef>;
+  private pendingScrollCommitteeId: number | null = null;
 
   public readonly committeeSearchQuery = signal<string>('');
   public readonly programSearchQuery = signal<string>('');
@@ -240,7 +242,64 @@ export class HomeComponent implements OnDestroy {
   }
 
   getEventsByYear(committee: CommitteesList, year: number): CommitteeEvent[] {
-    return committee.events.filter((event) => this.extractEventYear(event) === year);
+    return committee.events
+      .filter((event) => this.extractEventYear(event) === year)
+      .sort((a, b) => {
+        const aDate = a.startDate ? new Date(a.startDate).getTime() : 0;
+        const bDate = b.startDate ? new Date(b.startDate).getTime() : 0;
+        return aDate - bDate;
+      });
+  }
+
+  getEventComputedStatus(event: CommitteeEvent): 'completed' | 'ongoing' | 'upcoming' {
+    const now = new Date();
+    const start = event.startDate ? new Date(event.startDate) : null;
+    const end = event.endDate ? new Date(event.endDate) : null;
+
+    if (end && now > end) return 'completed';
+    if (start && now >= start && (!end || now <= end)) return 'ongoing';
+    return 'upcoming';
+  }
+
+  getDateColorClass(event: CommitteeEvent): string {
+    const status = this.getEventComputedStatus(event);
+    if (status === 'completed') return 'date-completed';
+    if (status === 'ongoing') return 'date-ongoing';
+    return 'date-upcoming';
+  }
+
+  getYearOrdinal(year: number): string {
+    if (year % 100 >= 11 && year % 100 <= 13) return `${year}th`;
+    switch (year % 10) {
+      case 1: return `${year}st`;
+      case 2: return `${year}nd`;
+      case 3: return `${year}rd`;
+      default: return `${year}th`;
+    }
+  }
+
+  scrollToFirstOngoingEvent(committeeId: number): void {
+    this.pendingScrollCommitteeId = committeeId;
+  }
+
+  ngAfterViewChecked(): void {
+    if (this.pendingScrollCommitteeId === null) return;
+    const committeeId = this.pendingScrollCommitteeId;
+    this.pendingScrollCommitteeId = null;
+
+    const shell = this.eventsShells.find(
+      el => el.nativeElement.getAttribute('data-committee-id') === String(committeeId)
+    );
+    if (!shell) return;
+    const shellElement = shell.nativeElement as HTMLElement;
+    const firstOngoing = shellElement.querySelector('.event-card-ongoing') as HTMLElement | null;
+    if (firstOngoing) {
+      const leftPadding = parseFloat(getComputedStyle(shellElement).paddingLeft) || 0;
+      shellElement.scrollTo({
+        left: Math.max(0, firstOngoing.offsetLeft - leftPadding),
+        behavior: 'smooth'
+      });
+    }
   }
 
   getDefaultYearTabIndex(committee: CommitteesList): number {
@@ -249,22 +308,7 @@ export class HomeComponent implements OnDestroy {
     return index >= 0 ? index : 0;
   }
 
-  hasFullCommitteeData(committee: CommitteesList): boolean {
-    if ('availableYears' in committee && Array.isArray(committee.availableYears)) {
-      const years = committee.availableYears.map((y) => y.year);
-      return years.length > 1 || (years.length === 1 && years[0] !== this.currentYear());
-    }
-    return false;
-  }
-
-  onCommitteePanelOpened(committee: CommitteesList): void {
-    if (this.hasFullCommitteeData(committee)) {
-      return;
-    }
-    this.fetchCommitteeDetail(committee.id);
-  }
-
-  private fetchCommitteeDetail(committeeId: number): void {
+  private loadCommitteeYearEvents(committee: CommitteesList, year: number): void {
     const locationCoords = this.userLocationCords();
     if (!locationCoords) return;
 
@@ -272,8 +316,8 @@ export class HomeComponent implements OnDestroy {
       latitude: locationCoords.lat,
       longitude: locationCoords.long,
       distanceKm: this.selectedCommitteeRadius,
-      year: this.selectedYearService.selectedYear(),
-      committeeId
+      year,
+      committeeId: committee.id
     };
 
     const fetch$ = this.isLoggedIn
@@ -284,15 +328,51 @@ export class HomeComponent implements OnDestroy {
       next: (res) => {
         if (res.length > 0) {
           const updatedCommittee = res[0];
-          this.committeeList.update((list) =>
-            list.map((c) => (c.id === committeeId ? updatedCommittee : c))
-          );
+          this.committeeList.update((list) => list.map((currentCommittee) => {
+            if (currentCommittee.id !== committee.id) return currentCommittee;
+
+            const retainedEvents = currentCommittee.events.filter(
+              (event) => this.extractEventYear(event) !== year
+            );
+
+            return {
+              ...currentCommittee,
+              events: [...retainedEvents, ...updatedCommittee.events]
+            };
+          }));
+          this.scrollToFirstOngoingEvent(committee.id);
         }
       },
       error: (error) => {
-        console.error('Failed to fetch committee detail:', error);
+        console.error('Failed to fetch committee year events:', error);
       }
     });
+  }
+
+  onYearTabClick(committee: CommitteesList, year: number): void {
+    this.loadCommitteeYearEvents(committee, year);
+  }
+
+  onCommitteePanelOpened(committee: CommitteesList, panelPrefix: 'nearby' | 'favourite' | 'preview'): void {
+    this.scrollToFirstOngoingEvent(committee.id);
+    window.setTimeout(() => {
+      const panel = document.getElementById(`${panelPrefix}-committee-${committee.id}`);
+      const scrollContainer = panel?.closest('.committees-scroll') as HTMLElement | null;
+      if (!panel || !scrollContainer) return;
+
+      const containerRect = scrollContainer.getBoundingClientRect();
+      const panelRect = panel.getBoundingClientRect();
+      const topPadding = parseFloat(getComputedStyle(scrollContainer).paddingTop) || 0;
+      const targetScrollTop = scrollContainer.scrollTop
+        + panelRect.top
+        - containerRect.top
+        - topPadding;
+
+      scrollContainer.scrollTo({
+        top: Math.max(0, targetScrollTop),
+        behavior: 'smooth'
+      });
+    }, 250);
   }
 
   // ─── Open committee location in Google Maps for navigation ─────────

@@ -33,7 +33,7 @@
   min-width: 0;
   display: flex;
   flex-direction: column;
-  background: #f8fafc;
+  background: #ffffff;
   transition: flex-basis 0.25s cubic-bezier(0.4, 0, 0.2, 1);
   opacity: 1;
   visibility: visible;
@@ -111,7 +111,7 @@ body.resizing-col {
 }
 
 .col-search-bar {
-  padding: 10px;
+  padding: 12px 14px;
   border-bottom: 1px solid #e2e8f0;
   background: #ffffff;
   flex-shrink: 0;
@@ -125,14 +125,14 @@ body.resizing-col {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 1rem;
+  gap: 14px;
   width: 100%;
 }
 
 .col-title-container {
   display: flex;
   align-items: center;
-  gap: 0.5rem;
+  gap: 10px;
 }
 
 .col-icon {
@@ -143,8 +143,12 @@ body.resizing-col {
 }
 
 .col-title {
-  font-size: 1.05rem;
+  font-family: inherit;
+  font-style: normal;
+  font-size: 1.08rem;
   font-weight: 700;
+  line-height: 1.2;
+  letter-spacing: 0.01em;
   color: #0f172a;
   margin: 0;
 }
@@ -152,7 +156,7 @@ body.resizing-col {
 .section-search-pill {
   display: inline-flex;
   align-items: center;
-  height: 34px;
+  height: 36px;
   padding: 0 10px 0 12px;
   border: 1px solid #e2e8f0;
   border-radius: 999px;
@@ -255,10 +259,10 @@ body.resizing-col {
 .committees-scroll, 
 .sidebar-scroll {
   height: 100%;
-  overflow-y: auto;
+  overflow-y: scroll;
   scroll-behavior: smooth;
   -webkit-overflow-scrolling: touch;
-  padding: 0.75rem;
+  padding: 0.4rem;
   display: flex;
   flex-direction: column;
   box-sizing: border-box;
@@ -311,7 +315,8 @@ body.resizing-col {
     min-height: 34px !important;
     height: 34px !important;
     padding: 0 12px !important;
-    border-right: 1px solid #e2e8f0 !important;
+    border: 1px solid transparent !important;
+    border-bottom: none !important;
     transition: background 0.12s ease-in-out;
 
     .mdc-tab__content {
@@ -337,11 +342,10 @@ body.resizing-col {
     }
 
     &.mdc-tab--active {
-      background: #f8fafc !important;
-      border-top: 4px solid #767e80 !important;
+      background: #e0e2ec !important;
+      border-bottom: none !important;
       border-radius: 6px 6px 0 0 !important;
-      border-right-color: #767e80 !important;
-      border-left: 1px solid #767e80 !important;
+      margin-bottom: -1px !important;
 
       .mdc-tab__text-label {
         color: #767e80 !important;
@@ -356,6 +360,7 @@ body.resizing-col {
 
     &:not(.mdc-tab--active):hover {
       background: #f1f5f9 !important;
+      border-radius: 6px 6px 0 0 !important;
     }
 
     .disabled-tab-icon {
@@ -389,14 +394,19 @@ body.resizing-col {
     overflow: hidden;
     border-top: none !important;
     border-radius: 0 0 8px 8px;
-    background: #f8fafc;
-    border: 1px solid #767e80;
+    background: #e0e2ec;
+    // border: 1px solid #767e80;
+     border-radius: 0 0 6px 6px !important;
   }
 
   ::ng-deep .mat-mdc-tab-body-content {
     height: 100%;
     overflow: hidden;
   }
+}
+
+.committee-year-tabs {
+  padding: 0;
 }
 
 .committees-tabs-header-actions {
@@ -558,15 +568,19 @@ body.resizing-col {
   }
 
   ::ng-deep .mat-expansion-panel-header {
-    padding: 8px 14px !important;
+    padding: 10px !important;
     height: auto !important;
     background: transparent !important;
     display: flex !important;
     align-items: flex-start !important;
-    .mat-expansion-indicator { margin-top: 2px !important; }
+    .mat-expansion-indicator {
+      // margin-top: 2px !important;
+      // margin-left: 8px !important;
+      svg { display: none !important; }
+    }
   }
 
-  ::ng-deep .mat-expansion-panel-body { padding: 0 10px 10px !important; }
+  ::ng-deep .mat-expansion-panel-body { padding: 0px 10px 10px 10px !important; }
 
   .panel-header-inner {
     background: transparent;
@@ -579,8 +593,8 @@ body.resizing-col {
   }
 
   ::ng-deep .mat-expanded .panel-header-inner {
-    background: #f8fafc;
-    border-color: #e2e8f0;
+    background: #e0e2ec;
+    border-color: #e0e2ec;
   }
 }
 
@@ -710,7 +724,16 @@ body.resizing-col {
 
 .card-main-info-area { display: flex; flex-direction: column; gap: 3px; }
 .card-title-row { display: flex; align-items: center; gap: 6px; }
-.committee-display-name { font-size: 1.5rem; font-weight: 700; color: #0f172a; margin: 0; }
+.committee-display-name {
+  font-family: inherit;
+  font-style: normal;
+  font-size: 1.15rem;
+  font-weight: 700;
+  line-height: 1.25;
+  letter-spacing: 0;
+  color: #0f172a;
+  margin: 0;
+}
 
 .fav-heart-toggle-btn {
   width: 28px !important;
@@ -739,7 +762,7 @@ body.resizing-col {
   text-align: center !important;
   width: 100% !important;
   min-height: 140px !important; /* Forces layout to open up vertical axis space */
-  padding: 24px 16px !important;
+  padding: 16px !important;
   box-sizing: border-box !important;
   clear: both;
 
@@ -953,28 +976,49 @@ body.resizing-col {
    👥 EVENTS CARDS ARCHITECTURE & LAYOUTS
    ========================================================================== */
 .committee-events-shell {
-  display: flex; flex-wrap: nowrap; gap: 10px; padding: 10px; overflow-x: auto;
-  scrollbar-width: thin; scrollbar-color: #e2e8f0 transparent;
+  display: flex;
+  flex-wrap: nowrap;
+  gap: 10px;
+  padding: 10px;
+  overflow-x: auto;
+  scrollbar-width: thin;
   &::-webkit-scrollbar { height: 4px; }
   &::-webkit-scrollbar-track { background: transparent; }
   &::-webkit-scrollbar-thumb { background: #e2e8f0; border-radius: 4px; }
 }
 
 .event-card {
-  flex: 0 0 calc((100% - 20px) / 3); min-width: 0; display: flex; border-radius: 14px; overflow: hidden;
-  border: 1px solid #dbe4f0; background: linear-gradient(180deg, #ffffff 0%, #f8fbff 100%);
-  box-shadow: 0 1px 4px rgba(15, 23, 42, 0.05); transition: all 0.18s ease-in-out;
-  
+  flex: 0 0 320px;
+  width: 320px;
+  min-width: 0;
+  display: flex;
+  border-radius: 14px;
+  overflow: hidden;
+  border: 1px solid #dbe4f0;
+  background: linear-gradient(180deg, #ffffff 0%, #f8fbff 100%);
+  box-shadow: 0 1px 4px rgba(15, 23, 42, 0.05);
+  transition: all 0.18s ease-in-out;
+
   &:hover {
-    box-shadow: 0 10px 24px rgba(15, 23, 42, 0.10); transform: translateY(-2px); border-color: #bfd4ea;
+    box-shadow: 0 10px 24px rgba(15, 23, 42, 0.10);
+    transform: translateY(-2px);
+    border-color: #bfd4ea;
   }
 }
 
 .event-card-surface { display: flex; flex-direction: column; width: 100%; }
 
 .event-card-banner {
-  position: relative; width: 100%; aspect-ratio: 16 / 9; min-height: 132px;
-  background-color: #0f172a; background-size: cover; background-position: center; background-repeat: no-repeat; overflow: hidden;
+  position: relative;
+  width: 100%;
+  max-width: 380px;
+  height: 214px;
+  margin: 0 auto;
+  background-color: #0f172a;
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
+  overflow: hidden;
 }
 
 .event-banner-img {
@@ -1012,10 +1056,30 @@ body.resizing-col {
 .event-status-completed { background: rgba(55,65,81,0.85);    color: #fff; }
 .event-status-cancelled { background: rgba(153,27,27,0.85);   color: #fff; }
 
+.event-banner-overlay {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 8px;
+  pointer-events: none;
+  z-index: 2;
+}
+
 .event-visibility-badge {
-  display: inline-flex; align-items: center; height: 18px; padding: 0 7px; border-radius: 999px;
-  font-size: 0.55rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.3px;
-  background: rgba(255,255,255,0.88); color: #0f172a; box-shadow: 0 6px 18px rgba(15, 23, 42, 0.16);
+  display: inline-flex; align-items: center; height: 20px; padding: 0 10px; border-radius: 999px;
+  font-size: 0.65rem; font-weight: 800; text-transform: uppercase; letter-spacing: 0.4px;
+  background: #f97316; color: #ffffff; box-shadow: 0 4px 12px rgba(249, 115, 22, 0.35);
+  pointer-events: auto;
+}
+
+.date-separator {
+  margin: 0 4px;
+  font-size: 0.62rem;
+  color: #64748b;
+  font-weight: 600;
 }
 
 .event-banner-placeholder {
@@ -1026,14 +1090,17 @@ body.resizing-col {
 
 .event-card-body { padding: 10px 10px 12px; display: flex; flex-direction: column; gap: 8px; }
 .event-card-topline { display: flex; align-items: flex-start; justify-content: space-between; gap: 10px; }
-.event-card-title { margin: 0 0 3px; font-size: 0.82rem; font-weight: 700; color: #0f172a; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-
-.event-open-btn {
-  flex-shrink: 0; width: 26px !important; height: 26px !important; line-height: 26px !important; padding: 0 !important;
-  color: #334155 !important; background: #eef6ff !important; border: 1px solid #bfdbfe !important; border-radius: 50% !important;
-  display: inline-flex !important; align-items: center; justify-content: center;
-  mat-icon { font-size: 0.86rem !important; width: 0.86rem !important; height: 0.86rem !important; }
-  &:hover:not(:disabled) { background: #dbeafe !important; }
+.event-card-title {
+  font-family: inherit;
+  font-style: normal;
+  margin: 0 0 4px;
+  font-size: 0.84rem;
+  font-weight: 700;
+  line-height: 1.25;
+  color: #0f172a;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .event-card-meta { display: flex; flex-direction: column; gap: 4px; }
@@ -1041,6 +1108,16 @@ body.resizing-col {
   display: inline-flex; align-items: center; gap: 2px; height: 20px; padding: 0 8px; border-radius: 999px;
   font-size: 0.62rem; color: #64748b; background: #f8fafc; border: 1px solid #e2e8f0;
   mat-icon { font-size: 0.65rem; width: 0.65rem; height: 0.65rem; color: #94a3b8; }
+
+  &.date-completed { color: #64748b; border-color: #cbd5e1; background: #f1f5f9;
+    mat-icon { color: #64748b; }
+  }
+  &.date-ongoing { color: #10b981; border-color: #6ee7b7; background: #ecfdf5;
+    mat-icon { color: #10b981; }
+  }
+  &.date-upcoming { color: #f59e0b; border-color: #fcd34d; background: #fffbeb;
+    mat-icon { color: #f59e0b; }
+  }
 }
 
 /* ==========================================================================
@@ -1067,7 +1144,6 @@ body.resizing-col {
 /* ==========================================================================
    📐 DESKTOP LAYOUT ADJUSTMENTS
    ========================================================================== */
-.event-card { flex: 0 0 calc((100% - 10px) / 2); }
 
 .home-page {
   flex-direction: row;

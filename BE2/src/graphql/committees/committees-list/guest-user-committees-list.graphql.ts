@@ -78,13 +78,24 @@ export const guestCommitteesResolvers = {
 
       const committeeIds = rawList.map(item => item.id);
       let eventsMap: Record<number, any[]> = {};
+      let eventYearsMap: Record<number, Set<number>> = {};
+      const selectedYear = Number.isInteger(year) ? Number(year) : new Date().getFullYear();
 
       if (committeeIds.length > 0) {
         const placeholders = committeeIds.map(() => '?').join(',');
-        // Keep all committee event rows here so the UI can build the full year-tab matrix
-        // (past years, current year, empty years). The frontend already performs the
-        // per-year filter when rendering the tab contents.
-        const eventParams: any[] = [...committeeIds];
+        const eventYearRows = await query<any[]>(`
+          SELECT committee_id AS committeeId, YEAR(start_date) AS eventYear
+          FROM events
+          WHERE committee_id IN (${placeholders})
+          GROUP BY committee_id, YEAR(start_date)
+        `, committeeIds);
+
+        eventYearsMap = eventYearRows.reduce((map: Record<number, Set<number>>, row: any) => {
+          const committeeIdNum = Number(row.committeeId);
+          if (!map[committeeIdNum]) map[committeeIdNum] = new Set<number>();
+          map[committeeIdNum].add(Number(row.eventYear));
+          return map;
+        }, {});
 
         const eventRows = await query<any[]>(`
           SELECT 
@@ -98,8 +109,9 @@ export const guestCommitteesResolvers = {
             DATE_FORMAT(end_date, '%Y-%m-%d') AS endDate
           FROM events
           WHERE committee_id IN (${placeholders})
+            AND YEAR(start_date) = ?
           ORDER BY start_date DESC, created_at DESC
-        `, eventParams);
+        `, [...committeeIds, selectedYear]);
 
         const eventIds = eventRows.map((e: any) => e.eventId);
         let bannersMap: Record<number, string[]> = {};
@@ -133,13 +145,7 @@ export const guestCommitteesResolvers = {
       return rawList.map((item: any) => {
         const allEvents = eventsMap[item.id] || [];
         const establishYear = Number(item.establish_year) || currentYear;
-        const yearsWithEvents = new Set<number>();
-        for (const event of allEvents) {
-          if (event.startDate) {
-            const eventYear = new Date(event.startDate).getFullYear();
-            if (!Number.isNaN(eventYear)) yearsWithEvents.add(eventYear);
-          }
-        }
+        const yearsWithEvents = eventYearsMap[item.id] || new Set<number>();
 
         const availableYears: Array<{ year: number; hasEvents: boolean }> = [];
         for (let y = establishYear; y <= currentYear; y++) {

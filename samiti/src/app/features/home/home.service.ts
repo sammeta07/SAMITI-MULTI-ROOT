@@ -108,7 +108,10 @@ export class HomeService {
             }
             return (res.data?.committeesListGuestUser ?? []).map((item) => ({
               ...item,
-              committeeLogo: sanitizeCloudinaryLogoUrl(item.committeeLogo)
+              committeeLogo: sanitizeCloudinaryLogoUrl(item.committeeLogo),
+              events: (item.events ?? []).filter(
+                (event) => event.visibility === 'VISIBLE' && event.type === 'PUBLIC'
+              )
             }));
           })
         );
@@ -163,7 +166,10 @@ export class HomeService {
             }
             return (res.data?.committeesListAuthUser ?? []).map((item) => ({
               ...item,
-              committeeLogo: sanitizeCloudinaryLogoUrl(item.committeeLogo)
+              committeeLogo: sanitizeCloudinaryLogoUrl(item.committeeLogo),
+              events: (item.events ?? []).filter(
+                (event) => event.visibility === 'VISIBLE'
+              )
             }));
           })
         );
