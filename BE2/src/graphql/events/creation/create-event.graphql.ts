@@ -1,9 +1,15 @@
 import { query, execute } from '../../../config/db';
 import { hasEventsDisplayNameColumn } from '../details/event-display-name-support';
 
-const ALLOWED_EVENT_STATUSES = new Set(['UPCOMING', 'ONGOING', 'COMPLETED', 'CANCELLED']);
 const ALLOWED_EVENT_VISIBILITIES = new Set(['VISIBLE', 'HIDDEN']);
 const ALLOWED_EVENT_TYPES = new Set(['PUBLIC', 'PRIVATE']);
+
+function parseLocalDate(value: string | null): Date | null {
+  if (!value) return null;
+  const [year, month, day] = String(value).split('-').map(Number);
+  if (!year || !month || !day) return null;
+  return new Date(year, month - 1, day);
+}
 
 function throwEventError(code: string, message: string): never {
   throw new Error(`${code}: ${message}`);
@@ -51,6 +57,12 @@ function normalizeOptionalText(value: unknown): string | null {
 
   const normalized = value.trim();
   return normalized.length > 0 ? normalized : null;
+}
+
+function normalizeEventCategory(value: unknown): string | null {
+  const normalized = normalizeOptionalText(value);
+  if (!normalized) return null;
+  return normalized.toUpperCase() === 'PUJA' ? 'RELIGIOUS' : normalized;
 }
 
 function normalizeDateInput(value: unknown, fieldName: string): string | null {
@@ -104,7 +116,7 @@ export const createEventTypes = `
     address: String
     eventBanner: String
     bannerImages: [String!]!
-    status: String!
+    eventYear: Int!
     category: String
     visibility: String!
     type: String
@@ -124,7 +136,7 @@ export const createEventTypes = `
     address: String
     eventBanner: String
     bannerImageUrls: [String!]
-    status: String!
+    eventYear: Int!
     category: String
     visibility: String!
     type: String
@@ -149,8 +161,8 @@ export const createEventResolvers = {
       const eventName = normalizeOptionalText(input.eventName);
       const eventDisplayName = eventName ? buildEventDisplayName(eventName, input.eventDisplayName) : null;
       const address = normalizeOptionalText(input.address);
-      const category = normalizeOptionalText(input.category);
-      const normalizedStatus = normalizeEnumInput(input.status, 'UPCOMING', ALLOWED_EVENT_STATUSES, 'status');
+      const eventYear = Number(input.eventYear);
+      const category = normalizeEventCategory(input.category);
       const normalizedVisibility = normalizeEnumInput(input.visibility, 'VISIBLE', ALLOWED_EVENT_VISIBILITIES, 'visibility');
       const normalizedType = normalizeEnumInput(input.type, 'PUBLIC', ALLOWED_EVENT_TYPES, 'type');
       const normalizedStartDate = normalizeDateInput(input.startDate, 'startDate');
@@ -160,6 +172,9 @@ export const createEventResolvers = {
 
       if (isNaN(latitude)) throwEventError('BAD_REQUEST', 'latitude must be a valid number');
       if (isNaN(longitude)) throwEventError('BAD_REQUEST', 'longitude must be a valid number');
+      if (!Number.isInteger(eventYear) || eventYear < 1 || eventYear > 49) {
+        throwEventError('BAD_REQUEST', 'eventYear must be an integer between 1 and 49');
+      }
 
       if (!Number.isInteger(committeeId) || committeeId <= 0) {
         throwEventError('BAD_REQUEST', 'committeeId must be a positive integer');
@@ -217,14 +232,14 @@ export const createEventResolvers = {
 
         const result = supportsEventDisplayName
           ? await execute(
-              `INSERT INTO events (committee_id, name, display_name, address, status, category, visibility, type, start_date, end_date, latitude, longitude, created_by, updated_by, created_at)
+              `INSERT INTO events (committee_id, name, display_name, address, event_year, category, visibility, type, start_date, end_date, latitude, longitude, created_by, updated_by, created_at)
                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW())`,
               [
                 committeeId,
                 eventName,
                 eventDisplayName,
                 address,
-                normalizedStatus,
+                eventYear,
                 category,
                 normalizedVisibility,
                 normalizedType,
@@ -237,13 +252,13 @@ export const createEventResolvers = {
               ]
             )
           : await execute(
-              `INSERT INTO events (committee_id, name, address, status, category, visibility, type, start_date, end_date, latitude, longitude, created_by, updated_by, created_at)
+              `INSERT INTO events (committee_id, name, address, event_year, category, visibility, type, start_date, end_date, latitude, longitude, created_by, updated_by, created_at)
                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW())`,
               [
                 committeeId,
                 eventName,
                 address,
-                normalizedStatus,
+                eventYear,
                 category,
                 normalizedVisibility,
                 normalizedType,
@@ -281,13 +296,13 @@ export const createEventResolvers = {
             ? `SELECT id, id as eventId, name as eventName,
                       COALESCE(NULLIF(TRIM(display_name), ''), LEFT(name, 20)) as eventDisplayName,
                       committee_id as committeeId,
-                      address, status, category, visibility, \`type\`, latitude, longitude,
+                      address, category, visibility, \`type\`, latitude, longitude,
                       start_date as startDate, end_date as endDate, created_by as createdBy, updated_by as updatedBy, created_at as createdAt
                FROM events WHERE id = ?`
             : `SELECT id, id as eventId, name as eventName,
                       LEFT(name, 20) as eventDisplayName,
                       committee_id as committeeId,
-                      address, status, category, visibility, \`type\`, latitude, longitude,
+                      address, category, visibility, \`type\`, latitude, longitude,
                       start_date as startDate, end_date as endDate, created_by as createdBy, updated_by as updatedBy, created_at as createdAt
                FROM events WHERE id = ?`,
           [eventId]

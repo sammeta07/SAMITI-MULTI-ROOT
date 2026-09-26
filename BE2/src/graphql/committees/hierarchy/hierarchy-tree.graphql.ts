@@ -16,7 +16,6 @@ export const hierarchyTreeTypes = `
     roles: [HierarchyEventRole!]!
     startDate: String
     endDate: String
-    status: String
     children: [HierarchyTreeNode!]!
   }
 
@@ -38,7 +37,6 @@ type InternalTreeNode = {
   roles: Set<string>;
   startDate?: string | null;
   endDate?: string | null;
-  status?: string | null;
   children: InternalTreeNode[];
   childIds: Set<string>;
 };
@@ -55,31 +53,6 @@ const committeeRolePriority: Record<string, number> = {
   COMMITTEE_MASTER_ADMIN: 3
 };
 
-const parseLocalDate = (value: string | null): Date | null => {
-  if (!value) return null;
-  const [year, month, day] = String(value).split('-').map(Number);
-  if (!year || !month || !day) return null;
-  return new Date(year, month - 1, day);
-};
-
-const deriveEventStatusFromDates = (startDate: string | null, endDate: string | null): string => {
-  const today = new Date();
-  today.setHours(0, 0, 0, 0);
-
-  const start = parseLocalDate(startDate);
-  const end = parseLocalDate(endDate);
-
-  if (end && end.getTime() < today.getTime()) {
-    return 'COMPLETED';
-  }
-
-  if (start && start.getTime() <= today.getTime()) {
-    return 'STARTED';
-  }
-
-  return 'UPCOMING';
-};
-
 export type SerializedHierarchyTreeNode = {
   id: string;
   name: string;
@@ -88,7 +61,6 @@ export type SerializedHierarchyTreeNode = {
   roles: EventRoleInfo[];
   startDate: string | null;
   endDate: string | null;
-  status: string | null;
   children: SerializedHierarchyTreeNode[];
 };
 
@@ -283,7 +255,6 @@ export const hierarchyTreeResolvers = {
             roles: eventRoles,
             startDate: eventRow.start_date ? String(eventRow.start_date) : null,
             endDate: eventRow.end_date ? String(eventRow.end_date) : null,
-            status: deriveEventStatusFromDates(eventRow.start_date, eventRow.end_date),
             children: [],
             childIds: new Set<string>()
           };
@@ -395,21 +366,6 @@ export const hierarchyTreeResolvers = {
         const isRightEvent = rightNode.type === 'EVENT';
 
         if (isLeftEvent && isRightEvent) {
-          const statusOrder: Record<string, number> = {
-            COMPLETED: 0,
-            STARTED: 1,
-            UPCOMING: 2
-          };
-
-          const leftStatus = String(leftNode.status || '').toUpperCase();
-          const rightStatus = String(rightNode.status || '').toUpperCase();
-          const leftOrder = statusOrder[leftStatus] ?? 99;
-          const rightOrder = statusOrder[rightStatus] ?? 99;
-
-          if (leftOrder !== rightOrder) {
-            return leftOrder - rightOrder;
-          }
-
           const leftDate = leftNode.startDate ?? '';
           const rightDate = rightNode.startDate ?? '';
 
@@ -449,7 +405,6 @@ export const hierarchyTreeResolvers = {
         }),
         startDate: node.startDate ?? null,
         endDate: node.endDate ?? null,
-        status: node.status ?? null,
         children: node.children.map((childNode) => serializeNode(childNode))
       });
 

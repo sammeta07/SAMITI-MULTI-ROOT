@@ -3,7 +3,6 @@ import { hasEventsDisplayNameColumn } from '../details/event-display-name-suppor
 import { deleteLocalMediaFileIfExists } from '../../../media/image-cleanup';
 import { isCloudinaryStorageEnabled } from '../../../media/cloudinary-storage';
 
-const ALLOWED_EVENT_STATUSES = new Set(['UPCOMING', 'ONGOING', 'COMPLETED', 'CANCELLED']);
 const ALLOWED_EVENT_VISIBILITIES = new Set(['VISIBLE', 'HIDDEN']);
 const ALLOWED_EVENT_TYPES = new Set(['PUBLIC', 'PRIVATE']);
 
@@ -55,6 +54,12 @@ function normalizeOptionalText(value: unknown): string | null {
   return normalized.length > 0 ? normalized : null;
 }
 
+function normalizeEventCategory(value: unknown): string | null {
+  const normalized = normalizeOptionalText(value);
+  if (!normalized) return null;
+  return normalized.toUpperCase() === 'PUJA' ? 'RELIGIOUS' : normalized;
+}
+
 function normalizeDateInput(value: unknown, fieldName: string): string | null {
   const normalized = normalizeOptionalText(value);
   if (!normalized) {
@@ -104,9 +109,9 @@ export const updateEventTypes = `
     eventDisplayName: String!
     committeeId: Int!
     address: String
+    eventYear: Int!
     eventBanner: String
     bannerImages: [String!]!
-    status: String!
     category: String
     visibility: String!
     type: String
@@ -136,7 +141,7 @@ export const updateEventTypes = `
     eventName: String!
     eventDisplayName: String!
     address: String
-    status: String!
+    eventYear: Int!
     category: String
     visibility: String!
     type: String
@@ -164,8 +169,8 @@ export const updateEventResolvers = {
       const eventName = normalizeOptionalText(input.eventName);
       const eventDisplayName = eventName ? buildEventDisplayName(eventName, input.eventDisplayName) : null;
       const address = normalizeOptionalText(input.address);
-      const category = normalizeOptionalText(input.category);
-      const normalizedStatus = normalizeEnumInput(input.status, 'UPCOMING', ALLOWED_EVENT_STATUSES, 'status');
+      const eventYear = Number(input.eventYear);
+      const category = normalizeEventCategory(input.category);
       const normalizedVisibility = normalizeEnumInput(input.visibility, 'VISIBLE', ALLOWED_EVENT_VISIBILITIES, 'visibility');
       const normalizedType = normalizeEnumInput(input.type, 'PUBLIC', ALLOWED_EVENT_TYPES, 'type');
       const normalizedStartDate = normalizeDateInput(input.startDate, 'startDate');
@@ -204,6 +209,10 @@ export const updateEventResolvers = {
 
       if (Number.isNaN(longitude)) {
         throwEventError('BAD_REQUEST', 'longitude must be a valid number');
+      }
+
+      if (!Number.isInteger(eventYear) || eventYear < 1 || eventYear > 49) {
+        throwEventError('BAD_REQUEST', 'eventYear must be an integer between 1 and 49');
       }
 
       const supportsEventDisplayName = await hasEventsDisplayNameColumn();
@@ -264,7 +273,7 @@ export const updateEventResolvers = {
            SET name = ?,
                display_name = ?,
                address = ?,
-               status = ?,
+               event_year = ?,
                category = ?,
                visibility = ?,
                type = ?,
@@ -279,7 +288,7 @@ export const updateEventResolvers = {
             eventName,
             eventDisplayName,
             address,
-            normalizedStatus,
+            eventYear,
             category,
             normalizedVisibility,
             normalizedType,
@@ -297,7 +306,7 @@ export const updateEventResolvers = {
           `UPDATE events
            SET name = ?,
                address = ?,
-               status = ?,
+               event_year = ?,
                category = ?,
                visibility = ?,
                type = ?,
@@ -311,7 +320,7 @@ export const updateEventResolvers = {
            [
             eventName,
             address,
-            normalizedStatus,
+              eventYear,
             category,
             normalizedVisibility,
             normalizedType,
@@ -331,14 +340,14 @@ export const updateEventResolvers = {
           ? `SELECT id, id as eventId, name as eventName,
                     COALESCE(NULLIF(TRIM(display_name), ''), LEFT(name, 20)) as eventDisplayName,
                     committee_id as committeeId,
-                    address, status, category, visibility, \`type\`, latitude, longitude,
+                    address, category, visibility, \`type\`, latitude, longitude,
                     event_logo as eventLogo,
                     start_date as startDate, end_date as endDate, created_by as createdBy, updated_by as updatedBy, created_at as createdAt
               FROM events WHERE id = ?`
           : `SELECT id, id as eventId, name as eventName,
                     LEFT(name, 20) as eventDisplayName,
                     committee_id as committeeId,
-                    address, status, category, visibility, \`type\`, latitude, longitude,
+                    address, category, visibility, \`type\`, latitude, longitude,
                     event_logo as eventLogo,
                     start_date as startDate, end_date as endDate, created_by as createdBy, updated_by as updatedBy, created_at as createdAt
               FROM events WHERE id = ?`,

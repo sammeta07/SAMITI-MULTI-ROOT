@@ -71,12 +71,14 @@ export class HomeService {
             events {
               eventId
               eventName
-              status
-              type
-              visibility
+              eventYear
+              category
+              address
+              eventLogo
+              latitude
+              longitude
               startDate
               endDate
-              eventBanner
               bannerImages
             }
             availableYears {
@@ -109,9 +111,7 @@ export class HomeService {
             return (res.data?.committeesListGuestUser ?? []).map((item) => ({
               ...item,
               committeeLogo: sanitizeCloudinaryLogoUrl(item.committeeLogo),
-              events: (item.events ?? []).filter(
-                (event) => event.visibility === 'VISIBLE' && event.type === 'PUBLIC'
-              )
+              events: item.events ?? []
             }));
           })
         );
@@ -135,12 +135,14 @@ export class HomeService {
             events {
               eventId
               eventName
-              status
-              type
-              visibility
+              eventYear
+              category
+              address
+              eventLogo
+              latitude
+              longitude
               startDate
               endDate
-              eventBanner
               bannerImages
             }
             availableYears {
@@ -167,9 +169,7 @@ export class HomeService {
             return (res.data?.committeesListAuthUser ?? []).map((item) => ({
               ...item,
               committeeLogo: sanitizeCloudinaryLogoUrl(item.committeeLogo),
-              events: (item.events ?? []).filter(
-                (event) => event.visibility === 'VISIBLE'
-              )
+              events: item.events ?? []
             }));
           })
         );

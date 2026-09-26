@@ -16,6 +16,7 @@ import { LoadingStateService } from '../../../../shared/services/loading-state.s
 import { AdminHierarchyTreeNode, RoleNode, TreeNode } from './dashboard-hierarchy-tree.models';
 import { sanitizeCloudinaryLogoUrl } from '../../../../shared/services/cloudinary-logo.util';
 import { SelectedYearService } from '../../../../shared/services/selected-year.service';
+import { getEventComputedStatus } from '../../../../shared/services/event-status.util';
 
 @Component({
   selector: 'app-dashboard-hierarchy-tree',
@@ -192,7 +193,6 @@ export class DashboardHierarchyTreeComponent implements OnInit {
       roles: node.roles || undefined,
       startDate: node.startDate ?? undefined,
       endDate: node.endDate ?? undefined,
-      status: node.status ?? undefined,
       children: mappedChildren.length > 0 ? mappedChildren : undefined
     };
   }
@@ -213,6 +213,10 @@ export class DashboardHierarchyTreeComponent implements OnInit {
     }
 
     return null;
+  }
+
+  public getEventStatus(node: TreeNode): string {
+    return getEventComputedStatus(node.startDate, node.endDate);
   }
 
   private mapBackendTypeToTreeType(typeValue: string, nodeId: string): TreeNode['type'] | null {
@@ -260,8 +264,8 @@ export class DashboardHierarchyTreeComponent implements OnInit {
       const isRightEvent = right.type === 'event';
 
       if (isLeftEvent && isRightEvent) {
-        const leftStatus = String(left.status || '').toUpperCase();
-        const rightStatus = String(right.status || '').toUpperCase();
+        const leftStatus = getEventComputedStatus(left.startDate, left.endDate);
+        const rightStatus = getEventComputedStatus(right.startDate, right.endDate);
         const leftOrder = statusOrder[leftStatus] ?? 99;
         const rightOrder = statusOrder[rightStatus] ?? 99;
 

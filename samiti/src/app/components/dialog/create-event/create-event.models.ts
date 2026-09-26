@@ -5,10 +5,10 @@ export interface CreateEventPayload {
   address?: string;
   eventBanner?: string;
   bannerImageUrls?: string[];
-  status: 'UPCOMING' | 'ONGOING' | 'COMPLETED' | 'CANCELLED';
   category?: string;
   visibility: 'VISIBLE' | 'HIDDEN';
   type: 'PUBLIC' | 'PRIVATE';
+  eventYear: number;
   startDate: string | null;
   endDate: string | null;
   latitude: number;
@@ -24,10 +24,10 @@ export interface CreateEventResponse {
   address?: string;
   eventBanner?: string;
   bannerImages: string[];
-  status: string;
   category?: string;
   visibility: string;
   type: 'PUBLIC' | 'PRIVATE';
+  eventYear: number;
   startDate: string | null;
   endDate: string | null;
   latitude: number;
@@ -50,10 +50,10 @@ export interface UpdateEventResponse {
   address?: string;
   eventBanner?: string;
   bannerImages: string[];
-  status: string;
   category?: string;
   visibility: string;
   type: 'PUBLIC' | 'PRIVATE';
+  eventYear: number;
   startDate: string | null;
   endDate: string | null;
   latitude: number;

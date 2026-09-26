@@ -76,13 +76,13 @@
 
           <!-- Leaf Node Definition -->
           <mat-nested-tree-node *matTreeNodeDef="let node" class="tree-flat-node-row leaf-node-spec"
-            [ngClass]="['type-' + node.type, getCommitteeLogoRoleClass(node), (node.type === 'event' && node.status ? 'status-container-' + node.status.toLowerCase() : '')]"
+            [ngClass]="['type-' + node.type, getCommitteeLogoRoleClass(node), (node.type === 'event' ? 'status-container-' + getEventStatus(node).toLowerCase() : '')]"
             [class.is-selected]="isNodeSelected(node)">
 
                <div class="tree-node-guide-stub-horizontal"></div>
 
                <div class="node-interactive-strip" (click)="onNodeClick(node)"
-                [ngClass]="['type-' + node.type, isNodeSelected(node) ? 'is-selected' : '', getCommitteeLogoRoleClass(node), (node.type === 'event' && node.status ? 'status-container-' + node.status.toLowerCase() : '')]"
+                      [ngClass]="['type-' + node.type, isNodeSelected(node) ? 'is-selected' : '', getCommitteeLogoRoleClass(node), (node.type === 'event' ? 'status-container-' + getEventStatus(node).toLowerCase() : '')]"
                 [class.is-just-selected]="isNodeHighlighted(node)">
               
               <div class="node-logo-avatar-wrapper branch-leaf-avatar" [ngClass]="['color-' + node.type, getCommitteeLogoRoleClass(node)]"
@@ -140,12 +140,12 @@
 
           <!-- Parent Node Definition -->
            <mat-nested-tree-node *matTreeNodeDef="let node; when: hasChild" [isExpanded]="isNodeExpanded(node)">
-             <div class="tree-flat-node-row parent-node-spec" [ngClass]="['type-' + node.type, node.roleScope ? 'scope-' + node.roleScope : '', getCommitteeLogoRoleClass(node), (node.type === 'event' && node.status ? 'status-container-' + node.status.toLowerCase() : '')]" [class.is-selected]="isNodeSelected(node)">
+             <div class="tree-flat-node-row parent-node-spec" [ngClass]="['type-' + node.type, node.roleScope ? 'scope-' + node.roleScope : '', getCommitteeLogoRoleClass(node), (node.type === 'event' ? 'status-container-' + getEventStatus(node).toLowerCase() : '')]" [class.is-selected]="isNodeSelected(node)">
               
                <div class="tree-node-guide-stub-horizontal"></div>
 
               <div class="node-interactive-strip" (click)="onNodeClick(node)"
-                [ngClass]="['type-' + node.type, isNodeExpanded(node) ? 'is-active-expanded' : '', isNodeSelected(node) ? 'is-selected' : '', getCommitteeLogoRoleClass(node), (node.type === 'event' && node.status ? 'status-container-' + node.status.toLowerCase() : '')]"
+                [ngClass]="['type-' + node.type, isNodeExpanded(node) ? 'is-active-expanded' : '', isNodeSelected(node) ? 'is-selected' : '', getCommitteeLogoRoleClass(node), (node.type === 'event' ? 'status-container-' + getEventStatus(node).toLowerCase() : '')]"
                 [class.is-just-selected]="isNodeHighlighted(node)">
                 
                    <div class="node-logo-avatar-wrapper" [ngClass]="['type-' + node.type, getCommitteeLogoRoleClass(node)]"

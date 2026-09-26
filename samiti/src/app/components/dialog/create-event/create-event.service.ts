@@ -22,8 +22,8 @@ export class CreateEventService {
         committeeId
         address
         eventBanner
-        status
         category
+        eventYear
         visibility
         type
         startDate
@@ -48,24 +48,24 @@ export class CreateEventService {
       this.graphqlUrl,
       {
         query: mutation,
-        variables: {
-          input: {
-            committeeId: payload.committeeId,
-            eventName: payload.eventName,
-            eventDisplayName: payload.eventDisplayName || null,
-            address: payload.address || null,
-            eventBanner: payload.eventBanner || null,
-            bannerImageUrls: payload.bannerImageUrls || null,
-            status: payload.status,
-            category: payload.category || null,
-            visibility: payload.visibility,
-            type: payload.type,
-            startDate: payload.startDate,
-            endDate: payload.endDate,
-            latitude: payload.latitude,
-            longitude: payload.longitude
+          variables: {
+            input: {
+              committeeId: payload.committeeId,
+              eventName: payload.eventName,
+              eventDisplayName: payload.eventDisplayName || null,
+              address: payload.address || null,
+              eventBanner: payload.eventBanner || null,
+              bannerImageUrls: payload.bannerImageUrls || null,
+              category: payload.category || null,
+              eventYear: payload.eventYear,
+              visibility: payload.visibility,
+              type: payload.type,
+              startDate: payload.startDate,
+              endDate: payload.endDate,
+              latitude: payload.latitude,
+              longitude: payload.longitude
+            }
           }
-        }
       },
       { 
         withCredentials: true,
@@ -86,8 +86,8 @@ export class CreateEventService {
         committeeId
         address
         eventBanner
-        status
         category
+        eventYear
         visibility
         type
         startDate
@@ -111,23 +111,23 @@ export class CreateEventService {
       this.graphqlUrl,
       {
         query: mutation,
-        variables: {
-          input: {
-            eventId: payload.eventId,
-            committeeId: payload.committeeId,
-            eventName: payload.eventName,
-            eventDisplayName: payload.eventDisplayName || null,
-            address: payload.address || null,
-            status: payload.status,
-            category: payload.category || null,
-            visibility: payload.visibility,
-            type: payload.type,
-            startDate: payload.startDate,
-            endDate: payload.endDate,
-            latitude: payload.latitude,
-            longitude: payload.longitude
+          variables: {
+            input: {
+              eventId: payload.eventId,
+              committeeId: payload.committeeId,
+              eventName: payload.eventName,
+              eventDisplayName: payload.eventDisplayName || null,
+              address: payload.address || null,
+              category: payload.category || null,
+              eventYear: payload.eventYear,
+              visibility: payload.visibility,
+              type: payload.type,
+              startDate: payload.startDate,
+              endDate: payload.endDate,
+              latitude: payload.latitude,
+              longitude: payload.longitude
+            }
           }
-        }
       },
       {
         withCredentials: true,

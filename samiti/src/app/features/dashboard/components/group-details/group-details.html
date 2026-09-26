@@ -404,7 +404,7 @@
 
           <div class="horizontal-list-container" #eventsScrollContainer>
             @for (event of committeeEvents(); track event.id) {
-              <div class="event-aligned-row" [ngClass]="'status-container-' + (event.status || 'UPCOMING').toLowerCase()">
+              <div class="event-aligned-row" [ngClass]="'status-container-' + getEventStatus(event).toLowerCase()">
                 
                 <div class="event-meta-card">
                   <span class="event-logo-circle circle-shape event-logo-upload"
@@ -446,8 +446,8 @@
                       </div>
                       
                       <div class="event-meta-row">
-                        <span class="event-pill status-tag tag-{{event.status.toLowerCase() || 'upcoming'}}">
-                          <mat-icon>fiber_manual_record</mat-icon>{{ event.status }}
+                        <span class="event-pill status-tag tag-{{getEventStatus(event).toLowerCase()}}">
+                          <mat-icon>fiber_manual_record</mat-icon>{{ getEventStatus(event) }}
                         </span>
                         <span class="event-pill event-date-pill">
                           <mat-icon>calendar_month</mat-icon>

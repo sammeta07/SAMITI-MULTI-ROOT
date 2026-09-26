@@ -1,7 +1,7 @@
 import { Pipe, PipeTransform } from '@angular/core';
 import { TextFormatService } from '../services/text-format-service.service';
 
-export type TextFormatMode = 'title' | 'sentence' | 'lower' | 'email' | 'mobile' | 'gender';
+export type TextFormatMode = 'title' | 'sentence' | 'lower' | 'email' | 'mobile' | 'gender' | 'ordinal';
 
 @Pipe({
   name: 'textFormatPipe',
@@ -22,6 +22,8 @@ export class TextFormatPipe implements PipeTransform {
         return this.textFormatService.normalizeMobile(value);
       case 'sentence':
         return this.textFormatService.toSentenceCase(value);
+      case 'ordinal':
+        return this.textFormatService.toOrdinal(value);
       case 'title':
       default:
         return this.textFormatService.toTitleCase(value);

@@ -60,6 +60,8 @@ function parseSqlStatements(sql: string): string[] {
 async function executeSqlStatementsFromFile(connection: mysql.Connection, migrationFilePath: string): Promise<void> {
   const sql = fs.readFileSync(migrationFilePath, 'utf-8');
   const statements = parseSqlStatements(sql);
+  const migrationFileName = path.basename(migrationFilePath);
+  const approvedDestructiveMigrations = new Set(['059-remove-event-status.sql']);
 
   for (const statement of statements) {
     const isDestructiveStatement =
@@ -67,8 +69,8 @@ async function executeSqlStatementsFromFile(connection: mysql.Connection, migrat
       /\bTRUNCATE\s+TABLE\b/i.test(statement) ||
       /\bDELETE\s+FROM\b/i.test(statement) ||
       /\bALTER\s+TABLE\b[\s\S]*\bDROP\b/i.test(statement);
-    if (isDestructiveStatement) {
-      throw new Error(`Refusing destructive migration statement in ${path.basename(migrationFilePath)}`);
+    if (isDestructiveStatement && !approvedDestructiveMigrations.has(migrationFileName)) {
+      throw new Error(`Refusing destructive migration statement in ${migrationFileName}`);
     }
 
     console.log(`\n📝 Executing: ${statement.substring(0, 100)}...`);

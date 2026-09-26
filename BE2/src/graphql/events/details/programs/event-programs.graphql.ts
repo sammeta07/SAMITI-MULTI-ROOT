@@ -38,7 +38,6 @@ export const eventProgramsResolvers = {
           e.name AS eventName,
           ${supportsEventDisplayName ? "COALESCE(NULLIF(TRIM(e.display_name), ''), LEFT(e.name, 20))" : 'LEFT(e.name, 20)'} AS eventDisplayName,
           e.address,
-          e.status,
           e.category,
           e.visibility,
           e.type,

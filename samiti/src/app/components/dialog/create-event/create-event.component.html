@@ -43,18 +43,8 @@
         </mat-form-field>
       </div>
 
-      <!-- STATUS & TYPE -->
+      <!-- CATEGORY & OCCURRENCE COUNT -->
       <div class="form-row-split-grid">
-        <mat-form-field appearance="outline" class="samiti-custom-field">
-          <mat-label>Status</mat-label>
-          <mat-select [(ngModel)]="status" name="status" required>
-            @for (s of statuses; track s) {
-              <mat-option [value]="s">{{ s }}</mat-option>
-            }
-          </mat-select>
-          <mat-icon matPrefix>info</mat-icon>
-        </mat-form-field>
-
         <mat-form-field appearance="outline" class="samiti-custom-field">
           <mat-label>Event Category</mat-label>
           <mat-select [(ngModel)]="category" name="category">
@@ -63,6 +53,13 @@
             }
           </mat-select>
           <mat-icon matPrefix>category</mat-icon>
+        </mat-form-field>
+
+        <mat-form-field appearance="outline" class="samiti-custom-field">
+          <mat-label>Event Occurrence (Years)</mat-label>
+          <input matInput [(ngModel)]="eventYear" name="eventYear" type="number" min="1" max="49" step="1" required>
+          <mat-icon matPrefix>repeat</mat-icon>
+          <mat-hint>Enter a value from 1 to 49.</mat-hint>
         </mat-form-field>
       </div>
 

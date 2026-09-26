@@ -12,7 +12,6 @@ export interface AdminHierarchyTreeNode {
   roles: EventRoleInfo[];
   startDate?: string | null;
   endDate?: string | null;
-  status?: string | null;
   children: AdminHierarchyTreeNode[];
 }
 
@@ -49,7 +48,6 @@ export interface TreeNode {
   type: 'role' | 'group' | 'event' | 'program' | 'task';
   id?: number;
   children?: TreeNode[];
-  status?: string;
   logo?: string | null;
   roleScope?: 'master_admin' | 'admin' | 'member';
   roles?: EventRoleInfo[];

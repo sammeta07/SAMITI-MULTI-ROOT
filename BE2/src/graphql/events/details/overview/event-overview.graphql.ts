@@ -16,7 +16,6 @@ export const eventOverviewTypes = `
     eventBanner: String
     eventLogo: String
     bannerImages: [String!]!
-    status: String!
     category: String
     visibility: String!
     type: String
@@ -65,7 +64,6 @@ export const eventOverviewResolvers = {
           e.name AS eventName,
           ${supportsEventDisplayName ? "COALESCE(NULLIF(TRIM(e.display_name), ''), LEFT(e.name, 20))" : 'LEFT(e.name, 20)'} AS eventDisplayName,
           e.address,
-          e.status,
           e.category,
           e.visibility,
           e.type,
@@ -172,7 +170,6 @@ export const eventOverviewResolvers = {
         eventBanner: bannerImageRows[0]?.mediaUrl || null,
         eventLogo: event.eventLogo || null,
         bannerImages: bannerImageRows.map((row) => row.mediaUrl),
-        status: String(event.status || ''),
         category: event.category || null,
         visibility: String(event.visibility || ''),
         type: event.type || null,

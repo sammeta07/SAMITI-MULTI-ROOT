@@ -1,23 +1,24 @@
 <div class="home-page" [class.dashboard-mode]="isLoggedIn">
   <div class="home-body">
 
+    <!-- GROUPS / COMMITTEES SECTION -->
     <section class="committees-col" 
              [style.flex-basis]="committeesWidth() + '%'"
              [class.panel-collapsed]="!(uiService.isCommitteesSectionVisible$ | async)" 
              aria-label="Committees Management Panel">
+      
+      <!-- Top Search & Controls -->
       <div class="col-search-bar">
         <div class="col-header-row">
           <div class="col-title-container">
-              <button mat-icon-button type="button" class="global-panel-toggle-btn" 
-                [class.panel-active]="uiService.isCommitteesSectionVisible$ | async"
-                (click)="toggleGroupsPanel()" 
-                matTooltip="Toggle Groups Panel" 
-                matTooltipPosition="below">
-                <mat-icon>{{ (uiService.isCommitteesSectionVisible$ | async) ? 'chevron_left' : 'chevron_right' }}</mat-icon>
-              </button>
-            <div class="col-title-wrapper">
-              <h2 class="col-title">Groups</h2>
-            </div>
+            <button mat-icon-button type="button" class="global-panel-toggle-btn" 
+              [class.panel-active]="uiService.isCommitteesSectionVisible$ | async"
+              (click)="toggleGroupsPanel()" 
+              matTooltip="Toggle Groups Panel" 
+              matTooltipPosition="below">
+              <mat-icon>{{ (uiService.isCommitteesSectionVisible$ | async) ? 'chevron_left' : 'chevron_right' }}</mat-icon>
+            </button>
+            <h2 class="col-title">Groups</h2>
           </div>
 
           <div class="section-search-pill">
@@ -30,7 +31,7 @@
             <select class="ssp-select" name="committeeRadius" [(ngModel)]="selectedCommitteeRadius"
               (change)="onRadiusChange($event)">
               @for (radius of radiusOptions; track radius) {
-              <option [value]="radius">{{ radius }} km</option>
+                <option [value]="radius">{{ radius }} km</option>
               }
             </select>
             @if (committeeSearchQuery()) {
@@ -42,27 +43,30 @@
         </div>
       </div>
 
+      <!-- Tabs & Content -->
       <div class="committees-tabs-shell">
+        
+        <!-- Skeleton Template -->
         <ng-template #committeeSkeletonTpl>
           <div class="home-skeleton-list">
             @for (row of [1,2,3,4]; track row) {
-            <div class="home-skeleton-panel">
-              <div class="home-sk-header">
-                <div class="hsk hsk-avatar"></div>
-                <div class="hsk-info">
-                  <div class="hsk hsk-line lg"></div>
-                  <div class="hsk hsk-line sm"></div>
-                </div>
-                <div class="hsk-right">
-                  <div class="hsk hsk-chip"></div>
-                  <div class="hsk hsk-chip sm"></div>
+              <div class="home-skeleton-panel">
+                <div class="home-sk-header">
+                  <div class="hsk hsk-avatar"></div>
+                  <div class="hsk-info">
+                    <div class="hsk hsk-line lg"></div>
+                    <div class="hsk hsk-line sm"></div>
+                  </div>
+                  <div class="hsk-right">
+                    <div class="hsk hsk-chip"></div>
+                  </div>
                 </div>
               </div>
-            </div>
             }
           </div>
         </ng-template>
 
+        <!-- Committee Card Template -->
         <ng-template #committeeCardTemplate let-committee let-isAuth="isAuth" let-panelPrefix="panelPrefix">
           <mat-expansion-panel id="{{ panelPrefix }}-committee-{{ committee.id }}" [hideToggle]="false"
             [expanded]="isPanelExpanded(panelPrefix, committee.id)"
@@ -79,380 +83,413 @@
             <mat-expansion-panel-header>
               <div class="panel-header-inner">
                 <div class="committee-card-grid">
-                <div class="card-logo-area">
-                  <ng-template #homeCommitteeLogoContent>
-                    @if (committee.committeeLogo) {
-                    <img [src]="committee.committeeLogo" alt="{{ committee.committeeName }} logo" class="committee-avatar" (error)="committee.committeeLogo = null" />
-                    } @else {
-                    <div class="committee-avatar-fallback"
-                      [class.fb-master-admin]="isAuth && committee.committeeRole === 'COMMITTEE_MASTER_ADMIN'"
-                      [class.fb-admin]="isAuth && committee.committeeRole === 'COMMITTEE_ADMIN'"
-                      [class.fb-member]="isAuth && committee.committeeRole === 'COMMITTEE_MEMBER'"
-                      [class.fb-pending]="isAuth && committee.status === 'PENDING' && !committee.committeeRole"
-                      [class.fb-none]="!isAuth || (!committee.committeeRole && committee.status !== 'PENDING')">
-                      {{ committee.committeeName.charAt(0).toUpperCase() }}
-                    </div>
-                    }
-                  </ng-template>
-
-                  @if (isAuth && isCommitteeMasterAdmin(committee)) {
-                    <input #homeCommitteeLogoInput type="file" hidden accept="image/*" (click)="$event.stopPropagation()" (change)="onCommitteeLogoSelected($event, committee)">
-                    <button type="button" class="committee-logo-edit-trigger"
-                      [class.is-uploading]="isUploadingCommitteeLogo(committee.id)"
-                      (click)="$event.stopPropagation(); homeCommitteeLogoInput.click()"
-                      [disabled]="isUploadingCommitteeLogo(committee.id)"
-                      matTooltip="Change committee logo" matTooltipPosition="above"
-                      aria-label="Change committee logo">
-                      <ng-container [ngTemplateOutlet]="homeCommitteeLogoContent"></ng-container>
-                      <span class="logo-edit-overlay" aria-hidden="true">
-                        @if (isUploadingCommitteeLogo(committee.id)) {
-                          <mat-progress-spinner mode="indeterminate" diameter="22" class="logo-upload-spinner"></mat-progress-spinner>
-                        } @else {
-                          <mat-icon>edit</mat-icon>
-                        }
-                      </span>
-                    </button>
-                  } @else {
-                    <ng-container [ngTemplateOutlet]="homeCommitteeLogoContent"></ng-container>
-                  }
-                </div>
-
-                <div class="card-main-info-area">
-                  <div class="card-title-row">
-                    <h3 class="committee-display-name">{{ committee.committeeName | titlecase }}</h3>
-                    @if (isAuth && committee.committeeRole !== 'COMMITTEE_MASTER_ADMIN' && committee.committeeRole !== 'COMMITTEE_ADMIN' && committee.committeeRole !== 'COMMITTEE_MEMBER') {
-                    <button mat-icon-button type="button" class="fav-heart-toggle-btn"
-                      (click)="toggleFavouriteCommittee(committee.id, $event)">
-                      <mat-icon [class.is-fav-active]="committee.isFavourite">
-                        {{ committee.isFavourite ? 'favorite' : 'favorite_border' }}
-                      </mat-icon>
-                    </button>
-                    }
-                  </div>
-
-                  <div class="card-location-row">
-                    <span class="location-text-trim">{{ committee.address | textFormatPipe:'sentence' }}</span>
-                  </div>
-                </div>
-
-                <div class="card-identity-pills-area">
-                  <div class="committee-id-pill">
-                    <span>ID: {{ committee.id }}</span>
-                    <button mat-icon-button type="button" class="copy-id-btn"
-                      (click)="copyCommitteeId(committee.id.toString(), $event, tooltip)" #tooltip="matTooltip"
-                      matTooltip="Copy Committee ID" matTooltipPosition="above">
-                      @if (copiedCommitteeId === committee.id.toString()) {
-                      <mat-icon class="copy-icon-success">done_all</mat-icon>
+                  
+                  <!-- Logo Area -->
+                  <div class="card-logo-area">
+                    <ng-template #homeCommitteeLogoContent>
+                      @if (committee.committeeLogo) {
+                        <img [src]="committee.committeeLogo" alt="{{ committee.committeeName }} logo" class="committee-avatar" (error)="committee.committeeLogo = null" />
                       } @else {
-                      <mat-icon>content_copy</mat-icon>
+                        <div class="committee-avatar-fallback"
+                          [class.fb-master-admin]="isAuth && committee.committeeRole === 'COMMITTEE_MASTER_ADMIN'"
+                          [class.fb-admin]="isAuth && committee.committeeRole === 'COMMITTEE_ADMIN'"
+                          [class.fb-member]="isAuth && committee.committeeRole === 'COMMITTEE_MEMBER'"
+                          [class.fb-pending]="isAuth && committee.status === 'PENDING' && !committee.committeeRole"
+                          [class.fb-none]="!isAuth || (!committee.committeeRole && committee.status !== 'PENDING')">
+                          {{ committee.committeeName.charAt(0).toUpperCase() }}
+                        </div>
                       }
-                    </button>
-                  </div>
-                  <span class="meta-pill text-muted-badge since-year-badge">Est. {{ committee.establishYear }}</span>
-                  <div class="phone-contact-group">
-                    @for (phone of committee.contactNumbers; track phone + '-' + $index) {
-                    <span class="meta-pill phone-contact-badge">
-                      <mat-icon>phone</mat-icon>{{ phone }}
-                    </span>
-                    }
-                  </div>
-                </div>
+                    </ng-template>
 
-                <div class="card-actions-identity-area">
-                  <div class="identity-top-row">
-                    @if (isAuth) {
-                      @if (committee.committeeRole === 'COMMITTEE_MASTER_ADMIN') {
-                        <span class="user-role-badge badge-master-admin">
-                          <mat-icon class="role-badge-icon">verified</mat-icon>MASTER ADMIN
+                    @if (isAuth && isCommitteeMasterAdmin(committee)) {
+                      <input #homeCommitteeLogoInput type="file" hidden accept="image/*" (click)="$event.stopPropagation()" (change)="onCommitteeLogoSelected($event, committee)">
+                      <button type="button" class="committee-logo-edit-trigger"
+                        [class.is-uploading]="isUploadingCommitteeLogo(committee.id)"
+                        (click)="$event.stopPropagation(); homeCommitteeLogoInput.click()"
+                        [disabled]="isUploadingCommitteeLogo(committee.id)"
+                        matTooltip="Change logo" matTooltipPosition="above">
+                        <ng-container [ngTemplateOutlet]="homeCommitteeLogoContent"></ng-container>
+                        <span class="logo-edit-overlay" aria-hidden="true">
+                          @if (isUploadingCommitteeLogo(committee.id)) {
+                            <mat-progress-spinner mode="indeterminate" diameter="18" class="logo-upload-spinner"></mat-progress-spinner>
+                          } @else {
+                            <mat-icon>edit</mat-icon>
+                          }
                         </span>
-                      }
-                      @if (committee.committeeRole === 'COMMITTEE_ADMIN') {
-                        <span class="user-role-badge badge-admin">
-                          <mat-icon class="role-badge-icon">verified</mat-icon>ADMIN
-                        </span>
-                      }
-                      @if (committee.committeeRole === 'COMMITTEE_MEMBER') {
-                        <span class="user-role-badge badge-member">
-                          <mat-icon class="role-badge-icon">verified</mat-icon>MEMBER
-                        </span>
-                      }
+                      </button>
+                    } @else {
+                      <ng-container [ngTemplateOutlet]="homeCommitteeLogoContent"></ng-container>
                     }
                   </div>
 
-                   <div class="directions-status-row">
+                  <!-- Name, Address & Meta Tags -->
+                  <div class="card-main-info-area">
+                    <div class="card-title-row">
+                      <h3 class="committee-display-name">{{ committee.committeeName | titlecase }}</h3>
+                      @if (isAuth && committee.committeeRole !== 'COMMITTEE_MASTER_ADMIN' && committee.committeeRole !== 'COMMITTEE_ADMIN' && committee.committeeRole !== 'COMMITTEE_MEMBER') {
+                        <button mat-icon-button type="button" class="fav-heart-toggle-btn"
+                          (click)="toggleFavouriteCommittee(committee.id, $event)">
+                          <mat-icon [class.is-fav-active]="committee.isFavourite">
+                            {{ committee.isFavourite ? 'favorite' : 'favorite_border' }}
+                          </mat-icon>
+                        </button>
+                      }
+                    </div>
+
+                    <div class="card-location-row">
+                      <span class="location-text-trim">{{ committee.address | textFormatPipe:'sentence' }}</span>
+                    </div>
+
+                    <div class="card-identity-pills-area">
+                      <div class="committee-id-pill">
+                        <span>ID: {{ committee.id }}</span>
+                        <button mat-icon-button type="button" class="copy-id-btn"
+                          (click)="copyCommitteeId(committee.id.toString(), $event, tooltip)" #tooltip="matTooltip"
+                          matTooltip="Copy ID" matTooltipPosition="above">
+                          @if (copiedCommitteeId === committee.id.toString()) {
+                            <mat-icon class="copy-icon-success">done_all</mat-icon>
+                          } @else {
+                            <mat-icon>content_copy</mat-icon>
+                          }
+                        </button>
+                      </div>
+                      <span class="meta-pill since-year-badge">Est. {{ committee.establishYear }}</span>
+                      @for (phone of committee.contactNumbers; track phone + '-' + $index) {
+                        <span class="meta-pill phone-contact-badge">
+                          <mat-icon>phone</mat-icon>{{ phone }}
+                        </span>
+                      }
+                    </div>
+                  </div>
+
+                  <!-- Actions & Distance -->
+                  <div class="card-actions-area">
+                    <div class="identity-top-row">
                       @if (isAuth) {
-                        @if (committee.status === 'PENDING' && committee.pendingRequestRole) {
-                         <button mat-stroked-button type="button" class="action-btn delete-btn"
-                           matTooltip="Cancel join request"
-                           (click)="cancelRequest(committee.id, $event)">
-                           <mat-icon>cancel</mat-icon>
-                           <span>Cancel</span>
-                         </button>
+                        @if (committee.committeeRole === 'COMMITTEE_MASTER_ADMIN') {
+                          <span class="user-role-badge badge-master-admin">
+                            <mat-icon class="role-badge-icon">verified</mat-icon>MASTER ADMIN
+                          </span>
                         }
-                         @if (!committee.committeeRole && committee.status !== 'PENDING') {
-                           <button mat-button type="button" class="join-committee-btn"
-                             (click)="onRequestMemberRole(committee.id, $event)">
-                             <mat-icon>group_add</mat-icon>
-                             <span>Join</span>
-                           </button>
+                        @if (committee.committeeRole === 'COMMITTEE_ADMIN') {
+                          <span class="user-role-badge badge-admin">
+                            <mat-icon class="role-badge-icon">verified</mat-icon>ADMIN
+                          </span>
+                        }
+                        @if (committee.committeeRole === 'COMMITTEE_MEMBER') {
+                          <span class="user-role-badge badge-member">
+                            <mat-icon class="role-badge-icon">verified</mat-icon>MEMBER
+                          </span>
+                        }
+                        @if (committee.status === 'PENDING' && committee.pendingRequestRole) {
+                          <button mat-stroked-button type="button" class="action-btn delete-btn"
+                            matTooltip="Cancel join request"
+                            (click)="cancelRequest(committee.id, $event)">
+                            <mat-icon>cancel</mat-icon>
+                            <span>Cancel</span>
+                          </button>
+                        }
+                        @if (!committee.committeeRole && committee.status !== 'PENDING') {
+                          <button mat-button type="button" class="join-committee-btn"
+                            (click)="onRequestMemberRole(committee.id, $event)">
+                            <mat-icon>group_add</mat-icon>
+                            <span>Join</span>
+                          </button>
                         }
                       }
                     </div>
-                </div>
 
-                <div class="distance-display-area">
-                  <button type="button" class="proximity-display-row"
-                    (click)="openCommitteeInMaps(committee, $event)"
-                    matTooltip="Navigate with Google Maps" matTooltipPosition="above">
-                    <mat-icon class="compass-pointer-icon">directions</mat-icon>
-                    <span class="spatial-distance-metric">{{ committee.distanceMeters }} m</span>
-                  </button>
-                </div>
+                    <button type="button" class="proximity-display-row"
+                      (click)="openCommitteeInMaps(committee, $event)"
+                      matTooltip="Open in Google Maps" matTooltipPosition="above">
+                      <mat-icon class="compass-pointer-icon">directions</mat-icon>
+                      <span class="spatial-distance-metric">{{ committee.distanceMeters }} m</span>
+                    </button>
+                  </div>
 
                 </div>
               </div>
             </mat-expansion-panel-header>
 
+            <!-- Expanded Body: Year Tabs & 65/35 Event Cards -->
             <div class="expansion-inner-content-wrapper">
-              <mat-tab-group class="committee-year-tabs" animationDuration="200ms"
+              <mat-tab-group class="committee-year-tabs" animationDuration="0ms"
                 [selectedIndex]="getDefaultYearTabIndex(committee)"
                 (selectedIndexChange)="onYearTabClick(committee, getCommitteeYearTabs(committee)[$event])">
                 @for (year of getCommitteeYearTabs(committee); track year) {
-                <mat-tab>
-                  <ng-template mat-tab-label>
-                    <mat-icon class="year-tab-icon">calendar_month</mat-icon>
-                    <span>{{ year }}</span>
-                  </ng-template>
-                  @if (getEventsByYear(committee, year).length > 0) {
-                   <div class="committee-events-shell" #eventsShell [attr.data-committee-id]="committee.id">
-                     @for (event of getEventsByYear(committee, year); track event.eventId) {
-                     <div class="event-card" [class.event-card-ongoing]="getEventComputedStatus(event) === 'ongoing'">
-                      <div class="event-card-surface">
-                        <div class="event-card-banner"
-                             role="button"
-                             tabindex="0"
-                             (click)="openEventDetails(event.eventId, $event)">
-                          @if (event.bannerImages.length > 1) {
-                            <div class="banner-carousel">
-                              <img [src]="event.bannerImages[getBannerIndex(event.eventId)]"
-                                   [alt]="event.eventName"
-                                   class="event-banner-img" />
-                              <button class="carousel-btn carousel-btn-prev"
-                                      (click)="prevBanner(event.eventId, event.bannerImages.length, $event)"
-                                      aria-label="Previous banner">
-                                <mat-icon>chevron_left</mat-icon>
-                              </button>
-                              <button class="carousel-btn carousel-btn-next"
-                                      (click)="nextBanner(event.eventId, event.bannerImages.length, $event)"
-                                      aria-label="Next banner">
-                                <mat-icon>chevron_right</mat-icon>
-                              </button>
-                              <div class="carousel-dots">
-                                @for (img of event.bannerImages; track $index) {
-                                  <span class="carousel-dot" [class.active]="getBannerIndex(event.eventId) === $index"></span>
-                                }
+                  <mat-tab>
+                    <ng-template mat-tab-label>
+                      <div class="year-tab-label" (click)="onYearTabClick(committee, year)">
+                        <mat-icon class="year-tab-icon">calendar_month</mat-icon>
+                        <span>{{ year }}</span>
+                      </div>
+                    </ng-template>
+                    
+                    <div class="committee-events-shell" #eventsShell [attr.data-committee-id]="committee.id">
+                      @if (isYearEventsLoading(committee, year)) {
+                        @for (row of [1,2,3]; track row) {
+                          <div class="event-card event-card-skeleton">
+                            <div class="event-card-surface">
+                              <div class="event-skeleton-banner"></div>
+                              <div class="event-card-body">
+                                <div class="event-card-header">
+                                  <div class="event-skeleton-logo"></div>
+                                  <div class="event-card-info">
+                                    <div class="event-skeleton-line"></div>
+                                    <div class="event-skeleton-line sm"></div>
+                                  </div>
+                                </div>
                               </div>
                             </div>
-                          } @else if (event.bannerImages.length === 1 || event.eventBanner) {
-                            <img [src]="event.bannerImages[0] || event.eventBanner" [alt]="event.eventName" class="event-banner-img" />
-                          } @else {
-                            <div class="event-banner-placeholder">
-                              <mat-icon>event</mat-icon>
-                            </div>
-                          }
-                          <div class="event-banner-overlay">
-                            <span class="event-status-badge event-status-{{ event.status | lowercase }}">{{ event.status }}</span>
-                            <span class="event-visibility-badge">{{ getYearOrdinal(year) }} year</span>
                           </div>
-                        </div>
+                        }
+                      } @else if (getEventsByYear(committee, year).length > 0) {
+                        @for (event of getEventsByYear(committee, year); track event.eventId) {
+                          <div class="event-card event-status-border-{{ getEventComputedStatus(event) }}">
+                            <div class="event-card-surface">
+                              
+                              <!-- Banner Section: 65% Height with Micro-padded Category Chip -->
+                              <div class="event-card-banner" role="button" tabindex="0" (click)="openEventDetails(event.eventId, $event)">
+                                @if (event.bannerImages.length > 1) {
+                                  <div class="banner-carousel">
+                                    <img [src]="event.bannerImages[getBannerIndex(event.eventId)]" [alt]="event.eventName" class="event-banner-img" />
+                                    <button class="carousel-btn carousel-btn-prev" (click)="prevBanner(event.eventId, event.bannerImages.length, $event)" aria-label="Previous">
+                                      <mat-icon>chevron_left</mat-icon>
+                                    </button>
+                                    <button class="carousel-btn carousel-btn-next" (click)="nextBanner(event.eventId, event.bannerImages.length, $event)" aria-label="Next">
+                                      <mat-icon>chevron_right</mat-icon>
+                                    </button>
+                                    <div class="carousel-dots">
+                                      @for (img of event.bannerImages; track $index) {
+                                        <span class="carousel-dot" [class.active]="getBannerIndex(event.eventId) === $index"></span>
+                                      }
+                                    </div>
+                                  </div>
+                                } @else if (event.bannerImages.length > 0) {
+                                  <img [src]="event.bannerImages[0]" [alt]="event.eventName" class="event-banner-img" />
+                                } @else {
+                                  <div class="event-banner-placeholder">
+                                    <mat-icon>event</mat-icon>
+                                  </div>
+                                }
+                                
+                                <div class="event-banner-overlay">
+                                  @if (event.category) {
+                                    <span class="event-banner-category-chip">{{ event.category | uppercase }}</span>
+                                  } @else {
+                                    <span></span>
+                                  }
+                                  @if (event.eventYear) {
+                                    <span class="event-year-badge">{{ getYearOrdinal(event.eventYear) }} Year</span>
+                                  }
+                                </div>
+                              </div>
 
-                        <div class="event-card-body">
-                          <div class="event-card-topline">
-                            <h4 class="event-card-title">{{ event.eventName | titlecase }}</h4>
+                              <!-- Content Section: 35% Height with Tight Rows -->
+                              <div class="event-card-body">
+                                <div class="event-card-header">
+                                  @if (event.eventLogo) {
+                                    <img [src]="event.eventLogo" [alt]="event.eventName" class="event-card-logo" />
+                                  } @else {
+                                    <div class="event-card-logo-placeholder">
+                                      <mat-icon>event</mat-icon>
+                                    </div>
+                                  }
+                                  <div class="event-card-info">
+                                    <h4 class="event-card-title">{{ event.eventName | titlecase }}</h4>
+                                    @if (event.address) {
+                                      <div class="event-card-address">{{ event.address }}</div>
+                                    }
+                                  </div>
+                                </div>
+
+                                <div class="event-card-meta">
+                                  @if (event.startDate || event.endDate) {
+                                    <span class="event-meta-chip" [class]="getDateColorClass(event)">
+                                      @if (event.startDate) {
+                                        <mat-icon>calendar_today</mat-icon>{{ event.startDate | date:'dd MMM yyyy' }}
+                                      }
+                                      @if (event.startDate && event.endDate) {
+                                        <span class="date-separator">To</span>
+                                      }
+                                      @if (event.endDate) {
+                                        <mat-icon>event_available</mat-icon>{{ event.endDate | date:'dd MMM yyyy' }}
+                                      }
+                                    </span>
+                                  }
+                                </div>
+                              </div>
+
+                            </div>
                           </div>
-                          <div class="event-card-meta">
-                            @if (event.startDate || event.endDate) {
-                            <span class="event-meta-chip" [class]="getDateColorClass(event)">
-                              @if (event.startDate) {
-                                <mat-icon>calendar_today</mat-icon>{{ event.startDate | date:'dd MMM yyyy' }}
-                              }
-                              @if (event.startDate && event.endDate) {
-                                <span class="date-separator">To</span>
-                              }
-                              @if (event.endDate) {
-                                <mat-icon>event_available</mat-icon>{{ event.endDate | date:'dd MMM yyyy' }}
-                              }
-                            </span>
-                            }
-                          </div>
+                        }
+                      } @else {
+                        <div class="committee-events-empty-state">
+                          <mat-icon>event_busy</mat-icon>
+                          <p>No events in {{ year }}.</p>
                         </div>
-                      </div>
+                      }
                     </div>
-                    }
-                  </div>
-                  } @else {
-                  <div class="committee-events-empty">
-                    <mat-icon>event_busy</mat-icon>
-                    <p>No events in {{ year }}.</p>
-                  </div>
-                  }
-                </mat-tab>
+                  </mat-tab>
                 }
               </mat-tab-group>
             </div>
           </mat-expansion-panel>
         </ng-template>
 
+        <!-- Unauthenticated View -->
         @if (!isLoggedIn) {
-        <div class="committees-tabs-header-actions">
-          <button mat-button type="button" class="active-filter-toggle-btn" [class.is-active-mode]="isActiveFilterModeActive()" (click)="activeFilterMode.update(mode => mode === 'ACTIVE' ? 'ALL' : 'ACTIVE')">
-            <mat-icon>{{ activeFilterMode() === 'ACTIVE' ? 'check_circle' : 'list' }}</mat-icon>
-            <span>{{ activeFilterMode() === 'ACTIVE' ? 'Active' : 'All' }}</span>
-          </button>
-          <button mat-button type="button" class="expand-collapse-btn" (click)="expandNearby()">Expand All</button>
-          <button mat-button type="button" class="expand-collapse-btn" (click)="collapseNearby()">Collapse All</button>
-        </div>
+          <div class="committees-tabs-header-actions">
+            <button mat-button type="button" class="active-filter-toggle-btn" [class.is-active-mode]="isActiveFilterModeActive()" (click)="activeFilterMode.update(mode => mode === 'ACTIVE' ? 'ALL' : 'ACTIVE')">
+              <mat-icon>{{ activeFilterMode() === 'ACTIVE' ? 'check_circle' : 'list' }}</mat-icon>
+              <span>{{ activeFilterMode() === 'ACTIVE' ? 'Active' : 'All' }}</span>
+            </button>
+            <button mat-button type="button" class="expand-collapse-btn" (click)="expandNearby()">Expand All</button>
+            <button mat-button type="button" class="expand-collapse-btn" (click)="collapseNearby()">Collapse All</button>
+          </div>
 
-        <mat-tab-group class="committees-tabs" animationDuration="200ms">
-          <mat-tab>
-            <ng-template mat-tab-label>
-              <mat-icon class="tab-leading-icon">adjust</mat-icon>
-              <span>Near By</span>
-              <span class="tab-badge">{{ filteredNearbyGroups().length }}</span>
-            </ng-template>
+          <mat-tab-group class="committees-tabs" animationDuration="150ms">
+            <mat-tab>
+              <ng-template mat-tab-label>
+                <mat-icon class="tab-leading-icon">adjust</mat-icon>
+                <span>Near By</span>
+                <span class="tab-badge">{{ filteredNearbyGroups().length }}</span>
+              </ng-template>
 
-            <div class="committees-scroll">
-              @if (isCommitteeListLoading) {
-                <ng-container [ngTemplateOutlet]="committeeSkeletonTpl"></ng-container>
-              } @else {
-              <mat-accordion #nearbyAccordion="matAccordion" [multi]="true" class="custom-clean-accordion">
-                @for (committee of filteredNearbyGroups(); track committee.id) {
-                <ng-container [ngTemplateOutlet]="committeeCardTemplate"
-                  [ngTemplateOutletContext]="{ $implicit: committee, isAuth: false, panelPrefix: 'nearby' }">
-                </ng-container>
+              <div class="committees-scroll">
+                @if (isCommitteeListLoading) {
+                  <ng-container [ngTemplateOutlet]="committeeSkeletonTpl"></ng-container>
+                } @else {
+                  <mat-accordion #nearbyAccordion="matAccordion" [multi]="true" class="custom-clean-accordion">
+                    @for (committee of filteredNearbyGroups(); track committee.id) {
+                      <ng-container [ngTemplateOutlet]="committeeCardTemplate"
+                        [ngTemplateOutletContext]="{ $implicit: committee, isAuth: false, panelPrefix: 'nearby' }">
+                      </ng-container>
+                    }
+                  </mat-accordion>
+
+                  @if (filteredNearbyGroups().length === 0) {
+                    <div class="col-empty">
+                      <mat-icon>gavel</mat-icon>
+                      <p>No committees found within {{selectedCommitteeRadius}} km.</p>
+                    </div>
+                  }
                 }
-              </mat-accordion>
-
-              @if (filteredNearbyGroups().length === 0) {
-              <div class="col-empty">
-                <mat-icon>gavel</mat-icon>
-                <p>No committees found within {{selectedCommitteeRadius}} km.</p>
               </div>
-              }
-              }
-            </div>
-          </mat-tab>
-        </mat-tab-group>
+            </mat-tab>
+          </mat-tab-group>
         } @else {
-        <div class="committees-tabs-header-actions">
-          <button mat-button type="button" class="active-filter-toggle-btn" [class.is-active-mode]="isActiveFilterModeActive()" (click)="activeFilterMode.update(mode => mode === 'ACTIVE' ? 'ALL' : 'ACTIVE')">
-            <mat-icon>{{ activeFilterMode() === 'ACTIVE' ? 'check_circle' : 'list' }}</mat-icon>
-            <span>{{ activeFilterMode() === 'ACTIVE' ? 'Active' : 'All' }}</span>
-          </button>
-          @if (selectedTabIndex === 0) {
-          <button mat-button type="button" class="expand-collapse-btn" (click)="expandNearby()">Expand All</button>
-          <button mat-button type="button" class="expand-collapse-btn" (click)="collapseNearby()">Collapse All</button>
-          } @else if (selectedTabIndex === 1) {
-          <button mat-button type="button" class="expand-collapse-btn" (click)="expandFavourites()">Expand All</button>
-          <button mat-button type="button" class="expand-collapse-btn" (click)="collapseFavourites()">Collapse All</button>
-          } @else if (selectedTabIndex === 2) {
-          <button mat-button type="button" class="expand-collapse-btn" (click)="expandPreview()">Expand All</button>
-          <button mat-button type="button" class="expand-collapse-btn" (click)="collapsePreview()">Collapse All</button>
-          }
-        </div>
+          <!-- Authenticated View -->
+          <div class="committees-tabs-header-actions">
+            <button mat-button type="button" class="active-filter-toggle-btn" [class.is-active-mode]="isActiveFilterModeActive()" (click)="activeFilterMode.update(mode => mode === 'ACTIVE' ? 'ALL' : 'ACTIVE')">
+              <mat-icon>{{ activeFilterMode() === 'ACTIVE' ? 'check_circle' : 'list' }}</mat-icon>
+              <span>{{ activeFilterMode() === 'ACTIVE' ? 'Active' : 'All' }}</span>
+            </button>
+            @if (selectedTabIndex === 0) {
+              <button mat-button type="button" class="expand-collapse-btn" (click)="expandNearby()">Expand All</button>
+              <button mat-button type="button" class="expand-collapse-btn" (click)="collapseNearby()">Collapse All</button>
+            } @else if (selectedTabIndex === 1) {
+              <button mat-button type="button" class="expand-collapse-btn" (click)="expandFavourites()">Expand All</button>
+              <button mat-button type="button" class="expand-collapse-btn" (click)="collapseFavourites()">Collapse All</button>
+            } @else if (selectedTabIndex === 2) {
+              <button mat-button type="button" class="expand-collapse-btn" (click)="expandPreview()">Expand All</button>
+              <button mat-button type="button" class="expand-collapse-btn" (click)="collapsePreview()">Collapse All</button>
+            }
+          </div>
 
-        <mat-tab-group class="committees-tabs" animationDuration="200ms" [(selectedIndex)]="selectedTabIndex">
-          <mat-tab>
-            <ng-template mat-tab-label>
-              <mat-icon class="tab-leading-icon">adjust</mat-icon>
-              <span>Near By</span>
-              <span class="tab-badge">{{ filteredNearbyGroups().length }}</span>
-            </ng-template>
+          <mat-tab-group class="committees-tabs" animationDuration="150ms" [(selectedIndex)]="selectedTabIndex">
+            <mat-tab>
+              <ng-template mat-tab-label>
+                <mat-icon class="tab-leading-icon">adjust</mat-icon>
+                <span>Near By</span>
+                <span class="tab-badge">{{ filteredNearbyGroups().length }}</span>
+              </ng-template>
 
-            <div class="committees-scroll">
-              @if (isCommitteeListLoading) {
-                <ng-container [ngTemplateOutlet]="committeeSkeletonTpl"></ng-container>
-              } @else {
-              <mat-accordion #nearbyAccordion="matAccordion" [multi]="true" class="custom-clean-accordion">
-                @for (committee of filteredNearbyGroups(); track committee.id) {
-                <ng-container [ngTemplateOutlet]="committeeCardTemplate"
-                  [ngTemplateOutletContext]="{ $implicit: committee, isAuth: true, panelPrefix: 'nearby' }">
-                </ng-container>
+              <div class="committees-scroll">
+                @if (isCommitteeListLoading) {
+                  <ng-container [ngTemplateOutlet]="committeeSkeletonTpl"></ng-container>
+                } @else {
+                  <mat-accordion #nearbyAccordion="matAccordion" [multi]="true" class="custom-clean-accordion">
+                    @for (committee of filteredNearbyGroups(); track committee.id) {
+                      <ng-container [ngTemplateOutlet]="committeeCardTemplate"
+                        [ngTemplateOutletContext]="{ $implicit: committee, isAuth: true, panelPrefix: 'nearby' }">
+                      </ng-container>
+                    }
+                  </mat-accordion>
+
+                  @if (filteredNearbyGroups().length === 0) {
+                    <div class="col-empty">
+                      <mat-icon>gavel</mat-icon>
+                      <p>No committees found within {{selectedCommitteeRadius}} km.</p>
+                    </div>
+                  }
                 }
-              </mat-accordion>
-
-              @if (filteredNearbyGroups().length === 0) {
-              <div class="col-empty">
-                <mat-icon>gavel</mat-icon>
-                <p>No committees found within {{selectedCommitteeRadius}} km.</p>
               </div>
-              }
-              }
-            </div>
-          </mat-tab>
+            </mat-tab>
 
-          <mat-tab>
-            <ng-template mat-tab-label>
-              <mat-icon class="tab-leading-icon">favorite_border</mat-icon>
-              <span>Favourites</span>
-              <span class="tab-badge">{{ filteredFavouriteGroups().length }}</span>
-            </ng-template>
+            <mat-tab>
+              <ng-template mat-tab-label>
+                <mat-icon class="tab-leading-icon">favorite_border</mat-icon>
+                <span>Favourites</span>
+                <span class="tab-badge">{{ filteredFavouriteGroups().length }}</span>
+              </ng-template>
 
-            <div class="committees-scroll">
-              @if (isCommitteeListLoading) {
-                <ng-container [ngTemplateOutlet]="committeeSkeletonTpl"></ng-container>
-              } @else {
-              <mat-accordion #favouriteAccordion="matAccordion" [multi]="true" class="custom-clean-accordion">
-                @for (committee of filteredFavouriteGroups(); track committee.id) {
-                <ng-container [ngTemplateOutlet]="committeeCardTemplate"
-                  [ngTemplateOutletContext]="{ $implicit: committee, isAuth: true, panelPrefix: 'favourite' }">
-                </ng-container>
+              <div class="committees-scroll">
+                @if (isCommitteeListLoading) {
+                  <ng-container [ngTemplateOutlet]="committeeSkeletonTpl"></ng-container>
+                } @else {
+                  <mat-accordion #favouriteAccordion="matAccordion" [multi]="true" class="custom-clean-accordion">
+                    @for (committee of filteredFavouriteGroups(); track committee.id) {
+                      <ng-container [ngTemplateOutlet]="committeeCardTemplate"
+                        [ngTemplateOutletContext]="{ $implicit: committee, isAuth: true, panelPrefix: 'favourite' }">
+                      </ng-container>
+                    }
+                  </mat-accordion>
+
+                  @if (filteredFavouriteGroups().length === 0) {
+                    <div class="col-empty">
+                      <mat-icon>favorite_border</mat-icon>
+                      <p>Mark committees as favourite to track them here.</p>
+                    </div>
+                  }
                 }
-              </mat-accordion>
-
-              @if (filteredFavouriteGroups().length === 0) {
-              <div class="col-empty">
-                <mat-icon>favorite_border</mat-icon>
-                <p>Mark committees as favourite to track them here.</p>
               </div>
-              }
-              }
-            </div>
-          </mat-tab>
+            </mat-tab>
 
-          <mat-tab>
-            <ng-template mat-tab-label>
-              <mat-icon class="tab-leading-icon">preview</mat-icon>
-              <span>Preview</span>
-              <span class="tab-badge">{{ filteredPreviewGroups().length }}</span>
-            </ng-template>
+            <mat-tab>
+              <ng-template mat-tab-label>
+                <mat-icon class="tab-leading-icon">preview</mat-icon>
+                <span>Preview</span>
+                <span class="tab-badge">{{ filteredPreviewGroups().length }}</span>
+              </ng-template>
 
-            <div class="committees-scroll">
-              @if (isCommitteeListLoading) {
-                <ng-container [ngTemplateOutlet]="committeeSkeletonTpl"></ng-container>
-              } @else {
-              <mat-accordion #previewAccordion="matAccordion" [multi]="true" class="custom-clean-accordion">
-                @for (committee of filteredPreviewGroups(); track committee.id) {
-                <ng-container [ngTemplateOutlet]="committeeCardTemplate"
-                  [ngTemplateOutletContext]="{ $implicit: committee, isAuth: true, panelPrefix: 'preview' }">
-                </ng-container>
+              <div class="committees-scroll">
+                @if (isCommitteeListLoading) {
+                  <ng-container [ngTemplateOutlet]="committeeSkeletonTpl"></ng-container>
+                } @else {
+                  <mat-accordion #previewAccordion="matAccordion" [multi]="true" class="custom-clean-accordion">
+                    @for (committee of filteredPreviewGroups(); track committee.id) {
+                      <ng-container [ngTemplateOutlet]="committeeCardTemplate"
+                        [ngTemplateOutletContext]="{ $implicit: committee, isAuth: true, panelPrefix: 'preview' }">
+                      </ng-container>
+                    }
+                  </mat-accordion>
+
+                  @if (filteredPreviewGroups().length === 0) {
+                    <div class="col-empty">
+                      <mat-icon>preview</mat-icon>
+                      <p>No preview committees available.</p>
+                    </div>
+                  }
                 }
-              </mat-accordion>
-
-              @if (filteredPreviewGroups().length === 0) {
-              <div class="col-empty">
-                <mat-icon>preview</mat-icon>
-                <p>No preview committees available.</p>
               </div>
-              }
-              }
-            </div>
-          </mat-tab>
-        </mat-tab-group>
+            </mat-tab>
+          </mat-tab-group>
         }
       </div>
     </section>
 
+    <!-- Resizer Divider -->
     <div class="col-resizer"
          (mousedown)="onResizeStart($event)"
          [class.hidden]="!(uiService.isCommitteesSectionVisible$ | async)"
@@ -461,19 +498,21 @@
          matTooltip="Drag to resize"
          matTooltipPosition="above"></div>
 
+    <!-- PROGRAMS SIDEBAR SECTION -->
     <aside class="sidebar-col" 
            [class.panel-expanded-full]="!(uiService.isCommitteesSectionVisible$ | async)" 
            aria-label="Programs and Events Sidebar">
+      
       <div class="col-search-bar">
         <div class="col-header-row">
           <div class="col-title-container">
-              <button mat-icon-button type="button" class="global-panel-toggle-btn" 
-                [class.panel-active]="uiService.isCommitteesSectionVisible$ | async"
-                (click)="toggleGroupsPanel()" 
-                matTooltip="Toggle Groups Panel" 
-                matTooltipPosition="below">
-                <mat-icon>{{ (uiService.isCommitteesSectionVisible$ | async) ? 'chevron_left' : 'chevron_right' }}</mat-icon>
-              </button>
+            <button mat-icon-button type="button" class="global-panel-toggle-btn" 
+              [class.panel-active]="uiService.isCommitteesSectionVisible$ | async"
+              (click)="toggleGroupsPanel()" 
+              matTooltip="Toggle Groups Panel" 
+              matTooltipPosition="below">
+              <mat-icon>{{ (uiService.isCommitteesSectionVisible$ | async) ? 'chevron_left' : 'chevron_right' }}</mat-icon>
+            </button>
             <h2 class="col-title">Programs</h2>
           </div>
 
@@ -487,7 +526,7 @@
             <select class="ssp-select" name="programRadius" [(ngModel)]="selectedCommitteeRadius"
               (change)="onRadiusChange($event)">
               @for (radius of radiusOptions; track radius) {
-              <option [value]="radius">{{ radius }} km</option>
+                <option [value]="radius">{{ radius }} km</option>
               }
             </select>
             @if (programSearchQuery()) {
@@ -499,7 +538,7 @@
         </div>
       </div>
 
-      <mat-tab-group class="sidebar-tabs" animationDuration="200ms">
+      <mat-tab-group class="sidebar-tabs" animationDuration="150ms">
         <mat-tab>
           <ng-template mat-tab-label>
             <mat-icon class="tab-leading-icon">apps</mat-icon>
@@ -515,19 +554,19 @@
         </mat-tab>
 
         @if (isLoggedIn) {
-        <mat-tab>
-          <ng-template mat-tab-label>
-            <mat-icon class="tab-leading-icon">favorite</mat-icon>
-            <span>Favourites</span>
-            <span class="tab-badge">0</span>
-          </ng-template>
-          <div class="sidebar-scroll">
-            <div class="sidebar-empty">
-              <mat-icon>favorite_border</mat-icon>
-              <p>Mark programs as favourite to see them here.</p>
+          <mat-tab>
+            <ng-template mat-tab-label>
+              <mat-icon class="tab-leading-icon">favorite</mat-icon>
+              <span>Favourites</span>
+              <span class="tab-badge">0</span>
+            </ng-template>
+            <div class="sidebar-scroll">
+              <div class="sidebar-empty">
+                <mat-icon>favorite_border</mat-icon>
+                <p>Mark programs as favourite to see them here.</p>
+              </div>
             </div>
-          </div>
-        </mat-tab>
+          </mat-tab>
         }
 
         <mat-tab>

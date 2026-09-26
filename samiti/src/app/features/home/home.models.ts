@@ -14,12 +14,14 @@ export interface CommitteeListRequestBackend {
 export interface CommitteeEvent {
   eventId: number;
   eventName: string;
-  status: string;
-  type?: string | null;
-  visibility: string;
+  eventYear: number;
+  category?: string | null;
+  address?: string | null;
+  eventLogo?: string | null;
+  latitude?: number | null;
+  longitude?: number | null;
   startDate?: string | null;
   endDate?: string | null;
-  eventBanner?: string | null;
   bannerImages: string[];
 }
 

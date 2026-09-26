@@ -24,6 +24,7 @@ import { UiToggleService } from '../../shared/services/ui-toggle.service';
 import { ImageAssetService } from '../../core/services/image-asset.service';
 import { ImageCropperDialogComponent } from '../../shared/components/image-cropper-dialog/image-cropper-dialog.component';
 import { SelectedYearService } from '../../shared/services/selected-year.service';
+import { getEventComputedStatus } from '../../shared/services/event-status.util';
 
 @Component({
   selector: 'app-home',
@@ -63,6 +64,7 @@ export class HomeComponent implements OnDestroy, AfterViewChecked {
   private readonly carouselIndices = new Map<number, number>();
   private carouselTimer: ReturnType<typeof setInterval> | null = null;
   private readonly CAROUSEL_INTERVAL_MS = 3500;
+  private readonly loadingCommitteeYearEvents = new Map<string, boolean>();
   // public isCommitteesSectionVisible = false;
   
   userLocationCords = this.headerService.userLocationCords;
@@ -251,20 +253,17 @@ export class HomeComponent implements OnDestroy, AfterViewChecked {
       });
   }
 
-  getEventComputedStatus(event: CommitteeEvent): 'completed' | 'ongoing' | 'upcoming' {
-    const now = new Date();
-    const start = event.startDate ? new Date(event.startDate) : null;
-    const end = event.endDate ? new Date(event.endDate) : null;
-
-    if (end && now > end) return 'completed';
-    if (start && now >= start && (!end || now <= end)) return 'ongoing';
+  getEventComputedStatus(event: CommitteeEvent): 'completed' | 'started' | 'upcoming' {
+    const status = getEventComputedStatus(event.startDate, event.endDate);
+    if (status === 'COMPLETED') return 'completed';
+    if (status === 'STARTED') return 'started';
     return 'upcoming';
   }
 
   getDateColorClass(event: CommitteeEvent): string {
     const status = this.getEventComputedStatus(event);
     if (status === 'completed') return 'date-completed';
-    if (status === 'ongoing') return 'date-ongoing';
+    if (status === 'started') return 'date-started';
     return 'date-upcoming';
   }
 
@@ -276,6 +275,10 @@ export class HomeComponent implements OnDestroy, AfterViewChecked {
       case 3: return `${year}rd`;
       default: return `${year}th`;
     }
+  }
+
+  isYearEventsLoading(committee: CommitteesList, year: number): boolean {
+    return this.loadingCommitteeYearEvents.get(`${committee.id}-${year}`) ?? false;
   }
 
   scrollToFirstOngoingEvent(committeeId: number): void {
@@ -292,11 +295,11 @@ export class HomeComponent implements OnDestroy, AfterViewChecked {
     );
     if (!shell) return;
     const shellElement = shell.nativeElement as HTMLElement;
-    const firstOngoing = shellElement.querySelector('.event-card-ongoing') as HTMLElement | null;
-    if (firstOngoing) {
+    const firstStarted = shellElement.querySelector('.event-card-started') as HTMLElement | null;
+    if (firstStarted) {
       const leftPadding = parseFloat(getComputedStyle(shellElement).paddingLeft) || 0;
       shellElement.scrollTo({
-        left: Math.max(0, firstOngoing.offsetLeft - leftPadding),
+        left: Math.max(0, firstStarted.offsetLeft - leftPadding),
         behavior: 'smooth'
       });
     }
@@ -309,8 +312,17 @@ export class HomeComponent implements OnDestroy, AfterViewChecked {
   }
 
   private loadCommitteeYearEvents(committee: CommitteesList, year: number): void {
+    const key = `${committee.id}-${year}`;
+    if (this.loadingCommitteeYearEvents.has(key)) return;
+    this.loadingCommitteeYearEvents.set(key, true);
+    this.cdr.detectChanges();
+
     const locationCoords = this.userLocationCords();
-    if (!locationCoords) return;
+    if (!locationCoords) {
+      this.loadingCommitteeYearEvents.delete(key);
+      this.cdr.detectChanges();
+      return;
+    }
 
     const body: CommitteeListRequestBackend = {
       latitude: locationCoords.lat,
@@ -342,14 +354,20 @@ export class HomeComponent implements OnDestroy, AfterViewChecked {
           }));
           this.scrollToFirstOngoingEvent(committee.id);
         }
+        this.loadingCommitteeYearEvents.delete(key);
+        this.cdr.detectChanges();
       },
       error: (error) => {
         console.error('Failed to fetch committee year events:', error);
+        this.loadingCommitteeYearEvents.delete(key);
+        this.cdr.detectChanges();
       }
     });
   }
 
   onYearTabClick(committee: CommitteesList, year: number): void {
+    const key = `${committee.id}-${year}`;
+    if (this.loadingCommitteeYearEvents.has(key)) return;
     this.loadCommitteeYearEvents(committee, year);
   }
 

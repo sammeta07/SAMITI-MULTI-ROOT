@@ -24,7 +24,6 @@ export class EventDetailsOverviewService {
         eventBanner
         eventLogo
         bannerImages
-        status
         category
         visibility
         type

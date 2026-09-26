@@ -30,6 +30,7 @@ import { LoadingStateService } from '../../../../shared/services/loading-state.s
 import { TextFormatPipe } from '../../../../shared/pipe/text-format-pipe.pipe';
 import { ImageAssetService } from '../../../../core/services/image-asset.service';
 import { AuthService } from '../../../../core/services/auth.service';
+import { getEventComputedStatus } from '../../../../shared/services/event-status.util';
 import { ImageCropperDialogComponent } from '../../../../shared/components/image-cropper-dialog/image-cropper-dialog.component';
 
 @Component({
@@ -81,6 +82,10 @@ export class GroupDetailsComponent implements OnInit {
   public readonly userCommitteeRole = signal<'COMMITTEE_MEMBER' | 'COMMITTEE_ADMIN' | 'COMMITTEE_MASTER_ADMIN' | null>(null);
   public readonly groupData = signal<CommitteeProfileMeta | null>(null);
   public readonly committeeEvents = signal<CommitteeEventListItem[]>([]);
+
+  public getEventStatus(event: CommitteeEventListItem): string {
+    return getEventComputedStatus(event.startDate, event.endDate);
+  }
   
   public readonly masterAdminsList = signal<CommitteeRosterMember[]>([]);
   public readonly adminsList = signal<CommitteeRosterMember[]>([]);
@@ -499,26 +504,32 @@ export class GroupDetailsComponent implements OnInit {
               ...event,
               id: event.id || Number(event.eventId || 0)
             }));
-            const statusSortOrder: Record<string, number> = {
-              COMPLETED: 0,
-              STARTED: 1,
-              UPCOMING: 2
+
+            const getEventSortOrder = (event: CommitteeEventListItem): number => {
+              const now = new Date();
+              const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+              const start = event.startDate ? new Date(event.startDate) : null;
+              const end = event.endDate ? new Date(event.endDate) : null;
+              const startDate = start ? new Date(start.getFullYear(), start.getMonth(), start.getDate()) : null;
+              const endDate = end ? new Date(end.getFullYear(), end.getMonth(), end.getDate()) : null;
+              if (!startDate) return 0;
+              if (today < startDate) return 2;
+              if (endDate && today > endDate) return 0;
+              return 1;
             };
 
-              const sortedEvents = [...safeEvents].sort((a, b) => {
-                const statusA = String(a.status || '').toUpperCase();
-                const statusB = String(b.status || '').toUpperCase();
-                const orderA = statusSortOrder[statusA] ?? 99;
-                const orderB = statusSortOrder[statusB] ?? 99;
+            const sortedEvents = [...safeEvents].sort((a, b) => {
+              const orderA = getEventSortOrder(a);
+              const orderB = getEventSortOrder(b);
 
-                if (orderA !== orderB) {
-                  return orderA - orderB;
-                }
+              if (orderA !== orderB) {
+                return orderA - orderB;
+              }
 
-                const dateA = a.startDate ? new Date(a.startDate).getTime() : Infinity;
-                const dateB = b.startDate ? new Date(b.startDate).getTime() : Infinity;
-                return dateA - dateB;
-              });
+              const dateA = a.startDate ? new Date(a.startDate).getTime() : Infinity;
+              const dateB = b.startDate ? new Date(b.startDate).getTime() : Infinity;
+              return dateA - dateB;
+            });
               this.committeeEvents.set(sortedEvents);
               setTimeout(() => this.scrollToActiveEvent(), 50);
           } else {
@@ -778,8 +789,22 @@ export class GroupDetailsComponent implements OnInit {
     const events = this.committeeEvents();
     if (!events.length) return;
 
-    const targetEvent = events.find(e => String(e.status).toUpperCase() === 'STARTED') ||
-                        events.find(e => String(e.status).toUpperCase() === 'UPCOMING');
+    const now = new Date();
+    const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+
+    const getComputedStatus = (event: CommitteeEventListItem): string => {
+      const start = event.startDate ? new Date(event.startDate) : null;
+      const end = event.endDate ? new Date(event.endDate) : null;
+      const startDate = start ? new Date(start.getFullYear(), start.getMonth(), start.getDate()) : null;
+      const endDate = end ? new Date(end.getFullYear(), end.getMonth(), end.getDate()) : null;
+      if (!startDate) return 'completed';
+      if (today < startDate) return 'upcoming';
+      if (endDate && today > endDate) return 'completed';
+      return 'started';
+    };
+
+    const targetEvent = events.find(e => getComputedStatus(e) === 'started') ||
+                        events.find(e => getComputedStatus(e) === 'upcoming');
 
     if (!targetEvent) return;
 

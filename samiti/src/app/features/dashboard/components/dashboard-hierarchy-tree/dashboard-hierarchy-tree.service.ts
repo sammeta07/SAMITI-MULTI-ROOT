@@ -44,7 +44,6 @@ export class DashboardHierarchyTreeService {
             }
             startDate
             endDate
-            status
             children {
               id
               name
@@ -57,7 +56,6 @@ export class DashboardHierarchyTreeService {
               }
               startDate
               endDate
-              status
               children {
                 id
                 name
@@ -70,7 +68,6 @@ export class DashboardHierarchyTreeService {
                 }
                 startDate
                 endDate
-                status
                 children {
                   id
                   name
@@ -83,7 +80,6 @@ export class DashboardHierarchyTreeService {
                   }
                   startDate
                   endDate
-                  status
                 }
               }
             }

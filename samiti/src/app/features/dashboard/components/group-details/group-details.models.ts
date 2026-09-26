@@ -36,7 +36,6 @@ export interface CommitteeEventListItem {
   eventName: string;
   eventDisplayName: string;
   eventLogo?: string | null;
-  status: string;
   category?: string | null;
   type: 'PUBLIC' | 'PRIVATE';
   visibility: string;

@@ -56,7 +56,6 @@ export class GroupDetailsService {
           eventName
            eventDisplayName
            eventLogo
-          status
           category
           type
           visibility

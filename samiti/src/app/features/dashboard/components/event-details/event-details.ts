@@ -332,7 +332,7 @@ export class EventDetailsComponent implements OnInit, OnDestroy {
         eventId: currentEvent.eventId, committeeId: currentEvent.committeeId,
         address: currentEvent.committeeAddress || '', eventType: currentEvent.type === 'PRIVATE' ? 'PRIVATE' : 'PUBLIC',
         visibility: currentEvent.visibility, eventName: currentEvent.eventName,
-        eventDisplayName: currentEvent.eventDisplayName, status: currentEvent.status,
+        eventDisplayName: currentEvent.eventDisplayName,
         category: currentEvent.category, startDate: currentEvent.startDate,
         endDate: currentEvent.endDate, latitude: currentEvent.latitude, longitude: currentEvent.longitude
       }

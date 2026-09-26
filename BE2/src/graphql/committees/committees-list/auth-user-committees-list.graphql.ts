@@ -142,14 +142,18 @@ export const authCommitteesResolvers = {
             id AS eventId,
             committee_id AS committeeId,
             name,
-            status,
-            type,
-            visibility,
+            event_year AS eventYear,
+            category,
+            address,
+            event_logo AS eventLogo,
+            latitude,
+            longitude,
             DATE_FORMAT(start_date, '%Y-%m-%d') AS startDate,
             DATE_FORMAT(end_date, '%Y-%m-%d') AS endDate
           FROM events
           WHERE committee_id IN (${placeholders})
             AND YEAR(start_date) = ?
+            AND visibility = 'VISIBLE'
           ORDER BY start_date DESC, created_at DESC
         `, [...committeeIds, selectedYear]);
 
@@ -178,7 +182,6 @@ export const authCommitteesResolvers = {
           map[committeeIdNum].push(normalizeEventSummaryRow({
             ...event,
             eventName: event.eventName || event.name || '',
-            eventBanner: banners[0] || null,
             bannerImages: banners
           }));
           return map;
@@ -188,13 +191,7 @@ export const authCommitteesResolvers = {
       const currentYear = new Date().getFullYear();
 
       return rawList.map((item: any) => {
-        const role = String(item.committee_role || '').toUpperCase();
-        const hasMembership =
-          role === 'COMMITTEE_MASTER_ADMIN' ||
-          role === 'COMMITTEE_ADMIN' ||
-          role === 'COMMITTEE_MEMBER';
-        const allEvents = eventsMap[item.id] || [];
-        const visibleEvents = allEvents.filter((event) => event.visibility === 'VISIBLE');
+        const allEvents = (eventsMap[item.id] || []).filter((event: any) => event.visibility !== 'HIDDEN');
         const establishYear = Number(item.establish_year) || currentYear;
         const yearsWithEvents = eventYearsMap[item.id] || new Set<number>();
 
@@ -205,8 +202,6 @@ export const authCommitteesResolvers = {
             hasEvents: yearsWithEvents.has(y)
           });
         }
-
-        const selectedYearEvents = hasMembership ? allEvents : visibleEvents;
 
         return {
           id: item.id,
@@ -220,7 +215,7 @@ export const authCommitteesResolvers = {
           pendingRequestRole: item.pending_request_role || null,
           status: item.request_status || null,
           isFavourite: Number(item.is_favourite),
-          events: selectedYearEvents,
+          events: allEvents,
           availableYears
         };
       });

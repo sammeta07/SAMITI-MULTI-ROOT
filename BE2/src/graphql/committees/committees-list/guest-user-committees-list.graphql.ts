@@ -6,12 +6,14 @@ export const guestCommitteeTypes = `
   type EventSummary {
     eventId: Int!
     eventName: String!
-    status: String!
-    type: String
-    visibility: String!
+    eventYear: Int!
+    category: String
+    address: String
+    eventLogo: String
+    latitude: Float
+    longitude: Float
     startDate: String
     endDate: String
-    eventBanner: String
     bannerImages: [String!]!
   }
 
@@ -102,14 +104,18 @@ export const guestCommitteesResolvers = {
             id AS eventId,
             committee_id AS committeeId,
             name,
-            status,
-            type,
-            visibility,
+            event_year AS eventYear,
+            category,
+            address,
+            event_logo AS eventLogo,
+            latitude,
+            longitude,
             DATE_FORMAT(start_date, '%Y-%m-%d') AS startDate,
             DATE_FORMAT(end_date, '%Y-%m-%d') AS endDate
           FROM events
           WHERE committee_id IN (${placeholders})
             AND YEAR(start_date) = ?
+            AND visibility = 'VISIBLE'
           ORDER BY start_date DESC, created_at DESC
         `, [...committeeIds, selectedYear]);
 
@@ -135,7 +141,7 @@ export const guestCommitteesResolvers = {
           const committeeIdNum = Number(event.committeeId);
           if (!map[committeeIdNum]) map[committeeIdNum] = [];
           const banners = bannersMap[Number(event.eventId)] || [];
-          map[committeeIdNum].push(normalizeEventSummaryRow({ ...event, eventBanner: banners[0] || null, bannerImages: banners }));
+          map[committeeIdNum].push(normalizeEventSummaryRow({ ...event, bannerImages: banners }));
           return map;
         }, {});
       }
@@ -143,7 +149,7 @@ export const guestCommitteesResolvers = {
       const currentYear = new Date().getFullYear();
 
       return rawList.map((item: any) => {
-        const allEvents = eventsMap[item.id] || [];
+        const allEvents = (eventsMap[item.id] || []).filter((event: any) => event.visibility !== 'HIDDEN');
         const establishYear = Number(item.establish_year) || currentYear;
         const yearsWithEvents = eventYearsMap[item.id] || new Set<number>();
 

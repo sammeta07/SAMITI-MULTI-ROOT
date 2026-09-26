@@ -53,8 +53,8 @@ export class CreateEventDialogComponent implements OnInit {
   public address: string = '';
   public latitude: number | null = null;
   public longitude: number | null = null;
-  public status: 'UPCOMING' | 'ONGOING' | 'COMPLETED' | 'CANCELLED' = 'UPCOMING';
-  public category: string = 'puja';
+  public category: string = 'RELIGIOUS';
+  public eventYear = 1;
   public visibility: 'VISIBLE' | 'HIDDEN' = 'HIDDEN';
   public startDate: Date | null = null;
   public endDate: Date | null = null;
@@ -64,8 +64,7 @@ export class CreateEventDialogComponent implements OnInit {
   public readonly isEditMode = signal<boolean>(false);
   public readonly editingEventId = signal<number | null>(null);
 
-  public readonly eventTypes = ['puja', 'sports', 'meeting', 'celebration', 'workshop', 'other'];
-  public readonly statuses = ['UPCOMING', 'ONGOING', 'COMPLETED', 'CANCELLED'];
+  public readonly eventTypes = ['RELIGIOUS', 'sports', 'meeting', 'celebration', 'workshop', 'other'];
 
   ngOnInit(): void {
     const injectedEventId = Number(this.injectedData?.eventId);
@@ -97,14 +96,19 @@ export class CreateEventDialogComponent implements OnInit {
       this.eventDisplayName = injectedEventDisplayName.trim();
     }
 
-    const injectedStatus = String(this.injectedData?.status || '').toUpperCase();
-    if (this.statuses.includes(injectedStatus)) {
-      this.status = injectedStatus as 'UPCOMING' | 'ONGOING' | 'COMPLETED' | 'CANCELLED';
-    }
-
     const injectedCategory = this.injectedData?.category;
     if (typeof injectedCategory === 'string' && injectedCategory.trim().length > 0) {
-      this.category = injectedCategory.trim().toLowerCase();
+      const normalizedCategory = injectedCategory.trim();
+      this.category = normalizedCategory.toUpperCase() === 'PUJA'
+        ? 'RELIGIOUS'
+        : normalizedCategory.toUpperCase() === 'RELIGIOUS'
+          ? 'RELIGIOUS'
+          : normalizedCategory.toLowerCase();
+    }
+
+    const injectedEventYear = Number(this.injectedData?.eventYear);
+    if (Number.isInteger(injectedEventYear) && injectedEventYear >= 1 && injectedEventYear <= 49) {
+      this.eventYear = injectedEventYear;
     }
 
     const injectedStartDate = this.parseDateInput(this.injectedData?.startDate);
@@ -165,7 +169,9 @@ export class CreateEventDialogComponent implements OnInit {
       !!this.eventName?.trim() &&
       !!this.eventDisplayName?.trim() &&
       this.eventDisplayName.trim().length <= 20 &&
-      !!this.status &&
+      Number.isInteger(this.eventYear) &&
+      this.eventYear >= 1 &&
+      this.eventYear <= 49 &&
       !!this.startDate &&
       !!this.endDate
     );
@@ -195,8 +201,8 @@ export class CreateEventDialogComponent implements OnInit {
       eventName: this.eventName.trim(),
       eventDisplayName: this.eventDisplayName.trim(),
       address: this.address?.trim() || undefined,
-      status: this.status,
       category: this.category || undefined,
+      eventYear: this.eventYear,
       visibility: this.visibility,
       type: this.type(),
       startDate: startDateStr,

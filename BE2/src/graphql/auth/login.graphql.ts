@@ -36,7 +36,6 @@ type LoginEventRoleRow = RowDataPacket & {
   committee_logo: string | null;
   designation: string | null;
   membership_status: string | null;
-  event_status: string | null;
   event_visibility: string | null;
 };
 
@@ -81,7 +80,6 @@ export const loginTypes = `
     committeeLogo: String
     designation: String!
     membershipStatus: String!
-    eventStatus: String
     eventVisibility: String
   }
 
@@ -214,7 +212,6 @@ export const loginResolvers = {
           c.logo AS committee_logo,
           UPPER(COALESCE(NULLIF(TRIM(ue.designation), ''), 'MEMBER')) AS designation,
           UPPER(COALESCE(NULLIF(TRIM(ue.status), ''), 'ACTIVE')) AS membership_status,
-          e.status AS event_status,
           e.visibility AS event_visibility
          FROM users_events ue
          INNER JOIN events e ON e.id = ue.event_id
@@ -248,7 +245,6 @@ export const loginResolvers = {
               committeeLogo: ev.committee_logo || null,
               designation,
               membershipStatus: ev.membership_status || 'ACTIVE',
-              eventStatus: ev.event_status || null,
               eventVisibility: ev.event_visibility || null
             };
           });

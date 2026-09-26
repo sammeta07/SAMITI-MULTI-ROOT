@@ -46,4 +46,11 @@ export class TextFormatService {
       .toLowerCase();
     return normalized.replace(/(^\s*[a-z])|([.!?]\s*[a-z])/g, (segment) => segment.toUpperCase());
   }
+
+  toOrdinal(value: unknown): string {
+    const num = Number(value);
+    if (!Number.isFinite(num)) return String(value ?? '');
+    const abs = Math.abs(Math.trunc(num));
+    return `${num}${abs % 100 >= 11 && abs % 100 <= 13 ? 'th' : ['th', 'st', 'nd', 'rd', 'th', 'th', 'th', 'th', 'th', 'th'][abs % 10]}`;
+  }
 }

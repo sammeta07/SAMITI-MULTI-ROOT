@@ -1,12 +1,14 @@
 export interface EventSummaryRow {
   eventId: number;
   eventName: string;
-  status: string;
-  type: string | null;
-  visibility: string;
+  eventYear: number;
+  category: string | null;
+  address: string | null;
+  eventLogo: string | null;
+  latitude: number | null;
+  longitude: number | null;
   startDate: string | null;
   endDate: string | null;
-  eventBanner: string | null;
   bannerImages: string[];
 }
 
@@ -31,12 +33,14 @@ export function normalizeEventSummaryRow(event: any): EventSummaryRow {
   return {
     eventId: Number(event.eventId) || 0,
     eventName: String(event.eventName || event.name || '').trim(),
-    status: String(event.status || 'UPCOMING'),
-    type: event.type || null,
-    visibility: String(event.visibility || 'VISIBLE'),
+    eventYear: Number(event.eventYear) || 0,
+    category: event.category || null,
+    address: event.address || null,
+    eventLogo: event.eventLogo || null,
+    latitude: event.latitude === null || event.latitude === undefined ? null : Number(event.latitude),
+    longitude: event.longitude === null || event.longitude === undefined ? null : Number(event.longitude),
     startDate: event.startDate || null,
     endDate: event.endDate || null,
-    eventBanner: event.eventBanner || null,
-    bannerImages: Array.isArray(event.bannerImages) ? event.bannerImages : (event.eventBanner ? [event.eventBanner] : [])
+    bannerImages: Array.isArray(event.bannerImages) ? event.bannerImages : []
   };
 }

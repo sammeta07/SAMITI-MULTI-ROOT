@@ -35,31 +35,6 @@ const normalizeEventDisplayName = (eventName: string, displayName: string | null
   return eventName.slice(0, 20);
 };
 
-const parseLocalDate = (value: string | null): Date | null => {
-  if (!value) return null;
-  const [year, month, day] = String(value).split('-').map(Number);
-  if (!year || !month || !day) return null;
-  return new Date(year, month - 1, day);
-};
-
-const deriveEventStatusFromDates = (startDate: string | null, endDate: string | null): string => {
-  const today = new Date();
-  today.setHours(0, 0, 0, 0);
-
-  const start = parseLocalDate(startDate);
-  const end = parseLocalDate(endDate);
-
-  if (end && end.getTime() < today.getTime()) {
-    return 'COMPLETED';
-  }
-
-  if (start && start.getTime() <= today.getTime()) {
-    return 'STARTED';
-  }
-
-  return 'UPCOMING';
-};
-
 export const committeeDetailsTypes = `
   type CommitteeMember {
     id: Int!
@@ -76,7 +51,6 @@ export const committeeDetailsTypes = `
     eventName: String!
     eventDisplayName: String!
     eventLogo: String
-    status: String!
     category: String
     type: String!
     visibility: String!
@@ -197,7 +171,6 @@ export const committeeDetailsResolvers = {
           e.name AS eventName,
           ${supportsEventDisplayName ? "COALESCE(NULLIF(TRIM(e.display_name), ''), LEFT(e.name, 20))" : 'LEFT(e.name, 20)'} AS eventDisplayName,
           e.address,
-          e.status,
           e.category,
           e.\`type\` AS type,
           e.visibility,
@@ -247,7 +220,6 @@ export const committeeDetailsResolvers = {
           eventName: event.eventName,
           eventDisplayName: normalizeEventDisplayName(event.eventName, event.eventDisplayName, supportsEventDisplayName),
           eventLogo: event.eventLogo || null,
-          status: deriveEventStatusFromDates(event.startDate, event.endDate),
           category: event.category || null,
           type: event.type,
           visibility: event.visibility,

@@ -14,7 +14,6 @@ export interface EventOverviewMeta {
   eventDisplayName: string;
   eventBanner?: string | null;
   eventLogo?: string | null;
-  status: string;
   category?: string | null;
   visibility: string;
   type?: 'PUBLIC' | 'PRIVATE' | string;
