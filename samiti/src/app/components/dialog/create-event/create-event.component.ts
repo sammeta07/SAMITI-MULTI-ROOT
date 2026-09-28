@@ -113,7 +113,7 @@ export class CreateEventDialogComponent implements OnInit {
     }
 
     const injectedEventYear = Number(this.injectedData?.eventYear);
-    if (Number.isInteger(injectedEventYear) && injectedEventYear >= 1 && injectedEventYear <= 49) {
+    if (Number.isInteger(injectedEventYear) && injectedEventYear >= 1) {
       this.eventYear = injectedEventYear;
     }
 
@@ -177,7 +177,6 @@ export class CreateEventDialogComponent implements OnInit {
       this.eventDisplayName.trim().length <= 20 &&
       Number.isInteger(this.eventYear) &&
       this.eventYear >= 1 &&
-      this.eventYear <= 49 &&
       !!this.startDate &&
       !!this.endDate &&
       !!this.address?.trim() &&

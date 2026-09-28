@@ -122,6 +122,10 @@ export class EventDetailsComponent implements OnInit, OnDestroy {
     return this.stateService.eventOverview();
   }
 
+  public get eventYear(): number | null | undefined {
+    return this.overviewData?.eventYear ?? null;
+  }
+
   public get currentTab(): string {
     const url = this.router.url;
     if (url.includes('/voting')) return 'voting';
@@ -262,6 +266,25 @@ export class EventDetailsComponent implements OnInit, OnDestroy {
     return 'started';
   }
 
+  public formatEventYear(year: number | null | undefined): string {
+    if (!year || year < 1) return '';
+    const suffix = this.getOrdinalSuffix(year);
+    return `${year}${suffix} Year`;
+  }
+
+  private getOrdinalSuffix(year: number): string {
+    const absYear = Math.abs(year);
+    if (absYear % 100 >= 11 && absYear % 100 <= 13) {
+      return 'th';
+    }
+    switch (absYear % 10) {
+      case 1: return 'st';
+      case 2: return 'nd';
+      case 3: return 'rd';
+      default: return 'th';
+    }
+  }
+
   public get isEventMasterAdmin(): boolean {
     return this.userEventRole === 'COMMITTEE_MASTER_ADMIN';
   }
@@ -337,6 +360,7 @@ export class EventDetailsComponent implements OnInit, OnDestroy {
         eventName: currentEvent.eventName,
         eventDisplayName: currentEvent.eventDisplayName,
         category: currentEvent.category,
+        eventYear: currentEvent.eventYear,
         startDate: currentEvent.startDate,
         endDate: currentEvent.endDate,
         latitude: currentEvent.latitude,

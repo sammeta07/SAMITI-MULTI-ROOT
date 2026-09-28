@@ -15,6 +15,7 @@ export interface EventOverviewMeta {
   eventBanner?: string | null;
   eventLogo?: string | null;
   category?: string | null;
+  eventYear?: number | null;
   visibility: string;
   type?: 'PUBLIC' | 'PRIVATE' | string;
   startDate?: string | null;
@@ -30,4 +31,5 @@ export interface EventOverviewMeta {
 
 export interface EventOverviewPayload extends EventOverviewMeta {
   bannerImages: string[];
+  eventYear?: number | null;
 }

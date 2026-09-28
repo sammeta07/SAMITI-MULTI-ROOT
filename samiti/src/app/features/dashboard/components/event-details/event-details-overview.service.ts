@@ -25,6 +25,7 @@ export class EventDetailsOverviewService {
         eventLogo
         bannerImages
         category
+        eventYear
         visibility
         type
         startDate

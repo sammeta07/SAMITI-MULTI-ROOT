@@ -48,6 +48,7 @@ export class EventOverviewService {
         eventLogo
         bannerImages
         category
+        eventYear
         visibility
         type
         startDate

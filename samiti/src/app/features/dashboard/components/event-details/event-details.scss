@@ -250,6 +250,34 @@
     border-color: #fbcfe8;
     mat-icon { color: #be185d; }
   }
+
+  &.year-pill {
+    background: #f5f3ff;
+    color: #6b21a8;
+    border-color: #ddd6fe;
+    mat-icon { color: #7c3aed; }
+  }
+
+  &.date-pill-status-started {
+    background: #ecfdf5;
+    color: #047857;
+    border-color: #a7f3d0;
+    mat-icon { color: #10b981; }
+  }
+
+  &.date-pill-status-upcoming {
+    background: #fffbeb;
+    color: #b45309;
+    border-color: #fde68a;
+    mat-icon { color: #f59e0b; }
+  }
+
+  &.date-pill-status-completed {
+    background: #f1f5f9;
+    color: #475569;
+    border-color: #cbd5e1;
+    mat-icon { color: #94a3b8; }
+  }
 }
 
 /* TOP RIGHT ROLE BADGE */

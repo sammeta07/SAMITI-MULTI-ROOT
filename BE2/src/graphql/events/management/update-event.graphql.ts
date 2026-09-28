@@ -211,8 +211,8 @@ export const updateEventResolvers = {
         throwEventError('BAD_REQUEST', 'longitude must be a valid number');
       }
 
-      if (!Number.isInteger(eventYear) || eventYear < 1 || eventYear > 49) {
-        throwEventError('BAD_REQUEST', 'eventYear must be an integer between 1 and 49');
+      if (!Number.isInteger(eventYear) || eventYear < 1) {
+        throwEventError('BAD_REQUEST', 'eventYear must be an integer greater than or equal to 1');
       }
 
       const supportsEventDisplayName = await hasEventsDisplayNameColumn();
@@ -340,14 +340,14 @@ export const updateEventResolvers = {
           ? `SELECT id, id as eventId, name as eventName,
                     COALESCE(NULLIF(TRIM(display_name), ''), LEFT(name, 20)) as eventDisplayName,
                     committee_id as committeeId,
-                    address, category, visibility, \`type\`, latitude, longitude,
+                    address, event_year as eventYear, category, visibility, \`type\`, latitude, longitude,
                     event_logo as eventLogo,
                     start_date as startDate, end_date as endDate, created_by as createdBy, updated_by as updatedBy, created_at as createdAt
               FROM events WHERE id = ?`
           : `SELECT id, id as eventId, name as eventName,
                     LEFT(name, 20) as eventDisplayName,
                     committee_id as committeeId,
-                    address, category, visibility, \`type\`, latitude, longitude,
+                    address, event_year as eventYear, category, visibility, \`type\`, latitude, longitude,
                     event_logo as eventLogo,
                     start_date as startDate, end_date as endDate, created_by as createdBy, updated_by as updatedBy, created_at as createdAt
               FROM events WHERE id = ?`,
