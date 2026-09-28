@@ -1,37 +1,30 @@
 <div class="dashboard-requests-wrapper">
-  <nav class="inner-tabs">
-    <button
-      type="button"
-      class="tab-button"
-      [class.active]="selectedTab() === 0"
-      (click)="onTabClick(0)"
-    >
-      <mat-icon class="tab-icon">admin_panel_settings</mat-icon>
-      <span class="tab-label-text">Admin Requests</span>
-    </button>
+  <div class="inner-tabs">
+    <mat-tab-group class="inner-tab-group samiti-nav-tabs" animationDuration="150ms" [(selectedIndex)]="selectedTabIndex" (selectedIndexChange)="onTabChange($event)">
+      <mat-tab>
+        <ng-template mat-tab-label>
+          <mat-icon class="tab-leading-icon">admin_panel_settings</mat-icon>
+          <span>Admin Requests</span>
+        </ng-template>
+      </mat-tab>
 
-    <button
-      type="button"
-      class="tab-button"
-      [class.active]="selectedTab() === 1"
-      (click)="onTabClick(1)"
-    >
-      <mat-icon class="tab-icon">person</mat-icon>
-      <span class="tab-label-text">Membership Requests</span>
-    </button>
+      <mat-tab>
+        <ng-template mat-tab-label>
+          <mat-icon class="tab-leading-icon">person</mat-icon>
+          <span>Membership Requests</span>
+        </ng-template>
+      </mat-tab>
 
-    <button
-      type="button"
-      class="tab-button"
-      [class.active]="selectedTab() === 2"
-      (click)="onTabClick(2)"
-    >
-      <mat-icon class="tab-icon">history</mat-icon>
-      <span class="tab-label-text">History</span>
-    </button>
-  </nav>
+      <mat-tab>
+        <ng-template mat-tab-label>
+          <mat-icon class="tab-leading-icon">history</mat-icon>
+          <span>History</span>
+        </ng-template>
+      </mat-tab>
+    </mat-tab-group>
+  </div>
 
-  <div class="inner-tab-content">
+  <div class="inner-tab-content samiti-nav-content">
     <router-outlet></router-outlet>
   </div>
 </div>

@@ -3,7 +3,15 @@ import { HttpClient } from '@angular/common/http';
 import { Observable } from 'rxjs';
 import { map } from 'rxjs/operators';
 import { environment } from '../../../../../environments/environment';
-import { CancelCommitteeMembershipRequestPayload, CommitteeDetailsPayload, CommitteeEventListItem, CommitteeMembershipRequestRole, CommitteeProfileMeta, DeletedEventPayload, SubmitCommitteeMembershipRequestPayload, UpdatedEventVisibilityPayload } from './group-details.models';
+import { 
+  CancelCommitteeMembershipRequestPayload, 
+  CommitteeDetailsPayload, 
+  CommitteeMembershipRequestRole, 
+  CommitteeProfileMeta, 
+  DeletedEventPayload, 
+  SubmitCommitteeMembershipRequestPayload, 
+  UpdatedEventVisibilityPayload 
+} from './group-details.models';
 import { EventMappedVotingRole } from '../event-details/event-voting/event-voting.models';
 import { CommitteeMembershipRequestService } from '../../../../core/services/committee-membership-request.service';
 import { sanitizeCloudinaryLogoUrl } from '../../../../shared/services/cloudinary-logo.util';
@@ -25,9 +33,9 @@ export class GroupDetailsService {
   private readonly graphqlUrl = environment.graphqlUrl;
   private readonly committeeMembershipRequestService = inject(CommitteeMembershipRequestService);
 
-  public getCommitteeDetails(id: string): Observable<CommitteeDetailsPayload> {
-    const query = `query {
-      committeeDetails(id: ${id}) {
+  public getCommitteeDetails(id: string, year?: number | null): Observable<CommitteeDetailsPayload> {
+    const query = `query GetCommitteeDetails($year: Int) {
+      committeeDetails(id: ${id}, year: $year) {
         id
         committeeId
         committeeName
@@ -54,8 +62,8 @@ export class GroupDetailsService {
           eventId
           committeeId
           eventName
-           eventDisplayName
-           eventLogo
+          eventDisplayName
+          eventLogo
           category
           type
           visibility
@@ -82,25 +90,51 @@ export class GroupDetailsService {
       }
     }`;
 
-    return this.http.post<{ data: { committeeDetails: CommitteeDetailsPayload } }>(
+    return this.http.post<GraphQLResponseEnvelope<{ committeeDetails: CommitteeDetailsPayload }>>(
       this.graphqlUrl,
-      { query },
+      { query, variables: { year: year ?? null } },
       { withCredentials: true }
     ).pipe(
-      map(res => ({
-        ...res.data.committeeDetails,
-        logo: sanitizeCloudinaryLogoUrl(res.data.committeeDetails?.logo)
-      }))
+      map((res) => {
+        if (res.errors?.length) {
+          throw new Error(res.errors[0].message || 'Failed to fetch committee details.');
+        }
+        if (!res.data?.committeeDetails) {
+          throw new Error('Committee details response is empty.');
+        }
+
+        const details = res.data.committeeDetails;
+        return {
+          ...details,
+          logo: sanitizeCloudinaryLogoUrl(details.logo),
+          events: (details.events || []).map((event) => ({
+            ...event,
+            eventLogo: sanitizeCloudinaryLogoUrl(event.eventLogo)
+          }))
+        };
+      })
     );
   }
 
-  public requestCommitteeAdminRole(committeeId: number, requestRole: CommitteeMembershipRequestRole): Observable<SubmitCommitteeMembershipRequestPayload> {
+  public requestCommitteeAdminRole(
+    committeeId: number, 
+    requestRole: CommitteeMembershipRequestRole
+  ): Observable<SubmitCommitteeMembershipRequestPayload> {
     return this.committeeMembershipRequestService
       .submitCommitteeMembershipRequest(committeeId, requestRole, true)
       .pipe(map((payload) => payload as SubmitCommitteeMembershipRequestPayload));
   }
 
-  public updateEventVisibility(eventId: number, visibility: 'VISIBLE' | 'HIDDEN'): Observable<UpdatedEventVisibilityPayload> {
+  public cancelCommitteeMembershipRequest(committeeId: number): Observable<CancelCommitteeMembershipRequestPayload> {
+    return this.committeeMembershipRequestService
+      .cancelCommitteeMembershipRequest(committeeId, true)
+      .pipe(map((payload) => payload as CancelCommitteeMembershipRequestPayload));
+  }
+
+  public updateEventVisibility(
+    eventId: number, 
+    visibility: 'VISIBLE' | 'HIDDEN'
+  ): Observable<UpdatedEventVisibilityPayload> {
     const query = `mutation UpdateEventVisibility($eventId: Int!, $visibility: String!) {
       updateEventVisibility(eventId: $eventId, visibility: $visibility) {
         eventId
@@ -109,7 +143,7 @@ export class GroupDetailsService {
       }
     }`;
 
-    return this.http.post<{ data: { updateEventVisibility: UpdatedEventVisibilityPayload } }>(
+    return this.http.post<GraphQLResponseEnvelope<{ updateEventVisibility: UpdatedEventVisibilityPayload }>>(
       this.graphqlUrl,
       {
         query,
@@ -120,11 +154,19 @@ export class GroupDetailsService {
       },
       { withCredentials: true }
     ).pipe(
-      map((res) => res.data.updateEventVisibility)
+      map((res) => {
+        if (res.errors?.length) {
+          throw new Error(res.errors[0].message || 'Failed to update event visibility.');
+        }
+        return res.data!.updateEventVisibility;
+      })
     );
   }
 
-  public updateEventVotingRoles(eventId: number, roleIds: number[]): Observable<{ eventId: number; mappedVotingRoles: EventMappedVotingRole[] }> {
+  public updateEventVotingRoles(
+    eventId: number, 
+    roleIds: number[]
+  ): Observable<{ eventId: number; mappedVotingRoles: EventMappedVotingRole[] }> {
     const query = `mutation UpdateEventVotingRoles($eventId: Int!, $roleIds: [Int!]!) {
       updateEventVotingRoles(eventId: $eventId, roleIds: $roleIds) {
         eventId
@@ -145,7 +187,7 @@ export class GroupDetailsService {
       }
     }`;
 
-    return this.http.post<{ data: { updateEventVotingRoles: { eventId: number; mappedVotingRoles: EventMappedVotingRole[] } } }>(
+    return this.http.post<GraphQLResponseEnvelope<{ updateEventVotingRoles: { eventId: number; mappedVotingRoles: EventMappedVotingRole[] } }>>(
       this.graphqlUrl,
       {
         query,
@@ -156,11 +198,20 @@ export class GroupDetailsService {
       },
       { withCredentials: true }
     ).pipe(
-      map((res) => res.data.updateEventVotingRoles)
+      map((res) => {
+        if (res.errors?.length) {
+          throw new Error(res.errors[0].message || 'Failed to update event voting roles.');
+        }
+        return res.data!.updateEventVotingRoles;
+      })
     );
   }
 
-  public updateEventLogo(eventId: number, committeeId: number, logo: string): Observable<{ eventId: number; eventLogo: string | null }> {
+  public updateEventLogo(
+    eventId: number, 
+    committeeId: number, 
+    logo: string
+  ): Observable<{ eventId: number; eventLogo: string | null }> {
     const query = `mutation UpdateEventLogo($input: UpdateEventLogoInput!) {
       updateEventLogo(input: $input) {
         eventId
@@ -168,7 +219,7 @@ export class GroupDetailsService {
       }
     }`;
 
-    return this.http.post<{ errors?: Array<{ message: string }>; data: { updateEventLogo: { eventId: number; eventLogo: string | null } } }>(
+    return this.http.post<GraphQLResponseEnvelope<{ updateEventLogo: { eventId: number; eventLogo: string | null } }>>(
       this.graphqlUrl,
       {
         query,
@@ -184,9 +235,13 @@ export class GroupDetailsService {
     ).pipe(
       map((res) => {
         if (res.errors?.length) {
-          throw new Error(res.errors[0].message || 'Failed to update event logo');
+          throw new Error(res.errors[0].message || 'Failed to update event logo.');
         }
-        return res.data.updateEventLogo;
+        const data = res.data!.updateEventLogo;
+        return {
+          ...data,
+          eventLogo: sanitizeCloudinaryLogoUrl(data.eventLogo)
+        };
       })
     );
   }
@@ -201,17 +256,20 @@ export class GroupDetailsService {
       }
     }`;
 
-    return this.http.post<{ data: { deleteEvent: DeletedEventPayload } }>(
+    return this.http.post<GraphQLResponseEnvelope<{ deleteEvent: DeletedEventPayload }>>(
       this.graphqlUrl,
       {
         query,
-        variables: {
-          eventId
-        }
+        variables: { eventId }
       },
       { withCredentials: true }
     ).pipe(
-      map((res) => res.data.deleteEvent)
+      map((res) => {
+        if (res.errors?.length) {
+          throw new Error(res.errors[0].message || 'Failed to delete event.');
+        }
+        return res.data!.deleteEvent;
+      })
     );
   }
 
@@ -240,7 +298,7 @@ export class GroupDetailsService {
     ).pipe(
       map((res) => {
         if (res.errors?.length) {
-          throw new Error(res.errors[0].message || 'Failed to update committee logo');
+          throw new Error(res.errors[0].message || 'Failed to update committee logo.');
         }
 
         const updatedLogo = res.data?.updateCommitteeLogo?.data?.logo ?? logo;
@@ -250,11 +308,5 @@ export class GroupDetailsService {
         } as CommitteeProfileMeta;
       })
     );
-  }
-
-  public cancelCommitteeMembershipRequest(committeeId: number): Observable<CancelCommitteeMembershipRequestPayload> {
-    return this.committeeMembershipRequestService
-      .cancelCommitteeMembershipRequest(committeeId, true)
-      .pipe(map((payload) => payload as CancelCommitteeMembershipRequestPayload));
   }
 }

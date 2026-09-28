@@ -14,6 +14,7 @@
   flex-direction: column;
   background: #ffffff;
   box-sizing: border-box;
+  overflow: hidden;
 }
 
 .year-dropdown-bar {
@@ -64,20 +65,14 @@
   font-weight: 600;
 }
 
-.tree-scroll-viewport {
-  width: 100%;
-  flex: 1 1 auto;
-  overflow-y: auto;
-  padding-bottom: 12px;
-
-  &::-webkit-scrollbar { width: 4px; }
-  &::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 99px; }
-}
-
+/* FIX: Flex 1 aur min-height 0 ensure karte hain ki viewport kabhi collapse na ho */
 .tree-viewport-guard {
   position: relative;
   width: 100%;
   flex: 1 1 auto;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
 
   &.is-navigating {
     .tree-scroll-viewport {
@@ -87,12 +82,25 @@
   }
 }
 
+.tree-scroll-viewport {
+  width: 100%;
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  padding-bottom: 16px;
+  box-sizing: border-box;
+
+  &::-webkit-scrollbar { width: 4px; }
+  &::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 99px; }
+}
+
 .navigation-dimming-overlay {
   position: absolute;
   inset: 0;
   border-radius: 6px;
   background: rgba(249, 115, 22, 0.06);
   pointer-events: auto;
+  z-index: 10;
 }
 
 .sidebar-global-static-menu-deck {
@@ -154,39 +162,37 @@
   color: #94a3b8;
   text-transform: uppercase;
   letter-spacing: 0.6px;
-  margin: 4px 0 2px 10px;
+  margin: 6px 0 2px 10px;
 }
 
 .samiti-fluent-tree {
   background: transparent !important;
   padding: 0 4px;
+  display: block;
 }
 
 .tree-flat-node-row {
   display: flex;
   align-items: center;
-  min-height: 32px;
+  min-height: 34px;
   height: auto;
   position: relative;
   margin-bottom: 1px;
   border-radius: 6px;
   padding-left: 6px;
-  transition: background-color 0.12s ease, box-shadow 0.12s ease;
+  transition: background-color 0.12s ease;
 
   &:not(.is-selected):hover {
     background: #f1f5f9;
   }
 
-  &.type-role {
-    &:not(.is-selected):hover { background: transparent !important; }
+  &.type-role:not(.is-selected):hover {
+    background: transparent !important;
   }
 
   &.is-selected {
     border-radius: 6px;
-
-    .node-actions-right-aligned {
-      opacity: 1;
-    }
+    .node-actions-right-aligned { opacity: 1; }
   }
 }
 
@@ -200,7 +206,7 @@
     top: 0; 
     bottom: 0; 
     left: 16px; 
-    border-left: 1px dashed #94a3b8;
+    border-left: 1px dashed #cbd5e1;
     z-index: 1;
   }
 }
@@ -211,7 +217,7 @@
   left: -2px; 
   width: 6px; 
   height: 0;
-  border-top: 1px dashed #94a3b8;
+  border-top: 1px dashed #cbd5e1;
   z-index: 1;
   transform: translateY(-50%);
 }
@@ -222,8 +228,8 @@
   display: flex;
   justify-content: center;
   align-items: center;
-  width: 36px;
-  height: 36px;
+  width: 32px;
+  height: 32px;
   box-sizing: border-box;
   border-radius: 8px;
   background: #f8fafc;
@@ -231,7 +237,7 @@
   overflow: hidden;
   flex-shrink: 0;
   --node-border-color: rgb(148, 163, 184);
-  border: 3px solid var(--node-border-color) !important;
+  border: 2px solid var(--node-border-color) !important;
   z-index: 2;
   transition: transform 0.15s ease;
 
@@ -242,43 +248,36 @@
   }
 
   .type-indicator-icon {
-    font-size: 1.3rem; 
-    width: 1.3rem; 
-    height: 1.3rem;
+    font-size: 1.2rem; 
+    width: 1.2rem; 
+    height: 1.2rem;
     display: inline-flex;
     align-items: center;
     justify-content: center;
   }
 
-  .logo-fallback-initial {
-    font-size: 0.9rem;
-    font-weight: 800;
-    text-transform: uppercase;
-    line-height: 1;
-  }
-
+  .logo-fallback-initial,
   .type-letter-icon {
+    font-size: 0.85rem;
+    font-weight: 800;
+    text-transform: uppercase;
+    line-height: 1;
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    width: 100%;
-    height: 100%;
-    font-size: 0.9rem;
-    font-weight: 800;
-    line-height: 1;
-    text-transform: uppercase;
   }
 
   &.type-role { background: #fef2f2; color: #dc2626; border-color: rgba(239, 68, 68, 0.25); }
   &.type-group { background: #eff6ff; color: #2563eb; border-color: rgba(59, 130, 246, 0.25); }
-  &.type-event { background: #f5f3ff; color: #7c3aed; border-color: rgba(139, 92, 246, 0.25); }
+  &.type-event,
+  &.color-event {
+    background: #f5f3ff; 
+    color: #7c3aed; 
+    border-color: rgba(139, 92, 246, 0.25);
+    border-radius: 50% !important;
+  }
   &.color-program { background: #ecfeff; color: #0891b2; border-color: rgba(6, 182, 212, 0.25); }
   &.color-task { background: #ecfdf5; color: #059669; border-color: rgba(16, 185, 129, 0.25); }
-
-.node-logo-avatar-wrapper.type-event,
-.node-logo-avatar-wrapper.color-event {
-  border-radius: 50% !important;
-}
 
   &.static-avatar {
     width: 24px !important;
@@ -292,44 +291,28 @@
   }
 }
 
-/* 🎨 FIXED (1): Dynamic color tinting for Top-level Role Shield icons */
-.tree-flat-node-row.scope-master_admin .node-logo-avatar-wrapper.type-role {
-  background: #fef2f2 !important;
+.tree-flat-node-row.scope-master_admin .node-logo-avatar-wrapper.type-role,
+.node-logo-avatar-wrapper.committee-role-master_admin {
+  background: rgba(239, 68, 68, 0.08) !important;
   color: #ef4444 !important;
   border-color: rgba(239, 68, 68, 0.35) !important;
-  border-width: 4px !important;
+  border-width: 3px !important;
 }
 
-.tree-flat-node-row.scope-admin .node-logo-avatar-wrapper.type-role {
-  background: #f0fdf4 !important;
+.tree-flat-node-row.scope-admin .node-logo-avatar-wrapper.type-role,
+.node-logo-avatar-wrapper.committee-role-admin {
+  background: rgba(34, 197, 94, 0.08) !important;
   color: #16a34a !important;
   border-color: rgba(34, 197, 94, 0.35) !important;
-  border-width: 4px !important;
+  border-width: 3px !important;
 }
 
-.tree-flat-node-row.scope-member .node-logo-avatar-wrapper.type-role {
-  background: #eff6ff !important;
+.tree-flat-node-row.scope-member .node-logo-avatar-wrapper.type-role,
+.node-logo-avatar-wrapper.committee-role-member {
+  background: rgba(59, 130, 246, 0.08) !important;
   color: #2563eb !important;
   border-color: rgba(59, 130, 246, 0.35) !important;
-  border-width: 4px !important;
-}
-
-.node-logo-avatar-wrapper.committee-role-master_admin {
-  border: 4px solid #ef4444 !important;
-  background: rgba(239, 68, 68, 0.08) !important;
-  color: #ef4444;
-}
-
-.node-logo-avatar-wrapper.committee-role-admin {
-  border: 4px solid #22c55e !important;
-  background: rgba(34, 197, 94, 0.08) !important;
-  color: #16a34a;
-}
-
-.node-logo-avatar-wrapper.committee-role-member {
-  border: 4px solid #3b82f6 !important;
-  background: rgba(59, 130, 246, 0.08) !important;
-  color: #2563eb;
+  border-width: 3px !important;
 }
 
 .node-interactive-strip {
@@ -338,7 +321,7 @@
   gap: 6px;
   flex-grow: 1;
   padding-left: 4px;
-  min-height: 48px;
+  min-height: 42px;
   height: 100%;
   align-self: stretch;
   box-sizing: border-box;
@@ -346,6 +329,7 @@
   cursor: pointer;
 
   &.is-selected {
+    border-radius: 0;
     .node-label-txt { font-weight: 700 !important; color: #000000 !important; }
   }
 
@@ -356,21 +340,9 @@
     .node-label-txt { color: #ea580c !important; font-weight: 700 !important; }
   }
 
-  &.is-just-selected {
-    animation: none;
-  }
-
-  &.status-container-started .node-logo-avatar-wrapper {
-    --node-border-color: #10b981;
-  }
-
-  &.status-container-upcoming .node-logo-avatar-wrapper {
-    --node-border-color: #f59e0b;
-  }
-
-  &.status-container-completed .node-logo-avatar-wrapper {
-    --node-border-color: #64748b;
-  }
+  &.status-container-started .node-logo-avatar-wrapper { --node-border-color: #10b981; }
+  &.status-container-upcoming .node-logo-avatar-wrapper { --node-border-color: #f59e0b; }
+  &.status-container-completed .node-logo-avatar-wrapper { --node-border-color: #64748b; }
 
   .node-label-txt {
     font-size: 0.78rem; 
@@ -403,23 +375,21 @@
 
   &.gap-control-wrapper { gap: 1px; }
 
-  .toggle-expansion-flat-btn {
-    width: 20px; 
-    height: 20px; 
-    line-height: 20px; 
-    color: #475569;
-    padding: 0;
-
-    mat-icon { font-size: 1rem; width: 1rem; height: 1rem; }
-  }
-
+  .toggle-expansion-flat-btn,
   .node-three-dots-btn {
     width: 20px; 
     height: 20px; 
     line-height: 20px; 
-    color: #94a3b8;
     padding: 0;
+  }
 
+  .toggle-expansion-flat-btn {
+    color: #475569;
+    mat-icon { font-size: 1rem; width: 1rem; height: 1rem; }
+  }
+
+  .node-three-dots-btn {
+    color: #94a3b8;
     mat-icon { font-size: 0.9rem; width: 0.9rem; height: 0.9rem; }
     &:hover { color: #475569; }
   }
@@ -452,10 +422,10 @@
 }
 
 .event-role-designation-icon {
-  font-size: 1rem;
-  width: 1rem;
-  height: 1rem;
-  line-height: 1rem;
+  font-size: 0.95rem;
+  width: 0.95rem;
+  height: 0.95rem;
+  line-height: 0.95rem;
   display: inline-flex !important;
   align-items: center;
   justify-content: center;
@@ -475,12 +445,9 @@
 }
 
 .status-container-started .event-role-designation-icon { color: #10b981; }
-
 .status-container-upcoming .event-role-designation-icon { color: #f59e0b; }
-
 .status-container-completed .event-role-designation-icon { color: #64748b; }
 
-/* Date subtitle styling */
 .event-date-range-subtitle {
   display: inline-flex;
   align-items: center;
@@ -491,18 +458,67 @@
   overflow: hidden;
   text-overflow: ellipsis;
   color: #64748b;
+
+  .date-separator { color: #94a3b8; }
+  .date-start, .date-end { color: #10b981; }
 }
 
-.date-start { color: #10b981; }
-.date-separator { color: #94a3b8; }
-.date-end { color: #10b981; }
+.status-container-upcoming .event-date-range-subtitle {
+  .date-start, .date-end { color: #f59e0b; }
+}
+.status-container-completed .event-date-range-subtitle {
+  .date-start, .date-end { color: #64748b; }
+}
 
-.status-container-upcoming .date-start { color: #f59e0b; }
-.status-container-upcoming .date-end { color: #f59e0b; }
-.status-container-started .date-start { color: #10b981; }
-.status-container-started .date-end { color: #10b981; }
-.status-container-completed .date-start { color: #64748b; }
-.status-container-completed .date-end { color: #64748b; }
+.tree-flat-node-row.is-selected {
+  &.type-group {
+    background: rgba(249, 115, 22, 0.08);
+    &.committee-role-master_admin, &.scope-master_admin { background: rgba(239, 68, 68, 0.08); }
+    &.committee-role-admin, &.scope-admin { background: rgba(34, 197, 94, 0.08); }
+    &.committee-role-member, &.scope-member { background: rgba(59, 130, 246, 0.08); }
+  }
+
+  &.type-event {
+    background: rgba(6, 182, 212, 0.08);
+    &.status-container-started { background: rgba(16, 185, 129, 0.08); }
+    &.status-container-upcoming { background: rgba(245, 158, 11, 0.08); }
+    &.status-container-completed { background: rgba(100, 116, 139, 0.08); }
+  }
+
+  &.type-program { background: rgba(139, 92, 246, 0.08); }
+
+  &.type-role {
+    background: rgba(249, 115, 22, 0.08);
+    &.scope-admin { background: rgba(34, 197, 94, 0.08); }
+    &.scope-master_admin { background: rgba(239, 68, 68, 0.08); }
+    &.scope-member { background: rgba(59, 130, 246, 0.08); }
+  }
+}
+
+.node-interactive-strip.is-selected {
+  &.type-group {
+    border-left: 3px solid #f97316;
+    &.committee-role-master_admin { border-left-color: #ef4444 !important; }
+    &.committee-role-admin { border-left-color: #22c55e !important; }
+    &.committee-role-member { border-left-color: #3b82f6 !important; }
+  }
+
+  &.type-event {
+    border-left: 3px solid #0891b2;
+    &.status-container-started { border-left-color: #10b981; }
+    &.status-container-upcoming { border-left-color: #f59e0b; }
+    &.status-container-completed { border-left-color: #64748b; }
+  }
+
+  &.type-program { border-left: 3px solid #7c3aed; }
+
+  &.type-role {
+    border-left: 3px solid #f97316;
+    &.scope-admin { border-left-color: #22c55e; }
+    &.scope-master_admin { border-left-color: #ef4444; }
+    &.scope-member { border-left-color: #3b82f6; }
+  }
+}
 
 ::ng-deep .samiti-compact-context-menu {
   min-width: 130px !important; 
@@ -521,167 +537,10 @@
     &:hover { background-color: #f1f5f9 !important; }
 
     &.delete-action-item {
-      mat-icon { color: #ef4444; } span { color: #ef4444; }
+      mat-icon, span { color: #ef4444; }
       &:hover { background-color: #fef2f2 !important; }
     }
   }
 
   .menu-divider-line { border: 0; border-top: 1px solid #f1f5f9; margin: 2px 0; }
-}
-
-@keyframes nodeSelectPulse {
-  0% { box-shadow: inset 0 0 0 0 rgba(249, 115, 22, 0.4); }
-  50% { box-shadow: inset 0 0 0 2px rgba(249, 115, 22, 0.2); }
-  100% { box-shadow: inset 0 0 0 0 rgba(249, 115, 22, 0); }
-}
-
-/* Scope and Selection Colors – background stays on the row (full width);
-   the left selection border is applied on the interactive strip so it renders
-   for BOTH leaf nodes and parent (committee) nodes. */
-.tree-flat-node-row.type-group.is-selected {
-  background: rgba(249, 115, 22, 0.08);
-}
-
-.tree-flat-node-row.type-group.is-selected.committee-role-master_admin {
-  background: rgba(239, 68, 68, 0.08);
-}
-
-.tree-flat-node-row.type-group.is-selected.committee-role-admin {
-  background: rgba(34, 197, 94, 0.08);
-}
-
-.tree-flat-node-row.type-group.is-selected.committee-role-member {
-  background: rgba(59, 130, 246, 0.08);
-}
-
-.tree-flat-node-row.type-group.is-selected.scope-master_admin {
-  background: rgba(239, 68, 68, 0.08);
-}
-
-.tree-flat-node-row.type-group.is-selected.scope-admin {
-  background: rgba(34, 197, 94, 0.08);
-}
-
-.tree-flat-node-row.type-group.is-selected.scope-member {
-  background: rgba(59, 130, 246, 0.08);
-}
-
-.tree-flat-node-row.type-event.is-selected.status-container-started {
-  background: rgba(16, 185, 129, 0.08);
-}
-
-.tree-flat-node-row.type-event.is-selected.status-container-upcoming {
-  background: rgba(245, 158, 11, 0.08);
-}
-
-.tree-flat-node-row.type-event.is-selected.status-container-completed {
-  background: rgba(100, 116, 139, 0.08);
-}
-
-.tree-flat-node-row.type-event.is-selected {
-  background: rgba(6, 182, 212, 0.08);
-}
-
-.tree-flat-node-row.type-program.is-selected {
-  background: rgba(139, 92, 246, 0.08);
-}
-
-.tree-flat-node-row.type-role.is-selected {
-  background: rgba(249, 115, 22, 0.08);
-}
-
-.tree-flat-node-row.type-role.is-selected.scope-admin {
-  background: rgba(34, 197, 94, 0.08);
-}
-
-.tree-flat-node-row.type-role.is-selected.scope-master_admin {
-  background: rgba(239, 68, 68, 0.08);
-}
-
-.tree-flat-node-row.type-role.is-selected.scope-member {
-  background: rgba(59, 130, 246, 0.08);
-}
-
-.node-interactive-strip.is-selected {
-  border-radius: 0;
-}
-
-.node-interactive-strip.is-selected.type-group {
-  border-left: 3px solid #f97316;
-}
-
-.node-interactive-strip.is-selected.type-group.committee-role-master_admin,
-.tree-flat-node-row.scope-master_admin .node-interactive-strip.is-selected.type-group {
-  border-left: 3px solid #ef4444 !important;
-}
-
-.node-interactive-strip.is-selected.type-group.committee-role-admin,
-.tree-flat-node-row.scope-admin .node-interactive-strip.is-selected.type-group {
-  border-left: 3px solid #22c55e !important;
-}
-
-.node-interactive-strip.is-selected.type-group.committee-role-member,
-.tree-flat-node-row.scope-member .node-interactive-strip.is-selected.type-group {
-  border-left: 3px solid #3b82f6 !important;
-}
-
-.node-interactive-strip.is-selected.type-event.status-container-started {
-  border-left: 3px solid #10b981;
-}
-
-.node-interactive-strip.is-selected.type-event.status-container-upcoming {
-  border-left: 3px solid #f59e0b;
-}
-
-.node-interactive-strip.is-selected.type-event.status-container-completed {
-  border-left: 3px solid #64748b;
-}
-
-.node-interactive-strip.is-selected.type-event {
-  border-left: 3px solid #0891b2;
-}
-
-.node-interactive-strip.is-selected.type-program {
-  border-left: 3px solid #7c3aed;
-}
-
-.node-interactive-strip.is-selected.type-role {
-  border-left: 3px solid #f97316;
-}
-
-.node-interactive-strip.is-selected.type-role.scope-admin {
-  border-left: 3px solid #22c55e;
-}
-
-.node-interactive-strip.is-selected.type-role.scope-master_admin {
-  border-left: 3px solid #ef4444;
-}
-
-.node-interactive-strip.is-selected.type-role.scope-member {
-  border-left: 3px solid #3b82f6;
-}
-
-.tree-flat-node-row.type-event .node-interactive-strip.is-selected .node-label-txt {
-  font-weight: 700;
-  color: #000000 !important;
-}
-
-.tree-flat-node-row.type-program .node-interactive-strip.is-selected .node-label-txt {
-  font-weight: 700;
-  color: #000000 !important;
-}
-
-.tree-flat-node-row.type-role.scope-admin .node-interactive-strip.is-selected .node-label-txt {
-  font-weight: 700;
-  color: #000000 !important;
-}
-
-.tree-flat-node-row.type-role.scope-master_admin .node-interactive-strip.is-selected .node-label-txt {
-  font-weight: 700;
-  color: #000000 !important;
-}
-
-.tree-flat-node-row.type-role.scope-member .node-interactive-strip.is-selected .node-label-txt {
-  font-weight: 700;
-  color: #000000 !important;
 }

@@ -254,6 +254,7 @@ body.resizing-col {
    ========================================================================== */
 .committees-tabs-shell {
   position: relative;
+  container-type: inline-size;
   display: flex;
   flex-direction: column;
   flex: 1;
@@ -266,72 +267,21 @@ body.resizing-col {
   flex-direction: column;
   flex: 1;
   overflow: hidden;
-  padding: 6px 8px 6px 8px;
+  padding: 0;
 
   ::ng-deep .mat-mdc-tab-header {
-    border-bottom: none !important;
-    min-height: 28px !important;
-    background: transparent !important;
-    flex-shrink: 0 !important;
+    margin: 4px 8px 0;
   }
 
-  ::ng-deep .mat-mdc-tab-labels {
-    justify-content: flex-start !important;
-    gap: 4px;
-  }
-
-  ::ng-deep .mat-mdc-tab {
-    min-width: 80px !important;
-    max-width: 120px !important;
-    min-height: 28px !important;
-    height: 28px !important;
-    padding: 0 10px !important;
-    border-radius: 6px 6px 0 0 !important;
-    background: #e2e8f0;
-    transition: background 0.15s ease;
-
-    .mdc-tab__content {
-      display: inline-flex !important;
-      align-items: center !important;
-      gap: 5px !important;
+  &.committees-tabs {
+    ::ng-deep .mat-mdc-tab-header {
+      padding-right: 224px;
     }
-
-    .mdc-tab__text-label {
-      font-size: 0.72rem !important;
-      font-weight: 600 !important;
-      color: #64748b !important;
-    }
-
-    &.mdc-tab--active {
-      background: #ffffff !important;
-      border: 1px solid #cbd5e1 !important;
-      border-bottom: 1px solid #ffffff !important;
-      margin-bottom: -1px !important;
-      z-index: 2;
-
-      .mdc-tab__text-label {
-        color: #0f172a !important;
-        font-weight: 700 !important;
-      }
-      mat-icon { color: #f97316 !important; }
-    }
-
-    &:not(.mdc-tab--active):hover {
-      background: #cbd5e1 !important;
-    }
-  }
-
-  ::ng-deep .mat-mdc-tab-indicator,
-  ::ng-deep .mdc-tab-indicator {
-    display: none !important;
   }
 
   ::ng-deep .mat-mdc-tab-body-wrapper {
     flex: 1;
     overflow: hidden;
-    background: #ffffff;
-    border: 1px solid #cbd5e1;
-    border-radius: 0 6px 6px 6px !important;
   }
 
   ::ng-deep .mat-mdc-tab-body-content {
@@ -342,12 +292,28 @@ body.resizing-col {
 
 .committees-tabs-header-actions {
   position: absolute;
-  top: 6px;
+  top: 10px;
   right: 10px;
   z-index: 10;
   display: inline-flex;
   align-items: center;
   gap: 4px;
+}
+
+@container (max-width: 700px) {
+  .committees-tabs-header-actions {
+    position: static;
+    justify-content: flex-end;
+    min-height: 28px;
+    padding: 2px 8px 0;
+  }
+
+  .committees-tabs-shell .committees-tabs {
+    ::ng-deep .mat-mdc-tab-header {
+      margin-top: 0;
+      padding-right: 0;
+    }
+  }
 }
 
 .tab-leading-icon {
@@ -424,7 +390,6 @@ body.resizing-col {
   overflow-y: auto;
   scroll-behavior: smooth;
   -webkit-overflow-scrolling: touch;
-  padding: 6px;
   display: flex;
   flex-direction: column;
   box-sizing: border-box;
@@ -460,10 +425,20 @@ body.resizing-col {
     &.panel-activity-active { border-left-color: #22c55e !important; }
     &.panel-activity-inactive { border-left-color: #ef4444 !important; }
 
-    &:hover { border-color: #cbd5e1 !important; }
+    &:hover { 
+      border-color: #cbd5e1 !important; 
+      border-left: 3px solid #cbd5e1 !important;
+
+      &.panel-activity-active { border-left-color: #22c55e !important; }
+      &.panel-activity-inactive { border-left-color: #ef4444 !important; }
+    }
     &.mat-expanded {
       border-color: #cbd5e1 !important;
+      border-left: 3px solid #cbd5e1 !important;
       box-shadow: 0 3px 8px rgba(15, 23, 42, 0.05) !important;
+
+      &.panel-activity-active { border-left-color: #22c55e !important; }
+      &.panel-activity-inactive { border-left-color: #ef4444 !important; }
     }
   }
 

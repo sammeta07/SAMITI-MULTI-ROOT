@@ -118,6 +118,21 @@
   }
 }
 
+.form-row-coords {
+  .coords-field {
+    flex: 1;
+    min-width: 0;
+  }
+
+  .fetch-location-wrapper {
+    flex: 0 0 auto;
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    margin-left: auto;
+  }
+}
+
 .samiti-custom-field {
   width: 100%;
 
@@ -125,6 +140,67 @@
     color: #64748b !important;
     font-size: 0.75rem;
   }
+
+  input[readonly] {
+    -webkit-text-fill-color: #475569;
+  }
+
+  input[type="number"][readonly] {
+    -moz-appearance: textfield;
+  }
+
+  input[type="number"][readonly]::-webkit-outer-spin-button,
+  input[type="number"][readonly]::-webkit-inner-spin-button {
+    -webkit-appearance: none;
+    margin: 0;
+  }
+
+  .address-edit-trigger {
+    color: #3b82f6 !important;
+    width: 32px !important;
+    height: 32px !important;
+    padding: 0 !important;
+    margin-right: 4px !important;
+    transition: all 0.15s ease;
+
+    &:hover {
+      background: rgba(59, 130, 246, 0.08) !important;
+      color: #2563eb !important;
+    }
+
+    mat-icon {
+      font-size: 1.15rem !important;
+      width: 1.15rem !important;
+      height: 1.15rem !important;
+    }
+  }
+}
+
+.fetch-location-btn {
+  width: 40px !important;
+  height: 40px !important;
+  background: linear-gradient(135deg, #10b981 0%, #059669 100%) !important;
+  color: #ffffff !important;
+  transition: all 0.2s ease;
+
+  &:hover {
+    background: linear-gradient(135deg, #059669 0%, #047857 100%) !important;
+    box-shadow: 0 4px 12px rgba(16, 185, 129, 0.3);
+  }
+
+  mat-icon {
+    font-size: 1.2rem !important;
+    width: 1.2rem !important;
+    height: 1.2rem !important;
+  }
+}
+
+.fetching-hint-row {
+  color: #10b981;
+  font-size: 0.75rem;
+  font-weight: 600;
+  margin-top: 4px;
+  padding-left: 2px;
 }
 
 /* 🎯 FORM ACTION FOOTER */

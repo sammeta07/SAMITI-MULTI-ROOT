@@ -38,7 +38,7 @@ export interface CommitteeEventListItem {
   eventLogo?: string | null;
   category?: string | null;
   type: 'PUBLIC' | 'PRIVATE';
-  visibility: string;
+  visibility: 'VISIBLE' | 'HIDDEN' | string;
   startDate?: string | null;
   endDate?: string | null;
   createdBy: number;

@@ -1,9 +1,10 @@
 import { Component, inject, signal, OnInit } from "@angular/core";
 import { CommonModule } from "@angular/common";
 import { MatIconModule } from "@angular/material/icon";
+import { MatTabsModule } from "@angular/material/tabs";
 import { RouterModule, RouterOutlet } from "@angular/router";
-import { Router, ActivatedRoute, NavigationEnd } from "@angular/router";
-import { filter } from "rxjs/operators";
+import { Router, ActivatedRoute, NavigationEnd, NavigationCancel, NavigationError } from "@angular/router";
+import { filter } from "rxjs";
 
 @Component({
   selector: "app-dashboard-sent-requests",
@@ -11,6 +12,7 @@ import { filter } from "rxjs/operators";
   imports: [
     CommonModule,
     MatIconModule,
+    MatTabsModule,
     RouterModule,
     RouterOutlet,
   ],
@@ -21,7 +23,7 @@ export class DashboardSentRequestsComponent implements OnInit {
   private readonly router = inject(Router);
   private readonly route = inject(ActivatedRoute);
 
-  selectedTab = signal(0);
+  selectedTabIndex = 0;
 
   readonly tabRoutes = [
     'admin-requests',
@@ -33,7 +35,7 @@ export class DashboardSentRequestsComponent implements OnInit {
     this.syncTabFromUrl();
 
     this.router.events.pipe(
-      filter(event => event instanceof NavigationEnd)
+      filter(event => event instanceof NavigationEnd || event instanceof NavigationCancel || event instanceof NavigationError)
     ).subscribe(() => {
       this.syncTabFromUrl();
     });
@@ -54,15 +56,13 @@ export class DashboardSentRequestsComponent implements OnInit {
     const segmentPath = segments[0]?.path || '';
     const index = this.tabRoutes.indexOf(segmentPath);
     if (index >= 0) {
-      this.selectedTab.set(index);
+      this.selectedTabIndex = index;
     }
   }
 
-  onTabClick(index: number): void {
+  onTabChange(index: number): void {
     const route = this.tabRoutes[index];
-    if (this.selectedTab() !== index) {
-      this.selectedTab.set(index);
-    }
+    this.selectedTabIndex = index;
     this.router.navigate([route], { relativeTo: this.route });
   }
 }

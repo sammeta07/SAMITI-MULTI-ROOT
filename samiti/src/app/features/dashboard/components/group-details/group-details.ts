@@ -1,4 +1,4 @@
-import { Component, inject, OnInit, signal, computed, ViewChild, ElementRef } from '@angular/core';
+import { Component, inject, OnInit, signal, computed, ViewChild, ElementRef, ChangeDetectorRef, effect } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
@@ -11,12 +11,17 @@ import { MatInputModule } from '@angular/material/input';
 import { MatExpansionModule } from '@angular/material/expansion';
 import { MatSlideToggleModule } from '@angular/material/slide-toggle';
 import { MatTooltipModule, MatTooltip } from '@angular/material/tooltip';
-import { ChangeDetectorRef } from '@angular/core';
 import { HttpErrorResponse } from '@angular/common/http';
 import { firstValueFrom, finalize } from 'rxjs';
+
 import { GroupDetailsService } from './group-details.service';
 import { NotifierService } from '../../../../shared/notifier/notifier.service';
-import { CancelCommitteeMembershipRequestPayload, CommitteeEventListItem, CommitteeProfileMeta, CommitteeRosterMember, CommitteeDetailsPayload, SubmitCommitteeMembershipRequestPayload } from './group-details.models';
+import { 
+  CommitteeEventListItem, 
+  CommitteeProfileMeta, 
+  CommitteeRosterMember, 
+  CommitteeDetailsPayload 
+} from './group-details.models';
 import { ConfirmDialogService } from '../../../../components/dialog/confirm/confirm-dialog.service';
 import { ConfirmDialogData } from '../../../../components/dialog/confirm/confirm-dialog.models';
 import { CreateEventDialogComponent } from '../../../../components/dialog/create-event/create-event.component';
@@ -32,6 +37,7 @@ import { ImageAssetService } from '../../../../core/services/image-asset.service
 import { AuthService } from '../../../../core/services/auth.service';
 import { getEventComputedStatus } from '../../../../shared/services/event-status.util';
 import { ImageCropperDialogComponent } from '../../../../shared/components/image-cropper-dialog/image-cropper-dialog.component';
+import { SelectedYearService } from '../../../../shared/services/selected-year.service';
 
 @Component({
   selector: 'app-group-details',
@@ -68,6 +74,17 @@ export class GroupDetailsComponent implements OnInit {
   private readonly cdr = inject(ChangeDetectorRef);
   private readonly imageAssetService = inject(ImageAssetService);
   private readonly authService = inject(AuthService);
+  private readonly selectedYearService = inject(SelectedYearService);
+
+  private readonly committeeIdForDetails = signal<string | null>(null);
+  private detailsRequestSequence = 0;
+  private readonly reloadDetailsForSelectedYear = effect(() => {
+    const year = this.selectedYearService.selectedYear();
+    const committeeId = this.committeeIdForDetails();
+    if (committeeId) {
+      this.fetchCommitteeDetailsPayload(committeeId, year);
+    }
+  });
 
   @ViewChild('eventsScrollContainer') eventsScrollContainer!: ElementRef<HTMLDivElement>;
 
@@ -75,48 +92,27 @@ export class GroupDetailsComponent implements OnInit {
   public readonly copiedCommitteeId = signal<string | null>(null);
   public readonly isUploadingCommitteeLogo = signal<boolean>(false);
   public readonly isUploadingEventLogo = signal<boolean>(false);
-  
-  // 🚀 ERROR 1 FIX: Expanded type allowance bracket including 'REJECTED' literals matches securely
+
   public readonly userRequestStatus = signal<'ACCEPTED' | 'PENDING' | 'REJECTED' | null>(null);
   public readonly userRequestRole = signal<'COMMITTEE_MEMBER' | 'COMMITTEE_ADMIN' | 'COMMITTEE_MASTER_ADMIN' | null>(null);
   public readonly userCommitteeRole = signal<'COMMITTEE_MEMBER' | 'COMMITTEE_ADMIN' | 'COMMITTEE_MASTER_ADMIN' | null>(null);
   public readonly groupData = signal<CommitteeProfileMeta | null>(null);
   public readonly committeeEvents = signal<CommitteeEventListItem[]>([]);
 
-  public getEventStatus(event: CommitteeEventListItem): string {
-    return getEventComputedStatus(event.startDate, event.endDate);
-  }
-  
   public readonly masterAdminsList = signal<CommitteeRosterMember[]>([]);
   public readonly adminsList = signal<CommitteeRosterMember[]>([]);
   public readonly membersList = signal<CommitteeRosterMember[]>([]);
 
-  public readonly skeletonRows = [1, 2, 3];
   public readonly skeletonRows2 = [1, 2];
-  public readonly skeletonRows3 = [1, 2, 3];
   public readonly skeletonRows6 = [1, 2, 3, 4, 5, 6];
-  public readonly skeletonRosterRows = [1, 2, 3, 4, 5, 6];
 
-  // 🔐 Computed role checks tracking operations variables
-  public readonly isCurrentUserMasterAdmin = computed(() => {
-    return this.userCommitteeRole() === 'COMMITTEE_MASTER_ADMIN';
-  });
-
-  public readonly isCurrentUserAdmin = computed(() => {
-    const role = this.userCommitteeRole();
-    return role === 'COMMITTEE_ADMIN';
-  });
-
-  public readonly isCurrentUserMember = computed(() => {
-    return this.userCommitteeRole() === 'COMMITTEE_MEMBER';
-  });
-
-  public readonly isCurrentUserPending = computed(() => {
-    return this.userRequestStatus() === 'PENDING';
-  });
+  public readonly isCurrentUserMasterAdmin = computed(() => this.userCommitteeRole() === 'COMMITTEE_MASTER_ADMIN');
+  public readonly isCurrentUserAdmin = computed(() => this.userCommitteeRole() === 'COMMITTEE_ADMIN');
+  public readonly isCurrentUserMember = computed(() => this.userCommitteeRole() === 'COMMITTEE_MEMBER');
+  public readonly isCurrentUserPending = computed(() => this.userRequestStatus() === 'PENDING');
 
   public readonly currentUserRoleLabel = computed(() => {
-    if (this.isCurrentUserMasterAdmin()) return 'Committee Master Admin';
+    if (this.isCurrentUserMasterAdmin()) return 'Master Admin';
     if (this.userCommitteeRole() === 'COMMITTEE_ADMIN') return 'Committee Admin';
     if (this.isCurrentUserMember()) return 'Committee Member';
     if (this.isCurrentUserPending()) return 'Pending Verification';
@@ -132,242 +128,9 @@ export class GroupDetailsComponent implements OnInit {
   });
 
   public readonly searchQuery = signal<string>('');
-  public readonly isSearchFocused = signal<boolean>(false);
-
   public readonly committeeIdString = computed(() => this.groupData()?.committeeId?.toString() ?? '');
 
-  public onSearchFocus(): void { this.isSearchFocused.set(true); }
-  public onSearchBlur(): void { this.isSearchFocused.set(false); }
-  public clearSearch(): void { this.searchQuery.set(''); }
-
-  public clearGroupLogo(): void {
-    this.groupData.update((currentValue) => {
-      if (!currentValue) return currentValue;
-      return { ...currentValue, logo: null };
-    });
-  }
-
-  public async onCommitteeLogoSelected(event: Event): Promise<void> {
-    const inputElement = event.target as HTMLInputElement;
-    const selectedFile = inputElement.files?.[0] || null;
-    inputElement.value = '';
-
-    if (!selectedFile) {
-      return;
-    }
-
-    if (!this.isCurrentUserMasterAdmin()) {
-      this.notifier.warn('Only committee master admins can update the committee logo');
-      return;
-    }
-
-    const committee = this.groupData();
-    if (!committee?.committeeId) {
-      this.notifier.error('Committee reference is missing. Please reload the workspace.');
-      return;
-    }
-
-    const selectedOrCroppedFile = await this.openCommitteeLogoCropDialog(selectedFile);
-    if (!selectedOrCroppedFile) {
-      return;
-    }
-
-    this.isUploadingCommitteeLogo.set(true);
-
-    try {
-      const uploadedLogoMetadata = await firstValueFrom(
-        this.imageAssetService.uploadSingleImageForCommitteeLogo(selectedOrCroppedFile, `committee-logo-${committee.committeeId}`)
-      );
-
-      const updatedCommittee = await firstValueFrom(
-        this.groupDetailsService.updateCommitteeLogo(committee, uploadedLogoMetadata.publicAbsoluteUrl)
-      );
-
-      const resolvedLogo = updatedCommittee?.logo || uploadedLogoMetadata.publicAbsoluteUrl;
-      this.groupData.update((currentValue) => {
-        if (!currentValue) return currentValue;
-        return { ...currentValue, logo: resolvedLogo };
-      });
-
-      const displayGroupName = this.toTitleCase(committee.committeeName || 'Committee');
-      this.notifier.success(`Committee logo for **${displayGroupName}** has been updated successfully.`);
-      this.hierarchyTreeService.triggerHierarchyTreeRefresh();
-    } catch (error: any) {
-      this.notifier.error(error?.message || 'Failed to update committee logo.');
-    } finally {
-      this.isUploadingCommitteeLogo.set(false);
-      this.cdr.detectChanges();
-    }
-  }
-
-  private async openCommitteeLogoCropDialog(file: File): Promise<File | null> {
-    return firstValueFrom(
-      this.dialog.open(ImageCropperDialogComponent, {
-        width: 'min(92vw, 920px)',
-        data: {
-          file,
-          title: 'Crop Committee Logo',
-          maintainAspectRatio: true,
-          aspectRatio: 1
-        }
-      }).afterClosed()
-    );
-  }
-
-  /* ======= EVENT DESIGNATION PHOTO UPLOAD (client-side preview only) ======= */
-  public readonly defaultDesignationSlots = [
-    { role: 'ADHYAKSHA', label: 'Adhyaksha' },
-    { role: 'UPADHYAKSHA', label: 'Upadhyaksh' },
-    { role: 'CASHIER', label: 'Cashier' }
-  ];
-
   private readonly designationPhotos = signal<Record<string, string>>({});
-
-  public getDesignationPhoto(eventId: number, role: number | string): string | undefined {
-    return this.designationPhotos()[`${eventId}:${role}`];
-  }
-
-  public getEventDesignationColor(eventId: number): string {
-    const accountRoles = this.authService.getStoredUserData()?.accountRoles;
-    if (!accountRoles?.committees) return '#64748b';
-    for (const committee of accountRoles.committees) {
-      const event = committee.events?.find(e => e.eventId === eventId);
-      if (event?.designation) {
-        switch (event.designation.toUpperCase()) {
-          case 'ADHYAKSHA': return '#FF00FF';
-          case 'UPADHYAKSHA': return '#800080';
-          case 'KOSHADHYAKSHA': return '#ffa500';
-          case 'AANKSHAK': return '#000000';
-          default: return '#64748b';
-        }
-      }
-    }
-    return '#64748b';
-  }
-
-  public onDesignationPhotoSlotClicked(eventId: number, role: number | string, event: Event): void {
-    event.stopPropagation();
-    const host = (event.currentTarget as HTMLElement).querySelector('input[type="file"]') as HTMLInputElement | null;
-    host?.click();
-  }
-
-  public async onDesignationPhotoSelected(eventId: number, role: number | string, event: Event): Promise<void> {
-    event.stopPropagation();
-    const inputElement = event.target as HTMLInputElement;
-    const selectedFile = inputElement.files?.[0] || null;
-    inputElement.value = '';
-
-    if (!selectedFile) {
-      return;
-    }
-
-    const selectedOrCroppedFile = await this.openDesignationPhotoCropDialog(selectedFile);
-    if (!selectedOrCroppedFile) {
-      return;
-    }
-
-    try {
-      const uploadedMetadata = await firstValueFrom(
-        this.imageAssetService.uploadSingleImageForCommitteeLogo(selectedOrCroppedFile, `designation-${eventId}-${role}`)
-      );
-
-      const key = `${eventId}:${role}`;
-      this.designationPhotos.update((current) => ({ ...current, [key]: uploadedMetadata.publicAbsoluteUrl }));
-      this.notifier.success(`**${role}** photo updated for this event.`);
-    } catch (error: any) {
-      this.notifier.error(error?.message || 'Failed to upload designation photo.');
-    }
-  }
-
-  private async openDesignationPhotoCropDialog(file: File): Promise<File | null> {
-    return firstValueFrom(
-      this.dialog.open(ImageCropperDialogComponent, {
-        width: 'min(92vw, 920px)',
-        data: {
-          file,
-          title: 'Crop Designation Photo',
-          maintainAspectRatio: true,
-          aspectRatio: 1
-        }
-      }).afterClosed()
-    );
-  }
-
-  /* ======= EVENT LOGO UPLOAD (persisted via updateEventLogo) ======= */
-  public onEventLogoCircleClicked(eventItem: CommitteeEventListItem, event: Event): void {
-    if (!(this.isCurrentUserMasterAdmin() || this.isCurrentUserAdmin())) {
-      return;
-    }
-    event.stopPropagation();
-    const host = (event.currentTarget as HTMLElement).querySelector('input[type="file"]') as HTMLInputElement | null;
-    host?.click();
-  }
-
-  public async onEventLogoSelected(eventItem: CommitteeEventListItem, event: Event): Promise<void> {
-    if (!(this.isCurrentUserMasterAdmin() || this.isCurrentUserAdmin())) {
-      return;
-    }
-    event.stopPropagation();
-    const inputElement = event.target as HTMLInputElement;
-    const selectedFile = inputElement.files?.[0] || null;
-    inputElement.value = '';
-
-    if (!selectedFile) {
-      return;
-    }
-
-    const committeeId = this.groupData()?.committeeId;
-    if (!committeeId || !eventItem?.eventId) {
-      this.notifier.error('Event reference is missing. Please reload the workspace.');
-      return;
-    }
-
-    const selectedOrCroppedFile = await this.openEventLogoCropDialog(selectedFile);
-    if (!selectedOrCroppedFile) {
-      return;
-    }
-
-    this.isUploadingEventLogo.set(true);
-
-    try {
-      const uploadedMetadata = await firstValueFrom(
-        this.imageAssetService.uploadSingleImageForCommitteeLogo(selectedOrCroppedFile, `event-logo-${eventItem.eventId}`)
-      );
-
-      const updated = await firstValueFrom(
-        this.groupDetailsService.updateEventLogo(eventItem.eventId, committeeId, uploadedMetadata.publicAbsoluteUrl)
-      );
-
-      const resolvedLogo = updated?.eventLogo || uploadedMetadata.publicAbsoluteUrl;
-      this.committeeEvents.update((currentEvents) =>
-        currentEvents.map((currentEvent) =>
-          currentEvent.eventId === eventItem.eventId ? { ...currentEvent, eventLogo: resolvedLogo } : currentEvent
-        )
-      );
-
-      const formattedEventName = this.toTitleCase(eventItem.eventName || 'Event');
-      this.hierarchyTreeService.triggerHierarchyTreeRefresh();
-      this.notifier.success(`Logo for **${formattedEventName}** has been updated successfully.`);
-    } catch (error: any) {
-      this.notifier.error(error?.message || 'Failed to update event logo.');
-    } finally {
-      this.isUploadingEventLogo.set(false);
-    }
-  }
-
-  private async openEventLogoCropDialog(file: File): Promise<File | null> {
-    return firstValueFrom(
-      this.dialog.open(ImageCropperDialogComponent, {
-        width: 'min(92vw, 920px)',
-        data: {
-          file,
-          title: 'Crop Event Logo',
-          maintainAspectRatio: true,
-          aspectRatio: 1
-        }
-      }).afterClosed()
-    );
-  }
 
   public readonly filteredMembersList = computed(() => {
     const query = this.searchQuery().toLowerCase().trim();
@@ -379,12 +142,54 @@ export class GroupDetailsComponent implements OnInit {
     );
   });
 
+  ngOnInit(): void {
+    this.route.params.subscribe((params) => {
+      const committeeId = params['id'];
+      if (committeeId) {
+        this.committeeIdForDetails.set(committeeId);
+      }
+    });
+  }
+
+  public getEventStatus(event: CommitteeEventListItem): string {
+    return getEventComputedStatus(event.startDate, event.endDate);
+  }
+
+  public clearSearch(): void {
+    this.searchQuery.set('');
+  }
+
+  public clearGroupLogo(): void {
+    this.groupData.update((curr) => (curr ? { ...curr, logo: null } : curr));
+  }
+
+  public getDesignationPhoto(eventId: number, role: number | string): string | undefined {
+    return this.designationPhotos()[`${eventId}:${role}`];
+  }
+
+  public getEventDesignationColor(eventId: number): string {
+    const accountRoles = this.authService.getStoredUserData()?.accountRoles;
+    if (!accountRoles?.committees) return '#64748b';
+    for (const committee of accountRoles.committees) {
+      const event = committee.events?.find((e: any) => e.eventId === eventId);
+      if (event?.designation) {
+        switch (event.designation.toUpperCase()) {
+          case 'ADHYAKSHA': return '#d946ef';
+          case 'UPADHYAKSHA': return '#8b5cf6';
+          case 'KOSHADHYAKSHA': return '#f59e0b';
+          case 'AANKSHAK': return '#0f172a';
+          default: return '#64748b';
+        }
+      }
+    }
+    return '#64748b';
+  }
+
   public getLoggedInUserId(): number {
     const userDataStr = localStorage.getItem('userData');
     if (userDataStr) {
       try {
-        const userData = JSON.parse(userDataStr);
-        return userData.id || 0;
+        return JSON.parse(userDataStr).id || 0;
       } catch {
         return 0;
       }
@@ -392,156 +197,102 @@ export class GroupDetailsComponent implements OnInit {
     return 0;
   }
 
-  ngOnInit(): void {
-    this.route.params.subscribe(params => {
-      const committeeId = params['id'];
-      if (committeeId) {
-        this.fetchCommitteeDetailsPayload(committeeId);
-      }
-    });
-  }
+  public async onCommitteeLogoSelected(event: Event): Promise<void> {
+    const inputElement = event.target as HTMLInputElement;
+    const selectedFile = inputElement.files?.[0] || null;
+    inputElement.value = '';
 
-  // public openEventDetails(eventId: number): void {
-  //   if (!eventId) return;
-  //   this.router.navigate(['/dashboard/event', eventId]);
-  // }
+    if (!selectedFile || !this.isCurrentUserMasterAdmin()) return;
 
-  public onEventVisibilityChange(eventItem: CommitteeEventListItem, isVisible: boolean): void {
-    if (!this.isCurrentUserMasterAdmin()) {
-      this.notifier.warn('Only committee admins can update event visibility');
+    const committee = this.groupData();
+    if (!committee?.committeeId) {
+      this.notifier.error('Committee reference is missing.');
       return;
     }
 
+    const cropped = await this.openCropDialog(selectedFile, 'Crop Committee Logo');
+    if (!cropped) return;
+
+    this.isUploadingCommitteeLogo.set(true);
+
+    try {
+      const upload = await firstValueFrom(
+        this.imageAssetService.uploadSingleImageForCommitteeLogo(cropped, `committee-logo-${committee.committeeId}`)
+      );
+      const updated = await firstValueFrom(
+        this.groupDetailsService.updateCommitteeLogo(committee, upload.publicAbsoluteUrl)
+      );
+
+      const resolved = updated?.logo || upload.publicAbsoluteUrl;
+      this.groupData.update((curr) => (curr ? { ...curr, logo: resolved } : curr));
+      this.notifier.success(`Logo updated successfully.`);
+      this.hierarchyTreeService.triggerHierarchyTreeRefresh();
+    } catch (err: any) {
+      this.notifier.error(err?.message || 'Failed to update logo.');
+    } finally {
+      this.isUploadingCommitteeLogo.set(false);
+      this.cdr.detectChanges();
+    }
+  }
+
+  public onEventLogoCircleClicked(eventItem: CommitteeEventListItem, event: Event): void {
+    if (!this.isCurrentUserMasterAdmin() && !this.isCurrentUserAdmin()) return;
+    event.stopPropagation();
+    const host = (event.currentTarget as HTMLElement).querySelector('input[type="file"]') as HTMLInputElement | null;
+    host?.click();
+  }
+
+  public async onEventLogoSelected(eventItem: CommitteeEventListItem, event: Event): Promise<void> {
+    if (!this.isCurrentUserMasterAdmin() && !this.isCurrentUserAdmin()) return;
+    event.stopPropagation();
+    const input = event.target as HTMLInputElement;
+    const file = input.files?.[0];
+    input.value = '';
+    if (!file) return;
+
+    const committeeId = this.groupData()?.committeeId;
+    if (!committeeId || !eventItem?.eventId) return;
+
+    const cropped = await this.openCropDialog(file, 'Crop Event Logo');
+    if (!cropped) return;
+
+    this.isUploadingEventLogo.set(true);
+    try {
+      const upload = await firstValueFrom(
+        this.imageAssetService.uploadSingleImageForCommitteeLogo(cropped, `event-logo-${eventItem.eventId}`)
+      );
+      const updated = await firstValueFrom(
+        this.groupDetailsService.updateEventLogo(eventItem.eventId, committeeId, upload.publicAbsoluteUrl)
+      );
+      const resolved = updated?.eventLogo || upload.publicAbsoluteUrl;
+      this.committeeEvents.update((evts) =>
+        evts.map((e) => (e.eventId === eventItem.eventId ? { ...e, eventLogo: resolved } : e))
+      );
+      this.notifier.success(`Event logo updated.`);
+    } catch (err: any) {
+      this.notifier.error(err?.message || 'Failed to update event logo.');
+    } finally {
+      this.isUploadingEventLogo.set(false);
+    }
+  }
+
+  public onEventVisibilityChange(eventItem: CommitteeEventListItem, isVisible: boolean): void {
+    if (!this.isCurrentUserMasterAdmin() && !this.isCurrentUserAdmin()) return;
     const visibility: 'VISIBLE' | 'HIDDEN' = isVisible ? 'VISIBLE' : 'HIDDEN';
     if (!eventItem?.eventId || eventItem.visibility === visibility) return;
 
-    const previousVisibility = eventItem.visibility;
-    this.committeeEvents.update((currentEvents) =>
-      currentEvents.map((currentEvent) =>
-        currentEvent.eventId === eventItem.eventId ? { ...currentEvent, visibility } : currentEvent
-      )
+    const prev = eventItem.visibility;
+    this.committeeEvents.update((evts) =>
+      evts.map((e) => (e.eventId === eventItem.eventId ? { ...e, visibility } : e))
     );
 
     this.groupDetailsService.updateEventVisibility(eventItem.eventId, visibility).subscribe({
-      next: () => {
-        const formattedEventName = this.toTitleCase(eventItem.eventName || 'Event');
-        const visibilityMessage = visibility === 'VISIBLE'
-          ? `**${formattedEventName}** is now visible to all the public`
-          : `**${formattedEventName}** is now hidden to all the public`;
-        this.notifier.success(visibilityMessage);
-      },
+      next: () => this.notifier.success(`Event visibility changed to ${visibility}.`),
       error: (err: HttpErrorResponse) => {
-        this.committeeEvents.update((currentEvents) =>
-          currentEvents.map((currentEvent) =>
-            currentEvent.eventId === eventItem.eventId ? { ...currentEvent, visibility: previousVisibility } : currentEvent
-          )
+        this.committeeEvents.update((evts) =>
+          evts.map((e) => (e.eventId === eventItem.eventId ? { ...e, visibility: prev } : e))
         );
-        this.notifier.error(err?.error?.message || 'Failed to update event visibility.');
-      }
-    });
-  }
-
-  public onEditEvent(eventItem: CommitteeEventListItem): void {
-    this.notifier.warn(`Edit event flow is not available yet for "${eventItem.eventName}".`);
-  }
-
-  public toTitleCase(value: string): string {
-    return value
-      .toLowerCase()
-      .replace(/\s+/g, ' ')
-      .trim()
-      .replace(/\b\w/g, (char) => char.toUpperCase());
-  }
-
-  private fetchCommitteeDetailsPayload(id: string): void {
-    this.isLoading.set(true);
-    this.loadingState.begin();
-
-    this.groupDetailsService.getCommitteeDetails(id).pipe(
-      finalize(() => {
-        this.isLoading.set(false);
-        this.loadingState.end();
-      })
-    ).subscribe({
-      next: (data: CommitteeDetailsPayload) => {
-        if (data && data.committeeId) {
-          const committeeInfo: CommitteeProfileMeta = {
-            id: data.id,
-            committeeId: data.committeeId,
-            committeeName: data.committeeName,
-            address: data.address,
-            establishYear: data.establishYear,
-            logo: data.logo,
-            latitude: data.latitude,
-            longitude: data.longitude,
-            contactNumbers: data.contactNumbers,
-            createdBy: data.createdBy,
-            createdAt: data.createdAt
-          };
-
-          this.groupData.set(committeeInfo);
-          this.userCommitteeRole.set(data.committeeRole ?? null);
-          this.userRequestStatus.set(data.userRequestStatus ?? null);
-          this.userRequestRole.set(data.userRequestRole ?? null);
-          
-          const membersPool = data.members || [];
-          
-          this.masterAdminsList.set(
-            membersPool.filter((m: CommitteeRosterMember) => String(m.committeeRole || '').toUpperCase() === 'COMMITTEE_MASTER_ADMIN')
-          );
-          
-          this.adminsList.set(
-            membersPool.filter((m: CommitteeRosterMember) => String(m.committeeRole || '').toUpperCase() === 'COMMITTEE_ADMIN')
-          );
-          
-          this.membersList.set(
-            membersPool.filter((m: CommitteeRosterMember) => String(m.committeeRole || '').toUpperCase() === 'COMMITTEE_MEMBER')
-          );
-          
-          // 🚀 ERROR 2 & 3 FIX: Forces mapping layout with strict type validation defaults inside tracking loop variables setup
-          if (data.events) {
-            const safeEvents = data.events.map((event: CommitteeEventListItem) => ({
-              ...event,
-              id: event.id || Number(event.eventId || 0)
-            }));
-
-            const getEventSortOrder = (event: CommitteeEventListItem): number => {
-              const now = new Date();
-              const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-              const start = event.startDate ? new Date(event.startDate) : null;
-              const end = event.endDate ? new Date(event.endDate) : null;
-              const startDate = start ? new Date(start.getFullYear(), start.getMonth(), start.getDate()) : null;
-              const endDate = end ? new Date(end.getFullYear(), end.getMonth(), end.getDate()) : null;
-              if (!startDate) return 0;
-              if (today < startDate) return 2;
-              if (endDate && today > endDate) return 0;
-              return 1;
-            };
-
-            const sortedEvents = [...safeEvents].sort((a, b) => {
-              const orderA = getEventSortOrder(a);
-              const orderB = getEventSortOrder(b);
-
-              if (orderA !== orderB) {
-                return orderA - orderB;
-              }
-
-              const dateA = a.startDate ? new Date(a.startDate).getTime() : Infinity;
-              const dateB = b.startDate ? new Date(b.startDate).getTime() : Infinity;
-              return dateA - dateB;
-            });
-              this.committeeEvents.set(sortedEvents);
-              setTimeout(() => this.scrollToActiveEvent(), 50);
-          } else {
-            this.committeeEvents.set([]);
-          }
-
-        } else {
-          this.notifier.error('Failed to parse committee details.');
-        }
-      },
-      error: (err: HttpErrorResponse) => {
-        this.notifier.error(err?.error?.message || 'Transaction error loading group rows.');
+        this.notifier.error(err?.error?.message || 'Failed to change visibility.');
       }
     });
   }
@@ -549,27 +300,23 @@ export class GroupDetailsComponent implements OnInit {
   public onRequestAdminRole(): void {
     const committee = this.groupData();
     if (!committee?.committeeId) return;
-    
-    const dialogData: ConfirmDialogData = {
+
+    const dialogRef = this.confirmDialog.open({
       title: 'Request Admin Role',
       message: 'Are you sure you want to request admin role for this committee?',
       confirmText: 'Send Request',
       cancelText: 'Cancel',
-      highlightText: committee.committeeName,
-    };
+      highlightText: committee.committeeName
+    });
 
-    const dialogRef = this.confirmDialog.open(dialogData);
-    dialogRef.afterClosed().subscribe((result) => {
-      if (!result?.confirmed) return;
-
+    dialogRef.afterClosed().subscribe((res) => {
+      if (!res?.confirmed) return;
       this.groupDetailsService.requestCommitteeAdminRole(Number(committee.committeeId), 'COMMITTEE_ADMIN').subscribe({
         next: () => {
-          this.notifier.success('Admin role request submitted successfully');
+          this.notifier.success('Admin request submitted.');
           this.fetchCommitteeDetailsPayload(String(committee.committeeId));
         },
-        error: (error: any) => {
-          this.notifier.error(error?.error?.message || 'Failed to submit admin role request');
-        }
+        error: (err: any) => this.notifier.error(err?.error?.message || 'Failed to request admin role.')
       });
     });
   }
@@ -578,26 +325,22 @@ export class GroupDetailsComponent implements OnInit {
     const committee = this.groupData();
     if (!committee?.committeeId) return;
 
-    const dialogData: ConfirmDialogData = {
-      title: 'Cancel Admin Role Request',
-      message: 'Are you sure you want to cancel your admin role request for this committee?',
+    const dialogRef = this.confirmDialog.open({
+      title: 'Cancel Admin Request',
+      message: 'Are you sure you want to cancel your admin request?',
       confirmText: 'Cancel Request',
       cancelText: 'Keep Request',
-      highlightText: committee.committeeName,
-    };
+      highlightText: committee.committeeName
+    });
 
-    const dialogRef = this.confirmDialog.open(dialogData);
-    dialogRef.afterClosed().subscribe((result) => {
-      if (!result?.confirmed) return;
-
+    dialogRef.afterClosed().subscribe((res) => {
+      if (!res?.confirmed) return;
       this.groupDetailsService.cancelCommitteeMembershipRequest(Number(committee.committeeId)).subscribe({
         next: () => {
-          this.notifier.success('Admin role request cancelled successfully');
+          this.notifier.success('Admin request cancelled.');
           this.fetchCommitteeDetailsPayload(String(committee.committeeId));
         },
-        error: (error: any) => {
-          this.notifier.error(error?.error?.message || 'Failed to cancel admin role request');
-        }
+        error: (err: any) => this.notifier.error(err?.error?.message || 'Failed to cancel request.')
       });
     });
   }
@@ -605,55 +348,32 @@ export class GroupDetailsComponent implements OnInit {
   public onViewMember(userId: number): void {
     const committee = this.groupData();
     if (!committee) return;
-    const member = this.membersList().find(m => m.id === userId) || 
-                   this.adminsList().find(m => m.id === userId) ||
-                   this.masterAdminsList().find(m => m.id === userId);
+    const member = this.membersList().find((m) => m.id === userId) ||
+                   this.adminsList().find((m) => m.id === userId) ||
+                   this.masterAdminsList().find((m) => m.id === userId);
     if (!member) return;
-
-    const checkAdmin = String(member.committeeRole || '').toUpperCase();
-    const isAdmin = checkAdmin === 'COMMITTEE_ADMIN' || checkAdmin === 'COMMITTEE_MASTER_ADMIN';
 
     document.body.classList.add('dialog-open');
     const dialogRef = this.dialog.open(ViewUserDialogComponent, {
       width: '1000px',
-      autoFocus: true,
-      disableClose: true,
-      hasBackdrop: true,
-      position: { right: '0', top: '0' },
       height: '100%',
+      position: { right: '0', top: '0' },
       panelClass: 'slide-in-dialog',
       data: {
         userId: userId.toString(),
         committeeId: committee.committeeId?.toString() || '',
         userName: member.name,
         userEmail: member.email,
-        isAdmin: isAdmin,
+        isAdmin: member.committeeRole === 'COMMITTEE_ADMIN' || member.committeeRole === 'COMMITTEE_MASTER_ADMIN',
         committeeName: committee.committeeName || ''
       }
     });
-
-    dialogRef.afterClosed().subscribe(() => {
-      document.body.classList.remove('dialog-open');
-    });
-  }
-
-  public onOpenFullRosterDialog(): void {
-    this.notifier.success('Compiling heavy matrix buffer records into full high-density modal dialogue shell...');
+    dialogRef.afterClosed().subscribe(() => document.body.classList.remove('dialog-open'));
   }
 
   public onPromoteMember(member: CommitteeRosterMember): void {
     const committee = this.groupData();
     if (!committee?.committeeId) return;
-
-    if (!this.isCurrentUserMasterAdmin() && !this.isCurrentUserAdmin()) {
-      this.notifier.warn('Only Administrators can execute promotion workflows');
-      return;
-    }
-
-    if (this.isCurrentUserAdmin() && String(member.committeeRole || '').toUpperCase() !== 'COMMITTEE_MEMBER') {
-      this.notifier.warn('Admins can only promote members');
-      return;
-    }
 
     const dialogRef = this.promoteMemberDialog.open({
       userId: String(member.id),
@@ -663,21 +383,14 @@ export class GroupDetailsComponent implements OnInit {
       committeeName: committee.committeeName
     });
 
-    dialogRef.afterClosed().subscribe((result) => {
-      if (result?.confirmed) {
-        this.fetchCommitteeDetailsPayload(String(committee.committeeId));
-      }
+    dialogRef.afterClosed().subscribe((res) => {
+      if (res?.confirmed) this.fetchCommitteeDetailsPayload(String(committee.committeeId));
     });
   }
 
   public onDemoteAdmin(admin: CommitteeRosterMember): void {
     const committee = this.groupData();
     if (!committee?.committeeId) return;
-
-    if (!this.isCurrentUserMasterAdmin()) {
-      this.notifier.warn('Only Master Administrators hold demotion access control tokens');
-      return;
-    }
 
     const dialogRef = this.demoteMemberDialog.open({
       userId: String(admin.id),
@@ -687,26 +400,14 @@ export class GroupDetailsComponent implements OnInit {
       committeeName: committee.committeeName
     });
 
-    dialogRef.afterClosed().subscribe((result) => {
-      if (result?.confirmed) {
-        this.fetchCommitteeDetailsPayload(String(committee.committeeId));
-      }
+    dialogRef.afterClosed().subscribe((res) => {
+      if (res?.confirmed) this.fetchCommitteeDetailsPayload(String(committee.committeeId));
     });
   }
 
   public onRemoveCommitteeMember(member: CommitteeRosterMember): void {
     const committee = this.groupData();
     if (!committee?.committeeId) return;
-
-    if (!this.isCurrentUserMasterAdmin() && !this.isCurrentUserAdmin()) {
-      this.notifier.warn('Only Administrators can eliminate accounts from workspaces');
-      return;
-    }
-
-    if (this.isCurrentUserAdmin() && String(member.committeeRole || '').toUpperCase() !== 'COMMITTEE_MEMBER') {
-      this.notifier.warn('Admins can only remove members');
-      return;
-    }
 
     const dialogRef = this.removeMemberDialog.open({
       userId: String(member.id),
@@ -715,10 +416,8 @@ export class GroupDetailsComponent implements OnInit {
       committeeName: committee.committeeName
     });
 
-    dialogRef.afterClosed().subscribe((result) => {
-      if (result?.confirmed) {
-        this.fetchCommitteeDetailsPayload(String(committee.committeeId));
-      }
+    dialogRef.afterClosed().subscribe((res) => {
+      if (res?.confirmed) this.fetchCommitteeDetailsPayload(String(committee.committeeId));
     });
   }
 
@@ -731,9 +430,6 @@ export class GroupDetailsComponent implements OnInit {
       position: { right: '0', top: '0' },
       height: '100%',
       width: '50%',
-      autoFocus: true,
-      disableClose: true,
-      hasBackdrop: true,
       panelClass: 'slide-in-dialog',
       data: {
         committeeId: committee.committeeId,
@@ -743,9 +439,9 @@ export class GroupDetailsComponent implements OnInit {
       }
     });
 
-    dialogRef.afterClosed().subscribe((result) => {
+    dialogRef.afterClosed().subscribe((res) => {
       document.body.classList.remove('dialog-open');
-      if (result && committee.committeeId) {
+      if (res && committee.committeeId) {
         this.hierarchyTreeService.triggerHierarchyTreeRefresh();
         this.fetchCommitteeDetailsPayload(String(committee.committeeId));
       }
@@ -761,16 +457,13 @@ export class GroupDetailsComponent implements OnInit {
       position: { right: '0', top: '0' },
       height: '100%',
       width: '50%',
-      autoFocus: true,
-      disableClose: true,
-      hasBackdrop: true,
       panelClass: 'slide-in-dialog',
       data: { committee }
     });
 
-    dialogRef.afterClosed().subscribe((result) => {
+    dialogRef.afterClosed().subscribe((res) => {
       document.body.classList.remove('dialog-open');
-      if (result) {
+      if (res) {
         this.hierarchyTreeService.triggerHierarchyTreeRefresh();
         this.fetchCommitteeDetailsPayload(String(committee.committeeId));
       }
@@ -778,78 +471,149 @@ export class GroupDetailsComponent implements OnInit {
   }
 
   public onDeleteCommitteeWorkspace(): void {
-    if (!this.isCurrentUserMasterAdmin()) return;
-    this.notifier.warn('Delete committee flow will be enabled after committee delete GraphQL API is restored.');
+    this.notifier.warn('Delete group capability will be available soon.');
+  }
+
+  public async copyCommitteeId(committeeId: string, event: Event, tooltip: MatTooltip): Promise<void> {
+    event.stopPropagation();
+    try {
+      this.copiedCommitteeId.set(committeeId);
+      await navigator.clipboard.writeText(committeeId);
+      const original = tooltip.message;
+      tooltip.message = `Copied ID: ${committeeId}`;
+      tooltip.show();
+      setTimeout(() => {
+        this.copiedCommitteeId.set(null);
+        tooltip.hide();
+        setTimeout(() => tooltip.message = original, 300);
+      }, 2000);
+    } catch {
+      this.notifier.error('Failed to copy ID');
+      this.copiedCommitteeId.set(null);
+    }
+  }
+
+  private fetchCommitteeDetailsPayload(id: string, year = this.selectedYearService.selectedYear()): void {
+    const requestSequence = ++this.detailsRequestSequence;
+    this.isLoading.set(true);
+    this.loadingState.begin();
+
+    this.groupDetailsService.getCommitteeDetails(id, year).pipe(
+      finalize(() => {
+        this.loadingState.end();
+        if (requestSequence !== this.detailsRequestSequence) return;
+        this.isLoading.set(false);
+      })
+    ).subscribe({
+      next: (data: CommitteeDetailsPayload) => {
+        if (requestSequence !== this.detailsRequestSequence) return;
+        if (!data?.committeeId) {
+          this.notifier.error('Failed to parse committee information.');
+          return;
+        }
+
+        this.groupData.set({
+          id: data.id,
+          committeeId: data.committeeId,
+          committeeName: data.committeeName,
+          address: data.address,
+          establishYear: data.establishYear,
+          logo: data.logo,
+          latitude: data.latitude,
+          longitude: data.longitude,
+          contactNumbers: data.contactNumbers,
+          createdBy: data.createdBy,
+          createdAt: data.createdAt
+        });
+
+        this.userCommitteeRole.set(data.committeeRole ?? null);
+        this.userRequestStatus.set(data.userRequestStatus ?? null);
+        this.userRequestRole.set(data.userRequestRole ?? null);
+
+        const pool = data.members || [];
+        this.masterAdminsList.set(pool.filter((m) => String(m.committeeRole || '').toUpperCase() === 'COMMITTEE_MASTER_ADMIN'));
+        this.adminsList.set(pool.filter((m) => String(m.committeeRole || '').toUpperCase() === 'COMMITTEE_ADMIN'));
+        this.membersList.set(pool.filter((m) => String(m.committeeRole || '').toUpperCase() === 'COMMITTEE_MEMBER'));
+
+        if (data.events?.length) {
+          const safeEvents = data.events.map((e) => ({
+            ...e,
+            id: e.id || Number(e.eventId || 0)
+          }));
+          this.committeeEvents.set(this.sortEventsByTimeline(safeEvents));
+          setTimeout(() => this.scrollToActiveEvent(), 100);
+        } else {
+          this.committeeEvents.set([]);
+        }
+      },
+      error: (err: HttpErrorResponse) => {
+        if (requestSequence !== this.detailsRequestSequence) return;
+        this.notifier.error(err?.error?.message || 'Error loading group workspace.');
+      }
+    });
+  }
+
+  private sortEventsByTimeline(events: CommitteeEventListItem[]): CommitteeEventListItem[] {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+
+    const getScore = (event: CommitteeEventListItem): number => {
+      const start = event.startDate ? new Date(event.startDate) : null;
+      const end = event.endDate ? new Date(event.endDate) : null;
+      if (end && today > end) return 1; // Completed
+      if (!start) return 3;
+      if (today < start) return 3; // Upcoming
+      return 2; // Started / Ongoing
+    };
+
+    return [...events].sort((a, b) => {
+      const scoreDiff = getScore(a) - getScore(b);
+      if (scoreDiff !== 0) return scoreDiff;
+      const timeA = a.startDate ? new Date(a.startDate).getTime() : Infinity;
+      const timeB = b.startDate ? new Date(b.startDate).getTime() : Infinity;
+      return timeA - timeB;
+    });
   }
 
   private scrollToActiveEvent(retries = 5): void {
     const container = this.eventsScrollContainer?.nativeElement;
-    if (!container || !container.isConnected || retries === 0) return;
+    if (!container || retries === 0) return;
 
     const events = this.committeeEvents();
     if (!events.length) return;
 
-    const now = new Date();
-    const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    const targetIndex = events.findIndex((e) => {
+      const status = this.getEventStatus(e).toLowerCase();
+      return status === 'started' || status === 'ongoing' || status === 'upcoming';
+    });
 
-    const getComputedStatus = (event: CommitteeEventListItem): string => {
-      const start = event.startDate ? new Date(event.startDate) : null;
-      const end = event.endDate ? new Date(event.endDate) : null;
-      const startDate = start ? new Date(start.getFullYear(), start.getMonth(), start.getDate()) : null;
-      const endDate = end ? new Date(end.getFullYear(), end.getMonth(), end.getDate()) : null;
-      if (!startDate) return 'completed';
-      if (today < startDate) return 'upcoming';
-      if (endDate && today > endDate) return 'completed';
-      return 'started';
-    };
-
-    const targetEvent = events.find(e => getComputedStatus(e) === 'started') ||
-                        events.find(e => getComputedStatus(e) === 'upcoming');
-
-    if (!targetEvent) return;
+    if (targetIndex === -1) return;
 
     const eventElements = container.querySelectorAll('.event-aligned-row');
-    if (eventElements.length === 0) {
+    const targetElement = eventElements[targetIndex] as HTMLElement;
+
+    if (!targetElement) {
       setTimeout(() => this.scrollToActiveEvent(retries - 1), 50);
       return;
     }
 
-    for (let i = 0; i < eventElements.length; i++) {
-      if (events[i]?.eventId === targetEvent.eventId) {
-        const element = eventElements[i] as HTMLElement;
-        const containerRect = container.getBoundingClientRect();
-        const elementRect = element.getBoundingClientRect();
-        const scrollTop = container.scrollTop + (elementRect.top - containerRect.top) - 10;
-        container.scrollTo({ top: scrollTop, behavior: 'smooth' });
-        break;
-      }
-    }
+    const containerRect = container.getBoundingClientRect();
+    const elementRect = targetElement.getBoundingClientRect();
+    const targetTop = container.scrollTop + (elementRect.top - containerRect.top) - 8;
+    container.scrollTo({ top: targetTop, behavior: 'smooth' });
   }
 
-  async copyCommitteeId(committeeId: string, event: Event, tooltip: MatTooltip): Promise<void> {
-    event.stopPropagation();
-    try {
-      this.copiedCommitteeId.set(committeeId);
-      this.cdr.detectChanges();
-      await navigator.clipboard.writeText(committeeId);
-
-      const originalMessage = tooltip.message;
-      tooltip.message = `Committee Id copied - ${committeeId}`;
-      tooltip.show();
-
-      setTimeout(() => {
-        this.copiedCommitteeId.set(null);
-        this.cdr.detectChanges();
-      }, 2000);
-
-      setTimeout(() => {
-        tooltip.hide();
-        setTimeout(() => tooltip.message = originalMessage, 500);
-      }, 2000);
-    } catch (err) {
-      this.notifier.error('Failed to copy Committee Id');
-      this.copiedCommitteeId.set(null);
-      this.cdr.detectChanges();
-    }
+  private async openCropDialog(file: File, title: string): Promise<File | null> {
+    return firstValueFrom(
+      this.dialog.open(ImageCropperDialogComponent, {
+        width: 'min(92vw, 860px)',
+        data: {
+          file,
+          title,
+          maintainAspectRatio: true,
+          aspectRatio: 1
+        }
+      }).afterClosed()
+    );
   }
 }

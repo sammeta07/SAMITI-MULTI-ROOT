@@ -26,18 +26,38 @@
 
       <div class="workspace-roster-events-split">
         <div class="roster-stack-column">
-          <section class="mesh-card roster-card master-admin-card-style roster-fixed skeleton-card">
+          <!-- Master Admin Skeleton -->
+          <section class="mesh-card roster-card skeleton-card roster-fixed-master">
             <div class="panel-card-header">
               <div class="header-title-left">
                 <div class="skeleton-box skeleton-avatar circle" style="width:18px;height:18px;"></div>
                 <div class="skeleton-box skeleton-line sm" style="width:110px;"></div>
               </div>
             </div>
-            <div class="mesh-list-scroll-box compact-scroll">
-              @for (r of skeletonRows3; track r) {
+            <div class="mesh-list-scroll-box compact-master-scroll">
+              <div class="item-density-row skeleton-row">
+                <div class="skeleton-box skeleton-avatar circle"></div>
+                <div class="row-info-core">
+                  <div class="skeleton-box skeleton-line sm" style="width:55%;"></div>
+                  <div class="skeleton-box skeleton-line sm" style="width:75%; margin-top:6px;"></div>
+                </div>
+              </div>
+            </div>
+          </section>
+
+          <!-- Group Admin Skeleton -->
+          <section class="mesh-card roster-card skeleton-card roster-fixed-admins">
+            <div class="panel-card-header">
+              <div class="header-title-left">
+                <div class="skeleton-box skeleton-avatar circle" style="width:18px;height:18px;"></div>
+                <div class="skeleton-box skeleton-line sm" style="width:110px;"></div>
+              </div>
+            </div>
+            <div class="mesh-list-scroll-box admin-2rows-scroll">
+              @for (r of skeletonRows2; track r) {
                 <div class="item-density-row skeleton-row">
                   <div class="skeleton-box skeleton-avatar circle"></div>
-                  <div class="row-info-core" style="flex:1;">
+                  <div class="row-info-core">
                     <div class="skeleton-box skeleton-line sm" style="width:55%;"></div>
                     <div class="skeleton-box skeleton-line sm" style="width:75%; margin-top:6px;"></div>
                   </div>
@@ -46,27 +66,8 @@
             </div>
           </section>
 
-          <section class="mesh-card roster-card admin-card-style roster-fixed-admins skeleton-card">
-            <div class="panel-card-header">
-              <div class="header-title-left">
-                <div class="skeleton-box skeleton-avatar circle" style="width:18px;height:18px;"></div>
-                <div class="skeleton-box skeleton-line sm" style="width:110px;"></div>
-              </div>
-            </div>
-            <div class="mesh-list-scroll-box full-scroll">
-              @for (r of skeletonRows3; track r) {
-                <div class="item-density-row skeleton-row">
-                  <div class="skeleton-box skeleton-avatar circle"></div>
-                  <div class="row-info-core" style="flex:1;">
-                    <div class="skeleton-box skeleton-line sm" style="width:55%;"></div>
-                    <div class="skeleton-box skeleton-line sm" style="width:75%; margin-top:6px;"></div>
-                  </div>
-                </div>
-              }
-            </div>
-          </section>
-
-          <section class="mesh-card roster-card members-card-style roster-grow skeleton-card">
+          <!-- Members Skeleton -->
+          <section class="mesh-card roster-card skeleton-card roster-grow">
             <div class="panel-card-header">
               <div class="header-title-left">
                 <div class="skeleton-box skeleton-avatar circle" style="width:18px;height:18px;"></div>
@@ -77,7 +78,7 @@
               @for (r of skeletonRows6; track r) {
                 <div class="item-density-row skeleton-row">
                   <div class="skeleton-box skeleton-avatar circle"></div>
-                  <div class="row-info-core" style="flex:1;">
+                  <div class="row-info-core">
                     <div class="skeleton-box skeleton-line sm" style="width:50%;"></div>
                     <div class="skeleton-box skeleton-line sm" style="width:72%; margin-top:6px;"></div>
                   </div>
@@ -87,6 +88,7 @@
           </section>
         </div>
 
+        <!-- Events Skeleton -->
         <section class="horizontal-full-card events-section-style events-full-height skeleton-card">
           <div class="panel-card-header">
             <div class="header-title-left">
@@ -95,17 +97,17 @@
             </div>
           </div>
           <div class="horizontal-list-container">
-            @for (n of skeletonRows3; track n) {
+            @for (n of skeletonRows2; track n) {
               <div class="event-aligned-row skeleton-event-row">
                 <div class="event-meta-card">
-                  <div class="skeleton-box skeleton-avatar" style="width:44px;height:44px;border-radius:10px;"></div>
+                  <div class="skeleton-box skeleton-avatar" style="width:40px;height:40px;border-radius:50%;"></div>
                   <div class="event-col-info">
                     <div class="skeleton-box skeleton-line lg" style="width:50%;"></div>
                     <div class="skeleton-box skeleton-line sm" style="width:80%; margin-top:6px;"></div>
                   </div>
                 </div>
                 <div class="event-designation-area">
-                  <div class="skeleton-box skeleton-line" style="height:100%; border-radius:12px;"></div>
+                  <div class="skeleton-box skeleton-line" style="height:100%; border-radius:8px;"></div>
                 </div>
               </div>
             }
@@ -118,7 +120,7 @@
     <div class="workspace-body scrollable-container">
 
       <!-- TOP COMMITTEE CARD -->
-      <div class="gd-committee-card"
+      <section class="gd-committee-card"
         [class.role-master-admin]="isCurrentUserMasterAdmin()"
         [class.role-admin]="userCommitteeRole() === 'COMMITTEE_ADMIN'"
         [class.role-member]="isCurrentUserMember()"
@@ -153,7 +155,7 @@
                 <ng-container [ngTemplateOutlet]="committeeLogoContent"></ng-container>
                 <span class="logo-edit-overlay" aria-hidden="true">
                   @if (isUploadingCommitteeLogo()) {
-                    <mat-progress-spinner mode="indeterminate" diameter="22" class="logo-upload-spinner"></mat-progress-spinner>
+                    <mat-progress-spinner mode="indeterminate" diameter="20" class="logo-upload-spinner"></mat-progress-spinner>
                   } @else {
                     <mat-icon>edit</mat-icon>
                   }
@@ -166,7 +168,7 @@
 
           <div class="card-main-info-area">
             <div class="card-title-row">
-              <h3 class="committee-display-name">{{ groupData()?.committeeName | titlecase }}</h3>
+              <h2 class="committee-display-name">{{ groupData()?.committeeName | titlecase }}</h2>
             </div>
             <div class="card-location-row">
               <mat-icon class="location-icon">location_on</mat-icon>
@@ -187,7 +189,7 @@
                 }
               </button>
             </div>
-            <span class="meta-pill text-muted-badge since-year-badge logo-est-badge">Est. {{ groupData()?.establishYear }}</span>
+            <span class="meta-pill since-year-badge">Est. {{ groupData()?.establishYear }}</span>
             
             @if (groupData()?.contactNumbers?.length) {
               <div class="phone-contact-group">
@@ -215,13 +217,11 @@
             </div>
           </div>
 
-          <!-- REDESIGNED ACTION BUTTONS -->
+          <!-- ACTION BUTTONS -->
           <div class="action-buttons-area">
             @if (isCurrentUserMember() || (!userCommitteeRole() && !isCurrentUserPending())) {
               @if (isCurrentUserPending()) {
-                <button mat-button class="action-btn req-cancel-btn"
-                  matTooltipPosition="above"
-                  (click)="onCancelAdminRoleRequest()">
+                <button mat-button class="action-btn req-cancel-btn" (click)="onCancelAdminRoleRequest()">
                   <mat-icon>cancel</mat-icon>Cancel Request
                 </button>
               } @else {
@@ -240,26 +240,26 @@
                 <mat-icon>delete</mat-icon>Delete
               </button>
               <button mat-button class="action-btn create-event-btn" (click)="onCreateEvent('PUBLIC')" [disabled]="!isCurrentUserMasterAdmin()"
-                matTooltip="Launch A Visible Public Event Entry Container">
+                matTooltip="Create a public event">
                 <mat-icon>add_circle</mat-icon>+ Public Event
               </button>
             }
           </div>
 
         </div>
-      </div>
+      </section>
 
       <!-- MAIN WORKSPACE SPLIT (ROSTER & EVENTS) -->
       <div class="workspace-roster-events-split">
 
-        <!-- ROSTER COLUMN -->
+        <!-- ROSTER COLUMN (35%) -->
         <div class="roster-stack-column">
 
-          <!-- MASTER ADMINS CARD (1 Row Visible Height) -->
+          <!-- MASTER ADMIN CARD (1 Row Visible) -->
           <section class="mesh-card roster-card master-admin-card-style roster-fixed-master">
             <div class="panel-card-header master-header-bg">
               <div class="header-title-left">
-                <mat-icon class="icon-accent-master">admin_panel_settings</mat-icon>
+                <mat-icon class="icon-accent-master">shield</mat-icon>
                 <span class="title-text">Master Admins</span>
                 <span class="count-pill">{{ masterAdminsList().length }}</span>
               </div>
@@ -291,7 +291,7 @@
             </div>
           </section>
 
-          <!-- GROUP ADMINS CARD (Exact 2 Rows Visible Height) -->
+          <!-- GROUP ADMINS CARD (Exact 2 Rows Visible) -->
           <section class="mesh-card roster-card admin-card-style roster-fixed-admins">
             <div class="panel-card-header admins-header-bg">
               <div class="header-title-left">
@@ -335,18 +335,18 @@
             </div>
           </section>
 
-          <!-- GROUP MEMBERS CARD (Fills remaining vertical space) -->
+          <!-- GROUP MEMBERS CARD (Fills Vertical Space) -->
           <section class="mesh-card roster-card members-card-style roster-grow">
             <div class="panel-card-header members-header-bg">
               <div class="header-title-left">
-                <mat-icon class="icon-accent-member">admin_panel_settings</mat-icon>
+                <mat-icon class="icon-accent-member">group</mat-icon>
                 <span class="title-text">Group Members</span>
                 <span class="count-pill">{{ membersList().length }}</span>
               </div>
-              @if (membersList().length > 5) {
+              @if (membersList().length > 4) {
                 <div class="section-search-pill">
                   <mat-icon class="ssp-icon">search</mat-icon>
-                  <input class="ssp-input" type="text" placeholder="Search Members..." [ngModel]="searchQuery()" (ngModelChange)="searchQuery.set($event)" />
+                  <input class="ssp-input" type="text" placeholder="Search members..." [ngModel]="searchQuery()" (ngModelChange)="searchQuery.set($event)" />
                   @if (searchQuery()) {
                     <button type="button" class="clear-search-trigger" (mousedown)="clearSearch()"><mat-icon>close</mat-icon></button>
                   }
@@ -384,7 +384,7 @@
                 </div>
               } @empty {
                 <div class="mini-empty-state">
-                  {{ searchQuery() ? 'No database matches found.' : 'No active group members roster logged.' }}
+                  {{ searchQuery() ? 'No matching members found.' : 'No members enrolled yet.' }}
                 </div>
               }
             </div>
@@ -392,11 +392,11 @@
 
         </div>
 
-        <!-- EVENTS COLUMN -->
+        <!-- EVENTS COLUMN (65%) -->
         <section class="horizontal-full-card events-section-style events-full-height">
-          <div class="panel-card-header">
+          <div class="panel-card-header events-header-bg">
             <div class="header-title-left">
-              <mat-icon class="icon-accent-event">event</mat-icon>
+              <mat-icon class="icon-accent-event">event_note</mat-icon>
               <span class="title-text">All Events</span>
               <span class="count-pill">{{ committeeEvents().length }}</span>
             </div>
@@ -433,12 +433,12 @@
                       <div class="event-title-row">
                         <span class="main-title event-main-title">{{ event.eventName | titlecase }}</span>
                         <div class="event-col-controls" (click)="$event.stopPropagation()">
-                          <span class="visibility-label">{{ event.visibility === 'VISIBLE' ? 'HIDE' : 'SHOW' }}</span>
+                          <span class="visibility-label">{{ event.visibility === 'VISIBLE' ? 'VISIBLE' : 'HIDDEN' }}</span>
                           <mat-slide-toggle
                             class="density-toggle"
                             [checked]="event.visibility === 'VISIBLE'"
-                            [disabled]="!isCurrentUserMasterAdmin() || isCurrentUserAdmin()"
-                            [matTooltip]="event.visibility === 'VISIBLE' ? 'Event will be hidden to everyone' : 'Event will be shown to everyone'"
+                            [disabled]="!isCurrentUserMasterAdmin() && !isCurrentUserAdmin()"
+                            [matTooltip]="event.visibility === 'VISIBLE' ? 'Hide this event from members' : 'Make this event public'"
                             matTooltipPosition="above"
                             (change)="onEventVisibilityChange(event, $event.checked)">
                           </mat-slide-toggle>
@@ -487,11 +487,11 @@
                               }
                             </span>
                             <div class="designation-info">
-                              <span class="role-name-hindi">{{ role.hindiName ? role.hindiName.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase()) : '' }}</span>
-                              <span class="role-name-english">{{ (role.englishName || role.roleName || '').replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase()) }}</span>
-                                @if (role.winnerName) {
-                                  <span class="winner-name" [style.color]="role.color || '#15803d'">{{ role.winnerName | titlecase }}</span>
-                                }
+                              <span class="role-name-hindi">{{ role.hindiName ? role.hindiName.replace(/_/g, ' ') : '' }}</span>
+                              <span class="role-name-english">{{ (role.englishName || role.roleName || '').replace(/_/g, ' ') | titlecase }}</span>
+                              @if (role.winnerName) {
+                                <span class="winner-name" [style.color]="role.color || '#15803d'">{{ role.winnerName | titlecase }}</span>
+                              }
                             </div>
                           </div>
                         </div>
@@ -509,7 +509,7 @@
             } @empty {
               <div class="mini-empty-state">
                 <mat-icon class="mini-empty-icon">event_busy</mat-icon>
-                <span class="mini-empty-text">No active dynamic events configured yet.</span>
+                <span class="mini-empty-text">No events configured for this community.</span>
               </div>
             }
           </div>
@@ -519,9 +519,9 @@
     </div>
   } @else {
     <div class="empty-layout-shell">
-      <mat-icon class="icon-off">folder_off</mat-icon>
-      <h3>No Active Workspace Loaded</h3>
-      <p>Select a community configuration branch from the side hierarchical dashboard tree navigator panel.</p>
+      <mat-icon class="icon-off">account_tree</mat-icon>
+      <h3>No Active Workspace Selected</h3>
+      <p>Please select a committee from the hierarchy tree on the left to view workspace details.</p>
     </div>
   }
 

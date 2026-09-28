@@ -1,4 +1,13 @@
-import { Component, effect, EventEmitter, inject, OnInit, Output, signal } from '@angular/core';
+import {
+  ChangeDetectorRef,
+  Component,
+  effect,
+  EventEmitter,
+  inject,
+  OnInit,
+  Output,
+  signal
+} from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { Router, NavigationEnd } from '@angular/router';
 import { MatTreeModule, MatTreeNestedDataSource } from '@angular/material/tree';
@@ -40,6 +49,7 @@ export class DashboardHierarchyTreeComponent implements OnInit {
   private readonly router = inject(Router);
   private readonly selectedYearService = inject(SelectedYearService);
   private readonly loadingState = inject(LoadingStateService);
+  private readonly cdr = inject(ChangeDetectorRef);
   private readonly routeRefreshAttempts = new Set<string>();
 
   public readonly isLoading = signal<boolean>(false);
@@ -130,6 +140,7 @@ export class DashboardHierarchyTreeComponent implements OnInit {
 
       return nextKeys;
     });
+    this.cdr.markForCheck();
   }
 
   private fetchAdminNavigationTree(): void {
@@ -138,15 +149,20 @@ export class DashboardHierarchyTreeComponent implements OnInit {
     this.treeService.getAdminHierarchyTree(this.selectedYear()).subscribe({
       next: (treeData) => {
         const transformedTree = this.transformBackendToTreeNode(treeData || []);
-        this.dataSource.data = transformedTree;
+        
+        // Data refresh sequence for MatTreeNestedDataSource
+        this.dataSource.data = [];
+        this.dataSource.data = [...transformedTree];
         this.hasCommitteesHierarchy.set(transformedTree.length > 0);
         this.expandAllTreeNodes();
         this.isLoading.set(false);
         this.syncActiveNodeFromRawUrl();
+        this.cdr.markForCheck();
       },
       error: (err: HttpErrorResponse) => {
         this.notifier.error(err?.error?.message || 'Server context transmission exception.');
         this.isLoading.set(false);
+        this.cdr.markForCheck();
       }
     });
   }
@@ -348,6 +364,7 @@ export class DashboardHierarchyTreeComponent implements OnInit {
         this.routeRefreshAttempts.delete(routeSelectionKey);
         this.scrollSelectedNodeIntoView();
         this.isLoading.set(false);
+        this.cdr.markForCheck();
         return;
       }
 
@@ -369,6 +386,7 @@ export class DashboardHierarchyTreeComponent implements OnInit {
       }
     }
     this.isLoading.set(false);
+    this.cdr.markForCheck();
   }
 
   private isDashboardRootRoute(urlSegments: string[]): boolean {
@@ -476,6 +494,7 @@ export class DashboardHierarchyTreeComponent implements OnInit {
 
         return nextKeys;
       });
+      this.cdr.markForCheck();
     }
   }
 
@@ -494,6 +513,7 @@ export class DashboardHierarchyTreeComponent implements OnInit {
 
   public toggleRequestsMenu(): void {
     this.isRequestsMenuOpen.update(open => !open);
+    this.cdr.markForCheck();
   }
 
   public isNodeSelected(node: TreeNode): boolean {
@@ -601,6 +621,7 @@ export class DashboardHierarchyTreeComponent implements OnInit {
     setTimeout(() => {
       if (this.highlightedNodeToken().startsWith(`${nodeKey}::`)) {
         this.highlightedNodeToken.set('');
+        this.cdr.markForCheck();
       }
     }, 1400);
   }

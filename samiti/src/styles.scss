@@ -28,6 +28,109 @@
   --shadow-md:         0 4px 16px rgba(0, 0, 0, 0.10);
 }
 
+/* Shared navigation tabs used across dashboard and home views. */
+.samiti-nav-tabs {
+  padding: 4px 8px 0;
+  box-sizing: border-box;
+
+  > .mat-mdc-tab-header {
+    min-height: 32px !important;
+    background: #e2e8f0 !important;
+    border: 1px solid #cbd5e1 !important;
+    border-bottom: none !important;
+    border-radius: 8px 8px 0 0 !important;
+    box-shadow: none !important;
+    .mat-mdc-tab-label-container,
+    .mat-mdc-tab-list,
+    .mat-mdc-tab-labels {
+      background: #e2e8f0 !important;
+      border: none !important;
+      box-shadow: none !important;
+    }
+
+    .mat-mdc-tab-labels {
+      justify-content: flex-start !important;
+      gap: 4px;
+    }
+
+    .mat-mdc-tab {
+      flex: 0 0 auto !important;
+      width: auto !important;
+      min-width: 80px !important;
+      max-width: 160px !important;
+      min-height: 32px !important;
+      height: 32px !important;
+      padding: 0 8px !important;
+      border: 1px solid transparent !important;
+      border-radius: 6px 6px 0 0 !important;
+      background: #cbd5e1 !important;
+      transition: background-color 150ms ease;
+
+      .mdc-tab__content {
+        display: inline-flex !important;
+        align-items: center !important;
+        gap: 5px !important;
+        white-space: nowrap !important;
+      }
+
+      .mdc-tab__text-label {
+        color: #64748b !important;
+        font-size: 0.75rem !important;
+        font-weight: 600 !important;
+        white-space: nowrap;
+      }
+
+      &.mdc-tab--active {
+        z-index: 2;
+        margin-bottom: -1px !important;
+        border-color: #cbd5e1 !important;
+        border-bottom-color: #f8fafc !important;
+        background: #f8fafc !important;
+
+        .mdc-tab__text-label {
+          color: #0f172a !important;
+          font-weight: 700 !important;
+        }
+
+        .tab-leading-icon,
+        mat-icon {
+          color: #f97316 !important;
+        }
+      }
+
+      &:not(.mdc-tab--active):hover {
+        background: #e2e8f0 !important;
+      }
+    }
+
+    .mat-mdc-tab-indicator,
+    .mdc-tab-indicator {
+      display: none !important;
+    }
+  }
+
+  > .mat-mdc-tab-body-wrapper {
+    box-sizing: border-box;
+    background: #f8fafc !important;
+    border-right: 2px solid #cbd5e1 !important;
+    border-bottom: 2px solid #cbd5e1 !important;
+    border-left: 2px solid #cbd5e1 !important;
+    border-top: none !important;
+    border-radius: 0 0 8px 8px !important;
+    padding: 10px !important;
+    margin: 0px 8px 10px 8px;
+  }
+}
+
+.samiti-nav-content {
+  box-sizing: border-box;
+  background-color: #f8fafc !important;
+  border-right: 1px solid #cbd5e1;
+  border-bottom: 1px solid #cbd5e1;
+  border-left: 1px solid #cbd5e1;
+  padding: 10px;
+}
+
 /* ─── 2. Global Resets & HTML Setup ──────────────────────────── */
 *, *::before, *::after {
   box-sizing: border-box;

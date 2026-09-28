@@ -10,6 +10,7 @@ import { MatSelectModule } from '@angular/material/select';
 import { MatDatepickerModule } from '@angular/material/datepicker';
 import { MatNativeDateModule } from '@angular/material/core';
 import { MatToolbar } from '@angular/material/toolbar';
+import { MatTooltipModule } from '@angular/material/tooltip';
 import { CreateEventService } from './create-event.service';
 import { NotifierService } from '../../../shared/notifier/notifier.service';
 import { TextFormatService } from '../../../shared/services/text-format-service.service';
@@ -32,6 +33,7 @@ import { DashboardHierarchyTreeService } from '../../../features/dashboard/compo
     MatDatepickerModule,
     MatNativeDateModule,
     MatToolbar,
+    MatTooltipModule,
   ],
   templateUrl: './create-event.component.html',
   styleUrl: './create-event.component.scss'
@@ -63,6 +65,9 @@ export class CreateEventDialogComponent implements OnInit {
   public readonly type = signal<'PUBLIC' | 'PRIVATE'>('PUBLIC');
   public readonly isEditMode = signal<boolean>(false);
   public readonly editingEventId = signal<number | null>(null);
+  public readonly isAddressEditable = signal<boolean>(false);
+  public readonly isFetchingLocation = signal<boolean>(false);
+  private readonly originalAddress = signal<string>('');
 
   public readonly eventTypes = ['RELIGIOUS', 'sports', 'meeting', 'celebration', 'workshop', 'other'];
 
@@ -76,6 +81,7 @@ export class CreateEventDialogComponent implements OnInit {
     const committeeAddress = this.injectedData?.address || this.injectedData?.committeeAddress;
     if (typeof committeeAddress === 'string' && committeeAddress.trim().length > 0) {
       this.address = committeeAddress.trim();
+      this.originalAddress.set(this.address);
     }
 
     const injectedEventType = this.injectedData?.eventType;
@@ -173,8 +179,21 @@ export class CreateEventDialogComponent implements OnInit {
       this.eventYear >= 1 &&
       this.eventYear <= 49 &&
       !!this.startDate &&
-      !!this.endDate
+      !!this.endDate &&
+      !!this.address?.trim() &&
+      this.latitude != null &&
+      this.longitude != null
     );
+  }
+
+  public enableAddressEdit(): void {
+    this.originalAddress.set(this.address);
+    this.isAddressEditable.set(true);
+  }
+
+  public resetAddress(): void {
+    this.address = this.originalAddress();
+    this.isAddressEditable.set(false);
   }
 
   public onCancel(): void {
@@ -261,6 +280,30 @@ export class CreateEventDialogComponent implements OnInit {
         console.error(this.isEditMode() ? 'Update event error:' : 'Create event error:', error);
       }
     });
+  }
+
+  public fetchUserLocation(): void {
+    if (!navigator.geolocation) {
+      return;
+    }
+
+    this.isFetchingLocation.set(true);
+
+    navigator.geolocation.getCurrentPosition(
+      (position) => {
+        this.latitude = Number(position.coords.latitude.toFixed(6));
+        this.longitude = Number(position.coords.longitude.toFixed(6));
+        this.isFetchingLocation.set(false);
+      },
+      () => {
+        this.isFetchingLocation.set(false);
+      },
+      {
+        enableHighAccuracy: true,
+        timeout: 10000,
+        maximumAge: 0
+      }
+    );
   }
 
   private parseDateInput(value: unknown): Date | null {

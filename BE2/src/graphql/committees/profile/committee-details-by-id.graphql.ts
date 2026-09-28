@@ -83,13 +83,13 @@ export const committeeDetailsTypes = `
 `;
 
 export const committeeDetailsQueryFields = `
-    committeeDetails(id: Int!): CommitteeDetailsData!
+    committeeDetails(id: Int!, year: Int): CommitteeDetailsData!
 `;
 
 export const committeeDetailsResolvers = {
   Query: {
-    async committeeDetails(_: any, args: { id: number }, context: any) {
-      const { id: committeeId } = args;
+    async committeeDetails(_: any, args: { id: number; year?: number | null }, context: any) {
+      const { id: committeeId, year } = args;
 
       const authHeader = context.headers?.authorization;
       const tokenFromCookie = context.cookies?.token;
@@ -163,7 +163,7 @@ export const committeeDetailsResolvers = {
 
       const supportsEventDisplayName = await hasEventsDisplayNameColumn();
 
-      const eventRows = await query<any[]>(`
+      const eventQuery = `
         SELECT
           e.id,
           e.id AS eventId,
@@ -182,8 +182,18 @@ export const committeeDetailsResolvers = {
           e.event_logo AS eventLogo
         FROM events e
         WHERE e.committee_id = ?
+          AND (? IS NULL OR (
+            e.start_date <= CONCAT(?, '-12-31')
+            AND (e.end_date >= CONCAT(?, '-01-01') OR e.end_date IS NULL)
+          ))
         ORDER BY e.start_date ASC, e.name ASC
-      `, [committeeId]);
+      `;
+
+      const eventParams = year
+        ? [committeeId, year, year, year]
+        : [committeeId, null, null, null];
+
+      const eventRows = await query<any[]>(eventQuery, eventParams);
 
       const hasCommitteeAccess = Boolean(
         adminCheckResult.length > 0 &&

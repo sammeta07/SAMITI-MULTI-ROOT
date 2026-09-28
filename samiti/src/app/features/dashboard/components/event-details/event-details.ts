@@ -1,4 +1,4 @@
-import { Component, inject, effect, OnInit, OnDestroy, signal } from '@angular/core';
+import { Component, inject, OnInit, OnDestroy, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ActivatedRoute, Router, RouterModule, RouterOutlet } from '@angular/router';
 import { MatIconModule } from '@angular/material/icon';
@@ -6,10 +6,16 @@ import { MatButtonModule } from '@angular/material/button';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatSelectModule } from '@angular/material/select';
 import { MatSlideToggleModule } from '@angular/material/slide-toggle';
+import { MatTabsModule } from '@angular/material/tabs';
 import { MatTooltipModule } from '@angular/material/tooltip';
+import { NavigationEnd, NavigationCancel, NavigationError } from '@angular/router';
+import { filter } from 'rxjs';
 import { MatDialog } from '@angular/material/dialog';
+import { MatFormFieldModule } from '@angular/material/form-field';
+import { FormsModule } from '@angular/forms';
 import { HttpErrorResponse } from '@angular/common/http';
 import { firstValueFrom, Subscription } from 'rxjs';
+
 import { EventVotingService } from './event-voting/event-voting.service';
 import { EventVotingPayload } from './event-voting/event-voting.models';
 import { EventDetailsOverviewService } from './event-details-overview.service';
@@ -17,8 +23,6 @@ import { EventOverviewService } from './event-overview/event-overview.service';
 import { EventOverviewPayload } from './event-overview/event-overview.models';
 import { NotifierService } from '../../../../shared/notifier/notifier.service';
 import { EventDetailsStateService } from './event-details-state.service';
-import { MatFormFieldModule } from '@angular/material/form-field';
-import { FormsModule } from '@angular/forms';
 import { ConfirmDialogService } from '../../../../components/dialog/confirm/confirm-dialog.service';
 import { ConfirmDialogData } from '../../../../components/dialog/confirm/confirm-dialog.models';
 import { DashboardHierarchyTreeService } from '../dashboard-hierarchy-tree/dashboard-hierarchy-tree.service';
@@ -38,6 +42,7 @@ import { ImageCropperDialogComponent } from '../../../../shared/components/image
     MatProgressSpinnerModule,
     MatSelectModule,
     MatSlideToggleModule,
+    MatTabsModule,
     MatTooltipModule,
     MatFormFieldModule,
     FormsModule
@@ -62,36 +67,59 @@ export class EventDetailsComponent implements OnInit, OnDestroy {
   public readonly isUploadingEventLogo = signal<boolean>(false);
   private overviewSub?: Subscription;
 
-  // Tracks the last event whose default tab was already resolved, so the
-  // auto-default only runs once per distinct event open (not on every data
-  // refresh). Reopening a different event re-evaluates the default tab.
-  private lastResolvedEventId: number | null = null;
   private currentEventId: number | null = null;
+  public selectedTabIndex = 0;
+  private routeSub?: Subscription;
 
   public ngOnInit(): void {
+    this.syncTabIndexFromUrl();
+
     this.overviewSub = this.route.params.subscribe((params) => {
       const id = params['id'];
       if (id) {
         const eventId = Number(id);
         if (eventId !== this.currentEventId) {
           this.currentEventId = eventId;
-          this.lastResolvedEventId = null;
           this.stateService.reset();
         }
         this.loadOverview(String(id));
       }
     });
+
+    this.routeSub = this.router.events.pipe(
+      filter((event) => event instanceof NavigationEnd || event instanceof NavigationCancel || event instanceof NavigationError)
+    ).subscribe(() => {
+      this.syncTabIndexFromUrl();
+    });
   }
 
   public ngOnDestroy(): void {
     this.overviewSub?.unsubscribe();
+    this.routeSub?.unsubscribe();
   }
 
-  constructor() {
+  private syncTabIndexFromUrl(): void {
+    const url = this.router.url;
+    if (url.includes('/overview')) this.selectedTabIndex = 1;
+    else if (url.includes('/programs')) this.selectedTabIndex = 2;
+    else if (url.includes('/people')) this.selectedTabIndex = 3;
+    else this.selectedTabIndex = 0;
+  }
+
+  public onTabChange(index: number): void {
+    const tabs: Array<'voting' | 'overview' | 'programs' | 'people'> = ['voting', 'overview', 'programs', 'people'];
+    const tab = tabs[index];
+    const eventId = this.eventData?.eventId ?? this.route.snapshot.params['id'];
+    if (!eventId) return;
+    this.router.navigate(['/dashboard', 'event', eventId, tab]);
   }
 
   public get eventData(): EventVotingPayload | null {
     return this.stateService.eventData();
+  }
+
+  public get overviewData(): EventOverviewPayload | null {
+    return this.stateService.eventOverview();
   }
 
   public get currentTab(): string {
@@ -107,8 +135,8 @@ export class EventDetailsComponent implements OnInit, OnDestroy {
     return String(this.eventData?.committeeRole || 'NONE').toUpperCase() === 'COMMITTEE_MASTER_ADMIN';
   }
 
-   public get currentVotingMode(): 'VOTING' | 'DIRECT' | null {
-     return (this.eventData?.votingMode as 'VOTING' | 'DIRECT' | undefined) || 'VOTING';
+  public get currentVotingMode(): 'VOTING' | 'DIRECT' {
+    return (this.eventData?.votingMode as 'VOTING' | 'DIRECT') || 'VOTING';
   }
 
   public get votingPhaseState(): number {
@@ -123,20 +151,22 @@ export class EventDetailsComponent implements OnInit, OnDestroy {
     if (!this.isResultsDeclared) return false;
     const mappedRoles = this.eventData?.mappedVotingRoles || [];
     if (mappedRoles.length === 0) return false;
+
     const rolesWithWinner = mappedRoles.filter((role) => {
       const winnerId = Number(role.winnerUserId);
       return Number.isInteger(winnerId) && winnerId > 0;
     });
     if (rolesWithWinner.length !== mappedRoles.length) return false;
+
     const results = this.stateService.eventResults();
     if (!results?.roles?.length) return false;
+
     return mappedRoles.every((role) => {
       const roleId = Number(role.roleId);
       const roleResult = results.roles.find((r) => Number(r.roleId) === roleId);
       if (!roleResult?.candidates?.length) return false;
       const winners = roleResult.candidates.filter((c) => c.isWinner);
-      if (winners.length !== 1) return false;
-      return true;
+      return winners.length === 1;
     });
   }
 
@@ -144,42 +174,20 @@ export class EventDetailsComponent implements OnInit, OnDestroy {
     return this.allWinnersResolved;
   }
 
-  public get votingPhaseLabel(): string {
-    switch (this.votingPhaseState) {
-      case 6: return 'Results Declared';
-      case 5: return 'Voting Stopped';
-      case 4: return 'Voting Started';
-      case 3: return 'Nominations Stopped';
-      case 2: return 'Nominations Started';
-      case 1: return 'Roles Locked';
-      default: return '';
-    }
-  }
-
-  public get votingPhaseIcon(): string {
-    if (this.votingPhaseState >= 6) return 'emoji_events';
-    if (this.votingPhaseState >= 5) return 'event_busy';
-    if (this.votingPhaseState >= 4) return 'how_to_vote';
-    if (this.votingPhaseState >= 3) return 'pause_circle';
-    if (this.votingPhaseState >= 2) return 'schedule';
-    if (this.votingPhaseState >= 1) return 'hourglass_top';
-    return 'hourglass_bottom';
-  }
-
   public navigateToTab(tab: string): void {
     if (tab !== 'voting' && !this.allWinnersResolved) {
       return;
     }
-
     const eventId = this.eventData?.eventId ?? this.route.snapshot.params['id'];
     if (!eventId) return;
     const target = tab === 'voting' || this.isResultsDeclared ? tab : 'voting';
     this.router.navigate(['/dashboard', 'event', eventId, target]);
   }
 
-   public onVotingModeChange(mode: 'VOTING' | 'DIRECT'): void {
+  public onVotingModeChange(mode: 'VOTING' | 'DIRECT'): void {
     const currentEvent = this.eventData;
     if (!currentEvent?.eventId || !mode) return;
+
     this.votingService.updateEventVotingMode(currentEvent.eventId, mode).subscribe({
       next: () => {
         this.stateService.eventData.update((prev) => {
@@ -207,22 +215,13 @@ export class EventDetailsComponent implements OnInit, OnDestroy {
     });
   }
 
-  /* ===================== EVENT OVERVIEW HEADER ===================== */
-  public get overviewData(): EventOverviewPayload | null {
-    return this.stateService.eventOverview();
-  }
-
   public get userEventRole(): string {
     return String(this.overviewData?.committeeRole || 'NONE').toUpperCase();
   }
 
   public get userEventRoleLabel(): string {
     const designation = this.overviewData?.myDesignation;
-    // Only show event-level designations from events_roles_master (have roleId)
-    if (designation?.roleId && designation.name) {
-      return designation.name;
-    }
-    return '';
+    return designation?.roleId && designation.name ? designation.name : '';
   }
 
   public get designationColor(): string {
@@ -236,7 +235,18 @@ export class EventDetailsComponent implements OnInit, OnDestroy {
     return '#64748b';
   }
 
-  public get calculatedEventStatus(): string {
+  public get designationIcon(): string | null {
+    const designation = this.overviewData?.myDesignation;
+    if (designation?.name && designation.icon) {
+      const normalized = designation.name.trim().toLowerCase();
+      if (normalized !== 'member' && normalized !== '') {
+        return designation.icon;
+      }
+    }
+    return null;
+  }
+
+  public get calculatedEventStatus(): 'started' | 'upcoming' | 'completed' {
     const now = new Date();
     const startDate = this.overviewData?.startDate ? new Date(this.overviewData.startDate) : null;
     const endDate = this.overviewData?.endDate ? new Date(this.overviewData.endDate) : null;
@@ -252,27 +262,8 @@ export class EventDetailsComponent implements OnInit, OnDestroy {
     return 'started';
   }
 
-  public get designationIcon(): string | null {
-    const designation = this.overviewData?.myDesignation;
-    if (designation?.name && designation.icon) {
-      const normalized = designation.name.trim().toLowerCase();
-      if (normalized !== 'member' && normalized !== '') {
-        return designation.icon;
-      }
-    }
-    return null;
-  }
-
   public get isEventMasterAdmin(): boolean {
     return this.userEventRole === 'COMMITTEE_MASTER_ADMIN';
-  }
-
-  public get isEventAdmin(): boolean {
-    return this.userEventRole === 'COMMITTEE_ADMIN';
-  }
-
-  public get isEventMember(): boolean {
-    return this.userEventRole === 'COMMITTEE_MEMBER';
   }
 
   public get hasEventRole(): boolean {
@@ -291,6 +282,7 @@ export class EventDetailsComponent implements OnInit, OnDestroy {
   private loadOverview(id: string): void {
     const requestedEventId = Number(id);
     this.isLoadingOverview.set(true);
+
     this.overviewService.getEventOverview(id).subscribe({
       next: (data) => {
         if (requestedEventId !== this.currentEventId) return;
@@ -312,7 +304,9 @@ export class EventDetailsComponent implements OnInit, OnDestroy {
       const requestedEventId = Number(currentEvent.eventId);
       this.overviewService.getEventOverview(String(currentEvent.eventId)).subscribe({
         next: (data) => {
-          if (requestedEventId === this.currentEventId) this.stateService.eventOverview.set(data ?? null);
+          if (requestedEventId === this.currentEventId) {
+            this.stateService.eventOverview.set(data ?? null);
+          }
         }
       });
     }
@@ -325,18 +319,31 @@ export class EventDetailsComponent implements OnInit, OnDestroy {
       return;
     }
     document.body.classList.add('dialog-open');
+
     const dialogRef = this.dialog.open(CreateEventDialogComponent, {
-      position: { right: '0', top: '0' }, height: '100%', width: '50%',
-      autoFocus: true, disableClose: true, hasBackdrop: true, panelClass: 'slide-in-dialog',
+      position: { right: '0', top: '0' },
+      height: '100%',
+      width: '50%',
+      autoFocus: true,
+      disableClose: true,
+      hasBackdrop: true,
+      panelClass: 'slide-in-dialog',
       data: {
-        eventId: currentEvent.eventId, committeeId: currentEvent.committeeId,
-        address: currentEvent.committeeAddress || '', eventType: currentEvent.type === 'PRIVATE' ? 'PRIVATE' : 'PUBLIC',
-        visibility: currentEvent.visibility, eventName: currentEvent.eventName,
+        eventId: currentEvent.eventId,
+        committeeId: currentEvent.committeeId,
+        address: currentEvent.committeeAddress || '',
+        eventType: currentEvent.type === 'PRIVATE' ? 'PRIVATE' : 'PUBLIC',
+        visibility: currentEvent.visibility,
+        eventName: currentEvent.eventName,
         eventDisplayName: currentEvent.eventDisplayName,
-        category: currentEvent.category, startDate: currentEvent.startDate,
-        endDate: currentEvent.endDate, latitude: currentEvent.latitude, longitude: currentEvent.longitude
+        category: currentEvent.category,
+        startDate: currentEvent.startDate,
+        endDate: currentEvent.endDate,
+        latitude: currentEvent.latitude,
+        longitude: currentEvent.longitude
       }
     });
+
     dialogRef.afterClosed().subscribe((result) => {
       document.body.classList.remove('dialog-open');
       if (!result) return;
@@ -347,11 +354,19 @@ export class EventDetailsComponent implements OnInit, OnDestroy {
 
   public onDeleteEvent(): void {
     const currentEvent = this.overviewData;
-    if (!currentEvent?.eventId) { this.notifier.error('No event available for deletion'); return; }
+    if (!currentEvent?.eventId) {
+      this.notifier.error('No event available for deletion');
+      return;
+    }
+
     const dialogData: ConfirmDialogData = {
-      title: 'Delete Event', message: 'Are you sure you want to delete this event? This action will also remove linked members, media, programs, and tasks.',
-      confirmText: 'Delete', cancelText: 'Cancel', highlightText: currentEvent.eventName
+      title: 'Delete Event',
+      message: 'Are you sure you want to delete this event? This action will also remove linked members, media, programs, and tasks.',
+      confirmText: 'Delete',
+      cancelText: 'Cancel',
+      highlightText: currentEvent.eventName
     };
+
     const dialogRef = this.confirmDialog.open(dialogData);
     dialogRef.afterClosed().subscribe((result) => {
       if (!result?.confirmed) return;
@@ -359,25 +374,40 @@ export class EventDetailsComponent implements OnInit, OnDestroy {
         next: () => {
           this.hierarchyTreeService.triggerHierarchyTreeRefresh();
           this.notifier.success(`**${this.toTitleCase(currentEvent.eventName)}** has been deleted successfully`);
-          if (currentEvent.committeeId) { this.router.navigate(['/dashboard', 'group', currentEvent.committeeId]); return; }
+          if (currentEvent.committeeId) {
+            this.router.navigate(['/dashboard', 'group', currentEvent.committeeId]);
+            return;
+          }
           this.router.navigate(['/dashboard', 'home']);
         },
-        error: (err: HttpErrorResponse) => { this.notifier.error(err?.error?.message || 'Failed to delete event.'); }
+        error: (err: HttpErrorResponse) => {
+          this.notifier.error(err?.error?.message || 'Failed to delete event.');
+        }
       });
     });
   }
 
   public onEventVisibilityChange(isVisible: boolean): void {
     const currentEvent = this.overviewData;
-    if (!currentEvent?.eventId) { this.notifier.error('No event available for visibility update'); return; }
+    if (!currentEvent?.eventId) {
+      this.notifier.error('No event available for visibility update');
+      return;
+    }
+
     const visibility: 'VISIBLE' | 'HIDDEN' = isVisible ? 'VISIBLE' : 'HIDDEN';
     if (currentEvent.visibility === visibility) return;
+
     const previousVisibility = currentEvent.visibility;
     this.stateService.eventOverview.set({ ...currentEvent, visibility });
+
     this.overviewEventService.updateEventVisibility(currentEvent.eventId, visibility).subscribe({
       next: () => {
         const formattedEventName = this.toTitleCase(currentEvent.eventName || 'Event');
-        this.notifier.success(visibility === 'VISIBLE' ? `**${formattedEventName}** is now visible to all the public` : `**${formattedEventName}** is now hidden to all the public`);
+        this.notifier.success(
+          visibility === 'VISIBLE'
+            ? `**${formattedEventName}** is now visible to all the public`
+            : `**${formattedEventName}** is now hidden to all the public`
+        );
       },
       error: (err: HttpErrorResponse) => {
         this.stateService.eventOverview.set({ ...currentEvent, visibility: previousVisibility });
@@ -400,21 +430,24 @@ export class EventDetailsComponent implements OnInit, OnDestroy {
       return;
     }
 
-    const selectedOrCroppedFile = await this.openEventLogoCropDialog(selectedFile);
-    if (!selectedOrCroppedFile) return;
+    const croppedFile = await this.openEventLogoCropDialog(selectedFile);
+    if (!croppedFile) return;
 
     this.isUploadingEventLogo.set(true);
 
     try {
       const uploadedMetadata = await firstValueFrom(
-        this.imageAssetService.uploadSingleImageForCommitteeLogo(selectedOrCroppedFile, `event-logo-${currentEvent.eventId}`)
+        this.imageAssetService.uploadSingleImageForCommitteeLogo(croppedFile, `event-logo-${currentEvent.eventId}`)
       );
 
       const updated = await firstValueFrom(
         this.overviewEventService.updateEventLogo(currentEvent.eventId, currentEvent.committeeId, uploadedMetadata.publicAbsoluteUrl)
       );
 
-      this.stateService.eventOverview.set({ ...currentEvent, eventLogo: updated.eventLogo || uploadedMetadata.publicAbsoluteUrl });
+      this.stateService.eventOverview.set({
+        ...currentEvent,
+        eventLogo: updated.eventLogo || uploadedMetadata.publicAbsoluteUrl
+      });
       this.hierarchyTreeService.triggerHierarchyTreeRefresh();
       this.notifier.success('Event logo updated successfully.');
     } catch (error: any) {
