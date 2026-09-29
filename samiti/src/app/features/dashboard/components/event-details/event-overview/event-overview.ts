@@ -1,6 +1,6 @@
 import { Component, ElementRef, inject, ViewChild, signal, ChangeDetectorRef, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { ActivatedRoute } from '@angular/router';
+import { ActivatedRoute, Router } from '@angular/router';
 import { MatDialog } from '@angular/material/dialog';
 import { MatIconModule } from '@angular/material/icon';
 import { MatButtonModule } from '@angular/material/button';
@@ -16,6 +16,7 @@ import { ConfirmDialogData } from '../../../../../components/dialog/confirm/conf
 import { EventDetailsStateService } from '../event-details-state.service';
 import { ImageAssetService } from '../../../../../core/services/image-asset.service';
 import { ImageCropperDialogComponent } from '../../../../../shared/components/image-cropper-dialog/image-cropper-dialog.component';
+import { CreateProgramDialogComponent } from '../../../../../components/dialog/create-program/create-program.component';
 
 @Component({
   selector: 'app-event-overview',
@@ -35,6 +36,7 @@ export class EventOverviewComponent implements OnInit {
   @ViewChild('bannerSingleFileInput') private readonly bannerSingleFileInput?: ElementRef<HTMLInputElement>;
 
   private readonly route = inject(ActivatedRoute);
+  private readonly router = inject(Router);
   private readonly dialog = inject(MatDialog);
   private readonly notifier = inject(NotifierService);
   private readonly overviewService = inject(EventOverviewService);
@@ -107,6 +109,12 @@ export class EventOverviewComponent implements OnInit {
     return this.hasEventRole || this.isEventMasterAdmin;
   }
 
+  public get canCreateProgram(): boolean {
+    if (this.isEventMasterAdmin || this.isEventAdmin) return true;
+    const designation = (this.eventData?.myDesignation?.name || '').trim().toLowerCase();
+    return designation === 'adhyaksha' || designation === 'upadhyaksha';
+  }
+
   public get canDeleteBanners(): boolean {
     return this.isEventMasterAdmin || this.isEventAdmin;
   }
@@ -126,6 +134,36 @@ export class EventOverviewComponent implements OnInit {
   public get fallbackInitial(): string {
     const name = this.eventData?.eventDisplayName || this.eventData?.eventName || '';
     return name ? name.charAt(0).toUpperCase() : 'E';
+  }
+
+  public onCreateProgram(): void {
+    const currentEvent = this.eventData;
+    if (!currentEvent?.eventId) {
+      this.notifier.error('No event available for program creation');
+      return;
+    }
+
+    document.body.classList.add('dialog-open');
+    const dialogRef = this.dialog.open(CreateProgramDialogComponent, {
+      position: { right: '0', top: '0' },
+      height: '100%',
+      width: '50%',
+      autoFocus: true,
+      disableClose: true,
+      hasBackdrop: true,
+      panelClass: 'slide-in-dialog',
+      data: { eventId: currentEvent.eventId }
+    });
+
+    dialogRef.afterClosed().subscribe((result) => {
+      document.body.classList.remove('dialog-open');
+      if (result) {
+        this.notifier.success(`Program "${result.programName}" created successfully!`);
+        if (result.programId) {
+          this.router.navigate(['/dashboard', 'program', result.programId]);
+        }
+      }
+    });
   }
 
   public ngOnInit(): void {

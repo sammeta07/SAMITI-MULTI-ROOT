@@ -24,7 +24,7 @@
       <div class="panel-card-header banner-header-bg">
         <div class="header-title-left">
           <mat-icon class="icon-accent-banner">photo_library</mat-icon>
-          <span class="title-text">Banner Images</span>
+          <span class="title-text">Event Banner Images</span>
           <span class="count-pill">{{ bannerCount }}/{{ MAX_BANNERS }}</span>
         </div>
 
@@ -93,6 +93,44 @@
           <div class="banner-empty-state">
             <mat-icon>image_not_supported</mat-icon>
             <p>No banner images uploaded yet.</p>
+          </div>
+        }
+      </div>
+    </section>
+
+    <!-- PROGRAM DETAILS SECTION -->
+    <section class="program-details-section">
+      <div class="panel-card-header program-header-bg">
+        <div class="header-title-left">
+          <mat-icon class="icon-accent-program">event_note</mat-icon>
+          <span class="title-text">Program Details</span>
+        </div>
+        @if (canCreateProgram) {
+          <button mat-button class="btn-action btn-add-program" type="button" (click)="onCreateProgram()">
+            <mat-icon>add</mat-icon>
+            <span>Create Program</span>
+          </button>
+        }
+      </div>
+
+      <div class="program-details-body">
+        @if (false) {
+          <div class="program-list">
+            <div class="program-card">
+              <div class="program-card-image">
+                <img src="" alt="Program Image" class="program-img" />
+              </div>
+              <div class="program-card-info">
+                <h3 class="program-name">Program Name</h3>
+                <p class="program-meta">Program details will appear here.</p>
+              </div>
+            </div>
+          </div>
+        } @else {
+          <div class="program-empty-state">
+            <mat-icon class="program-empty-icon">event_note</mat-icon>
+            <p class="program-empty-text">No programs scheduled for this event yet.</p>
+            <p class="program-empty-subtext">Create a program to get started.</p>
           </div>
         }
       </div>

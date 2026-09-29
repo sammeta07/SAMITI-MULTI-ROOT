@@ -137,6 +137,13 @@
           <!-- Bottom Right Action Triggers -->
           <div class="action-buttons-area">
 
+            @if (canCreateProgram) {
+              <button mat-button class="btn-action btn-add-program" (click)="onCreateProgram()">
+                <mat-icon>add</mat-icon>
+                <span>Create Program</span>
+              </button>
+            }
+
             <button mat-button class="btn-action btn-edit" [disabled]="!canManageEvent" (click)="onEditEvent()">
               <mat-icon>edit</mat-icon>
               <span>Edit</span>

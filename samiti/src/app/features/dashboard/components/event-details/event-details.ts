@@ -28,6 +28,7 @@ import { ConfirmDialogService } from '../../../../components/dialog/confirm/conf
 import { ConfirmDialogData } from '../../../../components/dialog/confirm/confirm-dialog.models';
 import { DashboardHierarchyTreeService } from '../dashboard-hierarchy-tree/dashboard-hierarchy-tree.service';
 import { CreateEventDialogComponent } from '../../../../components/dialog/create-event/create-event.component';
+import { CreateProgramDialogComponent } from '../../../../components/dialog/create-program/create-program.component';
 import { ImageAssetService } from '../../../../core/services/image-asset.service';
 import { ImageCropperDialogComponent } from '../../../../shared/components/image-cropper-dialog/image-cropper-dialog.component';
 
@@ -179,6 +180,16 @@ export class EventDetailsComponent implements OnInit, OnDestroy {
     return this.allWinnersResolved;
   }
 
+  public get canCreateProgram(): boolean {
+    const role = String(this.headerData?.committeeRole || 'NONE').toUpperCase();
+    if (role === 'COMMITTEE_MASTER_ADMIN' || role === 'COMMITTEE_ADMIN') {
+      return true;
+    }
+    const designation = this.userEventRoleLabel;
+    const normalized = (designation || '').toLowerCase();
+    return normalized === 'adhyaksha' || normalized === 'upadhyaksha';
+  }
+
   public navigateToTab(tab: string): void {
     if (tab !== 'voting' && !this.allWinnersResolved) {
       return;
@@ -187,6 +198,36 @@ export class EventDetailsComponent implements OnInit, OnDestroy {
     if (!eventId) return;
     const target = tab === 'voting' || this.isResultsDeclared ? tab : 'voting';
     this.router.navigate(['/dashboard', 'event', eventId, target]);
+  }
+
+  public onCreateProgram(): void {
+    const currentEvent = this.headerData;
+    if (!currentEvent?.eventId) {
+      this.notifier.error('No event available for program creation');
+      return;
+    }
+    document.body.classList.add('dialog-open');
+
+    const dialogRef = this.dialog.open(CreateProgramDialogComponent, {
+      position: { right: '0', top: '0' },
+      height: '100%',
+      width: '50%',
+      autoFocus: true,
+      disableClose: true,
+      hasBackdrop: true,
+      panelClass: 'slide-in-dialog',
+      data: { eventId: currentEvent.eventId }
+    });
+
+    dialogRef.afterClosed().subscribe((result) => {
+      document.body.classList.remove('dialog-open');
+      if (result) {
+        this.notifier.success(`Program "${result.programName}" created successfully!`);
+        if (result.programId) {
+          this.router.navigate(['/dashboard', 'program', result.programId]);
+        }
+      }
+    });
   }
 
   public onVotingModeChange(mode: 'VOTING' | 'DIRECT'): void {
