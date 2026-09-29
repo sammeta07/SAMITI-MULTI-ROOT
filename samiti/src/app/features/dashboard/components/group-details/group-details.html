@@ -432,17 +432,6 @@
                     <div class="event-head-block">
                       <div class="event-title-row">
                         <span class="main-title event-main-title">{{ event.eventName | titlecase }}</span>
-                        <div class="event-col-controls" (click)="$event.stopPropagation()">
-                          <span class="visibility-label">{{ event.visibility === 'VISIBLE' ? 'VISIBLE' : 'HIDDEN' }}</span>
-                          <mat-slide-toggle
-                            class="density-toggle"
-                            [checked]="event.visibility === 'VISIBLE'"
-                            [disabled]="!isCurrentUserMasterAdmin() && !isCurrentUserAdmin()"
-                            [matTooltip]="event.visibility === 'VISIBLE' ? 'Hide this event from members' : 'Make this event public'"
-                            matTooltipPosition="above"
-                            (change)="onEventVisibilityChange(event, $event.checked)">
-                          </mat-slide-toggle>
-                        </div>
                       </div>
                       
                       <div class="event-meta-row">

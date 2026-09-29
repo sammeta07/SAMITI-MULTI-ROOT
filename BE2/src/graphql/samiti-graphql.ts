@@ -26,7 +26,6 @@ import { eventOverviewTypes, eventOverviewQueryFields, eventOverviewResolvers } 
 import { eventPeopleTypes, eventPeopleQueryFields, eventPeopleResolvers } from './events/details/people/event-people.graphql';
 import { eventProgramsTypes, eventProgramsQueryFields, eventProgramsResolvers } from './events/details/programs/event-programs.graphql';
 import { eventVotingDetailsTypes, eventVotingDetailsQueryFields, eventVotingDetailsResolvers } from './events/details/voting/event-voting.graphql';
-import { updateEventVisibilityTypes, updateEventVisibilityMutationFields, updateEventVisibilityResolvers } from './events/management/update-event-visibility.graphql';
 import { uploadEventBannerImagesTypes, uploadEventBannerImagesMutationFields, uploadEventBannerImagesResolvers } from './events/media/upload-event-banner-images.graphql';
 import { deleteEventTypes, deleteEventMutationFields, deleteEventResolvers } from './events/management/delete-event.graphql';
 import { eventVotingTypes, eventVotingQueryFields, eventVotingMutationFields, eventVotingResolvers } from './events/details/voting/event-voting-core.graphql';
@@ -85,9 +84,8 @@ export const typeDefs = `
    ${eventOverviewTypes}
    ${eventPeopleTypes}
    ${eventProgramsTypes}
-   ${eventVotingDetailsTypes}
-    ${updateEventVisibilityTypes}
-   ${uploadEventBannerImagesTypes}
+    ${eventVotingDetailsTypes}
+    ${uploadEventBannerImagesTypes}
    ${deleteEventTypes}
 
    type Query {
@@ -128,7 +126,6 @@ export const typeDefs = `
     ${createProgramMutationFields}
     ${updateProgramMutationFields}
     ${uploadProgramBannerImagesMutationFields}
-    ${updateEventVisibilityMutationFields}
     ${uploadEventBannerImagesMutationFields}
     ${deleteEventMutationFields}
     ${eventVotingMutationFields}
@@ -183,7 +180,6 @@ export const resolvers = {
     ...createProgramResolvers.Mutation,
     ...updateProgramResolvers.Mutation,
     ...uploadProgramBannerImagesResolvers.Mutation,
-    ...updateEventVisibilityResolvers.Mutation,
     ...uploadEventBannerImagesResolvers.Mutation,
     ...deleteEventResolvers.Mutation,
     ...toggleCommitteeFavouriteResolvers.Mutation,

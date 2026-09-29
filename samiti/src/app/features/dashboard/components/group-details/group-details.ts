@@ -276,27 +276,6 @@ export class GroupDetailsComponent implements OnInit {
     }
   }
 
-  public onEventVisibilityChange(eventItem: CommitteeEventListItem, isVisible: boolean): void {
-    if (!this.isCurrentUserMasterAdmin() && !this.isCurrentUserAdmin()) return;
-    const visibility: 'VISIBLE' | 'HIDDEN' = isVisible ? 'VISIBLE' : 'HIDDEN';
-    if (!eventItem?.eventId || eventItem.visibility === visibility) return;
-
-    const prev = eventItem.visibility;
-    this.committeeEvents.update((evts) =>
-      evts.map((e) => (e.eventId === eventItem.eventId ? { ...e, visibility } : e))
-    );
-
-    this.groupDetailsService.updateEventVisibility(eventItem.eventId, visibility).subscribe({
-      next: () => this.notifier.success(`Event visibility changed to ${visibility}.`),
-      error: (err: HttpErrorResponse) => {
-        this.committeeEvents.update((evts) =>
-          evts.map((e) => (e.eventId === eventItem.eventId ? { ...e, visibility: prev } : e))
-        );
-        this.notifier.error(err?.error?.message || 'Failed to change visibility.');
-      }
-    });
-  }
-
   public onRequestAdminRole(): void {
     const committee = this.groupData();
     if (!committee?.committeeId) return;

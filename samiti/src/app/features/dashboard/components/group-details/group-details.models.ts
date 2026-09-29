@@ -48,12 +48,6 @@ export interface CommitteeEventListItem {
   mappedVotingRoles: EventMappedVotingRole[];
 }
 
-export interface UpdatedEventVisibilityPayload {
-  eventId: number;
-  visibility: 'VISIBLE' | 'HIDDEN';
-  updatedBy: number;
-}
-
 export interface DeletedEventPayload {
   eventId: number;
   eventName: string;

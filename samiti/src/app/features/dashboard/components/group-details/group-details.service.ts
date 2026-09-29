@@ -9,8 +9,7 @@ import {
   CommitteeMembershipRequestRole, 
   CommitteeProfileMeta, 
   DeletedEventPayload, 
-  SubmitCommitteeMembershipRequestPayload, 
-  UpdatedEventVisibilityPayload 
+  SubmitCommitteeMembershipRequestPayload
 } from './group-details.models';
 import { EventMappedVotingRole } from '../event-details/event-voting/event-voting.models';
 import { CommitteeMembershipRequestService } from '../../../../core/services/committee-membership-request.service';
@@ -129,38 +128,6 @@ export class GroupDetailsService {
     return this.committeeMembershipRequestService
       .cancelCommitteeMembershipRequest(committeeId, true)
       .pipe(map((payload) => payload as CancelCommitteeMembershipRequestPayload));
-  }
-
-  public updateEventVisibility(
-    eventId: number, 
-    visibility: 'VISIBLE' | 'HIDDEN'
-  ): Observable<UpdatedEventVisibilityPayload> {
-    const query = `mutation UpdateEventVisibility($eventId: Int!, $visibility: String!) {
-      updateEventVisibility(eventId: $eventId, visibility: $visibility) {
-        eventId
-        visibility
-        updatedBy
-      }
-    }`;
-
-    return this.http.post<GraphQLResponseEnvelope<{ updateEventVisibility: UpdatedEventVisibilityPayload }>>(
-      this.graphqlUrl,
-      {
-        query,
-        variables: {
-          eventId,
-          visibility
-        }
-      },
-      { withCredentials: true }
-    ).pipe(
-      map((res) => {
-        if (res.errors?.length) {
-          throw new Error(res.errors[0].message || 'Failed to update event visibility.');
-        }
-        return res.data!.updateEventVisibility;
-      })
-    );
   }
 
   public updateEventVotingRoles(
