@@ -231,7 +231,7 @@
               }
             }
             @if (isCurrentUserMasterAdmin() || isCurrentUserAdmin()) {
-              <button mat-button class="action-btn edit-btn" (click)="onEditCommitteeProfile()" [disabled]="!isCurrentUserMasterAdmin()"
+              <button mat-button class="action-btn edit-btn" (click)="onEditCommitteeProfile()" [disabled]="!isCurrentUserMasterAdmin() && !isCurrentUserAdmin()"
                 matTooltip="Edit group profile" matTooltipPosition="above">
                 <mat-icon>edit</mat-icon>Edit Profile
               </button>
@@ -239,7 +239,7 @@
                 matTooltip="Delete group" matTooltipPosition="above">
                 <mat-icon>delete</mat-icon>Delete
               </button>
-              <button mat-button class="action-btn create-event-btn" (click)="onCreateEvent('PUBLIC')" [disabled]="!isCurrentUserMasterAdmin()"
+              <button mat-button class="action-btn create-event-btn" (click)="onCreateEvent('PUBLIC')" [disabled]="!isCurrentUserMasterAdmin() && !isCurrentUserAdmin()"
                 matTooltip="Create a public event">
                 <mat-icon>add_circle</mat-icon>+ Public Event
               </button>
