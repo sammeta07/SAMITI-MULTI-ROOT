@@ -62,8 +62,9 @@ export class HomeComponent implements OnDestroy, AfterViewChecked {
   private previewExpandedCommitteeIds = new Set<number>();
   private readonly uploadingLogoCommitteeIds = new Set<number>();
   private readonly carouselIndices = new Map<number, number>();
-  private carouselTimer: ReturnType<typeof setInterval> | null = null;
-  private readonly CAROUSEL_INTERVAL_MS = 3500;
+  private readonly carouselTimers = new Map<number, ReturnType<typeof setTimeout>>();
+  private readonly CAROUSEL_MIN_INTERVAL_MS = 3000;
+  private readonly CAROUSEL_MAX_INTERVAL_MS = 5000;
   private readonly loadingCommitteeYearEvents = new Map<string, boolean>();
   // public isCommitteesSectionVisible = false;
   
@@ -352,6 +353,7 @@ export class HomeComponent implements OnDestroy, AfterViewChecked {
               events: [...retainedEvents, ...updatedCommittee.events]
             };
           }));
+          this.startCarouselAutoPlay();
           this.scrollToFirstOngoingEvent(committee.id);
         }
         this.loadingCommitteeYearEvents.delete(key);
@@ -432,25 +434,49 @@ export class HomeComponent implements OnDestroy, AfterViewChecked {
   }
 
   private startCarouselAutoPlay(): void {
-    this.stopCarouselAutoPlay();
-    this.carouselTimer = setInterval(() => {
-      for (const committee of this.committeeList()) {
-        for (const event of committee.events) {
-          if ((event.bannerImages?.length ?? 0) > 1) {
-            const current = this.carouselIndices.get(event.eventId) ?? 0;
-            this.carouselIndices.set(event.eventId, (current + 1) % event.bannerImages.length);
-          }
-        }
+    const rotatingEvents = this.committeeList()
+      .flatMap((committee) => committee.events)
+      .filter((event) => (event.bannerImages?.length ?? 0) > 1);
+    const rotatingEventIds = new Set(rotatingEvents.map((event) => event.eventId));
+
+    for (const [eventId, timer] of this.carouselTimers) {
+      if (!rotatingEventIds.has(eventId)) {
+        clearTimeout(timer);
+        this.carouselTimers.delete(eventId);
       }
+    }
+
+    for (const event of rotatingEvents) {
+      if (!this.carouselTimers.has(event.eventId)) {
+        this.scheduleCarouselAdvance(event.eventId);
+      }
+    }
+  }
+
+  private scheduleCarouselAdvance(eventId: number): void {
+    const delay = this.CAROUSEL_MIN_INTERVAL_MS + Math.floor(
+      Math.random() * (this.CAROUSEL_MAX_INTERVAL_MS - this.CAROUSEL_MIN_INTERVAL_MS + 1)
+    );
+    const timer = setTimeout(() => {
+      this.carouselTimers.delete(eventId);
+      const event = this.committeeList()
+        .flatMap((committee) => committee.events)
+        .find((currentEvent) => currentEvent.eventId === eventId);
+      const bannerCount = event?.bannerImages?.length ?? 0;
+      if (bannerCount < 2) return;
+
+      const current = this.carouselIndices.get(eventId) ?? 0;
+      this.carouselIndices.set(eventId, (current + 1) % bannerCount);
       this.cdr.detectChanges();
-    }, this.CAROUSEL_INTERVAL_MS);
+      this.scheduleCarouselAdvance(eventId);
+    }, delay);
+
+    this.carouselTimers.set(eventId, timer);
   }
 
   private stopCarouselAutoPlay(): void {
-    if (this.carouselTimer !== null) {
-      clearInterval(this.carouselTimer);
-      this.carouselTimer = null;
-    }
+    for (const timer of this.carouselTimers.values()) clearTimeout(timer);
+    this.carouselTimers.clear();
   }
 
   ngOnDestroy(): void {

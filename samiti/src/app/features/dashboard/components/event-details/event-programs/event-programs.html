@@ -11,7 +11,7 @@
       </button>
     </div>
     <div class="horizontal-list-container">
-      @for (program of eventData!.programs; track program.programId) {
+      @for (program of eventData?.programs ?? []; track program.programId) {
       <article class="event-program-row" (click)="onOpenProgram(program.programId)">
         <div class="program-row-left">
           @if (program.programBanner) {

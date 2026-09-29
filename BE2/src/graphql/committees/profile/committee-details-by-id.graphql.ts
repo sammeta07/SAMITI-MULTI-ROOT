@@ -204,9 +204,9 @@ export const committeeDetailsResolvers = {
         )
       );
 
-      const visibleEvents = hasCommitteeAccess
+      const accessibleEvents = hasCommitteeAccess
         ? eventRows
-        : eventRows.filter((event) => String(event.visibility || '').toUpperCase() === 'VISIBLE');
+        : eventRows.filter((event) => String(event.type || '').toUpperCase() === 'PUBLIC');
 
       // Fetch all members of the committee
       const members = await query<any[]>(`
@@ -223,7 +223,7 @@ export const committeeDetailsResolvers = {
       `, [committeeId]);
 
       const eventsWithVotingRoles = await Promise.all(
-        visibleEvents.map(async (event: any) => ({
+        accessibleEvents.map(async (event: any) => ({
           id: event.id,
           eventId: event.eventId,
           committeeId: event.committeeId,

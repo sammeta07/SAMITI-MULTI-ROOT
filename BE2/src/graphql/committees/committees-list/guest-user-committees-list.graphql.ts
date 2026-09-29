@@ -89,6 +89,7 @@ export const guestCommitteesResolvers = {
           SELECT committee_id AS committeeId, YEAR(start_date) AS eventYear
           FROM events
           WHERE committee_id IN (${placeholders})
+            AND type = 'PUBLIC'
           GROUP BY committee_id, YEAR(start_date)
         `, committeeIds);
 
@@ -115,7 +116,7 @@ export const guestCommitteesResolvers = {
           FROM events
           WHERE committee_id IN (${placeholders})
             AND YEAR(start_date) = ?
-            AND visibility = 'VISIBLE'
+            AND type = 'PUBLIC'
           ORDER BY start_date DESC, created_at DESC
         `, [...committeeIds, selectedYear]);
 
@@ -149,7 +150,7 @@ export const guestCommitteesResolvers = {
       const currentYear = new Date().getFullYear();
 
       return rawList.map((item: any) => {
-        const allEvents = (eventsMap[item.id] || []).filter((event: any) => event.visibility !== 'HIDDEN');
+        const allEvents = eventsMap[item.id] || [];
         const establishYear = Number(item.establish_year) || currentYear;
         const yearsWithEvents = eventYearsMap[item.id] || new Set<number>();
 

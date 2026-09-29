@@ -70,7 +70,8 @@ export const eventVotingDetailsResolvers = {
         SELECT
           e.id,
           e.id AS eventId,
-          e.committee_id AS committeeId
+          e.committee_id AS committeeId,
+          e.type
            ${supportsVotingPhaseState ? ', COALESCE(e.voting_phase_state, 0) AS votingPhaseState' : ', 0 AS votingPhaseState'}
            ${supportsVotingMode ? ', e.voting_mode AS votingMode' : ", 'VOTING' AS votingMode"}
         FROM events e
@@ -83,7 +84,7 @@ export const eventVotingDetailsResolvers = {
       }
 
       const event = eventResult[0];
-      const visibility = String(event.visibility || '').toUpperCase();
+      const eventType = String(event.type || '').toUpperCase();
 
       const committeeMembership = await query<any[]>(
         `SELECT committee_role
@@ -103,7 +104,7 @@ export const eventVotingDetailsResolvers = {
         )
       );
 
-      if (visibility === 'HIDDEN' && !hasCommitteeAccess) {
+      if (eventType !== 'PUBLIC' && !hasCommitteeAccess) {
         throwEventError('FORBIDDEN', 'You are not allowed to access this event');
       }
 

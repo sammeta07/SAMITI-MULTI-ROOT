@@ -61,7 +61,7 @@ export const eventProgramsResolvers = {
       }
 
       const event = eventResult[0];
-      const visibility = String(event.visibility || '').toUpperCase();
+      const eventType = String(event.type || '').toUpperCase();
 
       const committeeMembership = await query<any[]>(
         `SELECT committee_role
@@ -81,7 +81,7 @@ export const eventProgramsResolvers = {
         )
       );
 
-      if (visibility === 'HIDDEN' && !hasCommitteeAccess) {
+      if (eventType !== 'PUBLIC' && !hasCommitteeAccess) {
         throwEventError('FORBIDDEN', 'You are not allowed to access this event');
       }
 
