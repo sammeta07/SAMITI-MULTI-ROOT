@@ -21,6 +21,7 @@ import { EventVotingPayload } from './event-voting/event-voting.models';
 import { EventDetailsOverviewService } from './event-details-overview.service';
 import { EventOverviewService } from './event-overview/event-overview.service';
 import { EventOverviewPayload } from './event-overview/event-overview.models';
+import { EventDetailsHeaderPayload } from './event-overview/event-overview.models';
 import { NotifierService } from '../../../../shared/notifier/notifier.service';
 import { EventDetailsStateService } from './event-details-state.service';
 import { ConfirmDialogService } from '../../../../components/dialog/confirm/confirm-dialog.service';
@@ -82,8 +83,7 @@ export class EventDetailsComponent implements OnInit, OnDestroy {
           this.currentEventId = eventId;
           this.stateService.reset();
         }
-        this.loadOverview(String(id));
-        this.loadVotingDetails(String(id));
+        this.loadHeaderDetails(String(id));
       }
     });
 
@@ -119,12 +119,12 @@ export class EventDetailsComponent implements OnInit, OnDestroy {
     return this.stateService.eventData();
   }
 
-  public get overviewData(): EventOverviewPayload | null {
-    return this.stateService.eventOverview();
+  public get headerData(): EventDetailsHeaderPayload | null {
+    return this.stateService.headerData();
   }
 
   public get eventYear(): number | null | undefined {
-    return this.overviewData?.eventYear ?? null;
+    return this.headerData?.eventYear ?? null;
   }
 
   public get currentTab(): string {
@@ -221,16 +221,16 @@ export class EventDetailsComponent implements OnInit, OnDestroy {
   }
 
   public get userEventRole(): string {
-    return String(this.overviewData?.committeeRole || 'NONE').toUpperCase();
+    return String(this.headerData?.committeeRole || 'NONE').toUpperCase();
   }
 
   public get userEventRoleLabel(): string {
-    const designation = this.overviewData?.myDesignation;
+    const designation = this.headerData?.myDesignation;
     return designation?.roleId && designation.name ? designation.name : '';
   }
 
   public get designationColor(): string {
-    const designation = this.overviewData?.myDesignation;
+    const designation = this.headerData?.myDesignation;
     if (designation?.name && designation.color) {
       const normalized = designation.name.trim().toLowerCase();
       if (normalized !== 'member' && normalized !== '') {
@@ -241,7 +241,7 @@ export class EventDetailsComponent implements OnInit, OnDestroy {
   }
 
   public get designationIcon(): string | null {
-    const designation = this.overviewData?.myDesignation;
+    const designation = this.headerData?.myDesignation;
     if (designation?.name && designation.icon) {
       const normalized = designation.name.trim().toLowerCase();
       if (normalized !== 'member' && normalized !== '') {
@@ -253,8 +253,8 @@ export class EventDetailsComponent implements OnInit, OnDestroy {
 
   public get calculatedEventStatus(): 'started' | 'upcoming' | 'completed' {
     const now = new Date();
-    const startDate = this.overviewData?.startDate ? new Date(this.overviewData.startDate) : null;
-    const endDate = this.overviewData?.endDate ? new Date(this.overviewData.endDate) : null;
+    const startDate = this.headerData?.startDate ? new Date(this.headerData.startDate) : null;
+    const endDate = this.headerData?.endDate ? new Date(this.headerData.endDate) : null;
 
     if (!startDate) return 'completed';
 
@@ -291,7 +291,7 @@ export class EventDetailsComponent implements OnInit, OnDestroy {
   }
 
   public get hasEventRole(): boolean {
-    return Boolean(this.overviewData?.myDesignation?.roleId);
+    return Boolean(this.headerData?.myDesignation?.roleId);
   }
 
   public get canManageEvent(): boolean {
@@ -299,24 +299,24 @@ export class EventDetailsComponent implements OnInit, OnDestroy {
   }
 
   public get fallbackInitial(): string {
-    const name = this.overviewData?.eventDisplayName || this.overviewData?.eventName || '';
+    const name = this.headerData?.eventDisplayName || this.headerData?.eventName || '';
     return name ? name.charAt(0).toUpperCase() : 'E';
   }
 
-  private loadOverview(id: string): void {
+  private loadHeaderDetails(id: string): void {
     const requestedEventId = Number(id);
     this.isLoadingOverview.set(true);
 
-    this.overviewService.getEventOverview(id).subscribe({
+    this.overviewService.getEventDetailsHeader(id).subscribe({
       next: (data) => {
         if (requestedEventId !== this.currentEventId) return;
-        this.stateService.eventOverview.set(data ?? null);
+        this.stateService.headerData.set(data ?? null);
         this.isLoadingOverview.set(false);
       },
       error: (err: HttpErrorResponse) => {
         if (requestedEventId !== this.currentEventId) return;
-        this.notifier.error(err?.error?.message || 'Failed to load event overview.');
-        this.stateService.eventOverview.set(null);
+        this.notifier.error(err?.error?.message || 'Failed to load event header.');
+        this.stateService.headerData.set(null);
         this.isLoadingOverview.set(false);
       }
     });
@@ -349,14 +349,14 @@ export class EventDetailsComponent implements OnInit, OnDestroy {
     });
   }
 
-  private refreshOverview(): void {
-    const currentEvent = this.overviewData;
+  private refreshHeader(): void {
+    const currentEvent = this.headerData;
     if (currentEvent?.eventId) {
       const requestedEventId = Number(currentEvent.eventId);
-      this.overviewService.getEventOverview(String(currentEvent.eventId)).subscribe({
+      this.overviewService.getEventDetailsHeader(String(currentEvent.eventId)).subscribe({
         next: (data) => {
           if (requestedEventId === this.currentEventId) {
-            this.stateService.eventOverview.set(data ?? null);
+            this.stateService.headerData.set(data ?? null);
           }
         }
       });
@@ -364,7 +364,7 @@ export class EventDetailsComponent implements OnInit, OnDestroy {
   }
 
   public onEditEvent(): void {
-    const currentEvent = this.overviewData;
+    const currentEvent = this.headerData;
     if (!currentEvent?.eventId || !currentEvent?.committeeId) {
       this.notifier.error('No event available for editing');
       return;
@@ -384,7 +384,6 @@ export class EventDetailsComponent implements OnInit, OnDestroy {
         committeeId: currentEvent.committeeId,
         address: currentEvent.committeeAddress || '',
         eventType: currentEvent.type === 'PRIVATE' ? 'PRIVATE' : 'PUBLIC',
-        visibility: currentEvent.visibility,
         eventName: currentEvent.eventName,
         eventDisplayName: currentEvent.eventDisplayName,
         category: currentEvent.category,
@@ -400,12 +399,12 @@ export class EventDetailsComponent implements OnInit, OnDestroy {
       document.body.classList.remove('dialog-open');
       if (!result) return;
       this.hierarchyTreeService.triggerHierarchyTreeRefresh();
-      this.refreshOverview();
+      this.refreshHeader();
     });
   }
 
   public onDeleteEvent(): void {
-    const currentEvent = this.overviewData;
+    const currentEvent = this.headerData;
     if (!currentEvent?.eventId) {
       this.notifier.error('No event available for deletion');
       return;
@@ -439,35 +438,6 @@ export class EventDetailsComponent implements OnInit, OnDestroy {
     });
   }
 
-  public onEventVisibilityChange(isVisible: boolean): void {
-    const currentEvent = this.overviewData;
-    if (!currentEvent?.eventId) {
-      this.notifier.error('No event available for visibility update');
-      return;
-    }
-
-    const visibility: 'VISIBLE' | 'HIDDEN' = isVisible ? 'VISIBLE' : 'HIDDEN';
-    if (currentEvent.visibility === visibility) return;
-
-    const previousVisibility = currentEvent.visibility;
-    this.stateService.eventOverview.set({ ...currentEvent, visibility });
-
-    this.overviewEventService.updateEventVisibility(currentEvent.eventId, visibility).subscribe({
-      next: () => {
-        const formattedEventName = this.toTitleCase(currentEvent.eventName || 'Event');
-        this.notifier.success(
-          visibility === 'VISIBLE'
-            ? `**${formattedEventName}** is now visible to all the public`
-            : `**${formattedEventName}** is now hidden to all the public`
-        );
-      },
-      error: (err: HttpErrorResponse) => {
-        this.stateService.eventOverview.set({ ...currentEvent, visibility: previousVisibility });
-        this.notifier.error(err?.error?.message || 'Failed to update event visibility.');
-      }
-    });
-  }
-
   public async onEventLogoSelected(event: Event): Promise<void> {
     event.stopPropagation();
     const inputElement = event.target as HTMLInputElement;
@@ -476,7 +446,7 @@ export class EventDetailsComponent implements OnInit, OnDestroy {
 
     if (!selectedFile) return;
 
-    const currentEvent = this.overviewData;
+    const currentEvent = this.headerData;
     if (!currentEvent?.eventId || !currentEvent?.committeeId) {
       this.notifier.error('Event reference is missing. Please reload the workspace.');
       return;
@@ -496,7 +466,7 @@ export class EventDetailsComponent implements OnInit, OnDestroy {
         this.overviewEventService.updateEventLogo(currentEvent.eventId, currentEvent.committeeId, uploadedMetadata.publicAbsoluteUrl)
       );
 
-      this.stateService.eventOverview.set({
+      this.stateService.headerData.set({
         ...currentEvent,
         eventLogo: updated.eventLogo || uploadedMetadata.publicAbsoluteUrl
       });
@@ -510,8 +480,8 @@ export class EventDetailsComponent implements OnInit, OnDestroy {
   }
 
   public onEventLogoLoadError(): void {
-    if (this.overviewData) {
-      this.stateService.eventOverview.set({ ...this.overviewData, eventLogo: null });
+    if (this.headerData) {
+      this.stateService.headerData.set({ ...this.headerData, eventLogo: null });
     }
   }
 

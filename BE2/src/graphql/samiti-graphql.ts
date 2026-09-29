@@ -23,6 +23,7 @@ import { createEventTypes, createEventMutationFields, createEventResolvers } fro
 import { updateEventTypes, updateEventMutationFields, updateEventResolvers } from './events/management/update-event.graphql';
 import { eventDetailsTypes, eventDetailsQueryFields, eventDetailsResolvers } from './events/details/event-details-by-id.graphql';
 import { eventOverviewTypes, eventOverviewQueryFields, eventOverviewResolvers } from './events/details/overview/event-overview.graphql';
+import { eventDetailsHeaderTypes, eventDetailsHeaderQueryFields, eventDetailsHeaderResolvers } from './events/details/header/event-details-header.graphql';
 import { eventPeopleTypes, eventPeopleQueryFields, eventPeopleResolvers } from './events/details/people/event-people.graphql';
 import { eventProgramsTypes, eventProgramsQueryFields, eventProgramsResolvers } from './events/details/programs/event-programs.graphql';
 import { eventVotingDetailsTypes, eventVotingDetailsQueryFields, eventVotingDetailsResolvers } from './events/details/voting/event-voting.graphql';
@@ -80,9 +81,10 @@ export const typeDefs = `
    ${eventVoteTypes}
    ${eventInterestTypes}
    ${updateEventVotingModeTypes}
-   ${eventDetailsTypes}
-   ${eventOverviewTypes}
-   ${eventPeopleTypes}
+    ${eventDetailsTypes}
+    ${eventOverviewTypes}
+    ${eventDetailsHeaderTypes}
+    ${eventPeopleTypes}
    ${eventProgramsTypes}
     ${eventVotingDetailsTypes}
     ${uploadEventBannerImagesTypes}
@@ -105,6 +107,7 @@ export const typeDefs = `
     ${programDetailsQueryFields}
     ${eventDetailsQueryFields}
     ${eventOverviewQueryFields}
+    ${eventDetailsHeaderQueryFields}
     ${eventPeopleQueryFields}
     ${eventProgramsQueryFields}
     ${eventVotingDetailsQueryFields}
@@ -160,6 +163,7 @@ export const resolvers = {
     ...programDetailsResolvers.Query,
     ...eventDetailsResolvers.Query,
     ...eventOverviewResolvers.Query,
+    ...eventDetailsHeaderResolvers.Query,
     ...eventPeopleResolvers.Query,
     ...eventProgramsResolvers.Query,
     ...eventVotingDetailsResolvers.Query,

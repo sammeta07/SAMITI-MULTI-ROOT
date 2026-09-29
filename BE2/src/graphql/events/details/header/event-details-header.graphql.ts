@@ -3,32 +3,34 @@ import { RowDataPacket } from 'mysql2/promise';
 import { hasEventsDisplayNameColumn } from '../event-display-name-support';
 import { throwEventError, getLoggedInUserId } from '../voting/event-voting-core.graphql';
 
-export const eventOverviewTypes = `
-  type EventOverview {
+export const eventDetailsHeaderTypes = `
+  type EventDetailsHeader {
     id: Int!
     eventId: Int!
+    committeeId: Int
+    committeeAddress: String
     eventName: String!
     eventDisplayName: String!
-    bannerImages: [String!]!
+    eventLogo: String
+    category: String
+    eventYear: Int
+    type: String
+    startDate: String
+    endDate: String
+    latitude: Float
+    longitude: Float
     myDesignation: MyDesignation
     committeeRole: String
   }
-
-  type MyDesignation {
-    roleId: Int
-    name: String
-    color: String
-    icon: String
-  }
 `;
 
-export const eventOverviewQueryFields = `
-  eventOverview(id: Int!): EventOverview!
+export const eventDetailsHeaderQueryFields = `
+  eventDetailsHeader(id: Int!): EventDetailsHeader!
 `;
 
-export const eventOverviewResolvers = {
+export const eventDetailsHeaderResolvers = {
   Query: {
-    async eventOverview(_: any, args: { id: number }, context: any) {
+    async eventDetailsHeader(_: any, args: { id: number }, context: any) {
       const eventId = Number(args?.id);
       if (!Number.isInteger(eventId) || eventId <= 0) {
         throwEventError('BAD_REQUEST', 'id must be a positive integer');
@@ -42,9 +44,19 @@ export const eventOverviewResolvers = {
           e.id,
           e.id AS eventId,
           e.committee_id AS committeeId,
+          c.address AS committeeAddress,
           e.name AS eventName,
-          ${supportsEventDisplayName ? "COALESCE(NULLIF(TRIM(e.display_name), ''), LEFT(e.name, 20))" : 'LEFT(e.name, 20)'} AS eventDisplayName
+          ${supportsEventDisplayName ? "COALESCE(NULLIF(TRIM(e.display_name), ''), LEFT(e.name, 20))" : 'LEFT(e.name, 20)'} AS eventDisplayName,
+          e.category,
+          e.event_year AS eventYear,
+          e.type,
+          DATE_FORMAT(e.start_date, '%Y-%m-%d') AS startDate,
+          DATE_FORMAT(e.end_date, '%Y-%m-%d') AS endDate,
+          e.latitude,
+          e.longitude,
+          e.event_logo AS eventLogo
         FROM events e
+        LEFT JOIN committees c ON c.id = e.committee_id
         WHERE e.id = ?
         LIMIT 1
       `, [eventId]);
@@ -118,20 +130,21 @@ export const eventOverviewResolvers = {
         throwEventError('FORBIDDEN', 'You are not allowed to access this event');
       }
 
-      const bannerImageRows = await query<Array<RowDataPacket & { mediaUrl: string }>>(
-        `SELECT media_url AS mediaUrl
-         FROM event_media_assets
-         WHERE event_id = ?
-         ORDER BY sort_order ASC, id ASC`,
-        [eventId]
-      );
-
       return {
         id: Number(event.id),
         eventId: Number(event.eventId),
+        committeeId: event.committeeId || null,
+        committeeAddress: event.committeeAddress || null,
         eventName: String(event.eventName || ''),
         eventDisplayName: String(event.eventDisplayName || ''),
-        bannerImages: bannerImageRows.map((row) => row.mediaUrl),
+        eventLogo: event.eventLogo || null,
+        category: event.category || null,
+        eventYear: event.eventYear ? Number(event.eventYear) : null,
+        type: event.type || null,
+        startDate: event.startDate || null,
+        endDate: event.endDate || null,
+        latitude: event.latitude ? Number(event.latitude) : null,
+        longitude: event.longitude ? Number(event.longitude) : null,
         myDesignation: myDesignation,
         committeeRole
       };

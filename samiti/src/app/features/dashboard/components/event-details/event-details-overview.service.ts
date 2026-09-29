@@ -3,7 +3,7 @@ import { HttpClient } from '@angular/common/http';
 import { Observable } from 'rxjs';
 import { map } from 'rxjs/operators';
 import { environment } from '../../../../../environments/environment';
-import { EventOverviewPayload } from './event-overview/event-overview.models';
+import { EventOverviewPayload, EventDetailsHeaderPayload } from './event-overview/event-overview.models';
 
 @Injectable({
   providedIn: 'root'
@@ -21,12 +21,10 @@ export class EventDetailsOverviewService {
         committeeAddress
         eventName
         eventDisplayName
-        eventBanner
         eventLogo
         bannerImages
         category
         eventYear
-        visibility
         type
         startDate
         endDate
@@ -51,6 +49,42 @@ export class EventDetailsOverviewService {
       { withCredentials: true }
     ).pipe(
       map(res => res.data.eventOverview)
+    );
+  }
+
+  public getEventDetailsHeader(id: string): Observable<EventDetailsHeaderPayload> {
+    const query = `query {
+      eventDetailsHeader(id: ${id}) {
+        id
+        eventId
+        committeeId
+        committeeAddress
+        eventName
+        eventDisplayName
+        eventLogo
+        category
+        eventYear
+        type
+        startDate
+        endDate
+        latitude
+        longitude
+        myDesignation {
+          roleId
+          name
+          color
+          icon
+        }
+        committeeRole
+      }
+    }`;
+
+    return this.http.post<{ data: { eventDetailsHeader: EventDetailsHeaderPayload } }>(
+      this.graphqlUrl,
+      { query },
+      { withCredentials: true }
+    ).pipe(
+      map(res => res.data.eventDetailsHeader)
     );
   }
 }

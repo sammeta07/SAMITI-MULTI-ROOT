@@ -241,14 +241,6 @@ export const eventVotingTypes = `
     votingPhaseState: Int!
   }
 
-  type EventCommitteeMember {
-    userId: Int!
-    name: String!
-    email: String!
-    photo: String
-    committeeRole: String!
-  }
-
   type EventDirectAssignMember {
     userId: Int!
     name: String!
@@ -260,7 +252,6 @@ export const eventVotingTypes = `
 `;
 
 export const eventVotingQueryFields = `
-  eventCommitteeMembers(eventId: Int!): [EventCommitteeMember!]!
   eventDirectAssignMembers(eventId: Int!): [EventDirectAssignMember!]!
 `;
 
@@ -397,100 +388,6 @@ async function recordSingleCandidateWinners(eventId: number): Promise<void> {
 
 export const eventVotingResolvers = {
   Query: {
-    async eventCommitteeMembers(_: any, args: { eventId: number }, context: any) {
-      const eventId = Number(args?.eventId);
-      if (!Number.isInteger(eventId) || eventId <= 0) {
-        throwEventError('BAD_REQUEST', 'eventId must be a positive integer');
-      }
-
-      const loggedInUserId = await getLoggedInUserId(context);
-      const supportsVotingPhaseState = await hasEventsVotingPhaseStateColumn();
-      const supportsVotingMode = await hasEventsVotingModeColumn();
-
-      const eventResult = await query<any[]>(`
-        SELECT
-          e.id,
-          e.id AS eventId,
-          e.committee_id AS committeeId,
-          c.address AS committeeAddress,
-          e.name AS eventName,
-          e.category,
-          e.visibility,
-          e.type,
-          DATE_FORMAT(e.start_date, '%Y-%m-%d') AS startDate,
-          DATE_FORMAT(e.end_date, '%Y-%m-%d') AS endDate,
-          e.latitude,
-          e.longitude,
-          e.created_by AS createdBy,
-          e.updated_by AS updatedBy,
-          e.created_at AS createdAt
-           ${supportsVotingPhaseState ? ', COALESCE(e.voting_phase_state, 0) AS votingPhaseState' : ', 0 AS votingPhaseState'}
-           ${supportsVotingMode ? ', e.voting_mode AS votingMode' : ", 'VOTING' AS votingMode"}
-        FROM events e
-        LEFT JOIN committees c ON c.id = e.committee_id
-        WHERE e.id = ?
-        LIMIT 1
-      `, [eventId]);
-
-      if (!eventResult || eventResult.length === 0) {
-        throwEventError('NOT_FOUND', 'Event not found');
-      }
-
-      const event = eventResult[0];
-      const eventType = String(event.type || '').toUpperCase();
-
-      const committeeMembership = await query<any[]>(
-        `SELECT committee_role
-         FROM users_committees
-         WHERE committee_id = ? AND user_id = ?
-         LIMIT 1`,
-        [Number(event.committeeId), loggedInUserId]
-      );
-
-      const membership = committeeMembership[0];
-      const hasCommitteeAccess = Boolean(
-        membership &&
-        (
-          String(membership.committee_role || '') === 'COMMITTEE_MEMBER' ||
-          String(membership.committee_role || '') === 'COMMITTEE_ADMIN' ||
-          String(membership.committee_role || '') === 'COMMITTEE_MASTER_ADMIN'
-        )
-      );
-
-      if (eventType !== 'PUBLIC' && !hasCommitteeAccess) {
-        throwEventError('FORBIDDEN', 'You are not allowed to access this event');
-      }
-
-      const committeeMembers = await query<Array<RowDataPacket & {
-        userId: number;
-        name: string;
-        email: string;
-        photo: string | null;
-        committeeRole: string;
-      }>>(
-        `SELECT
-           u.id AS userId,
-           u.name,
-           u.email,
-           u.profile_photo AS photo,
-           UPPER(COALESCE(NULLIF(TRIM(uc.committee_role), ''), 'COMMITTEE_MEMBER')) AS committeeRole
-            FROM users_committees uc
-            INNER JOIN users u ON u.id = uc.user_id
-            WHERE uc.committee_id = ?
-              AND uc.committee_role IN ('COMMITTEE_MEMBER', 'COMMITTEE_ADMIN', 'COMMITTEE_MASTER_ADMIN')
-            ORDER BY u.name ASC`,
-        [Number(event.committeeId)]
-      );
-
-      return committeeMembers.map((memberRow) => ({
-        userId: Number(memberRow.userId),
-        name: String(memberRow.name || ''),
-        email: String(memberRow.email || ''),
-        photo: memberRow.photo || null,
-        committeeRole: String(memberRow.committeeRole || 'COMMITTEE_MEMBER')
-      }));
-    },
-
     async eventDirectAssignMembers(_: any, args: { eventId: number }, context: any) {
       const eventId = Number(args?.eventId);
       if (!Number.isInteger(eventId) || eventId <= 0) {

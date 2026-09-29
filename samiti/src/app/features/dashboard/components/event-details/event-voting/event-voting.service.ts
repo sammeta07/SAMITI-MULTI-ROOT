@@ -22,7 +22,6 @@ import {
   EventVoteHistory,
   CastEventVotePayload,
   EventResultsPayload,
-  EventCommitteeMember,
   EventDirectAssignMember
 } from './event-voting.models';
 
@@ -496,26 +495,6 @@ export class EventVotingService {
       { withCredentials: true }
     ).pipe(
       map(res => res.data.updateEventVotingMode)
-    );
-  }
-
-  public getCommitteeMembers(eventId: number): Observable<EventCommitteeMember[]> {
-    const query = `query {
-      eventCommitteeMembers(eventId: ${eventId}) {
-        userId
-        name
-        email
-        photo
-        committeeRole
-      }
-    }`;
-
-    return this.http.post<{ data: { eventCommitteeMembers: EventCommitteeMember[] } }>(
-      this.graphqlUrl,
-      { query },
-      { withCredentials: true }
-    ).pipe(
-      map(res => res.data.eventCommitteeMembers)
     );
   }
 

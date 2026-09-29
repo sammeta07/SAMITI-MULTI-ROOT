@@ -1,5 +1,6 @@
-import { Component, ElementRef, inject, ViewChild, signal, ChangeDetectorRef } from '@angular/core';
+import { Component, ElementRef, inject, ViewChild, signal, ChangeDetectorRef, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
+import { ActivatedRoute } from '@angular/router';
 import { MatDialog } from '@angular/material/dialog';
 import { MatIconModule } from '@angular/material/icon';
 import { MatButtonModule } from '@angular/material/button';
@@ -29,10 +30,11 @@ import { ImageCropperDialogComponent } from '../../../../../shared/components/im
   templateUrl: './event-overview.html',
   styleUrl: './event-overview.scss'
 })
-export class EventOverviewComponent {
+export class EventOverviewComponent implements OnInit {
   @ViewChild('bannerFileInput') private readonly bannerFileInput?: ElementRef<HTMLInputElement>;
   @ViewChild('bannerSingleFileInput') private readonly bannerSingleFileInput?: ElementRef<HTMLInputElement>;
 
+  private readonly route = inject(ActivatedRoute);
   private readonly dialog = inject(MatDialog);
   private readonly notifier = inject(NotifierService);
   private readonly overviewService = inject(EventOverviewService);
@@ -121,15 +123,33 @@ export class EventOverviewComponent {
     return this.bannerCount < this.MAX_BANNERS;
   }
 
-  public get primaryBannerUrl(): string | null {
-    if (this.eventData?.eventBanner) return this.eventData.eventBanner;
-    if (this.eventData?.bannerImages?.length) return this.eventData.bannerImages[0];
-    return null;
-  }
-
   public get fallbackInitial(): string {
     const name = this.eventData?.eventDisplayName || this.eventData?.eventName || '';
     return name ? name.charAt(0).toUpperCase() : 'E';
+  }
+
+  public ngOnInit(): void {
+    const parentParams$ = this.route.parent?.params;
+    if (!parentParams$) return;
+
+    parentParams$.subscribe(params => {
+      const eventId = params['id'];
+      if (eventId) {
+        this.loadEventOverview(eventId);
+      }
+    });
+  }
+
+  private loadEventOverview(eventId: string): void {
+    this.overviewService.getEventOverview(eventId).subscribe({
+      next: (data) => {
+        this.stateService.eventOverview.set(data ?? null);
+      },
+      error: (err: HttpErrorResponse) => {
+        this.notifier.error(err?.error?.message || 'Failed to load event overview.');
+        this.stateService.eventOverview.set(null);
+      }
+    });
   }
 
   public onAddBannerClick(): void {
@@ -158,7 +178,7 @@ export class EventOverviewComponent {
       const uploadedAssets = await firstValueFrom(this.imageAssetService.uploadMultipleImagesForEventBanners(filesToUpload));
       const urls = uploadedAssets.map((a: any) => a.publicAbsoluteUrl);
       const result = await firstValueFrom(this.overviewService.uploadEventBannerImages(currentEvent.eventId, urls));
-      this.stateService.eventOverview.set({ ...currentEvent, bannerImages: (result as any).bannerImages, eventBanner: (result as any).bannerImages[0] || currentEvent.eventBanner });
+      this.stateService.eventOverview.set({ ...currentEvent, bannerImages: (result as any).bannerImages });
       this.cdr.detectChanges();
       this.notifier.success(`${urls.length} banner image${urls.length > 1 ? 's' : ''} uploaded successfully.`);
     } catch (err: any) {
@@ -184,7 +204,7 @@ export class EventOverviewComponent {
       const uploadedAssets = await firstValueFrom(this.imageAssetService.uploadMultipleImagesForEventBanners([croppedFile]));
       const urls = uploadedAssets.map((a: any) => a.publicAbsoluteUrl);
       const result = await firstValueFrom(this.overviewService.uploadEventBannerImages(currentEvent.eventId, urls));
-      this.stateService.eventOverview.set({ ...currentEvent, bannerImages: (result as any).bannerImages, eventBanner: (result as any).bannerImages[0] || currentEvent.eventBanner });
+      this.stateService.eventOverview.set({ ...currentEvent, bannerImages: (result as any).bannerImages });
       this.cdr.detectChanges();
       this.notifier.success('Banner image uploaded successfully.');
     } catch (err: any) {
@@ -258,7 +278,6 @@ export class EventOverviewComponent {
       this.stateService.eventOverview.set({
         ...currentEvent,
         bannerImages: lastPayload?.bannerImages ?? currentEvent.bannerImages.filter((u) => !selectedUrls.includes(u)),
-        eventBanner: lastPayload ? lastPayload.bannerImages[0] || null : currentEvent.eventBanner
       });
       this.selectedBannerUrls.set(new Set<string>());
       this.isSelectionMode.set(false);
@@ -280,7 +299,7 @@ export class EventOverviewComponent {
       if (!result?.confirmed) return;
       this.overviewService.deleteEventBannerImage(currentEvent.eventId, imageUrl).subscribe({
         next: (payload: any) => {
-          this.stateService.eventOverview.set({ ...currentEvent, bannerImages: payload.bannerImages, eventBanner: payload.bannerImages[0] || null });
+          this.stateService.eventOverview.set({ ...currentEvent, bannerImages: payload.bannerImages });
           this.cdr.detectChanges();
           this.notifier.success('Banner image deleted successfully.');
         },

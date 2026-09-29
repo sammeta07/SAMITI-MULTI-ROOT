@@ -17,12 +17,6 @@ export interface UploadEventBannerImagesPayload {
   bannerImages: string[];
 }
 
-export interface UpdatedEventVisibilityPayload {
-  eventId: number;
-  visibility: 'VISIBLE' | 'HIDDEN';
-  updatedBy: number;
-}
-
 export interface UpdatedEventLogoPayload {
   eventId: number;
   eventLogo: string | null;
@@ -40,24 +34,9 @@ export class EventOverviewService {
       eventOverview(id: ${id}) {
         id
         eventId
-        committeeId
-        committeeAddress
         eventName
         eventDisplayName
-        eventBanner
-        eventLogo
         bannerImages
-        category
-        eventYear
-        visibility
-        type
-        startDate
-        endDate
-        latitude
-        longitude
-        createdBy
-        updatedBy
-        createdAt
         myDesignation {
           roleId
           name
@@ -96,27 +75,6 @@ export class EventOverviewService {
       { withCredentials: true }
     ).pipe(
       map(res => res.data.deleteEvent)
-    );
-  }
-
-  public updateEventVisibility(eventId: number, visibility: 'VISIBLE' | 'HIDDEN'): Observable<UpdatedEventVisibilityPayload> {
-    const query = `mutation UpdateEventVisibility($eventId: Int!, $visibility: String!) {
-      updateEventVisibility(eventId: $eventId, visibility: $visibility) {
-        eventId
-        visibility
-        updatedBy
-      }
-    }`;
-
-    return this.http.post<{ data: { updateEventVisibility: UpdatedEventVisibilityPayload } }>(
-      this.graphqlUrl,
-      {
-        query,
-        variables: { eventId, visibility }
-      },
-      { withCredentials: true }
-    ).pipe(
-      map(res => res.data.updateEventVisibility)
     );
   }
 

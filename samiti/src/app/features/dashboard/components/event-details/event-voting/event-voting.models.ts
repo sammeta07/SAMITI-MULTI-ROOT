@@ -232,14 +232,6 @@ export interface EventVotingPayload {
    votingMode?: 'VOTING' | 'DIRECT';
 }
 
-export interface EventCommitteeMember {
-  userId: number;
-  name: string;
-  email: string;
-  photo?: string | null;
-  committeeRole: string;
-}
-
 export interface EventDirectAssignMember {
   userId: number;
   name: string;

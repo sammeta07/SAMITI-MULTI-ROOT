@@ -15,7 +15,7 @@ import { FormsModule } from '@angular/forms';
 import { HttpErrorResponse } from '@angular/common/http';
 import { finalize } from 'rxjs';
 import { EventVotingService } from './event-voting.service';
-import { EventVotingPayload, EventMappedVotingRole, EventVoteHistory, EventResultsPayload, EventResultCandidate, VacateVotingRolePayload, EventDirectAssignMember, EventCommitteeMember } from './event-voting.models';
+import { EventVotingPayload, EventMappedVotingRole, EventVoteHistory, EventResultsPayload, EventResultCandidate, VacateVotingRolePayload, EventDirectAssignMember } from './event-voting.models';
 import { NotifierService } from '../../../../../shared/notifier/notifier.service';
 import { ConfirmDialogService } from '../../../../../components/dialog/confirm/confirm-dialog.service';
 import { ConfirmDialogData } from '../../../../../components/dialog/confirm/confirm-dialog.models';
@@ -89,7 +89,7 @@ export class EventVotingComponent implements OnInit, AfterViewInit, OnDestroy {
   }>>([]);
   public readonly directAssignMembers = signal<EventDirectAssignMember[]>([]);
   public readonly committeeMemberRoles = signal<Map<number, string>>(new Map());
-  public readonly allCommitteeMembers = signal<EventCommitteeMember[]>([]);
+  public readonly allCommitteeMembers = signal<EventDirectAssignMember[]>([]);
   public readonly selectedReassignMemberId = signal<number | null>(null);
   public readonly openReassignForRoleId = signal<number | null>(null);
   public readonly reassignMemberSearchQuery = signal<string>('');
@@ -535,11 +535,11 @@ export class EventVotingComponent implements OnInit, AfterViewInit, OnDestroy {
   }
 
   private loadCommitteeMemberRoles(eventId: number): void {
-    this.votingService.getCommitteeMembers(eventId).subscribe({
+    this.votingService.getDirectAssignMembers(eventId).subscribe({
       next: (members) => {
         if (eventId !== this.currentEventId) return;
         const map = new Map<number, string>();
-        const allMembers: EventCommitteeMember[] = [];
+        const allMembers: EventDirectAssignMember[] = [];
         for (const m of members) {
           map.set(Number(m.userId), m.committeeRole);
           allMembers.push(m);
