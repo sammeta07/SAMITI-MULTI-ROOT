@@ -365,12 +365,23 @@ export class EventVotingComponent implements OnInit, AfterViewInit, OnDestroy {
       const eventId = params['id'];
       if (!eventId) return;
       const normalizedEventId = Number(eventId);
+
+      const existingData = this.stateService.eventData();
+      const isDataForCurrentEvent = existingData && Number(existingData.eventId) === normalizedEventId;
+
       if (normalizedEventId !== this.currentEventId) {
         this.currentEventId = normalizedEventId;
         this.loadRequestId += 1;
-        this.resetEventState();
+        if (!isDataForCurrentEvent) {
+          this.resetEventState();
+        }
       }
-      this.loadEventVotingDetails(String(normalizedEventId), this.loadRequestId);
+
+      if (isDataForCurrentEvent) {
+        this.initializeVotingState(normalizedEventId);
+      } else {
+        this.loadEventVotingDetails(String(normalizedEventId), this.loadRequestId);
+      }
     });
   }
 

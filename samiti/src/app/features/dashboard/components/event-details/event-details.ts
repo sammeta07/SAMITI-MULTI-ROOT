@@ -83,6 +83,7 @@ export class EventDetailsComponent implements OnInit, OnDestroy {
           this.stateService.reset();
         }
         this.loadOverview(String(id));
+        this.loadVotingDetails(String(id));
       }
     });
 
@@ -317,6 +318,33 @@ export class EventDetailsComponent implements OnInit, OnDestroy {
         this.notifier.error(err?.error?.message || 'Failed to load event overview.');
         this.stateService.eventOverview.set(null);
         this.isLoadingOverview.set(false);
+      }
+    });
+  }
+
+  private loadVotingDetails(id: string): void {
+    this.votingService.getEventVotingDetails(id).subscribe({
+      next: (data) => {
+        if (Number(data?.eventId) !== Number(id)) return;
+        this.stateService.eventData.set(data ?? null);
+        if (data?.eventId && Number(data.votingPhaseState || 0) === 6 && !this.stateService.eventResults()) {
+          this.loadEventResults(Number(data.eventId));
+        }
+      },
+      error: (err: HttpErrorResponse) => {
+        this.notifier.error(err?.error?.message || 'Failed to load event details.');
+        this.stateService.eventData.set(null);
+      }
+    });
+  }
+
+  private loadEventResults(eventId: number): void {
+    this.votingService.getEventResults(eventId).subscribe({
+      next: (payload) => {
+        this.stateService.eventResults.set(payload ?? null);
+      },
+      error: () => {
+        this.stateService.eventResults.set(null);
       }
     });
   }
