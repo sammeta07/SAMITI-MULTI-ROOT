@@ -213,16 +213,15 @@
 
             <!-- Expanded Body: Year Tabs & 65/35 Event Cards -->
             <div class="expansion-inner-content-wrapper">
-              <mat-tab-group class="committee-year-tabs" animationDuration="0ms"
+              <mat-tab-group class="committee-year-tabs samiti-nav-tabs" animationDuration="150ms"
                 [selectedIndex]="getDefaultYearTabIndex(committee)"
                 (selectedIndexChange)="onYearTabClick(committee, getCommitteeYearTabs(committee)[$event])">
                 @for (year of getCommitteeYearTabs(committee); track year) {
                   <mat-tab>
                     <ng-template mat-tab-label>
-                      <div class="year-tab-label" (click)="onYearTabClick(committee, year)">
-                        <mat-icon class="year-tab-icon">calendar_month</mat-icon>
-                        <span>{{ year }}</span>
-                      </div>
+                      <mat-icon class="tab-leading-icon">calendar_month</mat-icon>
+                      <span>{{ year }}</span>
+                      <span class="tab-badge">{{ getEventsByYear(committee, year).length }}</span>
                     </ng-template>
                     
                     <div class="committee-events-shell" #eventsShell [attr.data-committee-id]="committee.id">

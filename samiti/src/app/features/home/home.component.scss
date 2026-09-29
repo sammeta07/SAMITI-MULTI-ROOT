@@ -273,12 +273,6 @@ body.resizing-col {
     margin: 4px 8px 0;
   }
 
-  &.committees-tabs {
-    ::ng-deep .mat-mdc-tab-header {
-      padding-right: 224px;
-    }
-  }
-
   ::ng-deep .mat-mdc-tab-body-wrapper {
     flex: 1;
     overflow: hidden;
@@ -453,7 +447,7 @@ body.resizing-col {
   }
 
   ::ng-deep .mat-expansion-panel-body {
-    padding: 0 8px 8px 8px !important;
+    padding: 4px 6px 6px 6px !important;
   }
 
   .panel-header-inner {
@@ -745,75 +739,93 @@ body.resizing-col {
 }
 
 /* ==========================================================================
-   EXPANDED COMMITTEE: YEAR TABS & 65/35 EVENT CARDS
+   EXPANDED COMMITTEE: YEAR TABS (MATCHING EXACT SAMITI-NAV-TABS DESIGN)
    ========================================================================== */
 .expansion-inner-content-wrapper {
   margin-top: 4px;
-  background: #f1f5f9;
-  border-radius: 6px;
-  padding: 6px;
-  border: 1px solid #e2e8f0;
+  background: transparent;
+  border-radius: 0;
+  padding: 0;
+  border: none;
 }
 
 .committee-year-tabs {
-  padding: 0;
+  padding: 0 !important;
 
-  ::ng-deep .mat-mdc-tab-header {
-    min-height: 26px !important;
-    background: transparent !important;
-  }
-
-  ::ng-deep .mat-mdc-tab {
-    min-width: 60px !important;
-    height: 24px !important;
-    min-height: 24px !important;
-    padding: 0 8px !important;
-    border-radius: 4px 4px 0 0 !important;
-    background: #e2e8f0 !important;
-
-    .mdc-tab__text-label {
-      font-size: 0.68rem !important;
-      font-weight: 600 !important;
-    }
-
-    &.mdc-tab--active {
-      background: #ffffff !important;
+  ::ng-deep {
+    > .mat-mdc-tab-header {
+      margin: 0 !important;
+      min-height: 30px !important;
+      background: #e2e8f0 !important;
       border: 1px solid #cbd5e1 !important;
-      border-bottom: 1px solid #ffffff !important;
-      .mdc-tab__text-label {
-        color: #0f172a !important;
-        font-weight: 700 !important;
+      border-bottom: none !important;
+      border-radius: 6px 6px 0 0 !important;
+      box-shadow: none !important;
+
+      .mat-mdc-tab-labels {
+        gap: 3px !important;
+      }
+
+      .mat-mdc-tab {
+        min-height: 30px !important;
+        height: 30px !important;
+        min-width: 68px !important;
+        padding: 0 8px !important;
+        border-radius: 5px 5px 0 0 !important;
+        background: #cbd5e1 !important;
+        border: 1px solid transparent !important;
+        margin-right: 0 !important;
+
+        .mdc-tab__text-label {
+          color: #64748b !important;
+          font-size: 0.72rem !important;
+          font-weight: 600 !important;
+        }
+
+        &.mdc-tab--active {
+          z-index: 2;
+          margin-bottom: -1px !important;
+          border-color: #cbd5e1 !important;
+          border-bottom-color: #f8fafc !important;
+          background: #f8fafc !important;
+
+          .mdc-tab__text-label {
+            color: #0f172a !important;
+            font-weight: 700 !important;
+          }
+
+          .tab-leading-icon,
+          mat-icon {
+            color: #f97316 !important;
+          }
+        }
+
+        &:not(.mdc-tab--active):hover {
+          background: #e2e8f0 !important;
+        }
       }
     }
-  }
 
-  ::ng-deep .mat-mdc-tab-body-wrapper {
-    background: #ffffff !important;
-    border: 1px solid #cbd5e1 !important;
-    border-radius: 0 4px 4px 4px !important;
-  }
-
-  .year-tab-label {
-    display: inline-flex;
-    align-items: center;
-    gap: 3px;
-  }
-
-  .year-tab-icon {
-    font-size: 0.72rem !important;
-    width: 0.72rem !important;
-    height: 0.72rem !important;
+    > .mat-mdc-tab-body-wrapper {
+      margin: 0 !important;
+      padding: 8px !important;
+      background: #f8fafc !important;
+      border: 1px solid #cbd5e1 !important;
+      border-top: none !important;
+      border-radius: 0 0 6px 6px !important;
+      box-sizing: border-box;
+    }
   }
 }
 
 .committee-events-shell {
   display: flex;
   gap: 10px;
-  padding: 8px;
+  padding: 0;
   overflow-x: auto;
   overflow-y: hidden;
   scrollbar-width: thin;
-  min-height: 218px;
+  min-height: 205px;
   align-items: stretch;
 
   &::-webkit-scrollbar { height: 4px; }
@@ -848,7 +860,6 @@ body.resizing-col {
   box-shadow: 0 1px 3px rgba(15, 23, 42, 0.04);
   transition: transform 0.15s ease, box-shadow 0.15s ease;
 
-  // Status border on Left
   &.event-status-border-started {
     border-left-color: #10b981 !important;
   }
@@ -903,7 +914,6 @@ body.resizing-col {
   }
 }
 
-/* Reduced edge padding so banner surface is maximum visible */
 .event-banner-overlay {
   position: absolute;
   inset: 0;
@@ -914,7 +924,6 @@ body.resizing-col {
   pointer-events: none;
 }
 
-/* Minimalist tight category badge */
 .event-banner-category-chip {
   font-size: 0.52rem;
   font-weight: 700;
@@ -931,7 +940,6 @@ body.resizing-col {
   box-shadow: 0 1px 2px rgba(0, 0, 0, 0.15);
 }
 
-/* Minimalist tight year badge */
 .event-year-badge {
   font-size: 0.52rem;
   font-weight: 700;
@@ -1031,7 +1039,6 @@ body.resizing-col {
   gap: 1px;
 }
 
-/* Row 1: Title */
 .event-card-title {
   margin: 0;
   font-size: 0.78rem;
@@ -1043,7 +1050,6 @@ body.resizing-col {
   text-overflow: ellipsis;
 }
 
-/* Row 2: Address */
 .event-card-address {
   font-size: 0.68rem;
   line-height: 1.15;
@@ -1053,7 +1059,6 @@ body.resizing-col {
   text-overflow: ellipsis;
 }
 
-/* Row 3: Dates */
 .event-card-meta {
   display: flex;
   align-items: center;
