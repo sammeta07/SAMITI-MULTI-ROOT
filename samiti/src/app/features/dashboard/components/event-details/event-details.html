@@ -136,17 +136,6 @@
 
           <!-- Bottom Right Action Triggers -->
           <div class="action-buttons-area">
-            <div class="toggle-control-capsule" [class.is-visible]="evt.visibility === 'VISIBLE'">
-              <span class="toggle-status-badge">
-                <span class="status-dot"></span>
-                <span>{{ evt.visibility === 'VISIBLE' ? 'PUBLIC' : 'HIDDEN' }}</span>
-              </span>
-              <mat-slide-toggle class="event-visibility-toggle"
-                                [checked]="evt.visibility === 'VISIBLE'"
-                                [disabled]="!canManageEvent"
-                                (change)="onEventVisibilityChange($event.checked)">
-              </mat-slide-toggle>
-            </div>
 
             <button mat-button class="btn-action btn-edit" [disabled]="!canManageEvent" (click)="onEditEvent()">
               <mat-icon>edit</mat-icon>
