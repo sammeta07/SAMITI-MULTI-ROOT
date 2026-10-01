@@ -1,4 +1,4 @@
-import { query, execute } from '../../../../config/db';
+import { query } from '../../../../config/db';
 import { RowDataPacket } from 'mysql2/promise';
 
 function throwProgramError(code: string, message: string): never {
@@ -40,92 +40,6 @@ async function getLoggedInUserId(context: any): Promise<number> {
   }
 }
 
-function formatTime12Hour(time24: string): string {
-  const [hours, minutes] = time24.split(':').map(Number);
-  const ampm = hours >= 12 ? 'PM' : 'AM';
-  const hours12 = hours % 12 || 12;
-  const paddedMinutes = String(minutes).padStart(2, '0');
-  return `${hours12}:${paddedMinutes} ${ampm}`;
-}
-
-function formatDateDisplay(dateStr: string): string {
-  const date = new Date(dateStr + 'T00:00:00');
-  return date.toLocaleDateString('en-US', {
-    month: 'short',
-    day: 'numeric',
-    year: 'numeric'
-  });
-}
-
-function buildProgramEntries(program: any): Array<{
-  id: number;
-  programId: number;
-  eventId: number;
-  programName: string;
-  startDate: string;
-  endDate: string;
-  startTime: string;
-  endTime: string;
-  isRecurring: boolean;
-  visibility: string;
-  address: string | null;
-  programImage: string | null;
-  displayDateText: string;
-  displayTimeText: string;
-  displayBadge: string | null;
-}> {
-  const entries: Array<any> = [];
-
-  if (program.is_recurring) {
-    const startDate = new Date(program.start_date + 'T00:00:00');
-    const endDate = new Date(program.end_date + 'T00:00:00');
-    const currentDate = new Date(startDate);
-
-    while (currentDate <= endDate) {
-      const dateStr = currentDate.toISOString().split('T')[0];
-      entries.push({
-        id: program.id,
-        programId: program.programId,
-        eventId: program.eventId,
-        programName: program.programName,
-        startDate: dateStr,
-        endDate: dateStr,
-        startTime: program.start_time,
-        endTime: program.end_time,
-        isRecurring: true,
-        visibility: program.visibility,
-        address: program.address,
-        programImage: program.program_image,
-        displayDateText: formatDateDisplay(dateStr),
-        displayTimeText: `${formatTime12Hour(program.start_time)} - ${formatTime12Hour(program.end_time)}`,
-        displayBadge: 'Daily'
-      });
-
-      currentDate.setDate(currentDate.getDate() + 1);
-    }
-  } else {
-    entries.push({
-      id: program.id,
-      programId: program.programId,
-      eventId: program.eventId,
-      programName: program.programName,
-      startDate: program.start_date,
-      endDate: program.end_date,
-      startTime: program.start_time,
-      endTime: program.end_time,
-      isRecurring: false,
-      visibility: program.visibility,
-      address: program.address,
-      programImage: program.program_image,
-      displayDateText: formatDateDisplay(program.start_date),
-      displayTimeText: `${formatTime12Hour(program.start_time)} - ${formatTime12Hour(program.end_time)}`,
-      displayBadge: null
-    });
-  }
-
-  return entries;
-}
-
 export const eventProgramsTypes = `
   type EventProgramEntry {
     id: Int!
@@ -140,9 +54,6 @@ export const eventProgramsTypes = `
     visibility: String!
     address: String
     programImage: String
-    displayDateText: String!
-    displayTimeText: String!
-    displayBadge: String
   }
 
   type EventProgramsPayload {
@@ -206,10 +117,10 @@ export const eventProgramsResolvers = {
            id AS programId,
            event_id AS eventId,
            name AS programName,
-           start_date AS start_date,
-           end_date AS end_date,
-           start_time AS start_time,
-           end_time AS end_time,
+           DATE_FORMAT(start_date, '%Y-%m-%d') AS startDate,
+           DATE_FORMAT(end_date, '%Y-%m-%d') AS endDate,
+           TIME_FORMAT(start_time, '%H:%i:%s') AS startTime,
+           TIME_FORMAT(end_time, '%H:%i:%s') AS endTime,
            is_recurring AS is_recurring,
            visibility,
            address,
@@ -241,7 +152,20 @@ export const eventProgramsResolvers = {
           program_image: bannerImageRows[0]?.mediaUrl || program.program_image
         };
 
-        entries.push(...buildProgramEntries(programWithImage));
+        entries.push({
+          id: program.id,
+          programId: program.programId,
+          eventId: program.eventId,
+          programName: program.programName,
+          startDate: program.startDate,
+          endDate: program.endDate,
+          startTime: program.startTime,
+          endTime: program.endTime,
+          isRecurring: Boolean(program.is_recurring),
+          visibility: program.visibility,
+          address: program.address,
+          programImage: programWithImage.program_image
+        });
       }
 
       return {

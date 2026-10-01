@@ -24,7 +24,8 @@ bash .devcontainer/start-workspace.sh
 ```
 
 The frontend and backend run in that terminal. Press `Ctrl+C` or close the
-terminal to stop both services. The VS Code Ports tab may still show a
-forwarded-port entry briefly; that entry does not mean the app server is still
-running. Ports used internally by VS Code extensions are separate from these
-app services.
+terminal to stop both services and their child processes. Stopping the
+devcontainer also stops the app services. The VS Code Ports tab may still show
+a forwarded-port entry briefly; that entry does not mean the app server is
+still running. Ports used internally by VS Code extensions are separate from
+these app services.

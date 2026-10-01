@@ -28,9 +28,6 @@ export class EventProgramsService {
           visibility
           address
           programImage
-          displayDateText
-          displayTimeText
-          displayBadge
         }
       }
     }`;

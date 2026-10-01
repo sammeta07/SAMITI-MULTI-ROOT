@@ -110,6 +110,17 @@
   gap: 14px;
 }
 
+.form-bordered-section {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  padding: 16px;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  background: #ffffff;
+  box-sizing: border-box;
+}
+
 .coords-field {
   width: 100%;
 }
@@ -152,15 +163,16 @@
   justify-content: space-between;
   gap: 16px;
   width: 100%;
-  padding: 12px 16px;
-  border: 1px solid #e2e8f0;
-  border-radius: 8px;
+  padding: 10px 10px;
+  border: 1px solid #6e7176;
+  border-radius: 4px;
   background: #ffffff;
   box-sizing: border-box;
-  transition: border-color 0.2s ease;
+  transition: all 0.2s ease;
 
   &:hover {
-    border-color: #cbd5e1;
+    border-color: #7c3aed;
+    background: #faf5ff;
   }
 }
 

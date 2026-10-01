@@ -76,7 +76,7 @@ export class EventProgramsComponent implements OnInit, OnDestroy{
       document.body.classList.remove('dialog-open');
       if (result) {
         this.notifier.success(`Program "${result.programName}" created successfully!`);
-        if (result.programId) { this.router.navigate(['/dashboard', 'program', result.programId]); }
+        this.router.navigate(['/dashboard', 'event', eventId, 'overview']);
       }
     });
   }

@@ -11,9 +11,6 @@ export interface EventProgramEntry {
   visibility: string;
   address?: string | null;
   programImage?: string | null;
-  displayDateText: string;
-  displayTimeText: string;
-  displayBadge?: string | null;
 }
 
 export interface EventProgramsPayload {

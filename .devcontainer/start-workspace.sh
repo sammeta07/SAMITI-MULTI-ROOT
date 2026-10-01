@@ -8,8 +8,8 @@ cleanup() {
   trap - EXIT INT TERM HUP
 
   for pid in "$backend_pid" "$frontend_pid"; do
-    if [[ -n "$pid" ]]; then
-      kill "$pid" 2>/dev/null || true
+    if [[ -n "$pid" ]] && kill -0 "$pid" 2>/dev/null; then
+      kill -TERM -- "-$pid" 2>/dev/null || true
     fi
   done
 
@@ -27,13 +27,13 @@ trap 'exit 129' HUP
 
 (
   cd BE2
-  exec npm run dev
+  exec setsid npm run dev
 ) &
 backend_pid=$!
 
 (
   cd samiti
-  exec npm start
+  exec setsid npm start
 ) &
 frontend_pid=$!
 

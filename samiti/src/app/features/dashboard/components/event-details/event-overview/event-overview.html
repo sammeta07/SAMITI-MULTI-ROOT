@@ -104,6 +104,7 @@
         <div class="header-title-left">
           <mat-icon class="icon-accent-program">event_note</mat-icon>
           <span class="title-text">Program Details</span>
+          <span class="count-pill">{{ eventPrograms.length }}</span>
         </div>
         @if (canCreateProgram) {
           <button mat-button class="btn-action btn-add-program" type="button" (click)="onCreateProgram()">
@@ -114,24 +115,64 @@
       </div>
 
       <div class="program-details-body">
-        @if (false) {
-          <div class="program-list">
-            <div class="program-card">
-              <div class="program-card-image">
-                <img src="" alt="Program Image" class="program-img" />
-              </div>
-              <div class="program-card-info">
-                <h3 class="program-name">Program Name</h3>
-                <p class="program-meta">Program details will appear here.</p>
-              </div>
-            </div>
+        @if (isLoadingPrograms) {
+          <div class="program-empty-state">
+            <p class="program-empty-text">Loading programs...</p>
           </div>
         } @else {
-          <div class="program-empty-state">
-            <mat-icon class="program-empty-icon">event_note</mat-icon>
-            <p class="program-empty-text">No programs scheduled for this event yet.</p>
-            <p class="program-empty-subtext">Create a program to get started.</p>
-          </div>
+          @if (eventPrograms.length > 0) {
+            <div class="program-list">
+              @for (program of eventPrograms; track program.programId + '-' + program.startDate) {
+                <article class="program-card">
+                  <div class="program-card-info">
+                    <div class="program-card-layout">
+                      <div class="program-card-content">
+                        <div class="program-title-group">
+                          <h3 class="program-name">{{ program.programName | titlecase }}</h3>
+                          <span class="program-address-text">{{ program.address | titlecase }}</span>
+                        </div>
+
+                        <div class="program-details-grid">
+                          <div class="program-detail">
+                            <mat-icon>event</mat-icon>
+                            <span>
+                              <strong>Date</strong>
+                              @if (program.isRecurring || program.startDate !== program.endDate) {
+                                {{ formatDisplayDate(program.startDate) }} – {{ formatDisplayDate(program.endDate) }}
+                              } @else {
+                                {{ formatDisplayDate(program.startDate) }}
+                              }
+                            </span>
+                          </div>
+                          <div class="program-detail">
+                            <mat-icon>schedule</mat-icon>
+                            <span><strong>Time</strong>{{ formatProgramTime(program.startTime) }} – {{ formatProgramTime(program.endTime) }}</span>
+                          </div>
+                          @if (program.isRecurring) {
+                            <div class="program-detail">
+                              <mat-icon>repeat</mat-icon>
+                              <span class="daily-program-pill">Daily Program</span>
+                            </div>
+                          }
+                        </div>
+                      </div>
+                      <div class="program-card-action">
+                        <button mat-button class="visibility-toggle-btn" type="button" (click)="updateProgramVisibility(program, program.visibility !== 'VISIBLE')" [disabled]="!canManageProgramVisibility || programsUpdatingVisibility().has(program.programId)">
+                          {{ program.visibility === 'VISIBLE' ? 'HIDE' : 'SHOW' }}
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                </article>
+              }
+            </div>
+          } @else {
+            <div class="program-empty-state">
+              <mat-icon class="program-empty-icon">event_note</mat-icon>
+              <p class="program-empty-text">No programs scheduled for this event yet.</p>
+              <p class="program-empty-subtext">Create a program to get started.</p>
+            </div>
+          }
         }
       </div>
     </section>

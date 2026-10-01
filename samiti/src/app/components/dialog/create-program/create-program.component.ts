@@ -16,6 +16,7 @@ import { provideNativeDateAdapter } from '@angular/material/core';
 import { CreateProgramService } from './create-program.service';
 import { NotifierService } from '../../../shared/notifier/notifier.service';
 import { HeaderService } from '../../header/header.service';
+import { TextFormatService } from '../../../shared/services/text-format-service.service';
 
 @Component({
   selector: 'app-create-program-dialog',
@@ -45,6 +46,7 @@ export class CreateProgramDialogComponent implements OnInit {
   private readonly createProgramService = inject(CreateProgramService);
   private readonly notifier = inject(NotifierService);
   private readonly headerService = inject(HeaderService);
+  private readonly textFormatService = inject(TextFormatService);
 
   public readonly injectedData = inject(MAT_DIALOG_DATA, { optional: true });
 
@@ -255,6 +257,18 @@ export class CreateProgramDialogComponent implements OnInit {
     const month = String(date.getMonth() + 1).padStart(2, '0');
     const day = String(date.getDate()).padStart(2, '0');
     return `${year}-${month}-${day}`;
+  }
+
+  public onProgramNameBlur(): void {
+    if (this.programName.trim()) {
+      this.programName = this.textFormatService.toTitleCase(this.programName);
+    }
+  }
+
+  public onAddressBlur(): void {
+    if (this.address.trim()) {
+      this.address = this.textFormatService.toTitleCase(this.address);
+    }
   }
 
   public onCancel(): void {

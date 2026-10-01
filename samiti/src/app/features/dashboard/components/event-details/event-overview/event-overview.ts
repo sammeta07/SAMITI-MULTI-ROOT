@@ -6,6 +6,7 @@ import { MatIconModule } from '@angular/material/icon';
 import { MatButtonModule } from '@angular/material/button';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatCheckboxModule } from '@angular/material/checkbox';
+import { MatSlideToggleModule } from '@angular/material/slide-toggle';
 import { HttpErrorResponse } from '@angular/common/http';
 import { firstValueFrom } from 'rxjs';
 import { EventOverviewService } from './event-overview.service';
@@ -14,6 +15,10 @@ import { NotifierService } from '../../../../../shared/notifier/notifier.service
 import { ConfirmDialogService } from '../../../../../components/dialog/confirm/confirm-dialog.service';
 import { ConfirmDialogData } from '../../../../../components/dialog/confirm/confirm-dialog.models';
 import { EventDetailsStateService } from '../event-details-state.service';
+import { EventProgramsService } from '../event-programs/event-programs.service';
+import { EventProgramEntry } from '../event-programs/event-programs.models';
+import { CreateProgramService } from '../../../../../components/dialog/create-program/create-program.service';
+import { DashboardHierarchyTreeService } from '../../dashboard-hierarchy-tree/dashboard-hierarchy-tree.service';
 import { ImageAssetService } from '../../../../../core/services/image-asset.service';
 import { ImageCropperDialogComponent } from '../../../../../shared/components/image-cropper-dialog/image-cropper-dialog.component';
 import { CreateProgramDialogComponent } from '../../../../../components/dialog/create-program/create-program.component';
@@ -26,7 +31,8 @@ import { CreateProgramDialogComponent } from '../../../../../components/dialog/c
     MatIconModule,
     MatButtonModule,
     MatProgressSpinnerModule,
-    MatCheckboxModule
+    MatCheckboxModule,
+    MatSlideToggleModule
   ],
   templateUrl: './event-overview.html',
   styleUrl: './event-overview.scss'
@@ -43,12 +49,18 @@ export class EventOverviewComponent implements OnInit {
   private readonly imageAssetService = inject(ImageAssetService);
   private readonly confirmDialog = inject(ConfirmDialogService);
   private readonly stateService = inject(EventDetailsStateService);
+  private readonly programsService = inject(EventProgramsService);
+  private readonly createProgramService = inject(CreateProgramService);
+  private readonly hierarchyTreeService = inject(DashboardHierarchyTreeService);
   private readonly cdr = inject(ChangeDetectorRef);
 
   public readonly isDeletingBanners = signal<boolean>(false);
   public readonly isSelectionMode = signal<boolean>(false);
   public readonly selectedBannerUrls = signal<Set<string>>(new Set<string>());
   public readonly skeletonRows5 = [1, 2, 3, 4, 5];
+  public eventPrograms: EventProgramEntry[] = [];
+  public isLoadingPrograms = true;
+  public readonly programsUpdatingVisibility = signal<Set<number>>(new Set<number>());
 
   public get eventData(): EventOverviewPayload | null {
     return this.stateService.eventOverview();
@@ -115,6 +127,10 @@ export class EventOverviewComponent implements OnInit {
     return designation === 'adhyaksha' || designation === 'upadhyaksha';
   }
 
+  public get canManageProgramVisibility(): boolean {
+    return this.isEventMasterAdmin || this.isEventAdmin;
+  }
+
   public get canDeleteBanners(): boolean {
     return this.isEventMasterAdmin || this.isEventAdmin;
   }
@@ -162,9 +178,8 @@ export class EventOverviewComponent implements OnInit {
       document.body.classList.remove('dialog-open');
       if (result) {
         this.notifier.success(`Program "${result.programName}" created successfully!`);
-        if (result.programId) {
-          this.router.navigate(['/dashboard', 'program', result.programId]);
-        }
+        this.loadEventPrograms(String(currentEvent.eventId));
+        this.hierarchyTreeService.triggerHierarchyTreeRefresh();
       }
     });
   }
@@ -177,6 +192,97 @@ export class EventOverviewComponent implements OnInit {
       const eventId = params['id'];
       if (eventId) {
         this.loadEventOverview(eventId);
+        this.loadEventPrograms(eventId);
+      }
+    });
+  }
+
+  public formatProgramTime(value: string): string {
+    const match = value.match(/^(\d{1,2}):(\d{2})(?::\d{2})?$/);
+    if (!match) {
+      return value;
+    }
+
+    const hours = Number(match[1]);
+    const minutes = Number(match[2]);
+    if (hours > 23 || minutes > 59) {
+      return value;
+    }
+
+    const period = hours >= 12 ? 'PM' : 'AM';
+    const displayHours = hours % 12 || 12;
+    return `${displayHours}:${String(minutes).padStart(2, '0')} ${period}`;
+  }
+
+  public formatDisplayDate(value: string): string {
+    const match = value.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+    if (!match) {
+      return value;
+    }
+
+    const year = match[1];
+    const month = Number(match[2]);
+    const day = match[3];
+
+    const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+    const monthName = months[month - 1] || match[2];
+
+    return `${day}-${monthName}-${year}`;
+  }
+
+  public updateProgramVisibility(program: EventProgramEntry, visible: boolean): void {
+    if (!this.canManageProgramVisibility || this.programsUpdatingVisibility().has(program.programId)) {
+      return;
+    }
+
+    const pendingProgramIds = new Set(this.programsUpdatingVisibility());
+    pendingProgramIds.add(program.programId);
+    this.programsUpdatingVisibility.set(pendingProgramIds);
+
+    this.createProgramService.updateProgram({
+      programId: program.programId,
+      eventId: program.eventId,
+      programName: program.programName,
+      address: program.address || undefined,
+      visibility: visible ? 'VISIBLE' : 'HIDDEN',
+      startDate: program.startDate,
+      endDate: program.endDate,
+      startTime: program.startTime,
+      endTime: program.endTime,
+      isRecurring: program.isRecurring
+    }).subscribe({
+      next: (updatedProgram) => {
+        this.eventPrograms = this.eventPrograms.map((entry) =>
+          entry.programId === program.programId
+            ? { ...entry, visibility: updatedProgram.visibility }
+            : entry
+        );
+        this.finishVisibilityUpdate(program.programId);
+      },
+      error: (err: HttpErrorResponse) => {
+        this.finishVisibilityUpdate(program.programId);
+        this.notifier.error(err?.error?.message || 'Failed to update program visibility.');
+      }
+    });
+  }
+
+  private finishVisibilityUpdate(programId: number): void {
+    const pendingProgramIds = new Set(this.programsUpdatingVisibility());
+    pendingProgramIds.delete(programId);
+    this.programsUpdatingVisibility.set(pendingProgramIds);
+  }
+
+  private loadEventPrograms(eventId: string): void {
+    this.isLoadingPrograms = true;
+    this.programsService.getEventPrograms(eventId).subscribe({
+      next: (data) => {
+        this.eventPrograms = data.entries ?? [];
+        this.isLoadingPrograms = false;
+      },
+      error: (err: HttpErrorResponse) => {
+        this.eventPrograms = [];
+        this.isLoadingPrograms = false;
+        this.notifier.error(err?.error?.message || 'Failed to load event programs.');
       }
     });
   }

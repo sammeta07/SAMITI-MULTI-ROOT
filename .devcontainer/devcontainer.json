@@ -1,6 +1,7 @@
 {
   "name": "samiti-multi-root",
   "image": "mcr.microsoft.com/devcontainers/typescript-node:1-22-bookworm",
+  "shutdownAction": "stopContainer",
   "workspaceFolder": "/workspaces/${localWorkspaceFolderBasename}",
   "forwardPorts": [3000, 4200],
   "portsAttributes": {

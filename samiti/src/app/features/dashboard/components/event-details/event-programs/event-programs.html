@@ -22,14 +22,11 @@
           <div class="program-row-info">
             <div class="main-title">{{ program.programName }}</div>
             <div class="secondary-sub-lbl">
-              {{ program.displayDateText || 'Date TBD' }}
+              {{ program.startDate }} – {{ program.endDate }}
             </div>
             <div class="secondary-sub-lbl">
-              {{ program.displayTimeText || 'Time TBD' }}
+              {{ program.startTime }} – {{ program.endTime }}
             </div>
-            @if (program.displayBadge) {
-            <span class="status-tag tag-upcoming">{{ program.displayBadge }}</span>
-            }
           </div>
         </div>
         <div class="program-row-right">

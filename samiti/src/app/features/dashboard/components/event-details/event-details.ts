@@ -224,7 +224,7 @@ export class EventDetailsComponent implements OnInit, OnDestroy {
       if (result) {
         this.notifier.success(`Program "${result.programName}" created successfully!`);
         if (result.programId) {
-          this.router.navigate(['/dashboard', 'program', result.programId]);
+          this.router.navigate(['/dashboard', 'event', currentEvent.eventId, 'overview']);
         }
       }
     });
