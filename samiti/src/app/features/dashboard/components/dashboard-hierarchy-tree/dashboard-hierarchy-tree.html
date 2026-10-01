@@ -76,14 +76,14 @@
             <!-- Leaf Node Definition -->
             <mat-nested-tree-node *matTreeNodeDef="let node" 
               class="tree-flat-node-row leaf-node-spec"
-              [ngClass]="['type-' + node.type, getCommitteeLogoRoleClass(node), (node.type === 'event' ? 'status-container-' + getEventStatus(node).toLowerCase() : '')]"
+              [ngClass]="['type-' + node.type, getCommitteeLogoRoleClass(node), ((node.type === 'event' || node.type === 'program') ? 'status-container-' + getEventStatus(node).toLowerCase() : '')]"
               [class.is-selected]="isNodeSelected(node)">
 
               <div class="tree-node-guide-stub-horizontal"></div>
 
                  <div class="node-interactive-strip" 
                       (click)="onNodeClick(node)"
-                      [ngClass]="['type-' + node.type, isNodeSelected(node) ? 'is-selected' : '', getCommitteeLogoRoleClass(node), (node.type === 'event' ? 'status-container-' + getEventStatus(node).toLowerCase() : '')]"
+                      [ngClass]="['type-' + node.type, isNodeSelected(node) ? 'is-selected' : '', getCommitteeLogoRoleClass(node), ((node.type === 'event' || node.type === 'program') ? 'status-container-' + getEventStatus(node).toLowerCase() : '')]"
                       [class.is-just-selected]="isNodeHighlighted(node)">
 
                  @if (node.type !== 'program') {
@@ -128,27 +128,15 @@
                     </span>
                   }
 
-                  @if (node.type === 'program' && (node.startDate || node.endDate || node.startTime || node.endTime)) {
+                  @if (node.type === 'program' && (node.startDate || node.endDate)) {
                     <span class="program-date-time-subtitle">
                       @if (node.startDate) {
                         @if (node.startDate === node.endDate) {
-                          <span class="program-date-single">Date({{ formatDisplayDate(node.startDate) }})</span>
+                          <span class="program-date-single">{{ formatDisplayDate(node.startDate) }}</span>
                         } @else {
                           <span class="program-date-start">{{ formatDisplayDate(node.startDate) }}</span>
-                          <span class="program-date-separator"> - </span>
+                          <span class="program-date-separator"> to </span>
                           <span class="program-date-end">{{ formatDisplayDate(node.endDate) }}</span>
-                        }
-                      }
-                      @if (node.startTime || node.endTime) {
-                        <span class="program-time-separator">, </span>
-                        @if (node.startTime) {
-                          <span class="program-time-start">{{ formatProgramTime(node.startTime) }}</span>
-                        }
-                        @if (node.startTime && node.endTime) {
-                          <span class="program-time-separator"> - </span>
-                        }
-                        @if (node.endTime) {
-                          <span class="program-time-end">{{ formatProgramTime(node.endTime) }}</span>
                         }
                       }
                     </span>
@@ -156,6 +144,13 @@
                 </div>
               </div>
 
+              @if (node.type === 'program' && (node.startTime || node.endTime)) {
+                <span class="program-time-range">
+                  @if (node.startTime) { {{ formatProgramTime(node.startTime) }} }
+                  @if (node.startTime && node.endTime) { - }
+                  @if (node.endTime) { {{ formatProgramTime(node.endTime) }} }
+                </span>
+              }
               <div class="node-actions-right-aligned">
                 <button mat-icon-button [matMenuTriggerFor]="actionMenu" [matMenuTriggerData]="{ currentTarget: node }"
                         class="node-three-dots-btn" (click)="$event.stopPropagation()">
@@ -167,14 +162,14 @@
             <!-- Parent Node Definition -->
             <mat-nested-tree-node *matTreeNodeDef="let node; when: hasChild" [isExpanded]="isNodeExpanded(node)">
               <div class="tree-flat-node-row parent-node-spec" 
-                   [ngClass]="['type-' + node.type, node.roleScope ? 'scope-' + node.roleScope : '', getCommitteeLogoRoleClass(node), (node.type === 'event' ? 'status-container-' + getEventStatus(node).toLowerCase() : '')]" 
+                   [ngClass]="['type-' + node.type, node.roleScope ? 'scope-' + node.roleScope : '', getCommitteeLogoRoleClass(node), ((node.type === 'event' || node.type === 'program') ? 'status-container-' + getEventStatus(node).toLowerCase() : '')]"
                    [class.is-selected]="isNodeSelected(node)">
 
                 <div class="tree-node-guide-stub-horizontal"></div>
 
                  <div class="node-interactive-strip" 
                       (click)="onNodeClick(node)"
-                      [ngClass]="['type-' + node.type, isNodeExpanded(node) ? 'is-active-expanded' : '', isNodeSelected(node) ? 'is-selected' : '', getCommitteeLogoRoleClass(node), (node.type === 'event' ? 'status-container-' + getEventStatus(node).toLowerCase() : '')]"
+                      [ngClass]="['type-' + node.type, isNodeExpanded(node) ? 'is-active-expanded' : '', isNodeSelected(node) ? 'is-selected' : '', getCommitteeLogoRoleClass(node), ((node.type === 'event' || node.type === 'program') ? 'status-container-' + getEventStatus(node).toLowerCase() : '')]"
                       [class.is-just-selected]="isNodeHighlighted(node)">
 
                  @if (node.type !== 'program') {
@@ -222,27 +217,15 @@
                        </span>
                      }
 
-                     @if (node.type === 'program' && (node.startDate || node.endDate || node.startTime || node.endTime)) {
+                     @if (node.type === 'program' && (node.startDate || node.endDate)) {
                        <span class="program-date-time-subtitle">
                          @if (node.startDate) {
                            @if (node.startDate === node.endDate) {
-                             <span class="program-date-single">Date({{ formatDisplayDate(node.startDate) }})</span>
+                             <span class="program-date-single">{{ formatDisplayDate(node.startDate) }}</span>
                            } @else {
                              <span class="program-date-start">{{ formatDisplayDate(node.startDate) }}</span>
-                             <span class="program-date-separator"> - </span>
+                             <span class="program-date-separator"> to </span>
                              <span class="program-date-end">{{ formatDisplayDate(node.endDate) }}</span>
-                           }
-                         }
-                         @if (node.startTime || node.endTime) {
-                           <span class="program-time-separator">, </span>
-                           @if (node.startTime) {
-                             <span class="program-time-start">{{ formatProgramTime(node.startTime) }}</span>
-                           }
-                           @if (node.startTime && node.endTime) {
-                             <span class="program-time-separator"> - </span>
-                           }
-                           @if (node.endTime) {
-                             <span class="program-time-end">{{ formatProgramTime(node.endTime) }}</span>
                            }
                          }
                        </span>
@@ -250,6 +233,13 @@
                   </div>
                 </div>
 
+                @if (node.type === 'program' && (node.startTime || node.endTime)) {
+                  <span class="program-time-range">
+                    @if (node.startTime) { {{ formatProgramTime(node.startTime) }} }
+                    @if (node.startTime && node.endTime) { - }
+                    @if (node.endTime) { {{ formatProgramTime(node.endTime) }} }
+                  </span>
+                }
                 <div class="node-actions-right-aligned gap-control-wrapper">
                   <button mat-icon-button class="toggle-expansion-flat-btn" (click)="toggleNodeExpansion(node, $event)">
                     <mat-icon class="mat-icon-rtl-mirror">

@@ -474,7 +474,7 @@
 .program-date-time-subtitle {
   display: inline-flex;
   align-items: center;
-  gap: 2px;
+  gap: 3px;
   font-size: 0.62rem;
   font-weight: 500;
   white-space: nowrap;
@@ -482,13 +482,23 @@
   text-overflow: ellipsis;
   color: #64748b;
 
-  .program-date-separator,
-  .program-time-separator { color: #94a3b8; }
+  .program-date-single,
   .program-date-start,
   .program-date-end,
-  .program-time-start,
-  .program-time-end { color: #7c3aed; }
+  .program-date-separator { color: #64748b; }
 }
+
+.program-time-range {
+  flex-shrink: 0;
+  margin-right: 4px;
+  font-size: 0.68rem;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.status-container-started .program-time-range { color: #10b981; }
+.status-container-upcoming .program-time-range { color: #f59e0b; }
+.status-container-completed .program-time-range { color: #64748b; }
 
 .tree-flat-node-row.is-selected {
   border-left: 3px solid #f97316;
@@ -514,11 +524,6 @@
     &.status-container-completed { border-left-color: #64748b; }
   }
 
-  &.type-program {
-    background: rgba(139, 92, 246, 0.08);
-    border-left-color: #7c3aed;
-  }
-
   &.type-role {
     background: rgba(249, 115, 22, 0.08);
     &.scope-admin { background: rgba(34, 197, 94, 0.08); }
@@ -528,6 +533,24 @@
     &.scope-master_admin { border-left-color: #ef4444; }
     &.scope-member { border-left-color: #3b82f6; }
   }
+}
+
+.tree-flat-node-row.type-program.is-selected.status-container-started {
+  background: rgba(16, 185, 129, 0.08);
+  border-left: 3px solid #10b981;
+  .node-label-txt { color: #047857 !important; }
+}
+
+.tree-flat-node-row.type-program.is-selected.status-container-upcoming {
+  background: rgba(245, 158, 11, 0.08);
+  border-left: 3px solid #f59e0b;
+  .node-label-txt { color: #b45309 !important; }
+}
+
+.tree-flat-node-row.type-program.is-selected.status-container-completed {
+  background: rgba(100, 116, 139, 0.08);
+  border-left: 3px solid #64748b;
+  .node-label-txt { color: #475569 !important; }
 }
 
 ::ng-deep .samiti-compact-context-menu {

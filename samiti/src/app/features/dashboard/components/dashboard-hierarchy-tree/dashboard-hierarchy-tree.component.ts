@@ -280,10 +280,12 @@ export class DashboardHierarchyTreeComponent implements OnInit {
     nodes.sort((left, right) => {
       const isLeftEvent = left.type === 'event';
       const isRightEvent = right.type === 'event';
+      const isLeftProgram = left.type === 'program';
+      const isRightProgram = right.type === 'program';
 
-      if (isLeftEvent && isRightEvent) {
-        const leftStatus = getEventComputedStatus(left.startDate, left.endDate);
-        const rightStatus = getEventComputedStatus(right.startDate, right.endDate);
+      if ((isLeftEvent && isRightEvent) || (isLeftProgram && isRightProgram)) {
+        const leftStatus = this.getEventStatus(left);
+        const rightStatus = this.getEventStatus(right);
         const leftOrder = statusOrder[leftStatus] ?? 99;
         const rightOrder = statusOrder[rightStatus] ?? 99;
 
@@ -298,6 +300,16 @@ export class DashboardHierarchyTreeComponent implements OnInit {
           if (!leftDate) return 1;
           if (!rightDate) return -1;
           return leftDate < rightDate ? -1 : 1;
+        }
+
+        if (isLeftProgram && isRightProgram) {
+          const leftEndDate = left.endDate ?? '';
+          const rightEndDate = right.endDate ?? '';
+          if (leftEndDate !== rightEndDate) {
+            if (!leftEndDate) return 1;
+            if (!rightEndDate) return -1;
+            return leftEndDate < rightEndDate ? -1 : 1;
+          }
         }
 
         return left.name.localeCompare(right.name);
@@ -667,7 +679,7 @@ export class DashboardHierarchyTreeComponent implements OnInit {
     const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
     const monthName = months[month - 1] || match[2];
 
-    return `${day}-${monthName}-${year}`;
+    return `${day}-${monthName}-${year.slice(-2)}`;
   }
 
   public getNodeDesignation(node: TreeNode): string | null {
