@@ -85,6 +85,7 @@ export class EventDetailsComponent implements OnInit, OnDestroy {
           this.stateService.reset();
         }
         this.loadHeaderDetails(String(id));
+        this.loadVotingDetails(String(id));
       }
     });
 
