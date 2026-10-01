@@ -499,6 +499,19 @@
   font-size: 0.9rem;
 }
 
+.program-owner-designation {
+  flex: 0 0 auto;
+  font-size: 1.1rem;
+  font-weight: 800;
+  line-height: 1;
+}
+
+.program-owner-input-suffix {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
 .program-owner-edit {
   color: #15803d;
 

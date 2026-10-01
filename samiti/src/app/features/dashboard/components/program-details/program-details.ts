@@ -70,6 +70,23 @@ export class ProgramDetailsComponent implements OnInit {
     return this.selectedBannerUrls().size;
   }
 
+  public get calculatedProgramStatus(): 'started' | 'upcoming' | 'completed' {
+    const now = new Date();
+    const program = this.programData();
+    const startDate = program?.startDate ? new Date(program.startDate) : null;
+    const endDate = program?.endDate ? new Date(program.endDate) : null;
+
+    if (!startDate) return 'completed';
+
+    const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    const start = new Date(startDate.getFullYear(), startDate.getMonth(), startDate.getDate());
+    const end = endDate ? new Date(endDate.getFullYear(), endDate.getMonth(), endDate.getDate()) : null;
+
+    if (today < start) return 'upcoming';
+    if (end && today > end) return 'completed';
+    return 'started';
+  }
+
   public toggleSelectionMode(): void {
     const next = !this.isSelectionMode();
     this.isSelectionMode.set(next);

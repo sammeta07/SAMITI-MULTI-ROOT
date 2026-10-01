@@ -682,6 +682,17 @@ export class DashboardHierarchyTreeComponent implements OnInit {
     return `${day}-${monthName}-${year.slice(-2)}`;
   }
 
+  public formatProgramDateRange(startDate: string, endDate: string): string {
+    const startMatch = startDate.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+    const endMatch = endDate.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+
+    if (startMatch && endMatch && startMatch[1] === endMatch[1] && startMatch[2] === endMatch[2]) {
+      return `${startMatch[3]} - ${this.formatDisplayDate(endDate)}`;
+    }
+
+    return `${this.formatDisplayDate(startDate)} to ${this.formatDisplayDate(endDate)}`;
+  }
+
   public getNodeDesignation(node: TreeNode): string | null {
     if (!node.roleScope || node.roleScope === 'member') {
       return null;

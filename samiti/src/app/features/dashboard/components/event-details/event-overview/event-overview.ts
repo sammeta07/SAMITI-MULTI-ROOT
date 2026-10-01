@@ -86,7 +86,8 @@ export class EventOverviewComponent implements OnInit {
   public readonly displayProgramOwnerName = (value: string | number | null): string => {
     if (value === null) return 'UNASSIGNED';
     if (typeof value === 'string') return value;
-    return this.allCommitteeMembers().find((member) => Number(member.userId) === value)?.name || String(value);
+    const owner = this.allCommitteeMembers().find((member) => Number(member.userId) === value);
+    return this.toTitleCase(owner?.name || String(value));
   };
 
   public getRoleColorClass(role?: string | null): string {
@@ -119,6 +120,16 @@ export class EventOverviewComponent implements OnInit {
     return !program.ownerName && program.ownerUserId === null;
   }
 
+  public getProgramOwnerCandidate(program: EventProgramEntry): EventDirectAssignMember | undefined {
+    if (program.ownerUserId === null || program.ownerUserId === undefined) return undefined;
+    return this.allCommitteeMembers().find((member) => Number(member.userId) === program.ownerUserId);
+  }
+
+  public getProgramOwnerIconColor(program: EventProgramEntry): string {
+    const owner = this.getProgramOwnerCandidate(program);
+    return owner?.color || this.getRoleColor(owner?.committeeRole);
+  }
+
   public isEditingProgramOwner(programId: number): boolean {
     return this.editingProgramOwnerIds().has(programId);
   }
@@ -130,7 +141,7 @@ export class EventOverviewComponent implements OnInit {
 
     this.programOwnerInputText = {
       ...this.programOwnerInputText,
-      [program.programId]: program.ownerName || ''
+      [program.programId]: this.toTitleCase(program.ownerName || '')
     };
     const editingProgramIds = new Set(this.editingProgramOwnerIds());
     editingProgramIds.add(program.programId);
@@ -151,8 +162,12 @@ export class EventOverviewComponent implements OnInit {
   public onProgramOwnerSelect(program: EventProgramEntry, event: { option: { value: number | string } }): void {
     const userId = Number(event.option.value);
     const name = this.getFilteredCandidates(program).find((c) => c.userId === userId)?.name || '';
-    this.programOwnerInputText = { ...this.programOwnerInputText, [program.programId]: name };
+    this.programOwnerInputText = { ...this.programOwnerInputText, [program.programId]: this.toTitleCase(name) };
     this.updateProgramOwner(program, Number.isInteger(userId) && userId > 0 ? userId : null);
+  }
+
+  private toTitleCase(value: string): string {
+    return value.toLowerCase().replace(/\b\w/g, (character) => character.toUpperCase());
   }
 
   public getFilteredCandidates(program: EventProgramEntry): EventDirectAssignMember[] {

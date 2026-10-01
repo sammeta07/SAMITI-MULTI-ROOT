@@ -134,9 +134,7 @@
                         @if (node.startDate === node.endDate) {
                           <span class="program-date-single">{{ formatDisplayDate(node.startDate) }}</span>
                         } @else {
-                          <span class="program-date-start">{{ formatDisplayDate(node.startDate) }}</span>
-                          <span class="program-date-separator"> to </span>
-                          <span class="program-date-end">{{ formatDisplayDate(node.endDate) }}</span>
+                          <span class="program-date-start">{{ formatProgramDateRange(node.startDate, node.endDate) }}</span>
                         }
                       }
                     </span>
@@ -223,9 +221,7 @@
                            @if (node.startDate === node.endDate) {
                              <span class="program-date-single">{{ formatDisplayDate(node.startDate) }}</span>
                            } @else {
-                             <span class="program-date-start">{{ formatDisplayDate(node.startDate) }}</span>
-                             <span class="program-date-separator"> to </span>
-                             <span class="program-date-end">{{ formatDisplayDate(node.endDate) }}</span>
+                             <span class="program-date-start">{{ formatProgramDateRange(node.startDate, node.endDate) }}</span>
                            }
                          }
                        </span>

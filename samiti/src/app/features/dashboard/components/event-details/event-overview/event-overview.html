@@ -174,13 +174,25 @@
                               />
                               @if (programsUpdatingOwner().has(program.programId)) {
                                 <span matSuffix class="program-owner-saving">
+                                  @if (getProgramOwnerCandidate(program); as ownerCandidate) {
+                                    @if (ownerCandidate.icon) {
+                                      <span class="program-owner-designation" [ngStyle]="{'color': ownerCandidate.color || getRoleColor(ownerCandidate.committeeRole)}">{{ ownerCandidate.icon }}</span>
+                                    }
+                                  }
                                   <mat-progress-spinner mode="indeterminate" diameter="14" strokeWidth="2"></mat-progress-spinner>
                                   <span>Saving...</span>
                                 </span>
                               } @else if (isEditingProgramOwner(program.programId)) {
-                                <button matSuffix mat-icon-button class="program-owner-cancel-btn" type="button" title="Cancel" aria-label="Cancel edit" (click)="cancelEditProgramOwner(program)">
-                                  <mat-icon>close</mat-icon>
-                                </button>
+                                <span matSuffix class="program-owner-input-suffix">
+                                  @if (getProgramOwnerCandidate(program); as ownerCandidate) {
+                                    @if (ownerCandidate.icon) {
+                                      <span class="program-owner-designation" [ngStyle]="{'color': ownerCandidate.color || getRoleColor(ownerCandidate.committeeRole)}">{{ ownerCandidate.icon }}</span>
+                                    }
+                                  }
+                                  <button mat-icon-button class="program-owner-cancel-btn" type="button" title="Cancel" aria-label="Cancel edit" (click)="cancelEditProgramOwner(program)">
+                                    <mat-icon>close</mat-icon>
+                                  </button>
+                                </span>
                               } @else {
                                 <span matSuffix class="da-input-icon"><mat-icon>expand_more</mat-icon></span>
                               }
@@ -226,6 +238,11 @@
                               <span class="program-owner-display">
                                 <span class="program-owner-label">Owner -</span>
                                 <span class="program-owner-name">{{ (program.ownerName || 'UNASSIGNED') | titlecase }}</span>
+                                @if (getProgramOwnerCandidate(program); as ownerCandidate) {
+                                  @if (ownerCandidate.icon) {
+                                    <span class="program-owner-designation" [ngStyle]="{'color': ownerCandidate.color || getRoleColor(ownerCandidate.committeeRole)}">{{ ownerCandidate.icon }}</span>
+                                  }
+                                }
                               </span>
                               @if (canAssignProgramOwner) {
                                 @if (isEditingProgramOwner(program.programId)) {

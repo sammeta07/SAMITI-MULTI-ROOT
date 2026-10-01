@@ -9,40 +9,70 @@
 
   <div class="workspace-body scrollable-container">
 
-    <section class="gd-committee-card">
-      <div class="committee-card-grid">
+    <section class="gd-committee-card" [ngClass]="'status-container-' + calculatedProgramStatus">
+      <div class="program-header-grid">
 
+        <!-- Middle: Title + Location -->
         <div class="card-main-info-area">
           <div class="card-title-row">
             <h3 class="committee-display-name">{{ programData()?.programName }}</h3>
           </div>
           <div class="card-location-row">
-            <span class="location-text-trim">{{ programData()?.address || 'No address available' }}</span>
+            <mat-icon class="location-icon">location_on</mat-icon>
+            <span class="location-text-trim">{{ programData()?.address || 'No address' }}</span>
           </div>
         </div>
 
-        <div class="card-actions-identity-area">
-          <div class="identity-top-row">
-            <span class="meta-pill status-pill status-badge-{{ programData()?.status?.toLowerCase() }}">
-              <mat-icon>circle</mat-icon>{{ programData()?.status }}
-            </span>
-            @if (programData()?.startDate) {
-            <span class="meta-pill date-pill"><mat-icon>calendar_month</mat-icon> {{ programData()?.startDate | date:'dd MMM yyyy' }}</span>
-            }
-            @if (programData()?.endDate) {
-            <span class="meta-pill date-pill"><mat-icon>event_busy</mat-icon> {{ programData()?.endDate | date:'dd MMM yyyy' }}</span>
-            }
-          </div>
+        <!-- Pills -->
+        <div class="card-identity-pills-area">
+          <span class="meta-pill status-pill status-badge-{{ programData()?.status?.toLowerCase() }}">
+            <span class="status-dot"></span>
+            {{ programData()?.status }}
+          </span>
 
-          <div class="directions-status-row">
-            <button mat-stroked-button class="action-btn edit-btn" (click)="onEditProgram()">
-              <mat-icon>edit</mat-icon>Edit
+          @if (programData()?.startDate) {
+            <span class="meta-pill date-pill date-pill-status-{{calculatedProgramStatus}}">
+              <mat-icon>event</mat-icon>
+              <span>{{ programData()?.startDate | date:'dd MMM yyyy' }}</span>
+            </span>
+          }
+
+          @if (programData()?.endDate) {
+            <span class="meta-pill date-pill date-end-pill date-pill-status-{{calculatedProgramStatus}}">
+              <mat-icon>event_available</mat-icon>
+              <span>{{ programData()?.endDate | date:'dd MMM yyyy' }}</span>
+            </span>
+          }
+
+          @if (programData()?.ownerName) {
+            <span class="meta-pill owner-pill">
+              <mat-icon>person</mat-icon>
+              <span>{{ programData()?.ownerName }}</span>
+            </span>
+          }
+
+          @if (programData()?.visibility) {
+            <span class="meta-pill type-pill" [class.type-private]="programData()?.visibility !== 'VISIBLE'">
+              <mat-icon>{{ programData()?.visibility === 'VISIBLE' ? 'public' : 'lock' }}</mat-icon>
+              <span>{{ programData()?.visibility }}</span>
+            </span>
+          }
+        </div>
+
+        <!-- Right: Actions -->
+        <div class="card-actions-identity-area">
+          <div class="action-buttons-area">
+            <button mat-button class="btn-action btn-edit" (click)="onEditProgram()">
+              <mat-icon>edit</mat-icon>
+              <span>Edit</span>
             </button>
-            <button mat-stroked-button class="action-btn delete-btn" (click)="onDeleteProgram()">
-              <mat-icon>delete</mat-icon>Delete
+            <button mat-button class="btn-action btn-delete" (click)="onDeleteProgram()">
+              <mat-icon>delete_outline</mat-icon>
+              <span>Delete</span>
             </button>
-            <button mat-stroked-button class="action-btn create-task-btn" (click)="onAddTask()">
-              <mat-icon>add</mat-icon>Task
+            <button mat-button class="btn-action btn-task" (click)="onAddTask()">
+              <mat-icon>add</mat-icon>
+              <span>Task</span>
             </button>
           </div>
         </div>
