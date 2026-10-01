@@ -81,28 +81,28 @@
 
               <div class="tree-node-guide-stub-horizontal"></div>
 
-              <div class="node-interactive-strip" 
-                   (click)="onNodeClick(node)"
-                   [ngClass]="['type-' + node.type, isNodeSelected(node) ? 'is-selected' : '', getCommitteeLogoRoleClass(node), (node.type === 'event' ? 'status-container-' + getEventStatus(node).toLowerCase() : '')]"
-                   [class.is-just-selected]="isNodeHighlighted(node)">
+                 <div class="node-interactive-strip" 
+                      (click)="onNodeClick(node)"
+                      [ngClass]="['type-' + node.type, isNodeSelected(node) ? 'is-selected' : '', getCommitteeLogoRoleClass(node), (node.type === 'event' ? 'status-container-' + getEventStatus(node).toLowerCase() : '')]"
+                      [class.is-just-selected]="isNodeHighlighted(node)">
 
-                <div class="node-logo-avatar-wrapper branch-leaf-avatar" 
-                     [ngClass]="['color-' + node.type, getCommitteeLogoRoleClass(node)]"
-                     [ngStyle]="node.type === 'event' && node.id ? {'--node-border-color': getEventDesignationColor(node), 'border-radius': '50%'} : {}">
-                  @if ((node.type === 'group' || node.type === 'event') && node.logo) {
-                    <img [src]="node.logo" [alt]="node.name" class="brand-image-node" (error)="node.logo = null" />
-                  } @else if (node.type === 'group' || node.type === 'event') {
-                    <span class="logo-fallback-initial">{{ getNodeInitial(node.name) }}</span>
-                  } @else if (node.type === 'program') {
-                    <span class="type-letter-icon">P</span>
-                  } @else if (node.type === 'task') {
-                    <span class="type-letter-icon">T</span>
-                  } @else {
-                    <mat-icon class="type-indicator-icon">assignment_turned_in</mat-icon>
-                  }
-                </div>
+                 @if (node.type !== 'program') {
+                   <div class="node-logo-avatar-wrapper branch-leaf-avatar" 
+                        [ngClass]="['color-' + node.type, getCommitteeLogoRoleClass(node)]"
+                        [ngStyle]="node.type === 'event' && node.id ? {'--node-border-color': getEventDesignationColor(node), 'border-radius': '50%'} : {}">
+                     @if ((node.type === 'group' || node.type === 'event') && node.logo) {
+                       <img [src]="node.logo" [alt]="node.name" class="brand-image-node" (error)="node.logo = null" />
+                     } @else if (node.type === 'group' || node.type === 'event') {
+                       <span class="logo-fallback-initial">{{ getNodeInitial(node.name) }}</span>
+                     } @else if (node.type === 'task') {
+                       <span class="type-letter-icon">T</span>
+                     } @else {
+                       <mat-icon class="type-indicator-icon">assignment_turned_in</mat-icon>
+                     }
+                   </div>
+                 }
 
-                <div class="node-text-content">
+                 <div class="node-text-content">
                   <div class="node-title-row">
                     <span class="node-label-txt" [class.bold-text]="isNodeSelected(node)">{{ node.name | titlecase }}</span>
                     @if (node.type === 'event' && shouldShowEventRole(node)) {
@@ -127,6 +127,32 @@
                       }
                     </span>
                   }
+
+                  @if (node.type === 'program' && (node.startDate || node.endDate || node.startTime || node.endTime)) {
+                    <span class="program-date-time-subtitle">
+                      @if (node.startDate) {
+                        @if (node.startDate === node.endDate) {
+                          <span class="program-date-single">Date({{ formatDisplayDate(node.startDate) }})</span>
+                        } @else {
+                          <span class="program-date-start">{{ formatDisplayDate(node.startDate) }}</span>
+                          <span class="program-date-separator"> - </span>
+                          <span class="program-date-end">{{ formatDisplayDate(node.endDate) }}</span>
+                        }
+                      }
+                      @if (node.startTime || node.endTime) {
+                        <span class="program-time-separator">, </span>
+                        @if (node.startTime) {
+                          <span class="program-time-start">{{ formatProgramTime(node.startTime) }}</span>
+                        }
+                        @if (node.startTime && node.endTime) {
+                          <span class="program-time-separator"> - </span>
+                        }
+                        @if (node.endTime) {
+                          <span class="program-time-end">{{ formatProgramTime(node.endTime) }}</span>
+                        }
+                      }
+                    </span>
+                  }
                 </div>
               </div>
 
@@ -146,34 +172,34 @@
 
                 <div class="tree-node-guide-stub-horizontal"></div>
 
-                <div class="node-interactive-strip" 
-                     (click)="onNodeClick(node)"
-                     [ngClass]="['type-' + node.type, isNodeExpanded(node) ? 'is-active-expanded' : '', isNodeSelected(node) ? 'is-selected' : '', getCommitteeLogoRoleClass(node), (node.type === 'event' ? 'status-container-' + getEventStatus(node).toLowerCase() : '')]"
-                     [class.is-just-selected]="isNodeHighlighted(node)">
+                 <div class="node-interactive-strip" 
+                      (click)="onNodeClick(node)"
+                      [ngClass]="['type-' + node.type, isNodeExpanded(node) ? 'is-active-expanded' : '', isNodeSelected(node) ? 'is-selected' : '', getCommitteeLogoRoleClass(node), (node.type === 'event' ? 'status-container-' + getEventStatus(node).toLowerCase() : '')]"
+                      [class.is-just-selected]="isNodeHighlighted(node)">
 
-                  <div class="node-logo-avatar-wrapper" 
-                       [ngClass]="['type-' + node.type, getCommitteeLogoRoleClass(node)]"
-                       [ngStyle]="node.type === 'event' && node.id ? {'--node-border-color': getEventDesignationColor(node), 'border-radius': '50%'} : {}">
-                    @if ((node.type === 'group' || node.type === 'event') && node.logo) {
-                      <img [src]="node.logo" [alt]="node.name" class="brand-image-node" (error)="node.logo = null" />
-                    } @else if (node.type === 'group' || node.type === 'event') {
-                      <span class="logo-fallback-initial">{{ getNodeInitial(node.name) }}</span>
-                    } @else if (node.type === 'program') {
-                      <span class="type-letter-icon">P</span>
-                    } @else if (node.type === 'task') {
-                      <span class="type-letter-icon">T</span>
-                    } @else {
-                      <mat-icon class="type-indicator-icon">
-                        @switch (node.type) {
-                          @case ('role') { admin_panel_settings }
-                          @case ('group') { groups }
-                          @default { folder }
-                        }
-                      </mat-icon>
-                    }
-                  </div>
+                 @if (node.type !== 'program') {
+                   <div class="node-logo-avatar-wrapper" 
+                        [ngClass]="['type-' + node.type, getCommitteeLogoRoleClass(node)]"
+                        [ngStyle]="node.type === 'event' && node.id ? {'--node-border-color': getEventDesignationColor(node), 'border-radius': '50%'} : {}">
+                     @if ((node.type === 'group' || node.type === 'event') && node.logo) {
+                       <img [src]="node.logo" [alt]="node.name" class="brand-image-node" (error)="node.logo = null" />
+                     } @else if (node.type === 'group' || node.type === 'event') {
+                       <span class="logo-fallback-initial">{{ getNodeInitial(node.name) }}</span>
+                     } @else if (node.type === 'task') {
+                       <span class="type-letter-icon">T</span>
+                     } @else {
+                       <mat-icon class="type-indicator-icon">
+                         @switch (node.type) {
+                           @case ('role') { admin_panel_settings }
+                           @case ('group') { groups }
+                           @default { folder }
+                         }
+                       </mat-icon>
+                     }
+                   </div>
+                 }
 
-                  <div class="node-text-content">
+                   <div class="node-text-content">
                     <div class="node-title-row">
                       <span class="node-label-txt" [class.bold-text]="isNodeSelected(node)">{{ node.name | titlecase }}</span>
                       @if (getNodeDesignation(node) && node.type !== 'role') {
@@ -188,13 +214,39 @@
                       }
                     </div>
 
-                    @if (node.type === 'event' && (node.startDate || node.endDate)) {
-                      <span class="event-date-range-subtitle">
-                        @if (node.startDate) { {{ node.startDate | date: 'd MMM y' }} }
-                        @if (node.startDate && node.endDate) { &ndash; }
-                        @if (node.endDate) { {{ node.endDate | date: 'd MMM y' }} }
-                      </span>
-                    }
+                     @if (node.type === 'event' && (node.startDate || node.endDate)) {
+                       <span class="event-date-range-subtitle">
+                         @if (node.startDate) { {{ node.startDate | date: 'd MMM y' }} }
+                         @if (node.startDate && node.endDate) { &ndash; }
+                         @if (node.endDate) { {{ node.endDate | date: 'd MMM y' }} }
+                       </span>
+                     }
+
+                     @if (node.type === 'program' && (node.startDate || node.endDate || node.startTime || node.endTime)) {
+                       <span class="program-date-time-subtitle">
+                         @if (node.startDate) {
+                           @if (node.startDate === node.endDate) {
+                             <span class="program-date-single">Date({{ formatDisplayDate(node.startDate) }})</span>
+                           } @else {
+                             <span class="program-date-start">{{ formatDisplayDate(node.startDate) }}</span>
+                             <span class="program-date-separator"> - </span>
+                             <span class="program-date-end">{{ formatDisplayDate(node.endDate) }}</span>
+                           }
+                         }
+                         @if (node.startTime || node.endTime) {
+                           <span class="program-time-separator">, </span>
+                           @if (node.startTime) {
+                             <span class="program-time-start">{{ formatProgramTime(node.startTime) }}</span>
+                           }
+                           @if (node.startTime && node.endTime) {
+                             <span class="program-time-separator"> - </span>
+                           }
+                           @if (node.endTime) {
+                             <span class="program-time-end">{{ formatProgramTime(node.endTime) }}</span>
+                           }
+                         }
+                       </span>
+                     }
                   </div>
                 </div>
 

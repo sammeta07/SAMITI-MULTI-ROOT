@@ -7,6 +7,7 @@ import { MatButtonModule } from '@angular/material/button';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatCheckboxModule } from '@angular/material/checkbox';
 import { MatTooltipModule } from '@angular/material/tooltip';
+import { MatSelectModule } from '@angular/material/select';
 import { HttpErrorResponse } from '@angular/common/http';
 import { firstValueFrom, finalize } from 'rxjs';
 import { ProgramDetailsPayload, ProgramTask } from './program-details.models';
@@ -18,6 +19,8 @@ import { ImageAssetService } from '../../../../core/services/image-asset.service
 import { LoadingStateService } from '../../../../shared/services/loading-state.service';
 import { ConfirmDialogService } from '../../../../components/dialog/confirm/confirm-dialog.service';
 import { ConfirmDialogData } from '../../../../components/dialog/confirm/confirm-dialog.models';
+import { ProgramOwnerService } from '../program-owner/program-owner.service';
+import { ProgramOwnerCandidate, ProgramOwnerPayload } from '../program-owner/program-owner.models';
 
 @Component({
   selector: 'app-program-details',
@@ -28,7 +31,8 @@ import { ConfirmDialogData } from '../../../../components/dialog/confirm/confirm
     MatButtonModule,
     MatProgressSpinnerModule,
     MatCheckboxModule,
-    MatTooltipModule
+    MatTooltipModule,
+    MatSelectModule
   ],
   templateUrl: './program-details.html',
   styleUrl: './program-details.scss'
@@ -40,6 +44,7 @@ export class ProgramDetailsComponent implements OnInit {
   private readonly dialog = inject(MatDialog);
   private readonly notifier = inject(NotifierService);
   private readonly programDetailsService = inject(ProgramDetailsService);
+  private readonly programOwnerService = inject(ProgramOwnerService);
   private readonly hierarchyTreeService = inject(DashboardHierarchyTreeService);
   private readonly imageAssetService = inject(ImageAssetService);
   private readonly loadingState = inject(LoadingStateService);
@@ -53,6 +58,8 @@ export class ProgramDetailsComponent implements OnInit {
   public readonly selectedBannerUrls = signal<Set<string>>(new Set<string>());
   public readonly programData = signal<ProgramDetailsPayload | null>(null);
   public readonly tasks = signal<ProgramTask[]>([]);
+  public readonly programOwnerCandidates = signal<ProgramOwnerCandidate[]>([]);
+  public readonly isUpdatingOwner = signal<boolean>(false);
   public readonly MAX_BANNERS = 5;
 
   public get bannerCount(): number {
@@ -149,6 +156,7 @@ export class ProgramDetailsComponent implements OnInit {
     this.isLoading.set(true);
     this.loadingState.begin();
     this.programData.set(null);
+    this.programOwnerCandidates.set([]);
 
     this.programDetailsService.getProgramDetails(id).pipe(
       finalize(() => {
@@ -159,11 +167,62 @@ export class ProgramDetailsComponent implements OnInit {
       next: (data: ProgramDetailsPayload) => {
         this.programData.set(data ?? null);
         this.tasks.set([]);
+        if (data?.canAssignOwner && data.eventId) {
+          const eventId = data.eventId;
+          this.programOwnerService.getCandidates(data.eventId).subscribe({
+            next: (candidates) => {
+              if (this.programData()?.eventId === eventId) {
+                this.programOwnerCandidates.set(candidates);
+              }
+            },
+            error: (err: HttpErrorResponse) => this.notifier.error(err?.error?.message || 'Failed to load committee members.')
+          });
+        } else {
+          this.programOwnerCandidates.set([]);
+        }
       },
       error: (err: HttpErrorResponse) => {
         this.notifier.error(err?.error?.message || 'Failed to load program details.');
         this.programData.set(null);
         this.tasks.set([]);
+      }
+    });
+  }
+
+  public updateProgramOwner(ownerUserId: number | null): void {
+    const currentProgram = this.programData();
+    if (!currentProgram?.programId || !currentProgram.canAssignOwner || this.isUpdatingOwner()) {
+      return;
+    }
+
+    this.programData.update((current) =>
+      current ? { ...current, ownerUserId } : current
+    );
+    this.isUpdatingOwner.set(true);
+    this.programOwnerService.assignOwner(currentProgram.programId, ownerUserId).subscribe({
+      next: (owner: ProgramOwnerPayload) => {
+        this.programData.update((current) =>
+          current && current.programId === owner.programId
+            ? {
+                ...current,
+                ownerUserId: owner.ownerUserId,
+                ownerName: owner.ownerName,
+                ownerAssignedBy: owner.ownerAssignedBy,
+                ownerAssignedAt: owner.ownerAssignedAt
+              }
+            : current
+        );
+        this.isUpdatingOwner.set(false);
+        this.notifier.success(owner.ownerName ? `Program owner assigned to ${owner.ownerName}.` : 'Program owner cleared.');
+      },
+      error: (err: HttpErrorResponse) => {
+        this.programData.update((current) =>
+          current && current.programId === currentProgram.programId
+            ? { ...current, ownerUserId: currentProgram.ownerUserId ?? null }
+            : current
+        );
+        this.isUpdatingOwner.set(false);
+        this.notifier.error(err?.error?.message || 'Failed to update program owner.');
       }
     });
   }

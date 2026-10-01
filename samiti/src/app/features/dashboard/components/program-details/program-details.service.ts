@@ -37,6 +37,11 @@ export class ProgramDetailsService {
         createdBy
         updatedBy
         createdAt
+        ownerUserId
+        ownerName
+        ownerAssignedBy
+        ownerAssignedAt
+        canAssignOwner
       }
     }`;
 

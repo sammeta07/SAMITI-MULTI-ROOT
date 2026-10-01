@@ -209,6 +209,8 @@ export class DashboardHierarchyTreeComponent implements OnInit {
       roles: node.roles || undefined,
       startDate: node.startDate ?? undefined,
       endDate: node.endDate ?? undefined,
+      startTime: node.startTime ?? undefined,
+      endTime: node.endTime ?? undefined,
       children: mappedChildren.length > 0 ? mappedChildren : undefined
     };
   }
@@ -633,6 +635,39 @@ export class DashboardHierarchyTreeComponent implements OnInit {
 
   public getNodeInitial(name: string | undefined): string {
     return String(name || '').trim().charAt(0).toUpperCase() || '?';
+  }
+
+  public formatProgramTime(value: string): string {
+    const match = value.match(/^(\d{1,2}):(\d{2})(?::\d{2})?$/);
+    if (!match) {
+      return value;
+    }
+
+    const hours = Number(match[1]);
+    const minutes = Number(match[2]);
+    if (hours > 23 || minutes > 59) {
+      return value;
+    }
+
+    const period = hours >= 12 ? 'PM' : 'AM';
+    const displayHours = hours % 12 || 12;
+    return `${displayHours}:${String(minutes).padStart(2, '0')} ${period}`;
+  }
+
+  public formatDisplayDate(value: string): string {
+    const match = value.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+    if (!match) {
+      return value;
+    }
+
+    const year = match[1];
+    const month = Number(match[2]);
+    const day = match[3];
+
+    const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+    const monthName = months[month - 1] || match[2];
+
+    return `${day}-${monthName}-${year}`;
   }
 
   public getNodeDesignation(node: TreeNode): string | null {

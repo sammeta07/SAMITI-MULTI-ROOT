@@ -157,6 +157,24 @@
                         </div>
                       </div>
                       <div class="program-card-action">
+                        <div class="program-owner-row">
+                          <span class="program-owner-label">Owner</span>
+                          @if (canAssignProgramOwner) {
+                            <mat-select
+                              class="program-owner-select"
+                              [value]="program.ownerUserId ?? null"
+                              (selectionChange)="updateProgramOwner(program, $event.value)"
+                              [disabled]="programsUpdatingOwner().has(program.programId)"
+                              aria-label="Assign program owner">
+                              <mat-option [value]="null">Unassigned</mat-option>
+                              @for (candidate of programOwnerCandidates(); track candidate.userId) {
+                                <mat-option [value]="candidate.userId">{{ candidate.name }}</mat-option>
+                              }
+                            </mat-select>
+                          } @else {
+                            <span class="program-owner-name">{{ program.ownerName || 'Unassigned' }}</span>
+                          }
+                        </div>
                         <button mat-button class="visibility-toggle-btn" type="button" (click)="updateProgramVisibility(program, program.visibility !== 'VISIBLE')" [disabled]="!canManageProgramVisibility || programsUpdatingVisibility().has(program.programId)">
                           {{ program.visibility === 'VISIBLE' ? 'HIDE' : 'SHOW' }}
                         </button>

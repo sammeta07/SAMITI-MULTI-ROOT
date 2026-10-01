@@ -12,6 +12,7 @@ export interface EventOverviewMeta {
   eventDisplayName: string;
   myDesignation?: MyDesignation | null;
   committeeRole?: string;
+  canAssignProgramOwner?: boolean;
 }
 
 export interface EventOverviewPayload extends EventOverviewMeta {

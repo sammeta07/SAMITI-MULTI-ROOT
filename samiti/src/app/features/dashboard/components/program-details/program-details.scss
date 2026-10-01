@@ -73,20 +73,19 @@
   box-shadow: 0 1px 4px rgba(109, 40, 217, 0.04);
 }
 
-.committee-card-grid { display: grid; width: 100%; grid-template-columns: 58px 1fr 190px; grid-template-rows: auto auto; row-gap: 6px; column-gap: 14px; align-items: start; }
-.card-logo-area { display: flex; flex-direction: column; align-items: center; gap: 5px; }
-
-.committee-avatar { width: 54px; height: 54px; border-radius: 11px; object-fit: cover; border: 1px solid #e2e8f0; }
-.committee-avatar-fallback { width: 54px; height: 54px; border-radius: 11px; background: linear-gradient(135deg, #8b5cf6, #7c3aed); color: #ffffff; display: flex; align-items: center; justify-content: center; font-size: 1.4rem; font-weight: 700; }
-.committee-avatar-fallback.program-avatar-fallback { background: linear-gradient(135deg, #8b5cf6, #7c3aed); }
+.committee-card-grid { display: grid; width: 100%; grid-template-columns: minmax(0, 1fr) 190px; grid-template-rows: auto auto; row-gap: 6px; column-gap: 14px; align-items: start; }
 
 .card-main-info-area { display: flex; flex-direction: column; gap: 3px; }
 .card-title-row { display: flex; align-items: center; gap: 6px; }
 .committee-display-name { font-size: 0.98rem; font-weight: 700; color: #0f172a; margin: 0; }
 .card-location-row { display: flex; align-items: center; gap: 4px; color: #475569; font-size: 0.82rem; }
 .location-text-trim { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.program-owner-header-row { display: flex; align-items: center; gap: 6px; color: #64748b; font-size: 0.76rem; }
+.program-owner-header-label { font-weight: 700; }
+.program-owner-header-name { color: #334155; }
+.program-owner-header-select { width: 180px; font-size: 0.76rem; }
 
-.card-actions-identity-area { grid-column: 3 / 4; grid-row: 1 / 2; display: flex; flex-direction: column; align-items: flex-end; gap: 6px; box-sizing: border-box; }
+.card-actions-identity-area { grid-column: 2 / 3; grid-row: 1 / 2; display: flex; flex-direction: column; align-items: flex-end; gap: 6px; box-sizing: border-box; }
 
 .identity-top-row { display: flex; align-items: center; gap: 6px; flex-wrap: nowrap; }
 
@@ -174,7 +173,7 @@
   .create-task-btn { color: #059669 !important; border-color: rgba(5, 150, 105, 0.3) !important; }
 }
 
-.card-paragraph-summary-area { grid-column: 1 / 4; border-top: 1px dashed #e2e8f0; padding-top: 5px; }
+.card-paragraph-summary-area { grid-column: 1 / -1; border-top: 1px dashed #e2e8f0; padding-top: 5px; }
 .summary-paragraph-text { font-size: 0.78rem; color: #64748b; line-height: 1.35; margin: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 100%; display: block; }
 
 /* COMPACT HERO CARD */

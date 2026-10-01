@@ -16,6 +16,11 @@ export interface ProgramDetailsPayload {
   createdBy?: number | null;
   updatedBy?: number | null;
   createdAt?: string | null;
+  ownerUserId?: number | null;
+  ownerName?: string | null;
+  ownerAssignedBy?: number | null;
+  ownerAssignedAt?: string | null;
+  canAssignOwner: boolean;
 }
 
 export interface ProgramTask {

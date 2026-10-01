@@ -7,6 +7,7 @@ import { MatButtonModule } from '@angular/material/button';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatCheckboxModule } from '@angular/material/checkbox';
 import { MatSlideToggleModule } from '@angular/material/slide-toggle';
+import { MatSelectModule } from '@angular/material/select';
 import { HttpErrorResponse } from '@angular/common/http';
 import { firstValueFrom } from 'rxjs';
 import { EventOverviewService } from './event-overview.service';
@@ -22,6 +23,8 @@ import { DashboardHierarchyTreeService } from '../../dashboard-hierarchy-tree/da
 import { ImageAssetService } from '../../../../../core/services/image-asset.service';
 import { ImageCropperDialogComponent } from '../../../../../shared/components/image-cropper-dialog/image-cropper-dialog.component';
 import { CreateProgramDialogComponent } from '../../../../../components/dialog/create-program/create-program.component';
+import { ProgramOwnerService } from '../../program-owner/program-owner.service';
+import { ProgramOwnerCandidate, ProgramOwnerPayload } from '../../program-owner/program-owner.models';
 
 @Component({
   selector: 'app-event-overview',
@@ -32,7 +35,8 @@ import { CreateProgramDialogComponent } from '../../../../../components/dialog/c
     MatButtonModule,
     MatProgressSpinnerModule,
     MatCheckboxModule,
-    MatSlideToggleModule
+    MatSlideToggleModule,
+    MatSelectModule
   ],
   templateUrl: './event-overview.html',
   styleUrl: './event-overview.scss'
@@ -50,6 +54,7 @@ export class EventOverviewComponent implements OnInit {
   private readonly confirmDialog = inject(ConfirmDialogService);
   private readonly stateService = inject(EventDetailsStateService);
   private readonly programsService = inject(EventProgramsService);
+  private readonly programOwnerService = inject(ProgramOwnerService);
   private readonly createProgramService = inject(CreateProgramService);
   private readonly hierarchyTreeService = inject(DashboardHierarchyTreeService);
   private readonly cdr = inject(ChangeDetectorRef);
@@ -61,6 +66,8 @@ export class EventOverviewComponent implements OnInit {
   public eventPrograms: EventProgramEntry[] = [];
   public isLoadingPrograms = true;
   public readonly programsUpdatingVisibility = signal<Set<number>>(new Set<number>());
+  public readonly programOwnerCandidates = signal<ProgramOwnerCandidate[]>([]);
+  public readonly programsUpdatingOwner = signal<Set<number>>(new Set<number>());
 
   public get eventData(): EventOverviewPayload | null {
     return this.stateService.eventOverview();
@@ -129,6 +136,10 @@ export class EventOverviewComponent implements OnInit {
 
   public get canManageProgramVisibility(): boolean {
     return this.isEventMasterAdmin || this.isEventAdmin;
+  }
+
+  public get canAssignProgramOwner(): boolean {
+    return Boolean(this.eventData?.canAssignProgramOwner);
   }
 
   public get canDeleteBanners(): boolean {
@@ -272,6 +283,52 @@ export class EventOverviewComponent implements OnInit {
     this.programsUpdatingVisibility.set(pendingProgramIds);
   }
 
+  public updateProgramOwner(program: EventProgramEntry, ownerUserId: number | null): void {
+    if (!this.canAssignProgramOwner || this.programsUpdatingOwner().has(program.programId)) {
+      return;
+    }
+
+    const previousOwnerUserId = program.ownerUserId ?? null;
+    this.eventPrograms = this.eventPrograms.map((entry) =>
+      entry.programId === program.programId ? { ...entry, ownerUserId } : entry
+    );
+
+    const pendingProgramIds = new Set(this.programsUpdatingOwner());
+    pendingProgramIds.add(program.programId);
+    this.programsUpdatingOwner.set(pendingProgramIds);
+
+    this.programOwnerService.assignOwner(program.programId, ownerUserId).subscribe({
+      next: (owner: ProgramOwnerPayload) => {
+        this.eventPrograms = this.eventPrograms.map((entry) =>
+          entry.programId === owner.programId
+            ? {
+                ...entry,
+                ownerUserId: owner.ownerUserId,
+                ownerName: owner.ownerName,
+                ownerAssignedBy: owner.ownerAssignedBy,
+                ownerAssignedAt: owner.ownerAssignedAt
+              }
+            : entry
+        );
+        this.finishOwnerUpdate(program.programId);
+        this.notifier.success(owner.ownerName ? `Program owner assigned to ${owner.ownerName}.` : 'Program owner cleared.');
+      },
+      error: (err: HttpErrorResponse) => {
+        this.eventPrograms = this.eventPrograms.map((entry) =>
+          entry.programId === program.programId ? { ...entry, ownerUserId: previousOwnerUserId } : entry
+        );
+        this.finishOwnerUpdate(program.programId);
+        this.notifier.error(err?.error?.message || 'Failed to update program owner.');
+      }
+    });
+  }
+
+  private finishOwnerUpdate(programId: number): void {
+    const pendingProgramIds = new Set(this.programsUpdatingOwner());
+    pendingProgramIds.delete(programId);
+    this.programsUpdatingOwner.set(pendingProgramIds);
+  }
+
   private loadEventPrograms(eventId: string): void {
     this.isLoadingPrograms = true;
     this.programsService.getEventPrograms(eventId).subscribe({
@@ -291,6 +348,13 @@ export class EventOverviewComponent implements OnInit {
     this.overviewService.getEventOverview(eventId).subscribe({
       next: (data) => {
         this.stateService.eventOverview.set(data ?? null);
+        this.programOwnerCandidates.set([]);
+        if (this.canAssignProgramOwner && data?.eventId) {
+          this.programOwnerService.getCandidates(data.eventId).subscribe({
+            next: (candidates) => this.programOwnerCandidates.set(candidates),
+            error: (err: HttpErrorResponse) => this.notifier.error(err?.error?.message || 'Failed to load committee members.')
+          });
+        }
       },
       error: (err: HttpErrorResponse) => {
         this.notifier.error(err?.error?.message || 'Failed to load event overview.');

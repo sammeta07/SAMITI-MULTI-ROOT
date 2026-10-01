@@ -37,6 +37,7 @@ import { createProgramTypes, createProgramMutationFields, createProgramResolvers
 import { updateProgramTypes, updateProgramMutationFields, updateProgramResolvers } from './programs/update-program.graphql';
 import { uploadProgramBannerImagesTypes, uploadProgramBannerImagesMutationFields, uploadProgramBannerImagesResolvers } from './programs/upload-program-banner-images.graphql';
 import { programDetailsTypes, programDetailsQueryFields, programDetailsResolvers } from './programs/program-details-by-id.graphql';
+import { programOwnerTypes, programOwnerQueryFields, programOwnerMutationFields, programOwnerResolvers } from './programs/program-owner.graphql';
 import { authCommitteeTypes, authCommitteeQueryFields, authCommitteesResolvers } from './committees/committees-list/auth-user-committees-list.graphql';
 import { guestCommitteeTypes, guestCommitteeQueryFields, guestCommitteesResolvers } from './committees/committees-list/guest-user-committees-list.graphql';
 import { committeeYearInfoTypes } from './committees/committees-list/committee-year-info.graphql';
@@ -77,6 +78,7 @@ export const typeDefs = `
   ${updateProgramTypes}
   ${uploadProgramBannerImagesTypes}
   ${programDetailsTypes}
+  ${programOwnerTypes}
    ${eventVotingTypes}
    ${eventVoteTypes}
    ${eventInterestTypes}
@@ -105,6 +107,7 @@ export const typeDefs = `
     ${hierarchyTreeQueryFields}
     ${committeeDetailsQueryFields}
     ${programDetailsQueryFields}
+    ${programOwnerQueryFields}
     ${eventDetailsQueryFields}
     ${eventOverviewQueryFields}
     ${eventDetailsHeaderQueryFields}
@@ -128,6 +131,7 @@ export const typeDefs = `
     ${updateEventMutationFields}
     ${createProgramMutationFields}
     ${updateProgramMutationFields}
+    ${programOwnerMutationFields}
     ${uploadProgramBannerImagesMutationFields}
     ${uploadEventBannerImagesMutationFields}
     ${deleteEventMutationFields}
@@ -161,6 +165,7 @@ export const resolvers = {
     ...hierarchyTreeResolvers.Query,
     ...committeeDetailsResolvers.Query,
     ...programDetailsResolvers.Query,
+    ...programOwnerResolvers.Query,
     ...eventDetailsResolvers.Query,
     ...eventOverviewResolvers.Query,
     ...eventDetailsHeaderResolvers.Query,
@@ -183,6 +188,7 @@ export const resolvers = {
     ...updateEventResolvers.Mutation,
     ...createProgramResolvers.Mutation,
     ...updateProgramResolvers.Mutation,
+    ...programOwnerResolvers.Mutation,
     ...uploadProgramBannerImagesResolvers.Mutation,
     ...uploadEventBannerImagesResolvers.Mutation,
     ...deleteEventResolvers.Mutation,

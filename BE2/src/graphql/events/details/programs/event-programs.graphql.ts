@@ -54,6 +54,10 @@ export const eventProgramsTypes = `
     visibility: String!
     address: String
     programImage: String
+    ownerUserId: Int
+    ownerName: String
+    ownerAssignedBy: Int
+    ownerAssignedAt: String
   }
 
   type EventProgramsPayload {
@@ -113,21 +117,26 @@ export const eventProgramsResolvers = {
 
       const programRows = await query<any[]>(
         `SELECT
-           id,
-           id AS programId,
-           event_id AS eventId,
-           name AS programName,
-           DATE_FORMAT(start_date, '%Y-%m-%d') AS startDate,
-           DATE_FORMAT(end_date, '%Y-%m-%d') AS endDate,
-           TIME_FORMAT(start_time, '%H:%i:%s') AS startTime,
-           TIME_FORMAT(end_time, '%H:%i:%s') AS endTime,
-           is_recurring AS is_recurring,
-           visibility,
-           address,
-           program_image AS program_image
-         FROM programs
-         WHERE event_id = ?
-         ORDER BY start_date ASC, start_time ASC`,
+           p.id,
+           p.id AS programId,
+           p.event_id AS eventId,
+           p.name AS programName,
+           DATE_FORMAT(p.start_date, '%Y-%m-%d') AS startDate,
+           DATE_FORMAT(p.end_date, '%Y-%m-%d') AS endDate,
+           TIME_FORMAT(p.start_time, '%H:%i:%s') AS startTime,
+           TIME_FORMAT(p.end_time, '%H:%i:%s') AS endTime,
+           p.is_recurring AS is_recurring,
+           p.visibility,
+           p.address,
+           p.program_image AS program_image,
+           p.owner_user_id AS ownerUserId,
+           owner.name AS ownerName,
+           p.owner_assigned_by AS ownerAssignedBy,
+           DATE_FORMAT(p.owner_assigned_at, '%Y-%m-%d %H:%i:%s') AS ownerAssignedAt
+         FROM programs p
+         LEFT JOIN users owner ON owner.id = p.owner_user_id
+         WHERE p.event_id = ?
+         ORDER BY p.start_date ASC, p.start_time ASC`,
         [eventId]
       );
 
@@ -164,7 +173,11 @@ export const eventProgramsResolvers = {
           isRecurring: Boolean(program.is_recurring),
           visibility: program.visibility,
           address: program.address,
-          programImage: programWithImage.program_image
+          programImage: programWithImage.program_image,
+          ownerUserId: program.ownerUserId === null ? null : Number(program.ownerUserId),
+          ownerName: program.ownerName || null,
+          ownerAssignedBy: program.ownerAssignedBy === null ? null : Number(program.ownerAssignedBy),
+          ownerAssignedAt: program.ownerAssignedAt || null
         });
       }
 

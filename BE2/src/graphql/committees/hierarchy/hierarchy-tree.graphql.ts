@@ -16,6 +16,8 @@ export const hierarchyTreeTypes = `
     roles: [HierarchyEventRole!]!
     startDate: String
     endDate: String
+    startTime: String
+    endTime: String
     children: [HierarchyTreeNode!]!
   }
 
@@ -37,6 +39,8 @@ type InternalTreeNode = {
   roles: Set<string>;
   startDate?: string | null;
   endDate?: string | null;
+  startTime?: string | null;
+  endTime?: string | null;
   children: InternalTreeNode[];
   childIds: Set<string>;
 };
@@ -61,6 +65,8 @@ export type SerializedHierarchyTreeNode = {
   roles: EventRoleInfo[];
   startDate: string | null;
   endDate: string | null;
+  startTime: string | null;
+  endTime: string | null;
   children: SerializedHierarchyTreeNode[];
 };
 
@@ -272,7 +278,11 @@ export const hierarchyTreeResolvers = {
           `SELECT
              id AS program_id,
              event_id,
-             name AS program_name
+             name AS program_name,
+             DATE_FORMAT(start_date, '%Y-%m-%d') AS start_date,
+             DATE_FORMAT(end_date, '%Y-%m-%d') AS end_date,
+             TIME_FORMAT(start_time, '%H:%i:%s') AS start_time,
+             TIME_FORMAT(end_time, '%H:%i:%s') AS end_time
            FROM programs
            WHERE event_id IN (${eventPlaceholders})
            ORDER BY name ASC`,
@@ -292,6 +302,10 @@ export const hierarchyTreeResolvers = {
             type: 'PROGRAM',
             logo: null,
             roles: new Set<string>(),
+            startDate: programRow.start_date ? String(programRow.start_date) : null,
+            endDate: programRow.end_date ? String(programRow.end_date) : null,
+            startTime: programRow.start_time ? String(programRow.start_time) : null,
+            endTime: programRow.end_time ? String(programRow.end_time) : null,
             children: [],
             childIds: new Set<string>()
           };
@@ -405,6 +419,8 @@ export const hierarchyTreeResolvers = {
         }),
         startDate: node.startDate ?? null,
         endDate: node.endDate ?? null,
+        startTime: node.startTime ?? null,
+        endTime: node.endTime ?? null,
         children: node.children.map((childNode) => serializeNode(childNode))
       });
 
@@ -437,6 +453,5 @@ export const hierarchyTreeResolvers = {
     }
   }
 };
-
 
 

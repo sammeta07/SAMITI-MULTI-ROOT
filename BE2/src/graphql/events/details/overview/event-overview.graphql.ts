@@ -12,6 +12,7 @@ export const eventOverviewTypes = `
     bannerImages: [String!]!
     myDesignation: MyDesignation
     committeeRole: String
+    canAssignProgramOwner: Boolean!
   }
 
   type MyDesignation {
@@ -69,6 +70,12 @@ export const eventOverviewResolvers = {
       const myDesignationRows = await query<any[]>(
         `SELECT ue.role_id AS roleId,
                UPPER(COALESCE(NULLIF(TRIM(ue.designation), ''), 'MEMBER')) AS name,
+               CASE
+                 WHEN LOWER(TRIM(COALESCE(ue.designation, ''))) IN ('adhyaksha', 'upadhyaksha')
+                   OR LOWER(TRIM(COALESCE(erm.english_name, ''))) IN ('adhyaksha', 'upadhyaksha')
+                   OR LOWER(TRIM(COALESCE(erm.role_name, ''))) IN ('adhyaksha', 'upadhyaksha')
+                 THEN 1 ELSE 0
+               END AS canAssignByDesignation,
                erm.color,
                CASE
                  WHEN erm.icon IS NOT NULL AND CHAR_LENGTH(erm.icon) > 0
@@ -113,6 +120,10 @@ export const eventOverviewResolvers = {
           : canSelfNominate
             ? 'COMMITTEE_MEMBER'
             : 'NONE';
+      const canAssignProgramOwner =
+        committeeRole === 'COMMITTEE_ADMIN' ||
+        committeeRole === 'COMMITTEE_MASTER_ADMIN' ||
+        Boolean(Number(myDesignation?.canAssignByDesignation));
 
       if (eventType !== 'PUBLIC' && !hasCommitteeAccess) {
         throwEventError('FORBIDDEN', 'You are not allowed to access this event');
@@ -133,7 +144,8 @@ export const eventOverviewResolvers = {
         eventDisplayName: String(event.eventDisplayName || ''),
         bannerImages: bannerImageRows.map((row) => row.mediaUrl),
         myDesignation: myDesignation,
-        committeeRole
+        committeeRole,
+        canAssignProgramOwner
       };
     }
   }

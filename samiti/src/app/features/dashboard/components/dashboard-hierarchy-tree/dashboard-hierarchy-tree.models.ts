@@ -12,6 +12,8 @@ export interface AdminHierarchyTreeNode {
   roles: EventRoleInfo[];
   startDate?: string | null;
   endDate?: string | null;
+  startTime?: string | null;
+  endTime?: string | null;
   children: AdminHierarchyTreeNode[];
 }
 
@@ -53,4 +55,6 @@ export interface TreeNode {
   roles?: EventRoleInfo[];
   startDate?: string | null;
   endDate?: string | null;
+  startTime?: string | null;
+  endTime?: string | null;
 }

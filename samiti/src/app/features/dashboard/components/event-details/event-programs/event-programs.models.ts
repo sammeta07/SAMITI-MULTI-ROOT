@@ -11,6 +11,10 @@ export interface EventProgramEntry {
   visibility: string;
   address?: string | null;
   programImage?: string | null;
+  ownerUserId?: number | null;
+  ownerName?: string | null;
+  ownerAssignedBy?: number | null;
+  ownerAssignedAt?: string | null;
 }
 
 export interface EventProgramsPayload {

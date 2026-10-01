@@ -32,6 +32,9 @@ export class DashboardHierarchyTreeService {
             icon
           }
           startDate
+          endDate
+          startTime
+          endTime
           children {
             id
             name
@@ -44,6 +47,8 @@ export class DashboardHierarchyTreeService {
             }
             startDate
             endDate
+            startTime
+            endTime
             children {
               id
               name
@@ -56,6 +61,8 @@ export class DashboardHierarchyTreeService {
               }
               startDate
               endDate
+              startTime
+              endTime
               children {
                 id
                 name
@@ -68,6 +75,8 @@ export class DashboardHierarchyTreeService {
                 }
                 startDate
                 endDate
+                startTime
+                endTime
                 children {
                   id
                   name
@@ -80,6 +89,38 @@ export class DashboardHierarchyTreeService {
                   }
                   startDate
                   endDate
+                  startTime
+                  endTime
+                  children {
+                    id
+                    name
+                    type
+                    logo
+                    roles {
+                      name
+                      color
+                      icon
+                    }
+                    startDate
+                    endDate
+                    startTime
+                    endTime
+                    children {
+                      id
+                      name
+                      type
+                      logo
+                      roles {
+                        name
+                        color
+                        icon
+                      }
+                      startDate
+                      endDate
+                      startTime
+                      endTime
+                    }
+                  }
                 }
               }
             }

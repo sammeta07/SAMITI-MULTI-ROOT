@@ -28,6 +28,10 @@ export class EventProgramsService {
           visibility
           address
           programImage
+          ownerUserId
+          ownerName
+          ownerAssignedBy
+          ownerAssignedAt
         }
       }
     }`;

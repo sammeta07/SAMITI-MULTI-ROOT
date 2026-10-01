@@ -44,6 +44,7 @@ export class EventOverviewService {
           icon
         }
         committeeRole
+        canAssignProgramOwner
       }
     }`;
 

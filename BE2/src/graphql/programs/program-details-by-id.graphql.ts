@@ -59,6 +59,11 @@ export const programDetailsTypes = `
     createdBy: Int!
     updatedBy: Int
     createdAt: String
+    ownerUserId: Int
+    ownerName: String
+    ownerAssignedBy: Int
+    ownerAssignedAt: String
+    canAssignOwner: Boolean!
   }
 `;
 
@@ -93,9 +98,14 @@ export const programDetailsResolvers = {
            p.created_by AS createdBy,
            p.updated_by AS updatedBy,
            p.created_at AS createdAt,
-           e.committee_id AS committeeId
+           e.committee_id AS committeeId,
+           p.owner_user_id AS ownerUserId,
+           owner.name AS ownerName,
+           p.owner_assigned_by AS ownerAssignedBy,
+           DATE_FORMAT(p.owner_assigned_at, '%Y-%m-%d %H:%i:%s') AS ownerAssignedAt
          FROM programs p
          LEFT JOIN events e ON e.id = p.event_id
+         LEFT JOIN users owner ON owner.id = p.owner_user_id
          WHERE p.id = ?
          LIMIT 1`,
         [programId]
@@ -107,6 +117,33 @@ export const programDetailsResolvers = {
 
       const program = programRows[0];
       const visibility = String(program.visibility || '').toUpperCase();
+      const ownerPermissionRows = await query<any[]>(
+        `SELECT
+           uc.committee_role AS committeeRole,
+           EXISTS (
+             SELECT 1
+             FROM users_events ue
+             LEFT JOIN events_roles_master erm ON erm.role_id = ue.role_id
+             WHERE ue.event_id = ?
+               AND ue.user_id = ?
+               AND (
+                 LOWER(TRIM(COALESCE(ue.designation, ''))) IN ('adhyaksha', 'upadhyaksha')
+                 OR LOWER(TRIM(COALESCE(erm.english_name, ''))) IN ('adhyaksha', 'upadhyaksha')
+                 OR LOWER(TRIM(COALESCE(erm.role_name, ''))) IN ('adhyaksha', 'upadhyaksha')
+               )
+           ) AS hasLeadershipDesignation
+         FROM events e
+         LEFT JOIN users_committees uc
+           ON uc.committee_id = e.committee_id AND uc.user_id = ?
+         WHERE e.id = ?
+         LIMIT 1`,
+        [Number(program.eventId), loggedInUserId, loggedInUserId, Number(program.eventId)]
+      );
+      const ownerPermission = ownerPermissionRows[0];
+      const committeeRole = String(ownerPermission?.committeeRole || '').toUpperCase();
+      const canAssignOwner = committeeRole === 'COMMITTEE_ADMIN' ||
+        committeeRole === 'COMMITTEE_MASTER_ADMIN' ||
+        Boolean(Number(ownerPermission?.hasLeadershipDesignation));
 
       if (visibility === 'HIDDEN') {
         const committeeMembership = await query<any[]>(
@@ -157,7 +194,12 @@ export const programDetailsResolvers = {
         isRecurring: program.isRecurring,
         createdBy: program.createdBy,
         updatedBy: program.updatedBy,
-        createdAt: program.createdAt
+        createdAt: program.createdAt,
+        ownerUserId: program.ownerUserId === null ? null : Number(program.ownerUserId),
+        ownerName: program.ownerName || null,
+        ownerAssignedBy: program.ownerAssignedBy === null ? null : Number(program.ownerAssignedBy),
+        ownerAssignedAt: program.ownerAssignedAt || null,
+        canAssignOwner
       };
     }
   }

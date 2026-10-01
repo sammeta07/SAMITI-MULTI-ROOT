@@ -12,14 +12,6 @@
     <section class="gd-committee-card">
       <div class="committee-card-grid">
 
-        <div class="card-logo-area">
-          @if (programData()?.programBanner || programData()?.bannerImages?.length) {
-          <img [src]="programData()?.programBanner || programData()?.bannerImages?.[0]" [alt]="programData()?.programName" class="committee-avatar" />
-          } @else {
-          <div class="committee-avatar-fallback program-avatar-fallback">{{ programData()?.programName?.charAt(0) || 'P' }}</div>
-          }
-        </div>
-
         <div class="card-main-info-area">
           <div class="card-title-row">
             <h3 class="committee-display-name">{{ programData()?.programName }}</h3>
@@ -62,7 +54,7 @@
       <div class="panel-card-header banner-header-bg">
         <div class="header-title-left">
           <mat-icon class="icon-accent-banner">photo_library</mat-icon>
-          <span class="title-text">Banner Images</span>
+          <span class="title-text">Program Banner Images</span>
           <span class="count-pill">{{ bannerCount }}/{{ MAX_BANNERS }}</span>
         </div>
         <div class="banner-header-actions">

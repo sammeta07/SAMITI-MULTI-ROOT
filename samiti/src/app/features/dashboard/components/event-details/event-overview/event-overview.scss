@@ -460,8 +460,36 @@
 
 .program-card-action {
   display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  justify-content: flex-end;
+  gap: 6px;
+}
+
+.program-owner-row {
+  display: flex;
   align-items: center;
   justify-content: flex-end;
+  gap: 5px;
+  color: #64748b;
+  font-size: 0.7rem;
+  white-space: nowrap;
+}
+
+.program-owner-label {
+  font-weight: 700;
+}
+
+.program-owner-name {
+  max-width: 135px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  color: #334155;
+}
+
+.program-owner-select {
+  width: 142px;
+  font-size: 0.72rem;
 }
 
 .program-card-heading {
