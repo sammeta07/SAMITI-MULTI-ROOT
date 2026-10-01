@@ -107,7 +107,7 @@
           <span class="count-pill">{{ eventPrograms.length }}</span>
         </div>
         @if (canCreateProgram) {
-          <button mat-button class="btn-action btn-add-program" type="button" (click)="onCreateProgram()">
+          <button mat-stroked-button class="btn-action btn-add-program" type="button" (click)="onCreateProgram()">
             <mat-icon>add</mat-icon>
             <span>Create Program</span>
           </button>
@@ -158,26 +158,114 @@
                       </div>
                       <div class="program-card-action">
                         <div class="program-owner-row">
-                          <span class="program-owner-label">Owner</span>
-                          @if (canAssignProgramOwner) {
-                            <mat-select
-                              class="program-owner-select"
-                              [value]="program.ownerUserId ?? null"
-                              (selectionChange)="updateProgramOwner(program, $event.value)"
-                              [disabled]="programsUpdatingOwner().has(program.programId)"
-                              aria-label="Assign program owner">
-                              <mat-option [value]="null">Unassigned</mat-option>
-                              @for (candidate of programOwnerCandidates(); track candidate.userId) {
-                                <mat-option [value]="candidate.userId">{{ candidate.name }}</mat-option>
+                          @if (canAssignProgramOwner && isEditingProgramOwner(program.programId)) {
+                            <mat-form-field class="program-owner-autocomplete-field" appearance="fill" subscriptSizing="dynamic">
+                              <span matPrefix class="da-input-icon"><mat-icon>search</mat-icon></span>
+                              <input
+                                type="text"
+                                matInput
+                                autocomplete="off"
+                                [(ngModel)]="programOwnerInputText[program.programId]"
+                                (input)="onProgramOwnerSearch(program.programId, $any($event.target).value)"
+                                placeholder="Search member..."
+                                [matAutocomplete]="autoProgramOwner"
+                                [disabled]="programsUpdatingOwner().has(program.programId)"
+                                aria-label="Assign program owner"
+                              />
+                              @if (programsUpdatingOwner().has(program.programId)) {
+                                <span matSuffix class="program-owner-saving">
+                                  <mat-progress-spinner mode="indeterminate" diameter="14" strokeWidth="2"></mat-progress-spinner>
+                                  <span>Saving...</span>
+                                </span>
+                              } @else if (isEditingProgramOwner(program.programId)) {
+                                <button matSuffix mat-icon-button class="program-owner-cancel-btn" type="button" title="Cancel" aria-label="Cancel edit" (click)="cancelEditProgramOwner(program)">
+                                  <mat-icon>close</mat-icon>
+                                </button>
+                              } @else {
+                                <span matSuffix class="da-input-icon"><mat-icon>expand_more</mat-icon></span>
                               }
-                            </mat-select>
+                              <mat-autocomplete
+                                #autoProgramOwner="matAutocomplete"
+                                class="da-program-owner-autocomplete"
+                                [displayWith]="displayProgramOwnerName"
+                                hideSingleSelectionIndicator
+                                (optionSelected)="onProgramOwnerSelect(program, $event)"
+                              >
+                                <mat-option [value]="null">UNASSIGNED</mat-option>
+                                @for (candidate of getFilteredCandidates(program); track candidate.userId) {
+                                  <mat-option
+                                    [value]="candidate.userId"
+                                    class="da-opt-row"
+                                    [ngClass]="getRoleColorClass(candidate.committeeRole)"
+                                  >
+                                    <div class="mat-auto-options">
+                                      <span class="da-opt-avatar" [ngClass]="getRoleColorClass(candidate.committeeRole)">
+                                        @if (candidate.photo) {
+                                          <img [src]="candidate.photo" [alt]="candidate.name" class="da-opt-img" />
+                                        } @else {
+                                          <span class="da-opt-initials">{{ getInitials(candidate.name) }}</span>
+                                        }
+                                      </span>
+                                      <div class="mat-auto-options-name-email">
+                                        <span class="da-opt-name">{{ candidate.name | titlecase }}</span>
+                                        <span class="da-opt-email">{{ candidate.email }}</span>
+                                      </div>
+                                      @if (candidate.icon) {
+                                        <span class="da-opt-cup" [ngStyle]="{'color': candidate.color || getRoleColor(candidate.committeeRole)}">{{ candidate.icon }}</span>
+                                      }
+                                    </div>
+                                  </mat-option>
+                                }
+                                @if (getFilteredCandidates(program).length === 0) {
+                                  <mat-option disabled class="da-opt-empty">No members found</mat-option>
+                                }
+                              </mat-autocomplete>
+                            </mat-form-field>
                           } @else {
-                            <span class="program-owner-name">{{ program.ownerName || 'Unassigned' }}</span>
+                            <div class="program-owner-value-wrap" [class.program-owner-unassigned]="isOwnerUnassigned(program)">
+                              <span class="program-owner-display">
+                                <span class="program-owner-label">Owner -</span>
+                                <span class="program-owner-name">{{ (program.ownerName || 'UNASSIGNED') | titlecase }}</span>
+                              </span>
+                              @if (canAssignProgramOwner) {
+                                @if (isEditingProgramOwner(program.programId)) {
+                                  <button
+                                    mat-icon-button
+                                    class="program-owner-edit"
+                                    type="button"
+                                    title="Cancel edit"
+                                    aria-label="Cancel edit"
+                                    [disabled]="programsUpdatingOwner().has(program.programId)"
+                                    (click)="cancelEditProgramOwner(program)"
+                                  >
+                                    <mat-icon>close</mat-icon>
+                                  </button>
+                                } @else {
+                                  <button
+                                    mat-icon-button
+                                    class="program-owner-edit"
+                                    type="button"
+                                    title="Edit program owner"
+                                    aria-label="Edit program owner"
+                                    [disabled]="programsUpdatingOwner().has(program.programId)"
+                                    (click)="editProgramOwner(program)"
+                                  >
+                                    <mat-icon>edit</mat-icon>
+                                  </button>
+                                }
+                              }
+                            </div>
                           }
                         </div>
-                        <button mat-button class="visibility-toggle-btn" type="button" (click)="updateProgramVisibility(program, program.visibility !== 'VISIBLE')" [disabled]="!canManageProgramVisibility || programsUpdatingVisibility().has(program.programId)">
-                          {{ program.visibility === 'VISIBLE' ? 'HIDE' : 'SHOW' }}
-                        </button>
+                        @if (canManageProgramVisibility) {
+                          <button mat-button class="visibility-toggle-btn" type="button" (click)="updateProgramVisibility(program, program.visibility !== 'VISIBLE')" [disabled]="programsUpdatingVisibility().has(program.programId)">
+                            {{ program.visibility === 'VISIBLE' ? 'HIDE' : 'SHOW' }}
+                          </button>
+                        } @else {
+                          <span class="program-visibility-label" [class.visibility-visible]="program.visibility === 'VISIBLE'" [class.visibility-hidden]="program.visibility !== 'VISIBLE'">
+                            {{ program.visibility === 'VISIBLE' ? 'This program is visible to public' : 'This program is Hidden from public' }}
+                          </span>
+                        }
                       </div>
                     </div>
                   </div>

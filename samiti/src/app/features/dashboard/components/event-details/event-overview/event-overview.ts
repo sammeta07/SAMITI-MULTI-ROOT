@@ -8,6 +8,10 @@ import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatCheckboxModule } from '@angular/material/checkbox';
 import { MatSlideToggleModule } from '@angular/material/slide-toggle';
 import { MatSelectModule } from '@angular/material/select';
+import { MatAutocompleteModule } from '@angular/material/autocomplete';
+import { MatFormFieldModule } from '@angular/material/form-field';
+import { MatInputModule } from '@angular/material/input';
+import { FormsModule } from '@angular/forms';
 import { HttpErrorResponse } from '@angular/common/http';
 import { firstValueFrom } from 'rxjs';
 import { EventOverviewService } from './event-overview.service';
@@ -25,6 +29,8 @@ import { ImageCropperDialogComponent } from '../../../../../shared/components/im
 import { CreateProgramDialogComponent } from '../../../../../components/dialog/create-program/create-program.component';
 import { ProgramOwnerService } from '../../program-owner/program-owner.service';
 import { ProgramOwnerCandidate, ProgramOwnerPayload } from '../../program-owner/program-owner.models';
+import { EventVotingService } from '../event-voting/event-voting.service';
+import { EventDirectAssignMember } from '../event-voting/event-voting.models';
 
 @Component({
   selector: 'app-event-overview',
@@ -36,7 +42,11 @@ import { ProgramOwnerCandidate, ProgramOwnerPayload } from '../../program-owner/
     MatProgressSpinnerModule,
     MatCheckboxModule,
     MatSlideToggleModule,
-    MatSelectModule
+    MatSelectModule,
+    MatAutocompleteModule,
+    MatFormFieldModule,
+    MatInputModule,
+    FormsModule
   ],
   templateUrl: './event-overview.html',
   styleUrl: './event-overview.scss'
@@ -55,6 +65,7 @@ export class EventOverviewComponent implements OnInit {
   private readonly stateService = inject(EventDetailsStateService);
   private readonly programsService = inject(EventProgramsService);
   private readonly programOwnerService = inject(ProgramOwnerService);
+  private readonly votingService = inject(EventVotingService);
   private readonly createProgramService = inject(CreateProgramService);
   private readonly hierarchyTreeService = inject(DashboardHierarchyTreeService);
   private readonly cdr = inject(ChangeDetectorRef);
@@ -68,6 +79,109 @@ export class EventOverviewComponent implements OnInit {
   public readonly programsUpdatingVisibility = signal<Set<number>>(new Set<number>());
   public readonly programOwnerCandidates = signal<ProgramOwnerCandidate[]>([]);
   public readonly programsUpdatingOwner = signal<Set<number>>(new Set<number>());
+  public readonly editingProgramOwnerIds = signal<Set<number>>(new Set<number>());
+  public readonly allCommitteeMembers = signal<EventDirectAssignMember[]>([]);
+  public programOwnerInputText: Record<number, string | number | null> = {};
+
+  public readonly displayProgramOwnerName = (value: string | number | null): string => {
+    if (value === null) return 'UNASSIGNED';
+    if (typeof value === 'string') return value;
+    return this.allCommitteeMembers().find((member) => Number(member.userId) === value)?.name || String(value);
+  };
+
+  public getRoleColorClass(role?: string | null): string {
+    switch ((role || '').toUpperCase()) {
+      case 'COMMITTEE_MASTER_ADMIN': return 'role-master';
+      case 'COMMITTEE_ADMIN': return 'role-admin';
+      case 'COMMITTEE_MEMBER': return 'role-member';
+      default: return 'role-default';
+    }
+  }
+
+  public getRoleColor(role?: string | null): string {
+    switch ((role || '').toUpperCase()) {
+      case 'COMMITTEE_MASTER_ADMIN': return '#ef4444';
+      case 'COMMITTEE_ADMIN': return '#22c55e';
+      case 'COMMITTEE_MEMBER': return '#3b82f6';
+      default: return '#64748b';
+    }
+  }
+
+  public getInitials(name?: string | null): string {
+    const trimmed = (name || '').trim();
+    if (!trimmed) return '';
+    const parts = trimmed.split(/\s+/).filter(Boolean);
+    if (parts.length >= 2) return (parts[0][0] + parts[1][0]).toUpperCase();
+    return trimmed.slice(0, 2).toUpperCase();
+  }
+
+  public isOwnerUnassigned(program: EventProgramEntry): boolean {
+    return !program.ownerName && program.ownerUserId === null;
+  }
+
+  public isEditingProgramOwner(programId: number): boolean {
+    return this.editingProgramOwnerIds().has(programId);
+  }
+
+  public editProgramOwner(program: EventProgramEntry): void {
+    if (!this.canAssignProgramOwner || this.programsUpdatingOwner().has(program.programId)) {
+      return;
+    }
+
+    this.programOwnerInputText = {
+      ...this.programOwnerInputText,
+      [program.programId]: program.ownerName || ''
+    };
+    const editingProgramIds = new Set(this.editingProgramOwnerIds());
+    editingProgramIds.add(program.programId);
+    this.editingProgramOwnerIds.set(editingProgramIds);
+  }
+
+  public cancelEditProgramOwner(program: EventProgramEntry): void {
+    const editingProgramIds = new Set(this.editingProgramOwnerIds());
+    editingProgramIds.delete(program.programId);
+    this.editingProgramOwnerIds.set(editingProgramIds);
+    this.programOwnerInputText = { ...this.programOwnerInputText, [program.programId]: program.ownerName || '' };
+  }
+
+  public onProgramOwnerSearch(programId: number, query: string): void {
+    this.programOwnerInputText = { ...this.programOwnerInputText, [programId]: query };
+  }
+
+  public onProgramOwnerSelect(program: EventProgramEntry, event: { option: { value: number | string } }): void {
+    const userId = Number(event.option.value);
+    const name = this.getFilteredCandidates(program).find((c) => c.userId === userId)?.name || '';
+    this.programOwnerInputText = { ...this.programOwnerInputText, [program.programId]: name };
+    this.updateProgramOwner(program, Number.isInteger(userId) && userId > 0 ? userId : null);
+  }
+
+  public getFilteredCandidates(program: EventProgramEntry): EventDirectAssignMember[] {
+    const inputValue = this.programOwnerInputText[program.programId];
+    const query = typeof inputValue === 'string' ? inputValue.toLowerCase().trim() : '';
+    const members = this.allCommitteeMembers()
+      .filter((m) => (m.committeeRole || '').toUpperCase() !== 'COMMITTEE_MASTER_ADMIN')
+      .map((m) => ({
+        userId: Number(m.userId),
+        name: m.name,
+        email: m.email,
+        photo: m.photo ?? null,
+        committeeRole: m.committeeRole,
+        isWinner: false,
+        icon: m.icon ?? null,
+        color: m.color ?? null,
+        roleIcon: '',
+        roleColor: ''
+      }));
+    const filtered = query
+      ? members.filter((m) => (m.name || '').toLowerCase().includes(query) || (m.email || '').toLowerCase().includes(query))
+      : members;
+    return filtered.sort((a, b) => {
+      const aIcon = Boolean(a.icon);
+      const bIcon = Boolean(b.icon);
+      if (aIcon !== bIcon) return aIcon ? -1 : 1;
+      return a.name.localeCompare(b.name);
+    });
+  }
 
   public get eventData(): EventOverviewPayload | null {
     return this.stateService.eventOverview();
@@ -310,6 +424,7 @@ export class EventOverviewComponent implements OnInit {
               }
             : entry
         );
+        this.programOwnerInputText[program.programId] = owner.ownerName || '';
         this.finishOwnerUpdate(program.programId);
         this.notifier.success(owner.ownerName ? `Program owner assigned to ${owner.ownerName}.` : 'Program owner cleared.');
       },
@@ -317,6 +432,7 @@ export class EventOverviewComponent implements OnInit {
         this.eventPrograms = this.eventPrograms.map((entry) =>
           entry.programId === program.programId ? { ...entry, ownerUserId: previousOwnerUserId } : entry
         );
+        this.programOwnerInputText[program.programId] = program.ownerName || '';
         this.finishOwnerUpdate(program.programId);
         this.notifier.error(err?.error?.message || 'Failed to update program owner.');
       }
@@ -327,6 +443,10 @@ export class EventOverviewComponent implements OnInit {
     const pendingProgramIds = new Set(this.programsUpdatingOwner());
     pendingProgramIds.delete(programId);
     this.programsUpdatingOwner.set(pendingProgramIds);
+
+    const editingProgramIds = new Set(this.editingProgramOwnerIds());
+    editingProgramIds.delete(programId);
+    this.editingProgramOwnerIds.set(editingProgramIds);
   }
 
   private loadEventPrograms(eventId: string): void {
@@ -335,6 +455,9 @@ export class EventOverviewComponent implements OnInit {
       next: (data) => {
         this.eventPrograms = data.entries ?? [];
         this.isLoadingPrograms = false;
+        this.eventPrograms.forEach((program) => {
+          this.programOwnerInputText[program.programId] = program.ownerName || '';
+        });
       },
       error: (err: HttpErrorResponse) => {
         this.eventPrograms = [];
@@ -354,11 +477,23 @@ export class EventOverviewComponent implements OnInit {
             next: (candidates) => this.programOwnerCandidates.set(candidates),
             error: (err: HttpErrorResponse) => this.notifier.error(err?.error?.message || 'Failed to load committee members.')
           });
+          this.loadDirectAssignMembers(data.eventId);
         }
       },
       error: (err: HttpErrorResponse) => {
         this.notifier.error(err?.error?.message || 'Failed to load event overview.');
         this.stateService.eventOverview.set(null);
+      }
+    });
+  }
+
+  private loadDirectAssignMembers(eventId: number): void {
+    this.votingService.getDirectAssignMembers(eventId).subscribe({
+      next: (members) => {
+        this.allCommitteeMembers.set(members ?? []);
+      },
+      error: (err: HttpErrorResponse) => {
+        this.allCommitteeMembers.set([]);
       }
     });
   }

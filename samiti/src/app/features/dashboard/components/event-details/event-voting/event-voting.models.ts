@@ -239,6 +239,8 @@ export interface EventDirectAssignMember {
   photo?: string | null;
   committeeRole: string;
   isWinner: boolean;
+  icon?: string | null;
+  color?: string | null;
   roleIcon?: string;
   roleColor?: string;
 }

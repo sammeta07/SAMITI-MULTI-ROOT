@@ -136,16 +136,17 @@
 
           <!-- Bottom Right Action Triggers -->
           <div class="action-buttons-area">
+            @if (canManageEvent) {
+              <button mat-button class="btn-action btn-edit" (click)="onEditEvent()">
+                <mat-icon>edit</mat-icon>
+                <span>Edit</span>
+              </button>
 
-            <button mat-button class="btn-action btn-edit" [disabled]="!canManageEvent" (click)="onEditEvent()">
-              <mat-icon>edit</mat-icon>
-              <span>Edit</span>
-            </button>
-
-            <button mat-button class="btn-action btn-delete" [disabled]="!canManageEvent" (click)="onDeleteEvent()">
-              <mat-icon>delete_outline</mat-icon>
-              <span>Delete</span>
-            </button>
+              <button mat-button class="btn-action btn-delete" (click)="onDeleteEvent()">
+                <mat-icon>delete_outline</mat-icon>
+                <span>Delete</span>
+              </button>
+            }
           </div>
         </div>
       </section>

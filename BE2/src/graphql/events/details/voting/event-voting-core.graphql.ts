@@ -248,6 +248,8 @@ export const eventVotingTypes = `
     photo: String
     committeeRole: String!
     isWinner: Boolean!
+    icon: String
+    color: String
   }
 `;
 
@@ -459,18 +461,24 @@ export const eventVotingResolvers = {
           email: string;
           photo: string | null;
           committeeRole: string;
+          icon: string | null;
+          color: string | null;
         }>>(
           `SELECT
              u.id AS userId,
              u.name,
              u.email,
              u.profile_photo AS photo,
-             UPPER(COALESCE(NULLIF(TRIM(uc.committee_role), ''), 'COMMITTEE_MEMBER')) AS committeeRole
+             UPPER(COALESCE(NULLIF(TRIM(uc.committee_role), ''), 'COMMITTEE_MEMBER')) AS committeeRole,
+             erm.icon AS icon,
+             erm.color AS color
            FROM users_committees uc
            INNER JOIN users u ON u.id = uc.user_id
+           LEFT JOIN users_events ue ON ue.user_id = u.id AND ue.event_id = ?
+           LEFT JOIN events_roles_master erm ON erm.role_id = ue.role_id
            WHERE uc.committee_id = ?
            ORDER BY u.name ASC`,
-          [Number(event.committeeId)]
+          [eventId, Number(event.committeeId)]
         ),
         query<Array<RowDataPacket & { winnerUserId: number }>>(
           `SELECT DISTINCT winner_user_id AS winnerUserId FROM event_winners WHERE event_id = ?`,
@@ -486,7 +494,9 @@ export const eventVotingResolvers = {
         email: String(memberRow.email || ''),
         photo: memberRow.photo || null,
         committeeRole: String(memberRow.committeeRole || 'COMMITTEE_MEMBER'),
-        isWinner: winnerUserIds.has(Number(memberRow.userId))
+        isWinner: winnerUserIds.has(Number(memberRow.userId)),
+        icon: memberRow.icon || null,
+        color: memberRow.color || null
       }));
     }
   },

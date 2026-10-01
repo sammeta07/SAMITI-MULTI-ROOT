@@ -507,6 +507,8 @@ export class EventVotingService {
         photo
         committeeRole
         isWinner
+        icon
+        color
       }
     }`;
 
