@@ -22,46 +22,97 @@
         </mat-form-field>
       </div>
 
-      <!-- START DATE TIME & END DATE TIME -->
+      <!-- START DATE & TIME -->
       <div class="form-row-split-grid">
         <mat-form-field appearance="outline" class="samiti-custom-field">
-          <mat-label>Start Date Time</mat-label>
-          <input matInput [matDatepicker]="startPicker" [(ngModel)]="startDateTime" name="startDateTime" required>
-          <mat-datepicker-toggle matSuffix [for]="startPicker"></mat-datepicker-toggle>
-          <mat-datepicker #startPicker></mat-datepicker>
-          <mat-icon matPrefix>schedule</mat-icon>
+          <mat-label>Start Date</mat-label>
+          <input matInput [matDatepicker]="startDatePicker" [(ngModel)]="startDate" name="startDate" required>
+          <mat-datepicker-toggle matSuffix [for]="startDatePicker"></mat-datepicker-toggle>
+          <mat-datepicker #startDatePicker></mat-datepicker>
+          <mat-icon matPrefix>calendar_today</mat-icon>
         </mat-form-field>
 
         <mat-form-field appearance="outline" class="samiti-custom-field">
-          <mat-label>End Date Time</mat-label>
-          <input matInput [matDatepicker]="endPicker" [(ngModel)]="endDateTime" name="endDateTime" required>
-          <mat-datepicker-toggle matSuffix [for]="endPicker"></mat-datepicker-toggle>
-          <mat-datepicker #endPicker></mat-datepicker>
+          <mat-label>Start Time</mat-label>
+          <input matInput [matTimepicker]="startTimepicker" [(ngModel)]="startTime" name="startTime" required>
+          <mat-timepicker-toggle matSuffix [for]="startTimepicker"></mat-timepicker-toggle>
+          <mat-timepicker #startTimepicker></mat-timepicker>
           <mat-icon matPrefix>schedule</mat-icon>
         </mat-form-field>
       </div>
 
+      <!-- END DATE & TIME -->
+      <div class="form-row-split-grid">
+        <mat-form-field appearance="outline" class="samiti-custom-field">
+          <mat-label>End Date</mat-label>
+          <input matInput [matDatepicker]="endDatePicker" [(ngModel)]="endDate" name="endDate" required>
+          <mat-datepicker-toggle matSuffix [for]="endDatePicker"></mat-datepicker-toggle>
+          <mat-datepicker #endDatePicker></mat-datepicker>
+          <mat-icon matPrefix>calendar_today</mat-icon>
+        </mat-form-field>
+
+        <mat-form-field appearance="outline" class="samiti-custom-field">
+          <mat-label>End Time</mat-label>
+          <input matInput [matTimepicker]="endTimepicker" [(ngModel)]="endTime" name="endTime" required>
+          <mat-timepicker-toggle matSuffix [for]="endTimepicker"></mat-timepicker-toggle>
+          <mat-timepicker #endTimepicker></mat-timepicker>
+          <mat-icon matPrefix>schedule</mat-icon>
+        </mat-form-field>
+      </div>
+
+      <!-- RECURRING TOGGLE -->
+      <div class="form-row-full">
+        <div class="recurring-field-wrapper">
+          <mat-slide-toggle
+            [(ngModel)]="isRecurring"
+            name="isRecurring"
+            class="recurring-toggle">
+          </mat-slide-toggle>
+          <span class="recurring-label">Recurring Program (applies to all days in date range)</span>
+        </div>
+      </div>
+
+      <!-- ADDRESS -->
       <div class="form-row-full">
         <mat-form-field appearance="outline" class="samiti-custom-field">
           <mat-label>Address</mat-label>
-          <input matInput [(ngModel)]="address" name="address" placeholder="Committee address" disabled>
+          <input matInput [(ngModel)]="address" name="address" placeholder="Committee address" [readonly]="!isAddressEditable()" required>
           <mat-icon matPrefix>place</mat-icon>
+          @if (!isAddressEditable()) {
+            <button mat-icon-button matSuffix type="button" class="address-edit-trigger" (click)="enableAddressEdit()" aria-label="Edit address" matTooltip="Edit address" matTooltipPosition="above">
+              <mat-icon>edit</mat-icon>
+            </button>
+          } @else {
+            <button mat-icon-button matSuffix type="button" class="address-edit-trigger" (click)="resetAddress()" aria-label="Reset address" matTooltip="Reset address" matTooltipPosition="above">
+              <mat-icon>refresh</mat-icon>
+            </button>
+          }
         </mat-form-field>
       </div>
 
-      <div class="form-row-split-grid">
-        <mat-form-field appearance="outline" class="samiti-custom-field" subscriptSizing="dynamic">
+      <!-- LATITUDE & LONGITUDE -->
+      <div class="form-row-coords">
+        <mat-form-field appearance="outline" class="samiti-custom-field coords-field" subscriptSizing="dynamic">
           <mat-label>Latitude</mat-label>
-          <input matInput [(ngModel)]="latitude" name="latitude" type="number" placeholder="Auto-detected" disabled>
+          <input matInput [(ngModel)]="latitude" name="latitude" type="number" placeholder="Auto-detected" readonly required>
           <mat-icon matPrefix>my_location</mat-icon>
         </mat-form-field>
 
-        <mat-form-field appearance="outline" class="samiti-custom-field" subscriptSizing="dynamic">
+        <mat-form-field appearance="outline" class="samiti-custom-field coords-field" subscriptSizing="dynamic">
           <mat-label>Longitude</mat-label>
-          <input matInput [(ngModel)]="longitude" name="longitude" type="number" placeholder="Auto-detected" disabled>
+          <input matInput [(ngModel)]="longitude" name="longitude" type="number" placeholder="Auto-detected" readonly required>
           <mat-icon matPrefix>explore</mat-icon>
         </mat-form-field>
+
+        <div class="fetch-location-wrapper">
+          <button mat-fab type="button" class="fetch-location-btn" (click)="fetchUserLocation()" aria-label="Fetch location" matTooltip="Fetch current location" matTooltipPosition="above">
+            <mat-icon>gps_fixed</mat-icon>
+          </button>
+        </div>
       </div>
+      @if (isFetchingLocation()) {
+        <div class="fetching-hint-row">Fetching current location...</div>
+      }
 
     </form>
   </div>

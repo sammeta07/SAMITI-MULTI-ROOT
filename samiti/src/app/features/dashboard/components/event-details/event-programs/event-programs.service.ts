@@ -14,17 +14,23 @@ export class EventProgramsService {
 
   public getEventPrograms(eventId: string): Observable<EventProgramsPayload> {
     const query = `query {
-      eventPrograms(id: ${eventId}) {
-        eventId
-        programs {
+      eventPrograms(eventId: ${eventId}) {
+        entries {
           id
           programId
+          eventId
           programName
-          status
-          visibility
           startDate
           endDate
-          programBanner
+          startTime
+          endTime
+          isRecurring
+          visibility
+          address
+          programImage
+          displayDateText
+          displayTimeText
+          displayBadge
         }
       }
     }`;

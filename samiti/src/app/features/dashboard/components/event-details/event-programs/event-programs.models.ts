@@ -1,15 +1,21 @@
-export interface EventProgramSummary {
+export interface EventProgramEntry {
   id: number;
   programId: number;
+  eventId: number;
   programName: string;
-  status: string;
+  startDate: string;
+  endDate: string;
+  startTime: string;
+  endTime: string;
+  isRecurring: boolean;
   visibility: string;
-  startDate?: string | null;
-  endDate?: string | null;
-  programBanner?: string | null;
+  address?: string | null;
+  programImage?: string | null;
+  displayDateText: string;
+  displayTimeText: string;
+  displayBadge?: string | null;
 }
 
 export interface EventProgramsPayload {
-  eventId: number;
-  programs: EventProgramSummary[];
+  entries: EventProgramEntry[];
 }

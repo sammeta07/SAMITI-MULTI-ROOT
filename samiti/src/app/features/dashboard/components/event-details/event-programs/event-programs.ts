@@ -7,7 +7,8 @@ import { MatButtonModule } from '@angular/material/button';
 import { NotifierService } from '../../../../../shared/notifier/notifier.service';
 import { CreateProgramDialogComponent } from '../../../../../components/dialog/create-program/create-program.component';
 import { EventProgramsService } from './event-programs.service';
-import { EventProgramsPayload } from './event-programs.models';
+import { EventProgramEntry } from './event-programs.models';
+import { EventDetailsStateService } from '../event-details-state.service';
 import { Subscription } from 'rxjs';
 
 @Component({
@@ -27,12 +28,13 @@ export class EventProgramsComponent implements OnInit, OnDestroy{
   private readonly dialog = inject(MatDialog);
   private readonly notifier = inject(NotifierService);
   private readonly programsService = inject(EventProgramsService);
+  private readonly stateService = inject(EventDetailsStateService);
   private parentParamsSub?: Subscription;
 
-  public eventData: EventProgramsPayload | null = null;
+  public eventData: EventProgramEntry[] | null = null;
 
   public get programsCount(): number {
-    return this.eventData?.programs?.length ?? 0;
+    return this.eventData?.length ?? 0;
   }
 
   ngOnInit(): void {
@@ -50,7 +52,7 @@ export class EventProgramsComponent implements OnInit, OnDestroy{
   private loadEventPrograms(eventId: string): void {
     this.programsService.getEventPrograms(eventId).subscribe({
       next: (data) => {
-        this.eventData = data ?? null;
+        this.eventData = data.entries ?? null;
       },
       error: (err: any) => {
         this.eventData = null;
@@ -59,13 +61,16 @@ export class EventProgramsComponent implements OnInit, OnDestroy{
   }
 
   public onCreateProgram(): void {
-    const currentEvent = this.eventData;
-    if (!currentEvent?.eventId) { this.notifier.error('No event available'); return; }
+    const eventId = this.route.parent?.snapshot.params['id'];
+    if (!eventId) { this.notifier.error('No event available'); return; }
     document.body.classList.add('dialog-open');
     const dialogRef = this.dialog.open(CreateProgramDialogComponent, {
       position: { right: '0', top: '0' }, height: '100%', width: '50%',
       autoFocus: true, disableClose: true, hasBackdrop: true, panelClass: 'slide-in-dialog',
-      data: { eventId: currentEvent.eventId, address: '' }
+      data: {
+        eventId: Number(eventId),
+        address: this.stateService.headerData()?.committeeAddress || ''
+      }
     });
     dialogRef.afterClosed().subscribe((result) => {
       document.body.classList.remove('dialog-open');

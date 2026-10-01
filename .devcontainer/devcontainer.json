@@ -14,7 +14,6 @@
     }
   },
   "postCreateCommand": "bash .devcontainer/setup-workspace.sh",
-  "postStartCommand": "bash .devcontainer/start-workspace.sh",
   "customizations": {
     "vscode": {
       "extensions": [

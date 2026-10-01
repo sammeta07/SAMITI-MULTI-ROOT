@@ -10,6 +10,9 @@ export interface ProgramDetailsPayload {
   visibility?: string | null;
   startDate?: string | null;
   endDate?: string | null;
+  startTime?: string | null;
+  endTime?: string | null;
+  isRecurring?: boolean | null;
   createdBy?: number | null;
   updatedBy?: number | null;
   createdAt?: string | null;

@@ -3,8 +3,11 @@ export interface CreateProgramPayload {
   programName: string;
   address?: string;
   visibility: 'VISIBLE' | 'HIDDEN';
-  startDateTime: string;
-  endDateTime: string;
+  startDate: string;
+  endDate: string;
+  startTime: string;
+  endTime: string;
+  isRecurring?: boolean;
 }
 
 export interface CreateProgramResponse {
@@ -14,8 +17,11 @@ export interface CreateProgramResponse {
   programName: string;
   address?: string;
   visibility: string;
-  startDateTime: string;
-  endDateTime: string;
+  startDate: string;
+  endDate: string;
+  startTime: string;
+  endTime: string;
+  isRecurring: boolean;
   createdBy: number;
   updatedBy?: number | null;
   createdAt: string;
@@ -33,8 +39,11 @@ export interface UpdateProgramResponse {
   address?: string;
   status: string;
   visibility: string;
-  startDateTime: string;
-  endDateTime: string;
+  startDate: string;
+  endDate: string;
+  startTime: string;
+  endTime: string;
+  isRecurring: boolean;
   createdBy: number;
   updatedBy?: number | null;
   createdAt: string;

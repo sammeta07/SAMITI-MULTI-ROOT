@@ -31,6 +31,9 @@ export class ProgramDetailsService {
         visibility
         startDate
         endDate
+        startTime
+        endTime
+        isRecurring
         createdBy
         updatedBy
         createdAt

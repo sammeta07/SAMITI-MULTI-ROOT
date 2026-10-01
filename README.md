@@ -14,3 +14,17 @@ Clone normally:
 ```bash
 git clone <repo-url>
 ```
+
+### Run the frontend and backend
+
+Open a terminal in the repository and run:
+
+```bash
+bash .devcontainer/start-workspace.sh
+```
+
+The frontend and backend run in that terminal. Press `Ctrl+C` or close the
+terminal to stop both services. The VS Code Ports tab may still show a
+forwarded-port entry briefly; that entry does not mean the app server is still
+running. Ports used internally by VS Code extensions are separate from these
+app services.

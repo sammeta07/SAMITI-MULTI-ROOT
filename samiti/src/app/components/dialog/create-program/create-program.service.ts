@@ -21,8 +21,11 @@ export class CreateProgramService {
         programName
         address
         visibility
-        startDateTime
-        endDateTime
+        startDate
+        endDate
+        startTime
+        endTime
+        isRecurring
         createdBy
         updatedBy
         createdAt
@@ -48,8 +51,11 @@ export class CreateProgramService {
         address
         status
         visibility
-        startDateTime
-        endDateTime
+        startDate
+        endDate
+        startTime
+        endTime
+        isRecurring
         createdBy
         updatedBy
         createdAt

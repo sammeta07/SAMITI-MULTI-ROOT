@@ -59,19 +59,36 @@ function normalizeVisibility(value: unknown): 'VISIBLE' | 'HIDDEN' {
   return normalized as 'VISIBLE' | 'HIDDEN';
 }
 
-function normalizeDateTimeInput(value: unknown, fieldName: string): string {
+function normalizeDate(value: unknown, fieldName: string): string {
   const normalized = normalizeOptionalText(value);
   if (!normalized) {
     throwProgramError('BAD_REQUEST', `${fieldName} is required`);
   }
 
-  const normalizedWithSeconds = normalized.length === 16 ? `${normalized}:00` : normalized;
-  const parsed = new Date(normalizedWithSeconds);
+  const parsed = new Date(normalized + 'T00:00:00');
   if (Number.isNaN(parsed.getTime())) {
-    throwProgramError('BAD_REQUEST', `${fieldName} must be a valid datetime`);
+    throwProgramError('BAD_REQUEST', `${fieldName} must be a valid date`);
   }
 
-  return parsed.toISOString().slice(0, 19).replace('T', ' ');
+  return parsed.toISOString().split('T')[0];
+}
+
+function normalizeTime(value: unknown, fieldName: string): string {
+  const normalized = normalizeOptionalText(value);
+  if (!normalized) {
+    throwProgramError('BAD_REQUEST', `${fieldName} is required`);
+  }
+
+  const parsed = new Date(`2000-01-01T${normalized}`);
+  if (Number.isNaN(parsed.getTime())) {
+    throwProgramError('BAD_REQUEST', `${fieldName} must be a valid time`);
+  }
+
+  const hours = String(parsed.getHours()).padStart(2, '0');
+  const minutes = String(parsed.getMinutes()).padStart(2, '0');
+  const seconds = String(parsed.getSeconds()).padStart(2, '0');
+
+  return `${hours}:${minutes}:${seconds}`;
 }
 
 export const createProgramTypes = `
@@ -83,8 +100,11 @@ export const createProgramTypes = `
     address: String
     status: String!
     visibility: String!
-    startDateTime: String!
-    endDateTime: String!
+    startDate: String!
+    endDate: String!
+    startTime: String!
+    endTime: String!
+    isRecurring: Boolean!
     createdBy: Int!
     updatedBy: Int
     createdAt: String!
@@ -95,8 +115,11 @@ export const createProgramTypes = `
     programName: String!
     address: String
     visibility: String
-    startDateTime: String!
-    endDateTime: String!
+    startDate: String!
+    endDate: String!
+    startTime: String!
+    endTime: String!
+    isRecurring: Boolean
   }
 `;
 
@@ -114,8 +137,11 @@ export const createProgramResolvers = {
       const programName = normalizeOptionalText(input.programName);
       const address = normalizeOptionalText(input.address);
       const visibility = normalizeVisibility(input.visibility);
-      const startDateTime = normalizeDateTimeInput(input.startDateTime, 'startDateTime');
-      const endDateTime = normalizeDateTimeInput(input.endDateTime, 'endDateTime');
+      const startDate = normalizeDate(input.startDate, 'startDate');
+      const endDate = normalizeDate(input.endDate, 'endDate');
+      const startTime = normalizeTime(input.startTime, 'startTime');
+      const endTime = normalizeTime(input.endTime, 'endTime');
+      const isRecurring = Boolean(input.isRecurring);
 
       if (!Number.isInteger(eventId) || eventId <= 0) {
         throwProgramError('BAD_REQUEST', 'eventId must be a positive integer');
@@ -129,8 +155,12 @@ export const createProgramResolvers = {
         throwProgramError('BAD_REQUEST', 'programName cannot exceed 255 characters');
       }
 
-      if (new Date(startDateTime) > new Date(endDateTime)) {
-        throwProgramError('BAD_REQUEST', 'startDateTime cannot be after endDateTime');
+      if (startDate > endDate) {
+        throwProgramError('BAD_REQUEST', 'startDate cannot be after endDate');
+      }
+
+      if (startTime >= endTime && startDate === endDate) {
+        throwProgramError('BAD_REQUEST', 'startTime must be before endTime on the same day');
       }
 
       const eventRows = await query<any[]>(
@@ -162,20 +192,26 @@ export const createProgramResolvers = {
         `INSERT INTO programs (
            event_id,
            name,
-           start_date_time,
-           end_date_time,
+           start_date,
+           end_date,
+           start_time,
+           end_time,
+           is_recurring,
            address,
            status,
            visibility,
            created_by,
            updated_by,
            created_at
-         ) VALUES (?, ?, ?, ?, ?, 'UPCOMING', ?, ?, ?, NOW())`,
+         ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'UPCOMING', ?, ?, ?, NOW())`,
         [
           eventId,
           programName,
-          startDateTime,
-          endDateTime,
+          startDate,
+          endDate,
+          startTime,
+          endTime,
+          isRecurring ? 1 : 0,
           address,
           visibility,
           loggedInUserId,
@@ -191,11 +227,14 @@ export const createProgramResolvers = {
            id AS programId,
            event_id AS eventId,
            name AS programName,
+           start_date AS startDate,
+           end_date AS endDate,
+           start_time AS startTime,
+           end_time AS endTime,
+           is_recurring AS isRecurring,
            address,
            status,
            visibility,
-           DATE_FORMAT(start_date_time, '%Y-%m-%dT%H:%i') AS startDateTime,
-           DATE_FORMAT(end_date_time, '%Y-%m-%dT%H:%i') AS endDateTime,
            created_by AS createdBy,
            updated_by AS updatedBy,
            created_at AS createdAt

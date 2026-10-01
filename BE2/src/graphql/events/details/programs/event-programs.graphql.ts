@@ -1,74 +1,189 @@
-import { query } from '../../../../config/db';
+import { query, execute } from '../../../../config/db';
 import { RowDataPacket } from 'mysql2/promise';
-import { hasEventsDisplayNameColumn } from '../event-display-name-support';
-import { hasEventsVotingPhaseStateColumn } from '../voting/event-voting-phase-support';
-import { hasEventsVotingModeColumn } from '../voting/event-voting-mode-support';
-import { throwEventError, getLoggedInUserId, getEventVotingPhaseState } from '../voting/event-voting-core.graphql';
+
+function throwProgramError(code: string, message: string): never {
+  throw new Error(`${code}: ${message}`);
+}
+
+function getAccessToken(context: any): string {
+  const authHeader = context.headers?.authorization;
+  const tokenFromCookie = context.cookies?.token;
+
+  if (typeof authHeader === 'string' && authHeader.startsWith('Bearer ')) {
+    return authHeader.slice(7);
+  }
+
+  if (typeof tokenFromCookie === 'string' && tokenFromCookie.trim().length > 0) {
+    return tokenFromCookie.trim();
+  }
+
+  return '';
+}
+
+async function getLoggedInUserId(context: any): Promise<number> {
+  const accessToken = getAccessToken(context);
+  if (!accessToken) {
+    throwProgramError('UNAUTHORIZED', 'Missing access token');
+  }
+
+  try {
+    const decoded: any = await context.jwt.verify(accessToken);
+    const loggedInUserId = Number(decoded?.id || decoded?.user_id || decoded?.uid);
+
+    if (!Number.isInteger(loggedInUserId) || loggedInUserId <= 0) {
+      throwProgramError('UNAUTHORIZED', 'Invalid token payload');
+    }
+
+    return loggedInUserId;
+  } catch {
+    throwProgramError('UNAUTHORIZED', 'Invalid or expired token');
+  }
+}
+
+function formatTime12Hour(time24: string): string {
+  const [hours, minutes] = time24.split(':').map(Number);
+  const ampm = hours >= 12 ? 'PM' : 'AM';
+  const hours12 = hours % 12 || 12;
+  const paddedMinutes = String(minutes).padStart(2, '0');
+  return `${hours12}:${paddedMinutes} ${ampm}`;
+}
+
+function formatDateDisplay(dateStr: string): string {
+  const date = new Date(dateStr + 'T00:00:00');
+  return date.toLocaleDateString('en-US', {
+    month: 'short',
+    day: 'numeric',
+    year: 'numeric'
+  });
+}
+
+function buildProgramEntries(program: any): Array<{
+  id: number;
+  programId: number;
+  eventId: number;
+  programName: string;
+  startDate: string;
+  endDate: string;
+  startTime: string;
+  endTime: string;
+  isRecurring: boolean;
+  visibility: string;
+  address: string | null;
+  programImage: string | null;
+  displayDateText: string;
+  displayTimeText: string;
+  displayBadge: string | null;
+}> {
+  const entries: Array<any> = [];
+
+  if (program.is_recurring) {
+    const startDate = new Date(program.start_date + 'T00:00:00');
+    const endDate = new Date(program.end_date + 'T00:00:00');
+    const currentDate = new Date(startDate);
+
+    while (currentDate <= endDate) {
+      const dateStr = currentDate.toISOString().split('T')[0];
+      entries.push({
+        id: program.id,
+        programId: program.programId,
+        eventId: program.eventId,
+        programName: program.programName,
+        startDate: dateStr,
+        endDate: dateStr,
+        startTime: program.start_time,
+        endTime: program.end_time,
+        isRecurring: true,
+        visibility: program.visibility,
+        address: program.address,
+        programImage: program.program_image,
+        displayDateText: formatDateDisplay(dateStr),
+        displayTimeText: `${formatTime12Hour(program.start_time)} - ${formatTime12Hour(program.end_time)}`,
+        displayBadge: 'Daily'
+      });
+
+      currentDate.setDate(currentDate.getDate() + 1);
+    }
+  } else {
+    entries.push({
+      id: program.id,
+      programId: program.programId,
+      eventId: program.eventId,
+      programName: program.programName,
+      startDate: program.start_date,
+      endDate: program.end_date,
+      startTime: program.start_time,
+      endTime: program.end_time,
+      isRecurring: false,
+      visibility: program.visibility,
+      address: program.address,
+      programImage: program.program_image,
+      displayDateText: formatDateDisplay(program.start_date),
+      displayTimeText: `${formatTime12Hour(program.start_time)} - ${formatTime12Hour(program.end_time)}`,
+      displayBadge: null
+    });
+  }
+
+  return entries;
+}
 
 export const eventProgramsTypes = `
-  type EventProgramsPayload {
+  type EventProgramEntry {
+    id: Int!
+    programId: Int!
     eventId: Int!
-    programs: [EventProgramSummary!]!
+    programName: String!
+    startDate: String!
+    endDate: String!
+    startTime: String!
+    endTime: String!
+    isRecurring: Boolean!
+    visibility: String!
+    address: String
+    programImage: String
+    displayDateText: String!
+    displayTimeText: String!
+    displayBadge: String
+  }
+
+  type EventProgramsPayload {
+    entries: [EventProgramEntry!]!
   }
 `;
 
 export const eventProgramsQueryFields = `
-  eventPrograms(id: Int!): EventProgramsPayload!
+  eventPrograms(eventId: Int!): EventProgramsPayload!
 `;
 
 export const eventProgramsResolvers = {
   Query: {
-    async eventPrograms(_: any, args: { id: number }, context: any) {
-      const eventId = Number(args?.id);
+    async eventPrograms(_: any, args: { eventId: number }, context: any) {
+      const eventId = Number(args?.eventId);
       if (!Number.isInteger(eventId) || eventId <= 0) {
-        throwEventError('BAD_REQUEST', 'id must be a positive integer');
+        throwProgramError('BAD_REQUEST', 'eventId must be a positive integer');
       }
 
       const loggedInUserId = await getLoggedInUserId(context);
-      const supportsEventDisplayName = await hasEventsDisplayNameColumn();
-      const supportsVotingPhaseState = await hasEventsVotingPhaseStateColumn();
-      const supportsVotingMode = await hasEventsVotingModeColumn();
 
-      const eventResult = await query<any[]>(`
-        SELECT
-          e.id,
-          e.id AS eventId,
-          e.committee_id AS committeeId,
-          c.address AS committeeAddress,
-          e.name AS eventName,
-          ${supportsEventDisplayName ? "COALESCE(NULLIF(TRIM(e.display_name), ''), LEFT(e.name, 20))" : 'LEFT(e.name, 20)'} AS eventDisplayName,
-          e.address,
-          e.category,
-          e.visibility,
-          e.type,
-          DATE_FORMAT(e.start_date, '%Y-%m-%d') AS startDate,
-          DATE_FORMAT(e.end_date, '%Y-%m-%d') AS endDate,
-          e.latitude,
-          e.longitude,
-          e.created_by AS createdBy,
-          e.updated_by AS updatedBy,
-          e.created_at AS createdAt
-           ${supportsVotingPhaseState ? ', COALESCE(e.voting_phase_state, 0) AS votingPhaseState' : ', 0 AS votingPhaseState'}
-           ${supportsVotingMode ? ', e.voting_mode AS votingMode' : ", 'VOTING' AS votingMode"}
-        FROM events e
-        LEFT JOIN committees c ON c.id = e.committee_id
-        WHERE e.id = ?
-        LIMIT 1
-      `, [eventId]);
+      const eventRows = await query<any[]>(
+        `SELECT id, committee_id, type
+         FROM events
+         WHERE id = ?
+         LIMIT 1`,
+        [eventId]
+      );
 
-      if (!eventResult || eventResult.length === 0) {
-        throwEventError('NOT_FOUND', 'Event not found');
+      if (eventRows.length === 0) {
+        throwProgramError('NOT_FOUND', 'Event not found');
       }
 
-      const event = eventResult[0];
-      const eventType = String(event.type || '').toUpperCase();
+      const eventRow = eventRows[0];
 
       const committeeMembership = await query<any[]>(
         `SELECT committee_role
          FROM users_committees
          WHERE committee_id = ? AND user_id = ?
          LIMIT 1`,
-        [Number(event.committeeId), loggedInUserId]
+        [Number(eventRow.committee_id), loggedInUserId]
       );
 
       const membership = committeeMembership[0];
@@ -81,53 +196,56 @@ export const eventProgramsResolvers = {
         )
       );
 
-      if (eventType !== 'PUBLIC' && !hasCommitteeAccess) {
-        throwEventError('FORBIDDEN', 'You are not allowed to access this event');
+      if (String(eventRow.type || '').toUpperCase() !== 'PUBLIC' && !hasCommitteeAccess) {
+        throwProgramError('FORBIDDEN', 'You are not allowed to access this event');
       }
 
-      const programRows = await query<Array<RowDataPacket & {
-        id: number;
-        programId: number;
-        programName: string;
-        status: string;
-        visibility: string;
-        startDate: string | null;
-        endDate: string | null;
-        programBanner: string | null;
-      }>>(
+      const programRows = await query<any[]>(
         `SELECT
-           p.id,
-           p.id AS programId,
-           p.name AS programName,
-           p.status,
-           p.visibility,
-           DATE_FORMAT(p.start_date_time, '%Y-%m-%d %H:%i:%s') AS startDate,
-           DATE_FORMAT(p.end_date_time, '%Y-%m-%d %H:%i:%s') AS endDate,
-           (
-             SELECT pma.media_url
-             FROM program_media_assets pma
-             WHERE pma.program_id = p.id
-             ORDER BY pma.sort_order ASC, pma.id ASC
-             LIMIT 1
-           ) AS programBanner
-         FROM programs p
-         WHERE p.event_id = ?
-         ORDER BY p.name ASC`,
+           id,
+           id AS programId,
+           event_id AS eventId,
+           name AS programName,
+           start_date AS start_date,
+           end_date AS end_date,
+           start_time AS start_time,
+           end_time AS end_time,
+           is_recurring AS is_recurring,
+           visibility,
+           address,
+           program_image AS program_image
+         FROM programs
+         WHERE event_id = ?
+         ORDER BY start_date ASC, start_time ASC`,
         [eventId]
       );
 
+      const entries: any[] = [];
+
+      for (const program of programRows) {
+        if (program.visibility === 'HIDDEN' && !hasCommitteeAccess) {
+          continue;
+        }
+
+        const bannerImageRows = await query<Array<RowDataPacket & { mediaUrl: string }>>(
+          `SELECT media_url AS mediaUrl
+           FROM program_media_assets
+           WHERE program_id = ?
+           ORDER BY sort_order ASC, id ASC
+           LIMIT 1`,
+          [program.id]
+        );
+
+        const programWithImage = {
+          ...program,
+          program_image: bannerImageRows[0]?.mediaUrl || program.program_image
+        };
+
+        entries.push(...buildProgramEntries(programWithImage));
+      }
+
       return {
-        eventId: Number(event.eventId),
-        programs: programRows.map((programRow) => ({
-          id: Number(programRow.id),
-          programId: Number(programRow.programId),
-          programName: String(programRow.programName || ''),
-          status: String(programRow.status || ''),
-          visibility: String(programRow.visibility || ''),
-          startDate: programRow.startDate,
-          endDate: programRow.endDate,
-          programBanner: programRow.programBanner || null
-        }))
+        entries
       };
     }
   }

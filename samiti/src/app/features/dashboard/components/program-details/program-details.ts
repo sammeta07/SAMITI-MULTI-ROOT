@@ -191,7 +191,10 @@ export class ProgramDetailsComponent implements OnInit {
         address: currentProgram.address || '',
         visibility: currentProgram.visibility,
         startDate: currentProgram.startDate,
-        endDate: currentProgram.endDate
+        endDate: currentProgram.endDate,
+        startTime: currentProgram.startTime,
+        endTime: currentProgram.endTime,
+        isRecurring: currentProgram.isRecurring
       }
     });
 

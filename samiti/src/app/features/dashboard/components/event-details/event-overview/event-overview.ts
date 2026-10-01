@@ -152,7 +152,10 @@ export class EventOverviewComponent implements OnInit {
       disableClose: true,
       hasBackdrop: true,
       panelClass: 'slide-in-dialog',
-      data: { eventId: currentEvent.eventId }
+      data: {
+        eventId: currentEvent.eventId,
+        address: this.stateService.headerData()?.committeeAddress || ''
+      }
     });
 
     dialogRef.afterClosed().subscribe((result) => {

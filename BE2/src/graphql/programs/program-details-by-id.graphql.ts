@@ -53,6 +53,9 @@ export const programDetailsTypes = `
     visibility: String!
     startDate: String
     endDate: String
+    startTime: String
+    endTime: String
+    isRecurring: Boolean
     createdBy: Int!
     updatedBy: Int
     createdAt: String
@@ -82,8 +85,11 @@ export const programDetailsResolvers = {
            p.address,
            p.status,
            p.visibility,
-           DATE_FORMAT(p.start_date_time, '%Y-%m-%d %H:%i:%s') AS startDate,
-           DATE_FORMAT(p.end_date_time, '%Y-%m-%d %H:%i:%s') AS endDate,
+           p.start_date AS startDate,
+           p.end_date AS endDate,
+           p.start_time AS startTime,
+           p.end_time AS endTime,
+           p.is_recurring AS isRecurring,
            p.created_by AS createdBy,
            p.updated_by AS updatedBy,
            p.created_at AS createdAt,
@@ -146,6 +152,9 @@ export const programDetailsResolvers = {
         visibility: program.visibility,
         startDate: program.startDate,
         endDate: program.endDate,
+        startTime: program.startTime,
+        endTime: program.endTime,
+        isRecurring: program.isRecurring,
         createdBy: program.createdBy,
         updatedBy: program.updatedBy,
         createdAt: program.createdAt

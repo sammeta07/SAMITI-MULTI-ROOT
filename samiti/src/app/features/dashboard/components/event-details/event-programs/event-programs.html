@@ -11,23 +11,29 @@
       </button>
     </div>
     <div class="horizontal-list-container">
-      @for (program of eventData?.programs ?? []; track program.programId) {
+      @for (program of eventData ?? []; track program.programId) {
       <article class="event-program-row" (click)="onOpenProgram(program.programId)">
         <div class="program-row-left">
-          @if (program.programBanner) {
-          <img [src]="program.programBanner" [alt]="program.programName" class="program-row-banner" />
+          @if (program.programImage) {
+          <img [src]="program.programImage" [alt]="program.programName" class="program-row-banner" />
           } @else {
           <div class="program-row-banner-fallback">{{ program.programName.charAt(0).toUpperCase() }}</div>
           }
           <div class="program-row-info">
             <div class="main-title">{{ program.programName }}</div>
             <div class="secondary-sub-lbl">
-              {{ program.startDate ? (program.startDate | date:'dd MMM yyyy') : 'Date TBD' }}
+              {{ program.displayDateText || 'Date TBD' }}
             </div>
+            <div class="secondary-sub-lbl">
+              {{ program.displayTimeText || 'Time TBD' }}
+            </div>
+            @if (program.displayBadge) {
+            <span class="status-tag tag-upcoming">{{ program.displayBadge }}</span>
+            }
           </div>
         </div>
         <div class="program-row-right">
-          <span class="status-tag tag-{{ program.status.toLowerCase() }}">{{ program.status }}</span>
+          <span class="status-tag tag-{{ program.visibility.toLowerCase() }}">{{ program.visibility }}</span>
           <button mat-icon-button class="circle-btn view-btn" type="button" title="Open program"
                   (click)="onOpenProgram(program.programId); $event.stopPropagation()">
             <mat-icon>open_in_new</mat-icon>

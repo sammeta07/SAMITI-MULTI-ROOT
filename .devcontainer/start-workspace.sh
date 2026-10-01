@@ -1,33 +1,40 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-LOG_DIR="/tmp/samiti-workspace-logs"
-mkdir -p "$LOG_DIR"
+backend_pid=""
+frontend_pid=""
 
-port_is_listening() {
-  local port="$1"
-  ss -ltn 2>/dev/null | grep -q ":$port "
+cleanup() {
+  trap - EXIT INT TERM HUP
+
+  for pid in "$backend_pid" "$frontend_pid"; do
+    if [[ -n "$pid" ]]; then
+      kill "$pid" 2>/dev/null || true
+    fi
+  done
+
+  for pid in "$backend_pid" "$frontend_pid"; do
+    if [[ -n "$pid" ]]; then
+      wait "$pid" 2>/dev/null || true
+    fi
+  done
 }
 
-start_if_missing() {
-  local port="$1"
-  local workdir="$2"
-  local command="$3"
-  local logfile="$4"
+trap cleanup EXIT
+trap 'exit 130' INT
+trap 'exit 143' TERM
+trap 'exit 129' HUP
 
-  if port_is_listening "$port"; then
-    echo "Port $port already in use, skipping $command"
-    return
-  fi
+(
+  cd BE2
+  exec npm run dev
+) &
+backend_pid=$!
 
-  (
-    cd "$workdir"
-    nohup bash -lc "$command" >"$LOG_DIR/$logfile" 2>&1 &
-  )
-}
+(
+  cd samiti
+  exec npm start
+) &
+frontend_pid=$!
 
-start_if_missing 3000 "BE2" "npm run dev" "backend.log"
-start_if_missing 4200 "samiti" "npm start -- --host 0.0.0.0" "frontend.log"
-
-echo "Frontend log: $LOG_DIR/frontend.log"
-echo "Backend log: $LOG_DIR/backend.log"
+wait -n "$backend_pid" "$frontend_pid"
