@@ -23,9 +23,7 @@
 | committee_id | int              | YES  | MUL | NULL              |                   |
 | name   | varchar(255)     | NO   |     | NULL              |                   |
 | event_banner | LONGTEXT         | YES  |     | NULL              | (base64/URL)      |
-| status       | varchar(50)      | NO   |     | UPCOMING          |                   |
 | type         | varchar(100)     | YES  |     | NULL              |                   |
-| visibility   | varchar(50)      | NO   |     | HIDDEN            |                   |
 | start_date   | date             | YES  |     | NULL              |                   |
 | end_date     | date             | YES  |     | NULL              |                   |
 | created_by   | int              | NO   | MUL | NULL              | (FK → users)      |
@@ -42,9 +40,7 @@
 | `committee_id` | int | YES | - | Foreign key to committees table |
 | `name` | varchar(255) | NO | - | Event name/title |
 | `event_banner` | LONGTEXT | YES | - | Event banner image (base64 encoded or URL) |
-| `status` | varchar(50) | NO | UPCOMING | Event status: `UPCOMING`, `ONGOING`, `COMPLETED`, `CANCELLED` |
 | `type` | varchar(100) | YES | - | Event type: `puja`, `sports`, `meeting`, `celebration`, `workshop`, `other` |
-| `visibility` | varchar(50) | NO | HIDDEN | Visibility: `VISIBLE`, `HIDDEN` |
 | `start_date` | date | YES | - | Event start date (YYYY-MM-DD) |
 | `end_date` | date | YES | - | Event end date (YYYY-MM-DD) |
 | `created_by` | int | NO | - | User ID who created the event (FK → users) |
@@ -55,8 +51,6 @@
 
 - `idx_events_committee_id` - For filtering events by committee
 - `idx_events_created_by` - For filtering events by creator
-- `idx_events_status` - For filtering events by status
-- `idx_events_visibility` - For filtering events by visibility
 - `idx_events_start_date` - For date range queries
 
 ## Foreign Keys
@@ -64,13 +58,6 @@
 - `fk_events_committee` - committee_id → committees.committee_id (CASCADE DELETE)
 - `fk_events_created_by` - created_by → users.user_id (RESTRICT DELETE)
 - `fk_events_updated_by` - updated_by → users.user_id (SET NULL DELETE)
-
-## Status Values
-
-- `UPCOMING` - Event is scheduled for future
-- `ONGOING` - Event is currently happening
-- `COMPLETED` - Event has finished
-- `CANCELLED` - Event is cancelled
 
 ## Type Values
 
@@ -80,11 +67,6 @@
 - `celebration` - Celebration event
 - `workshop` - Workshop/Training
 - `other` - Other event types
-
-## Visibility Values
-
-- `VISIBLE` - Event is visible to all members
-- `HIDDEN` - Event is private/hidden (default)
 
 ## Users Table Structure
 

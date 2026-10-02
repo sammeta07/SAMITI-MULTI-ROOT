@@ -49,7 +49,6 @@ export const programDetailsTypes = `
     programBanner: String
     bannerImages: [String!]!
     address: String
-    status: String!
     visibility: String!
     startDate: String
     endDate: String
@@ -88,10 +87,9 @@ export const programDetailsResolvers = {
            p.event_id AS eventId,
            p.name AS programName,
            p.address,
-           p.status,
            p.visibility,
-           p.start_date AS startDate,
-           p.end_date AS endDate,
+           DATE_FORMAT(p.start_date, '%Y-%m-%d') AS startDate,
+           DATE_FORMAT(p.end_date, '%Y-%m-%d') AS endDate,
            p.start_time AS startTime,
            p.end_time AS endTime,
            p.is_recurring AS isRecurring,
@@ -185,7 +183,6 @@ export const programDetailsResolvers = {
         programBanner: bannerImageRows[0]?.mediaUrl || null,
         bannerImages: bannerImageRows.map((row) => row.mediaUrl),
         address: program.address,
-        status: program.status,
         visibility: program.visibility,
         startDate: program.startDate,
         endDate: program.endDate,

@@ -49,7 +49,6 @@ export class CreateProgramService {
         eventId
         programName
         address
-        status
         visibility
         startDate
         endDate

@@ -37,7 +37,6 @@ export interface UpdateProgramResponse {
   eventId: number;
   programName: string;
   address?: string;
-  status: string;
   visibility: string;
   startDate: string;
   endDate: string;

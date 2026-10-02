@@ -6,7 +6,6 @@ export interface ProgramDetailsPayload {
   programBanner?: string | null;
   bannerImages: string[];
   address?: string | null;
-  status: string;
   visibility?: string | null;
   startDate?: string | null;
   endDate?: string | null;

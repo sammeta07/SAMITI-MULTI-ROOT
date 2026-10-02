@@ -3,7 +3,6 @@ import { hasEventsDisplayNameColumn } from '../details/event-display-name-suppor
 import { deleteLocalMediaFileIfExists } from '../../../media/image-cleanup';
 import { isCloudinaryStorageEnabled } from '../../../media/cloudinary-storage';
 
-const ALLOWED_EVENT_VISIBILITIES = new Set(['VISIBLE', 'HIDDEN']);
 const ALLOWED_EVENT_TYPES = new Set(['PUBLIC', 'PRIVATE']);
 
 function throwEventError(code: string, message: string): never {
@@ -113,7 +112,6 @@ export const updateEventTypes = `
     eventBanner: String
     bannerImages: [String!]!
     category: String
-    visibility: String!
     type: String
     startDate: String
     endDate: String
@@ -143,7 +141,6 @@ export const updateEventTypes = `
     address: String
     eventYear: Int!
     category: String
-    visibility: String!
     type: String
     startDate: String
     endDate: String
@@ -171,7 +168,6 @@ export const updateEventResolvers = {
       const address = normalizeOptionalText(input.address);
       const eventYear = Number(input.eventYear);
       const category = normalizeEventCategory(input.category);
-      const normalizedVisibility = normalizeEnumInput(input.visibility, 'VISIBLE', ALLOWED_EVENT_VISIBILITIES, 'visibility');
       const normalizedType = normalizeEnumInput(input.type, 'PUBLIC', ALLOWED_EVENT_TYPES, 'type');
       const normalizedStartDate = normalizeDateInput(input.startDate, 'startDate');
       const normalizedEndDate = normalizeDateInput(input.endDate, 'endDate');
@@ -275,7 +271,6 @@ export const updateEventResolvers = {
                address = ?,
                event_year = ?,
                category = ?,
-               visibility = ?,
                type = ?,
                 start_date = ?,
                 end_date = ?,
@@ -290,7 +285,6 @@ export const updateEventResolvers = {
             address,
             eventYear,
             category,
-            normalizedVisibility,
             normalizedType,
             normalizedStartDate,
             normalizedEndDate,
@@ -308,7 +302,6 @@ export const updateEventResolvers = {
                address = ?,
                event_year = ?,
                category = ?,
-               visibility = ?,
                type = ?,
                 start_date = ?,
                 end_date = ?,
@@ -322,7 +315,6 @@ export const updateEventResolvers = {
             address,
               eventYear,
             category,
-            normalizedVisibility,
             normalizedType,
             normalizedStartDate,
             normalizedEndDate,
@@ -340,14 +332,14 @@ export const updateEventResolvers = {
           ? `SELECT id, id as eventId, name as eventName,
                     COALESCE(NULLIF(TRIM(display_name), ''), LEFT(name, 20)) as eventDisplayName,
                     committee_id as committeeId,
-                    address, event_year as eventYear, category, visibility, \`type\`, latitude, longitude,
+                    address, event_year as eventYear, category, \`type\`, latitude, longitude,
                     event_logo as eventLogo,
                     start_date as startDate, end_date as endDate, created_by as createdBy, updated_by as updatedBy, created_at as createdAt
               FROM events WHERE id = ?`
           : `SELECT id, id as eventId, name as eventName,
                     LEFT(name, 20) as eventDisplayName,
                     committee_id as committeeId,
-                    address, event_year as eventYear, category, visibility, \`type\`, latitude, longitude,
+                    address, event_year as eventYear, category, \`type\`, latitude, longitude,
                     event_logo as eventLogo,
                     start_date as startDate, end_date as endDate, created_by as createdBy, updated_by as updatedBy, created_at as createdAt
               FROM events WHERE id = ?`,

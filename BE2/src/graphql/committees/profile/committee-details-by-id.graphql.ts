@@ -53,7 +53,6 @@ export const committeeDetailsTypes = `
     eventLogo: String
     category: String
     type: String!
-    visibility: String!
     startDate: String
     endDate: String
     createdBy: Int!
@@ -173,7 +172,6 @@ export const committeeDetailsResolvers = {
           e.address,
           e.category,
           e.\`type\` AS type,
-          e.visibility,
           DATE_FORMAT(e.start_date, '%Y-%m-%d') AS startDate,
           DATE_FORMAT(e.end_date, '%Y-%m-%d') AS endDate,
           e.created_by AS createdBy,
@@ -232,7 +230,6 @@ export const committeeDetailsResolvers = {
           eventLogo: event.eventLogo || null,
           category: event.category || null,
           type: event.type,
-          visibility: event.visibility,
           startDate: event.startDate || null,
           endDate: event.endDate || null,
           createdBy: event.createdBy,

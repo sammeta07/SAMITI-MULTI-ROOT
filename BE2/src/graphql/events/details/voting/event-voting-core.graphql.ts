@@ -408,7 +408,6 @@ export const eventVotingResolvers = {
           c.address AS committeeAddress,
           e.name AS eventName,
           e.category,
-          e.visibility,
           e.type,
           DATE_FORMAT(e.start_date, '%Y-%m-%d') AS startDate,
           DATE_FORMAT(e.end_date, '%Y-%m-%d') AS endDate,

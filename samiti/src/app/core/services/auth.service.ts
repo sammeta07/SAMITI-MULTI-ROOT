@@ -27,7 +27,6 @@ export interface AuthEventRoleItem {
   committeeLogo: string | null;
   designation: string;
   membershipStatus: string;
-  eventVisibility: string | null;
 }
 
 export interface AuthAccountRoles {
@@ -167,7 +166,6 @@ export class AuthService {
             committeeLogo
             designation
             membershipStatus
-            eventVisibility
           }
         }
       }

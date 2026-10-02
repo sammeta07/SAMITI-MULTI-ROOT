@@ -1,5 +1,6 @@
 import { query } from '../../../config/db';
 import { RowDataPacket } from 'mysql2/promise';
+import { getProgramLifecycleStatus } from '../../programs/program-status';
 import { hasEventsDisplayNameColumn } from './event-display-name-support';
 import { hasEventsVotingPhaseStateColumn } from './voting/event-voting-phase-support';
 import { hasEventsVotingModeColumn } from './voting/event-voting-mode-support';
@@ -175,7 +176,6 @@ export const eventDetailsTypes = `
     eventBanner: String
     bannerImages: [String!]!
     category: String
-    visibility: String!
     type: String
     startDate: String
     endDate: String
@@ -231,7 +231,6 @@ export const eventDetailsResolvers = {
           ${supportsEventDisplayName ? "COALESCE(NULLIF(TRIM(e.display_name), ''), LEFT(e.name, 20))" : 'LEFT(e.name, 20)'} AS eventDisplayName,
           e.address,
           e.category,
-          e.visibility,
           e.type,
           DATE_FORMAT(e.start_date, '%Y-%m-%d') AS startDate,
           DATE_FORMAT(e.end_date, '%Y-%m-%d') AS endDate,
@@ -316,7 +315,6 @@ export const eventDetailsResolvers = {
         id: number;
         programId: number;
         programName: string;
-        status: string;
         visibility: string;
         startDate: string | null;
         endDate: string | null;
@@ -326,10 +324,9 @@ export const eventDetailsResolvers = {
            p.id,
            p.id AS programId,
            p.name AS programName,
-           p.status,
            p.visibility,
-           DATE_FORMAT(p.start_date_time, '%Y-%m-%d %H:%i:%s') AS startDate,
-           DATE_FORMAT(p.end_date_time, '%Y-%m-%d %H:%i:%s') AS endDate,
+           DATE_FORMAT(p.start_date, '%Y-%m-%d') AS startDate,
+           DATE_FORMAT(p.end_date, '%Y-%m-%d') AS endDate,
            (
              SELECT pma.media_url
              FROM program_media_assets pma
@@ -401,7 +398,7 @@ export const eventDetailsResolvers = {
           id: Number(programRow.id),
           programId: Number(programRow.programId),
           programName: String(programRow.programName || ''),
-          status: String(programRow.status || ''),
+          status: getProgramLifecycleStatus(programRow.startDate, programRow.endDate),
           visibility: String(programRow.visibility || ''),
           startDate: programRow.startDate,
           endDate: programRow.endDate,

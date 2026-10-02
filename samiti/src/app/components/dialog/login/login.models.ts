@@ -32,7 +32,6 @@ export interface LoginUserData {
         committeeLogo: string | null;
         designation: string;
         membershipStatus: string;
-        eventVisibility: string | null;
       }>;
     }>;
   };

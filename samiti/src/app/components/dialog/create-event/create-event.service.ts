@@ -24,7 +24,6 @@ export class CreateEventService {
         eventBanner
         category
         eventYear
-        visibility
         type
         startDate
         endDate
@@ -58,7 +57,6 @@ export class CreateEventService {
               bannerImageUrls: payload.bannerImageUrls || null,
               category: payload.category || null,
               eventYear: payload.eventYear,
-              visibility: payload.visibility,
               type: payload.type,
               startDate: payload.startDate,
               endDate: payload.endDate,
@@ -88,7 +86,6 @@ export class CreateEventService {
         eventBanner
         category
         eventYear
-        visibility
         type
         startDate
         endDate
@@ -120,7 +117,6 @@ export class CreateEventService {
               address: payload.address || null,
               category: payload.category || null,
               eventYear: payload.eventYear,
-              visibility: payload.visibility,
               type: payload.type,
               startDate: payload.startDate,
               endDate: payload.endDate,

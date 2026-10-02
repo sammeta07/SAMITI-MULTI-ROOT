@@ -1,4 +1,5 @@
 import { query, execute } from '../../config/db';
+import { getProgramLifecycleStatus } from './program-status';
 
 const ALLOWED_PROGRAM_VISIBILITIES = new Set(['VISIBLE', 'HIDDEN']);
 
@@ -198,12 +199,11 @@ export const createProgramResolvers = {
            end_time,
            is_recurring,
            address,
-           status,
            visibility,
            created_by,
            updated_by,
            created_at
-         ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'UPCOMING', ?, ?, ?, NOW())`,
+         ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW())`,
         [
           eventId,
           programName,
@@ -227,13 +227,12 @@ export const createProgramResolvers = {
            id AS programId,
            event_id AS eventId,
            name AS programName,
-           start_date AS startDate,
-           end_date AS endDate,
+           DATE_FORMAT(start_date, '%Y-%m-%d') AS startDate,
+           DATE_FORMAT(end_date, '%Y-%m-%d') AS endDate,
            start_time AS startTime,
            end_time AS endTime,
            is_recurring AS isRecurring,
            address,
-           status,
            visibility,
            created_by AS createdBy,
            updated_by AS updatedBy,
@@ -244,7 +243,10 @@ export const createProgramResolvers = {
         [programId]
       );
 
-      return createdRows[0] || null;
+      const createdProgram = createdRows[0];
+      return createdProgram
+        ? { ...createdProgram, status: getProgramLifecycleStatus(createdProgram.startDate, createdProgram.endDate) }
+        : null;
     }
   }
 };

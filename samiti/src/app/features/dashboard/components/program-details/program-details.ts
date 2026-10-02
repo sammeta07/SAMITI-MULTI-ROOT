@@ -1,4 +1,4 @@
-import { Component, ElementRef, inject, OnInit, signal, ViewChild, ChangeDetectorRef } from '@angular/core';
+import { Component, ElementRef, inject, OnInit, signal, computed, ViewChild, ChangeDetectorRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ActivatedRoute } from '@angular/router';
 import { MatDialog } from '@angular/material/dialog';
@@ -17,6 +17,7 @@ import { DashboardHierarchyTreeService } from '../dashboard-hierarchy-tree/dashb
 import { CreateProgramDialogComponent } from '../../../../components/dialog/create-program/create-program.component';
 import { ImageAssetService } from '../../../../core/services/image-asset.service';
 import { LoadingStateService } from '../../../../shared/services/loading-state.service';
+import { getEventComputedStatus } from '../../../../shared/services/event-status.util';
 import { ConfirmDialogService } from '../../../../components/dialog/confirm/confirm-dialog.service';
 import { ConfirmDialogData } from '../../../../components/dialog/confirm/confirm-dialog.models';
 import { ProgramOwnerService } from '../program-owner/program-owner.service';
@@ -70,21 +71,74 @@ export class ProgramDetailsComponent implements OnInit {
     return this.selectedBannerUrls().size;
   }
 
-  public get calculatedProgramStatus(): 'started' | 'upcoming' | 'completed' {
-    const now = new Date();
+  public readonly calculatedProgramStatus = computed<'started' | 'upcoming' | 'completed'>(() => {
     const program = this.programData();
-    const startDate = program?.startDate ? new Date(program.startDate) : null;
-    const endDate = program?.endDate ? new Date(program.endDate) : null;
+    if (!program?.startDate) return 'completed';
+    return getEventComputedStatus(program.startDate, program.endDate).toLowerCase() as 'started' | 'upcoming' | 'completed';
+  });
 
-    if (!startDate) return 'completed';
+  public readonly formattedDateRange = computed<string | null>(() => {
+    const program = this.programData();
+    if (!program) return null;
 
-    const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-    const start = new Date(startDate.getFullYear(), startDate.getMonth(), startDate.getDate());
-    const end = endDate ? new Date(endDate.getFullYear(), endDate.getMonth(), endDate.getDate()) : null;
+    const startDate = this.parseLocalDate(program.startDate);
+    const endDate = this.parseLocalDate(program.endDate);
 
-    if (today < start) return 'upcoming';
-    if (end && today > end) return 'completed';
-    return 'started';
+    if (!startDate && !endDate) return null;
+    if (!startDate && endDate) return this.formatDate(endDate);
+    if (startDate && !endDate) return this.formatDate(startDate);
+
+    const sDate = startDate!;
+    const eDate = endDate!;
+
+    const startDay = String(sDate.getDate()).padStart(2, '0');
+    const endDay = String(eDate.getDate()).padStart(2, '0');
+    const startMonth = this.formatMonth(sDate);
+    const endMonth = this.formatMonth(eDate);
+
+    if (sDate.getFullYear() !== eDate.getFullYear()) {
+      return `${this.formatDate(sDate)} - ${this.formatDate(eDate)}`;
+    }
+    if (sDate.getMonth() !== eDate.getMonth()) {
+      return `${startDay} ${startMonth} - ${endDay} ${endMonth} ${eDate.getFullYear()}`;
+    }
+    if (sDate.getDate() === eDate.getDate()) {
+      return this.formatDate(sDate);
+    }
+    return `${startDay} - ${endDay} ${endMonth} ${eDate.getFullYear()}`;
+  });
+
+  public get programStartTime(): string | null {
+    return this.formatTimeOnly(this.programData()?.startTime);
+  }
+
+  public get programEndTime(): string | null {
+    return this.formatTimeOnly(this.programData()?.endTime);
+  }
+
+  private formatTimeOnly(timeStr?: string | null): string | null {
+    if (!timeStr) return null;
+    const parts = timeStr.split(':');
+    return parts.length >= 2 ? `${parts[0]}:${parts[1]}` : timeStr;
+  }
+
+  private parseLocalDate(value: string | null | undefined): Date | null {
+    if (!value || typeof value !== 'string') return null;
+    const cleaned = value.trim().slice(0, 10);
+    const [year, month, day] = cleaned.split('-').map(Number);
+    if (!year || !month || !day) return null;
+    return new Date(year, month - 1, day);
+  }
+
+  private formatDate(date: Date): string {
+    const day = String(date.getDate()).padStart(2, '0');
+    const month = this.formatMonth(date);
+    const year = date.getFullYear();
+    return `${day} ${month} ${year}`;
+  }
+
+  private formatMonth(date: Date): string {
+    return date.toLocaleString('en-US', { month: 'short' });
   }
 
   public toggleSelectionMode(): void {

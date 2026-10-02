@@ -6,7 +6,6 @@ export interface CreateEventPayload {
   eventBanner?: string;
   bannerImageUrls?: string[];
   category?: string;
-  visibility: 'VISIBLE' | 'HIDDEN';
   type: 'PUBLIC' | 'PRIVATE';
   eventYear: number;
   startDate: string | null;
@@ -25,7 +24,6 @@ export interface CreateEventResponse {
   eventBanner?: string;
   bannerImages: string[];
   category?: string;
-  visibility: string;
   type: 'PUBLIC' | 'PRIVATE';
   eventYear: number;
   startDate: string | null;
@@ -51,7 +49,6 @@ export interface UpdateEventResponse {
   eventBanner?: string;
   bannerImages: string[];
   category?: string;
-  visibility: string;
   type: 'PUBLIC' | 'PRIVATE';
   eventYear: number;
   startDate: string | null;

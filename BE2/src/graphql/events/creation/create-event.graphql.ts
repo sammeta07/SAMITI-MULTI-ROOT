@@ -1,7 +1,6 @@
 import { query, execute } from '../../../config/db';
 import { hasEventsDisplayNameColumn } from '../details/event-display-name-support';
 
-const ALLOWED_EVENT_VISIBILITIES = new Set(['VISIBLE', 'HIDDEN']);
 const ALLOWED_EVENT_TYPES = new Set(['PUBLIC', 'PRIVATE']);
 
 function parseLocalDate(value: string | null): Date | null {
@@ -118,7 +117,6 @@ export const createEventTypes = `
     bannerImages: [String!]!
     eventYear: Int!
     category: String
-    visibility: String!
     type: String
     startDate: String
     endDate: String
@@ -138,7 +136,6 @@ export const createEventTypes = `
     bannerImageUrls: [String!]
     eventYear: Int!
     category: String
-    visibility: String!
     type: String
     startDate: String
     endDate: String
@@ -163,7 +160,6 @@ export const createEventResolvers = {
       const address = normalizeOptionalText(input.address);
       const eventYear = Number(input.eventYear);
       const category = normalizeEventCategory(input.category);
-      const normalizedVisibility = normalizeEnumInput(input.visibility, 'VISIBLE', ALLOWED_EVENT_VISIBILITIES, 'visibility');
       const normalizedType = normalizeEnumInput(input.type, 'PUBLIC', ALLOWED_EVENT_TYPES, 'type');
       const normalizedStartDate = normalizeDateInput(input.startDate, 'startDate');
       const normalizedEndDate = normalizeDateInput(input.endDate, 'endDate');
@@ -232,8 +228,8 @@ export const createEventResolvers = {
 
         const result = supportsEventDisplayName
           ? await execute(
-              `INSERT INTO events (committee_id, name, display_name, address, event_year, category, visibility, type, start_date, end_date, latitude, longitude, created_by, updated_by, created_at)
-               VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW())`,
+              `INSERT INTO events (committee_id, name, display_name, address, event_year, category, type, start_date, end_date, latitude, longitude, created_by, updated_by, created_at)
+               VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW())`,
               [
                 committeeId,
                 eventName,
@@ -241,7 +237,6 @@ export const createEventResolvers = {
                 address,
                 eventYear,
                 category,
-                normalizedVisibility,
                 normalizedType,
                 normalizedStartDate,
                 normalizedEndDate,
@@ -252,15 +247,14 @@ export const createEventResolvers = {
               ]
             )
           : await execute(
-              `INSERT INTO events (committee_id, name, address, event_year, category, visibility, type, start_date, end_date, latitude, longitude, created_by, updated_by, created_at)
-               VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW())`,
+              `INSERT INTO events (committee_id, name, address, event_year, category, type, start_date, end_date, latitude, longitude, created_by, updated_by, created_at)
+               VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW())`,
               [
                 committeeId,
                 eventName,
                 address,
                 eventYear,
                 category,
-                normalizedVisibility,
                 normalizedType,
                 normalizedStartDate,
                 normalizedEndDate,
@@ -296,13 +290,13 @@ export const createEventResolvers = {
             ? `SELECT id, id as eventId, name as eventName,
                       COALESCE(NULLIF(TRIM(display_name), ''), LEFT(name, 20)) as eventDisplayName,
                       committee_id as committeeId,
-                      address, event_year as eventYear, category, visibility, \`type\`, latitude, longitude,
+                      address, event_year as eventYear, category, \`type\`, latitude, longitude,
                       start_date as startDate, end_date as endDate, created_by as createdBy, updated_by as updatedBy, created_at as createdAt
                FROM events WHERE id = ?`
             : `SELECT id, id as eventId, name as eventName,
                       LEFT(name, 20) as eventDisplayName,
                       committee_id as committeeId,
-                      address, event_year as eventYear, category, visibility, \`type\`, latitude, longitude,
+                      address, event_year as eventYear, category, \`type\`, latitude, longitude,
                       start_date as startDate, end_date as endDate, created_by as createdBy, updated_by as updatedBy, created_at as createdAt
                FROM events WHERE id = ?`,
           [eventId]

@@ -61,7 +61,12 @@ async function executeSqlStatementsFromFile(connection: mysql.Connection, migrat
   const sql = fs.readFileSync(migrationFilePath, 'utf-8');
   const statements = parseSqlStatements(sql);
   const migrationFileName = path.basename(migrationFilePath);
-  const approvedDestructiveMigrations = new Set(['059-remove-event-status.sql', '062-refactor-programs-table.sql']);
+  const approvedDestructiveMigrations = new Set([
+    '059-remove-event-status.sql',
+    '062-refactor-programs-table.sql',
+    '064-remove-program-status.sql',
+    '065-remove-event-visibility.sql'
+  ]);
 
   for (const statement of statements) {
     const isDestructiveStatement =

@@ -36,7 +36,6 @@ type LoginEventRoleRow = RowDataPacket & {
   committee_logo: string | null;
   designation: string | null;
   membership_status: string | null;
-  event_visibility: string | null;
 };
 
 type CountRow = RowDataPacket & {
@@ -80,7 +79,6 @@ export const loginTypes = `
     committeeLogo: String
     designation: String!
     membershipStatus: String!
-    eventVisibility: String
   }
 
   type AccountRolesSnapshot {
@@ -211,8 +209,7 @@ export const loginResolvers = {
           c.committee_name,
           c.logo AS committee_logo,
           UPPER(COALESCE(NULLIF(TRIM(ue.designation), ''), 'MEMBER')) AS designation,
-          UPPER(COALESCE(NULLIF(TRIM(ue.status), ''), 'ACTIVE')) AS membership_status,
-          e.visibility AS event_visibility
+          UPPER(COALESCE(NULLIF(TRIM(ue.status), ''), 'ACTIVE')) AS membership_status
          FROM users_events ue
          INNER JOIN events e ON e.id = ue.event_id
          INNER JOIN committees c ON c.id = e.committee_id
@@ -244,8 +241,7 @@ export const loginResolvers = {
               committeeName: ev.committee_name,
               committeeLogo: ev.committee_logo || null,
               designation,
-              membershipStatus: ev.membership_status || 'ACTIVE',
-              eventVisibility: ev.event_visibility || null
+              membershipStatus: ev.membership_status || 'ACTIVE'
             };
           });
           return {

@@ -27,7 +27,6 @@ export class ProgramDetailsService {
         programBanner
         bannerImages
         address
-        status
         visibility
         startDate
         endDate

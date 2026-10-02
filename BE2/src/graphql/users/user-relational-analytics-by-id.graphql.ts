@@ -1,5 +1,6 @@
 import { RowDataPacket } from 'mysql2/promise';
 import { query } from '../../config/db';
+import { getProgramLifecycleStatus } from '../programs/program-status';
 
 type UserProfileSnapshotRow = RowDataPacket & {
   id: number;
@@ -23,7 +24,8 @@ type UserCommitteeAffiliationSnapshotRow = RowDataPacket & {
 type UserProgramOwnershipSnapshotRow = RowDataPacket & {
   program_id: number;
   program_name: string;
-  status: string | null;
+  start_date: string | null;
+  end_date: string | null;
   committee_id: number;
 };
 
@@ -181,8 +183,9 @@ export const userRelationalAnalyticsResolvers = {
       const userProgramOwnershipSnapshotRows = await query<UserProgramOwnershipSnapshotRow[]>(
         `SELECT
           p.id AS program_id,
-          p.program_name,
-          p.status,
+          p.name AS program_name,
+          DATE_FORMAT(p.start_date, '%Y-%m-%d') AS start_date,
+          DATE_FORMAT(p.end_date, '%Y-%m-%d') AS end_date,
           e.committee_id
          FROM programs p
          INNER JOIN events e ON p.event_id = e.id
@@ -235,7 +238,7 @@ export const userRelationalAnalyticsResolvers = {
             programsOwned: userProgramOwnershipSnapshotRows.map((row) => ({
               programId: Number(row.program_id),
               programName: row.program_name,
-              status: row.status,
+              status: getProgramLifecycleStatus(row.start_date, row.end_date),
               committeeId: Number(row.committee_id)
             }))
           },

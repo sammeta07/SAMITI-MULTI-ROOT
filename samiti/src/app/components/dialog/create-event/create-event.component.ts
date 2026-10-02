@@ -57,7 +57,6 @@ export class CreateEventDialogComponent implements OnInit {
   public longitude: number | null = null;
   public category: string = 'RELIGIOUS';
   public eventYear = 1;
-  public visibility: 'VISIBLE' | 'HIDDEN' = 'HIDDEN';
   public startDate: Date | null = null;
   public endDate: Date | null = null;
 
@@ -86,11 +85,6 @@ export class CreateEventDialogComponent implements OnInit {
 
     const injectedEventType = this.injectedData?.eventType;
     this.type.set(injectedEventType === 'PRIVATE' ? 'PRIVATE' : 'PUBLIC');
-
-    const injectedVisibility = String(this.injectedData?.visibility || '').toUpperCase();
-    if (injectedVisibility === 'VISIBLE' || injectedVisibility === 'HIDDEN') {
-      this.visibility = injectedVisibility;
-    }
 
     const injectedEventName = this.injectedData?.eventName;
     if (typeof injectedEventName === 'string' && injectedEventName.trim().length > 0) {
@@ -221,7 +215,6 @@ export class CreateEventDialogComponent implements OnInit {
       address: this.address?.trim() || undefined,
       category: this.category || undefined,
       eventYear: this.eventYear,
-      visibility: this.visibility,
       type: this.type(),
       startDate: startDateStr,
       endDate: endDateStr,
