@@ -77,6 +77,60 @@ export class ProgramDetailsComponent implements OnInit {
     return getEventComputedStatus(program.startDate, program.endDate).toLowerCase() as 'started' | 'upcoming' | 'completed';
   });
 
+  public readonly timePillStatusClass = computed<string>(() => {
+    const program = this.programData();
+    if (!program) return '';
+
+    const status = this.calculatedProgramStatus();
+    if (status === 'completed') return 'time-pill-status-completed';
+    if (status === 'upcoming') return 'time-pill-status-upcoming';
+
+    // status === 'started'
+    const today = this.getTodayLocalDate();
+    const programStart = this.parseLocalDate(program.startDate);
+    const programEnd = this.parseLocalDate(program.endDate);
+
+    if (!programStart || !programEnd) return 'time-pill-status-started';
+
+    const startTime = this.parseTimeToMinutes(program.startTime);
+    const endTime = this.parseTimeToMinutes(program.endTime);
+
+    if (today.getTime() === programStart.getTime() && startTime !== null && endTime !== null) {
+      const now = this.getCurrentTimeMinutes();
+      if (now < startTime) return 'time-pill-status-upcoming';
+      if (now > endTime) return 'time-pill-status-completed';
+      return 'time-pill-status-started';
+    }
+
+    if (today > programStart && today < programEnd) return 'time-pill-status-started';
+    if (today.getTime() === programEnd.getTime() && startTime !== null && endTime !== null) {
+      const now = this.getCurrentTimeMinutes();
+      if (now > endTime) return 'time-pill-status-completed';
+    }
+
+    return 'time-pill-status-started';
+  });
+
+  private getTodayLocalDate(): Date {
+    const now = new Date();
+    return new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  }
+
+  private getCurrentTimeMinutes(): number {
+    const now = new Date();
+    return now.getHours() * 60 + now.getMinutes();
+  }
+
+  private parseTimeToMinutes(timeStr: string | null | undefined): number | null {
+    if (!timeStr) return null;
+    const match = timeStr.match(/^(\d{1,2}):(\d{2})(?::\d{2})?$/);
+    if (!match) return null;
+    const hours = Number(match[1]);
+    const minutes = Number(match[2]);
+    if (hours > 23 || minutes > 59) return null;
+    return hours * 60 + minutes;
+  }
+
   public readonly formattedDateRange = computed<string | null>(() => {
     const program = this.programData();
     if (!program) return null;
@@ -108,6 +162,12 @@ export class ProgramDetailsComponent implements OnInit {
     return `${startDay} - ${endDay} ${endMonth} ${eDate.getFullYear()}`;
   });
 
+  public get programOwnerDisplay(): string {
+    const name = this.programData()?.ownerName;
+    if (!name) return 'UNASSIGNED';
+    return String(name).toLowerCase().replace(/\b\w/g, (c) => c.toUpperCase());
+  }
+
   public get programStartTime(): string | null {
     return this.formatTimeOnly(this.programData()?.startTime);
   }
@@ -116,10 +176,32 @@ export class ProgramDetailsComponent implements OnInit {
     return this.formatTimeOnly(this.programData()?.endTime);
   }
 
+  public get formattedProgramStartTime(): string {
+    return this.formatTimeWithPeriod(this.programData()?.startTime);
+  }
+
+  public get formattedProgramEndTime(): string {
+    return this.formatTimeWithPeriod(this.programData()?.endTime);
+  }
+
   private formatTimeOnly(timeStr?: string | null): string | null {
     if (!timeStr) return null;
     const parts = timeStr.split(':');
     return parts.length >= 2 ? `${parts[0]}:${parts[1]}` : timeStr;
+  }
+
+  private formatTimeWithPeriod(timeStr?: string | null): string {
+    if (!timeStr) return '--:--';
+    const match = timeStr.match(/^(\d{1,2}):(\d{2})(?::\d{2})?$/);
+    if (!match) return timeStr;
+
+    const hours = Number(match[1]);
+    const minutes = Number(match[2]);
+    if (hours > 23 || minutes > 59) return timeStr;
+
+    const period = hours >= 12 ? 'PM' : 'AM';
+    const displayHours = hours % 12 || 12;
+    return `${displayHours}:${String(minutes).padStart(2, '0')} ${period}`;
   }
 
   private parseLocalDate(value: string | null | undefined): Date | null {

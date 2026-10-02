@@ -65,7 +65,6 @@ export class GroupDetailsService {
           eventLogo
           category
           type
-          visibility
           startDate
           endDate
           createdBy

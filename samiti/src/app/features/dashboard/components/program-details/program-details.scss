@@ -38,6 +38,7 @@
   justify-content: flex-end;
   gap: 6px;
   white-space: nowrap;
+  margin-left: auto;
 }
 
 /* GROUP-STYLE SUMMARY CARD */
@@ -85,9 +86,9 @@
   display: grid;
   width: 100%;
   grid-template-columns: minmax(0, 1fr) max-content;
-  align-items: center;
+  align-items: stretch;
   column-gap: 16px;
-  row-gap: 8px;
+  row-gap: 0;
 }
 
 /* MAIN INFO */
@@ -140,12 +141,30 @@
   text-overflow: ellipsis;
 }
 
+.program-owner-row {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: #64748b;
+  font-size: 0.78rem;
+}
+
+.owner-label {
+  font-weight: 700;
+  color: #64748b;
+}
+
+.owner-value {
+  font-weight: 600;
+  color: #0f172a;
+}
+
 .program-header-side {
   display: flex;
   flex-direction: column;
   align-items: flex-end;
   justify-content: space-between;
-  gap: 10px;
+  gap: 6px;
   min-width: max-content;
 }
 
@@ -244,11 +263,25 @@
     mat-icon { color: #7c3aed; }
   }
 
-  &.time-pill {
-    background: #f0fdf4;
-    color: #166534;
-    border-color: #bbf7d0;
+  &.time-pill-status-started {
+    background: #ecfdf5;
+    color: #047857;
+    border-color: #a7f3d0;
     mat-icon { color: #10b981; }
+  }
+
+  &.time-pill-status-upcoming {
+    background: #fffbeb;
+    color: #b45309;
+    border-color: #fde68a;
+    mat-icon { color: #f59e0b; }
+  }
+
+  &.time-pill-status-completed {
+    background: #f1f5f9;
+    color: #475569;
+    border-color: #cbd5e1;
+    mat-icon { color: #64748b; }
   }
 }
 
@@ -622,6 +655,6 @@
   }
 
   .program-header-side {
-    align-items: flex-start;
+    align-items: flex-end;
   }
 }

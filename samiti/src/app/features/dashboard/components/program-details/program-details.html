@@ -39,18 +39,18 @@
             }
 
             <!-- Recurring / One-Time -->
-            @if (programData()?.isRecurring !== null && programData()?.isRecurring !== undefined) {
+            @if (programData()?.isRecurring) {
               <span class="meta-pill recurring-pill">
                 <mat-icon>repeat</mat-icon>
-                <span>{{ programData()?.isRecurring ? 'RECURRING' : 'ONE-TIME' }}</span>
+                <span>DAILY</span>
               </span>
             }
 
             <!-- Start Time - End Time -->
             @if (programStartTime || programEndTime) {
-              <span class="meta-pill time-pill">
+              <span class="meta-pill time-pill {{ timePillStatusClass() }}">
                 <mat-icon>schedule</mat-icon>
-                <span>{{ programStartTime || '--:--' }} - {{ programEndTime || '--:--' }}</span>
+                <span>{{ formattedProgramStartTime }} - {{ formattedProgramEndTime }}</span>
               </span>
             }
 
@@ -61,18 +61,16 @@
                 <span>{{ programData()?.visibility }}</span>
               </span>
             }
+
           </div>
         </div>
 
-        <!-- Right Side: Owner and Action Buttons -->
+        <!-- Right Side: Owner -->
         <div class="program-header-side">
-          @if (programData()?.ownerName) {
-            <span class="meta-pill owner-pill" title="Program Owner">
-              <mat-icon>person</mat-icon>
-              <span>{{ programData()?.ownerName | titlecase }}</span>
-            </span>
-          }
-
+          <div class="program-owner-row">
+            <span class="owner-label">Owner :</span>
+            <span class="owner-value">{{ programOwnerDisplay }}</span>
+          </div>
           <div class="action-buttons-area">
             <button mat-button class="btn-action btn-edit" (click)="onEditProgram()">
               <mat-icon>edit</mat-icon>
