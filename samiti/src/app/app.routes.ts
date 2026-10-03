@@ -1,11 +1,12 @@
 import { Routes } from '@angular/router';
 import { authGuard } from './core/guards/auth-guard';
+import { votingPhaseGuard } from './core/guards/voting-phase.guard';
 
 export const routes: Routes = [
   { path: '', redirectTo: 'home', pathMatch: 'full' },
-  { 
-    path: 'home', 
-    loadComponent: () => import('./features/home/home.component').then(m => m.HomeComponent) 
+  {
+    path: 'home',
+    loadComponent: () => import('./features/home/home.component').then(m => m.HomeComponent)
   },
   {
     path: 'dashboard',
@@ -82,7 +83,8 @@ export const routes: Routes = [
         children: [
           {
             path: 'voting',
-            loadComponent: () => import('./features/dashboard/components/event-details/event-voting/event-voting').then(m => m.EventVotingComponent)
+            loadComponent: () => import('./features/dashboard/components/event-details/event-voting/event-voting').then(m => m.EventVotingComponent),
+            canActivate: [votingPhaseGuard]
           },
           {
             path: 'overview',

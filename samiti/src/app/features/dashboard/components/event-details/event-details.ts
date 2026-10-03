@@ -14,7 +14,7 @@ import { MatDialog } from '@angular/material/dialog';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { FormsModule } from '@angular/forms';
 import { HttpErrorResponse } from '@angular/common/http';
-import { firstValueFrom, Subscription } from 'rxjs';
+import { finalize, firstValueFrom, Subscription } from 'rxjs';
 
 import { EventVotingService } from './event-voting/event-voting.service';
 import { EventVotingPayload } from './event-voting/event-voting.models';
@@ -31,6 +31,7 @@ import { CreateEventDialogComponent } from '../../../../components/dialog/create
 import { CreateProgramDialogComponent } from '../../../../components/dialog/create-program/create-program.component';
 import { ImageAssetService } from '../../../../core/services/image-asset.service';
 import { ImageCropperDialogComponent } from '../../../../shared/components/image-cropper-dialog/image-cropper-dialog.component';
+import { LoadingStateService } from '../../../../shared/services/loading-state.service';
 
 @Component({
   selector: 'app-event-details',
@@ -64,6 +65,7 @@ export class EventDetailsComponent implements OnInit, OnDestroy {
   private readonly confirmDialog = inject(ConfirmDialogService);
   private readonly hierarchyTreeService = inject(DashboardHierarchyTreeService);
   private readonly imageAssetService = inject(ImageAssetService);
+  private readonly loadingState = inject(LoadingStateService);
 
   public readonly isLoadingOverview = signal<boolean>(false);
   public readonly isUploadingEventLogo = signal<boolean>(false);
@@ -376,24 +378,33 @@ export class EventDetailsComponent implements OnInit, OnDestroy {
   private loadHeaderDetails(id: string): void {
     const requestedEventId = Number(id);
     this.isLoadingOverview.set(true);
+    this.loadingState.begin();
 
-    this.overviewService.getEventDetailsHeader(id).subscribe({
+    this.overviewService.getEventDetailsHeader(id).pipe(
+      finalize(() => {
+        this.loadingState.end();
+        if (requestedEventId === this.currentEventId) {
+          this.isLoadingOverview.set(false);
+        }
+      })
+    ).subscribe({
       next: (data) => {
         if (requestedEventId !== this.currentEventId) return;
         this.stateService.headerData.set(data ?? null);
-        this.isLoadingOverview.set(false);
       },
       error: (err: HttpErrorResponse) => {
         if (requestedEventId !== this.currentEventId) return;
         this.notifier.error(err?.error?.message || 'Failed to load event header.');
         this.stateService.headerData.set(null);
-        this.isLoadingOverview.set(false);
       }
     });
   }
 
   private loadVotingDetails(id: string): void {
-    this.votingService.getEventVotingDetails(id).subscribe({
+    this.loadingState.begin();
+    this.votingService.getEventVotingDetails(id).pipe(
+      finalize(() => this.loadingState.end())
+    ).subscribe({
       next: (data) => {
         if (Number(data?.eventId) !== Number(id)) return;
         this.stateService.eventData.set(data ?? null);
@@ -409,7 +420,10 @@ export class EventDetailsComponent implements OnInit, OnDestroy {
   }
 
   private loadEventResults(eventId: number): void {
-    this.votingService.getEventResults(eventId).subscribe({
+    this.loadingState.begin();
+    this.votingService.getEventResults(eventId).pipe(
+      finalize(() => this.loadingState.end())
+    ).subscribe({
       next: (payload) => {
         this.stateService.eventResults.set(payload ?? null);
       },

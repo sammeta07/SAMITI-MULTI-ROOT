@@ -113,7 +113,28 @@ export class DashboardHierarchyTreeComponent implements OnInit {
       filter(event => event instanceof NavigationEnd)
     ).subscribe(() => {
       this.syncActiveNodeFromRawUrl();
+      this.releaseNavigationGuardIfDestinationDidNotStartLoading();
     });
+  }
+
+  private releaseNavigationGuardIfDestinationDidNotStartLoading(): void {
+    if (!this.awaitingDestinationLoad) {
+      return;
+    }
+
+    if (this.loadingState.isLoading()) {
+      this.destinationLoadBegun = true;
+      return;
+    }
+
+    if (!this.destinationLoadBegun) {
+      this.isNavigating.set(false);
+      this.awaitingDestinationLoad = false;
+      if (this.navigateTimeout) {
+        clearTimeout(this.navigateTimeout);
+        this.navigateTimeout = null;
+      }
+    }
   }
 
   public hasChild = (_: number, node: TreeNode): boolean => !!node.children && node.children.length > 0;
@@ -216,6 +237,7 @@ export class DashboardHierarchyTreeComponent implements OnInit {
       ownerUserId: mappedType === 'program' ? (node.ownerUserId ?? undefined) : undefined,
       isRecurring: mappedType === 'program' ? (node.isRecurring ?? undefined) : undefined,
       visibility: mappedType === 'program' ? (node.visibility ?? undefined) : undefined,
+      votingPhaseState: node.votingPhaseState ?? undefined,
       children: mappedChildren.length > 0 ? mappedChildren : undefined
     };
   }
@@ -585,7 +607,15 @@ export class DashboardHierarchyTreeComponent implements OnInit {
         }
         this.navigateTimeout = null;
       }, DashboardHierarchyTreeComponent.NAVIGATING_GUARD_TIMEOUT_MS);
-      this.router.navigate(['/dashboard', node.type, node.id]).then((success) => {
+
+      // Conditional routing: when an EVENT node's voting phase has reached
+      // the results stage (votingPhaseState === 6), land the user on the
+      // Overview tab instead of the Voting tab.
+      const targetPath = (node.type === 'event' && Number(node.votingPhaseState || 0) === 6)
+        ? ['/dashboard', 'event', node.id, 'overview']
+        : ['/dashboard', node.type, node.id];
+
+      this.router.navigate(targetPath).then((success) => {
         if (!success) {
           this.notifier.error(`Unable to open ${node.type} details.`);
           this.isNavigating.set(false);

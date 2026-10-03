@@ -5,6 +5,46 @@ import { map } from 'rxjs/operators';
 import { environment } from '../../../../../environments/environment';
 import { CommitteeDetailsPayload, RoleNode } from './dashboard-hierarchy-tree.models';
 
+/**
+ * Fields selected for every hierarchy tree node at any nesting depth.
+ * Kept in a single helper so the GraphQL query stays DRY across the
+ * (potentially many) recursive `children` blocks.
+ */
+const nodeFields = `
+  id
+  name
+  type
+  logo
+  roles {
+    name
+    color
+    icon
+  }
+  startDate
+  endDate
+  startTime
+  endTime
+  ownerUserId
+  isRecurring
+  visibility
+  votingPhaseState
+`;
+
+// Recursively build a `children { ... }` block up to `depth` levels deep.
+const buildChildrenBlock = (depth: number): string => {
+  if (depth <= 0) return '';
+  return `
+    children {
+      ${nodeFields}
+      ${buildChildrenBlock(depth - 1)}
+    }
+  `;
+};
+
+// The admin hierarchy tree nests COMMITTEE → EVENT → PROGRAM → TASK,
+// so 3 levels of children below the committee node are sufficient.
+const HIERARCHY_DEPTH = 3;
+
 @Injectable({
   providedIn: 'root'
 })
@@ -22,130 +62,8 @@ export class DashboardHierarchyTreeService {
       adminHierarchyTree(year: $year) {
         roleName
         committees {
-          id
-          name
-          type
-          logo
-          roles {
-            name
-            color
-            icon
-          }
-          startDate
-          endDate
-          startTime
-          endTime
-          ownerUserId
-          isRecurring
-          visibility
-          children {
-            id
-            name
-            type
-            logo
-            roles {
-              name
-              color
-              icon
-            }
-            startDate
-            endDate
-            startTime
-            endTime
-            ownerUserId
-            isRecurring
-            visibility
-            children {
-              id
-              name
-              type
-              logo
-              roles {
-                name
-                color
-                icon
-              }
-              startDate
-              endDate
-              startTime
-              endTime
-              ownerUserId
-              isRecurring
-              visibility
-              children {
-                id
-                name
-                type
-                logo
-                roles {
-                  name
-                  color
-                  icon
-                }
-                startDate
-                endDate
-                startTime
-                endTime
-                ownerUserId
-                isRecurring
-                visibility
-                children {
-                  id
-                  name
-                  type
-                  logo
-                  roles {
-                    name
-                    color
-                    icon
-                  }
-                  startDate
-                  endDate
-                  startTime
-                  endTime
-                  ownerUserId
-                  isRecurring
-                  visibility
-                  children {
-                    id
-                    name
-                    type
-                    logo
-                    roles {
-                      name
-                      color
-                      icon
-                    }
-                    startDate
-                    endDate
-                    startTime
-                    endTime
-                    ownerUserId
-                    isRecurring
-                    visibility
-                    children {
-                      id
-                      name
-                      type
-                      logo
-                      roles {
-                        name
-                        color
-                        icon
-                      }
-                      startDate
-                      endDate
-                      startTime
-                      endTime
-                      ownerUserId
-                      isRecurring
-                      visibility
-                    }
-                  }
-                }
-              }
-            }
-          }
+          ${nodeFields}
+          ${buildChildrenBlock(HIERARCHY_DEPTH)}
         }
       }
     }`;

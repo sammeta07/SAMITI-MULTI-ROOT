@@ -1,5 +1,6 @@
 import { query } from '../../../config/db';
 import { hasEventsDisplayNameColumn } from '../../events/details/event-display-name-support';
+import { hasEventsVotingPhaseStateColumn } from '../../events/details/voting/event-voting-phase-support';
 
 export const hierarchyTreeTypes = `
   type HierarchyEventRole {
@@ -21,6 +22,7 @@ type HierarchyTreeNode {
   ownerUserId: Int
   isRecurring: Boolean
   visibility: String
+  votingPhaseState: Int
   children: [HierarchyTreeNode!]!
 }
 
@@ -47,6 +49,7 @@ type InternalTreeNode = {
   ownerUserId?: number | null;
   isRecurring?: boolean | null;
   visibility?: string | null;
+  votingPhaseState?: number | null;
   children: InternalTreeNode[];
   childIds: Set<string>;
 };
@@ -76,6 +79,7 @@ export type SerializedHierarchyTreeNode = {
   ownerUserId: number | null;
   isRecurring: boolean | null;
   visibility: string | null;
+  votingPhaseState: number | null;
   children: SerializedHierarchyTreeNode[];
 };
 
@@ -181,9 +185,10 @@ export const hierarchyTreeResolvers = {
         committeeNodeById.set(committeeId, committeeNode);
       }
 
-      const committeeIds = Array.from(committeeNodeById.keys());
+const committeeIds = Array.from(committeeNodeById.keys());
       const committeePlaceholders = committeeIds.map(() => '?').join(',');
       const supportsEventDisplayName = await hasEventsDisplayNameColumn();
+      const supportsVotingPhaseState = await hasEventsVotingPhaseStateColumn();
 
         const eventRows = await query<any[]>(
           `SELECT
@@ -192,12 +197,13 @@ export const hierarchyTreeResolvers = {
              event_logo,
              DATE_FORMAT(start_date, '%Y-%m-%d') AS start_date,
              DATE_FORMAT(end_date, '%Y-%m-%d') AS end_date,
-             ${supportsEventDisplayName ? "COALESCE(NULLIF(TRIM(display_name), ''), LEFT(name, 20))" : 'LEFT(name, 20)'} AS event_name
-          FROM events
-          WHERE committee_id IN (${committeePlaceholders})
-            AND YEAR(start_date) = ?
-          ORDER BY start_date ASC, name ASC`,
-          [...committeeIds, selectedYear]
+             ${supportsEventDisplayName ? "COALESCE(NULLIF(TRIM(display_name), ''), LEFT(name, 20))" : 'LEFT(name, 20)'} AS event_name,
+             ${supportsVotingPhaseState ? 'COALESCE(voting_phase_state, 0) AS votingPhaseState' : '0 AS votingPhaseState'}
+           FROM events
+           WHERE committee_id IN (${committeePlaceholders})
+             AND YEAR(start_date) = ?
+           ORDER BY start_date ASC, name ASC`,
+           [...committeeIds, selectedYear]
         );
 
       const eventIds = eventRows.map((eventRow) => Number(eventRow.event_id));
@@ -270,6 +276,7 @@ export const hierarchyTreeResolvers = {
             roles: eventRoles,
             startDate: eventRow.start_date ? String(eventRow.start_date) : null,
             endDate: eventRow.end_date ? String(eventRow.end_date) : null,
+            votingPhaseState: supportsVotingPhaseState ? Number(eventRow.votingPhaseState || 0) : null,
             children: [],
             childIds: new Set<string>()
           };
@@ -308,22 +315,23 @@ export const hierarchyTreeResolvers = {
             continue;
           }
 
-          const programNode: InternalTreeNode = {
-            id: `program_${Number(programRow.program_id)}`,
-            name: String(programRow.program_name),
-            type: 'PROGRAM',
-            logo: null,
-            roles: new Set<string>(),
-            startDate: programRow.start_date ? String(programRow.start_date) : null,
-            endDate: programRow.end_date ? String(programRow.end_date) : null,
-            startTime: programRow.start_time ? String(programRow.start_time) : null,
-            endTime: programRow.end_time ? String(programRow.end_time) : null,
-            ownerUserId: programRow.ownerUserId === null || programRow.ownerUserId === undefined ? null : Number(programRow.ownerUserId),
-            isRecurring: programRow.isRecurring === null || programRow.isRecurring === undefined ? null : Boolean(programRow.isRecurring),
-            visibility: programRow.visibility ? String(programRow.visibility) : null,
-            children: [],
-            childIds: new Set<string>()
-          };
+const programNode: InternalTreeNode = {
+          id: `program_${Number(programRow.program_id)}`,
+          name: String(programRow.program_name),
+          type: 'PROGRAM',
+          logo: null,
+          roles: new Set<string>(),
+          startDate: programRow.start_date ? String(programRow.start_date) : null,
+          endDate: programRow.end_date ? String(programRow.end_date) : null,
+          startTime: programRow.start_time ? String(programRow.start_time) : null,
+          endTime: programRow.end_time ? String(programRow.end_time) : null,
+          ownerUserId: programRow.ownerUserId === null || programRow.ownerUserId === undefined ? null : Number(programRow.ownerUserId),
+          isRecurring: programRow.is_recurring === null || programRow.is_recurring === undefined ? null : Boolean(programRow.is_recurring),
+          visibility: programRow.visibility ? String(programRow.visibility) : null,
+          votingPhaseState: null,
+          children: [],
+          childIds: new Set<string>()
+        };
 
           attachChild(eventNode, programNode);
         }
@@ -356,15 +364,16 @@ export const hierarchyTreeResolvers = {
             taskRoles.add('ASSIGNED');
           }
 
-          const taskNode: InternalTreeNode = {
-            id: `task_${taskId}`,
-            name: String(taskRow.task_name),
-            type: 'TASK',
-            logo: null,
-            roles: taskRoles,
-            children: [],
-            childIds: new Set<string>()
-          };
+const taskNode: InternalTreeNode = {
+          id: `task_${taskId}`,
+          name: String(taskRow.task_name),
+          type: 'TASK',
+          logo: null,
+          roles: taskRoles,
+          votingPhaseState: null,
+          children: [],
+          childIds: new Set<string>()
+        };
 
           taskNodeById.set(taskId, taskNode);
         }
@@ -439,6 +448,7 @@ export const hierarchyTreeResolvers = {
         ownerUserId: node.ownerUserId ?? null,
         isRecurring: node.isRecurring ?? null,
         visibility: node.visibility ?? null,
+        votingPhaseState: node.votingPhaseState ?? null,
         children: node.children.map((childNode) => serializeNode(childNode))
       });
 
