@@ -184,6 +184,36 @@ export class ProgramDetailsComponent implements OnInit {
     return this.formatTimeWithPeriod(this.programData()?.endTime);
   }
 
+  public get formattedProgramTimeRange(): string {
+    const start = this.programData()?.startTime;
+    const end = this.programData()?.endTime;
+    if (!start || !end) return '';
+
+    const startParsed = this.parseTimeParts(start);
+    const endParsed = this.parseTimeParts(end);
+    if (!startParsed || !endParsed) return '';
+
+    const startPeriod = startParsed.hours >= 12 ? 'PM' : 'AM';
+    const endPeriod = endParsed.hours >= 12 ? 'PM' : 'AM';
+
+    if (startPeriod === endPeriod) {
+      const startDisplay = `${String(startParsed.hours % 12 || 12).padStart(2, '0')}:${String(startParsed.minutes).padStart(2, '0')}`;
+      const endDisplay = `${String(endParsed.hours % 12 || 12).padStart(2, '0')}:${String(endParsed.minutes).padStart(2, '0')}`;
+      return `${startDisplay} - ${endDisplay} ${startPeriod}`;
+    }
+
+    return `${this.formatTimeWithPeriod(start)} - ${this.formatTimeWithPeriod(end)}`;
+  }
+
+  private parseTimeParts(timeStr: string): { hours: number; minutes: number } | null {
+    const match = timeStr.match(/^(\d{1,2}):(\d{2})(?::\d{2})?$/);
+    if (!match) return null;
+    const hours = Number(match[1]);
+    const minutes = Number(match[2]);
+    if (hours > 23 || minutes > 59) return null;
+    return { hours, minutes };
+  }
+
   private formatTimeOnly(timeStr?: string | null): string | null {
     if (!timeStr) return null;
     const parts = timeStr.split(':');
@@ -352,19 +382,22 @@ export class ProgramDetailsComponent implements OnInit {
       current ? { ...current, ownerUserId } : current
     );
     this.isUpdatingOwner.set(true);
-    this.programOwnerService.assignOwner(currentProgram.programId, ownerUserId).subscribe({
-      next: (owner: ProgramOwnerPayload) => {
-        this.programData.update((current) =>
-          current && current.programId === owner.programId
-            ? {
-                ...current,
-                ownerUserId: owner.ownerUserId,
-                ownerName: owner.ownerName,
-                ownerAssignedBy: owner.ownerAssignedBy,
-                ownerAssignedAt: owner.ownerAssignedAt
-              }
-            : current
-        );
+this.programOwnerService.assignOwner(currentProgram.programId, ownerUserId).subscribe({
+        next: (owner: ProgramOwnerPayload) => {
+          this.programData.update((current) =>
+            current && current.programId === owner.programId
+              ? {
+                  ...current,
+                  ownerUserId: owner.ownerUserId,
+                  ownerName: owner.ownerName,
+                  ownerDesignation: owner.ownerDesignation,
+                  ownerDesignationColor: owner.ownerDesignationColor,
+                  ownerDesignationIcon: owner.ownerDesignationIcon,
+                  ownerAssignedBy: owner.ownerAssignedBy,
+                  ownerAssignedAt: owner.ownerAssignedAt
+                }
+              : current
+          );
         this.isUpdatingOwner.set(false);
         this.notifier.success(owner.ownerName ? `Program owner assigned to ${owner.ownerName}.` : 'Program owner cleared.');
       },

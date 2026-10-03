@@ -38,6 +38,9 @@ export class ProgramDetailsService {
         createdAt
         ownerUserId
         ownerName
+        ownerDesignation
+        ownerDesignationColor
+        ownerDesignationIcon
         ownerAssignedBy
         ownerAssignedAt
         canAssignOwner

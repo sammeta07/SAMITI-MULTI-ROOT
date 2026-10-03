@@ -17,6 +17,9 @@ export interface ProgramDetailsPayload {
   createdAt?: string | null;
   ownerUserId?: number | null;
   ownerName?: string | null;
+  ownerDesignation?: string | null;
+  ownerDesignationColor?: string | null;
+  ownerDesignationIcon?: string | null;
   ownerAssignedBy?: number | null;
   ownerAssignedAt?: string | null;
   canAssignOwner: boolean;

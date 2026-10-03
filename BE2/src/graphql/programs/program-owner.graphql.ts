@@ -11,6 +11,9 @@ export const programOwnerTypes = `
     programId: Int!
     ownerUserId: Int
     ownerName: String
+    ownerDesignation: String
+    ownerDesignationColor: String
+    ownerDesignationIcon: String
     ownerAssignedBy: Int
     ownerAssignedAt: String
   }
@@ -161,20 +164,39 @@ export const programOwnerResolvers = {
            p.id AS programId,
            p.owner_user_id AS ownerUserId,
            owner.name AS ownerName,
+           UPPER(COALESCE(NULLIF(TRIM(ownerUE.designation), ''), 'MEMBER')) AS ownerDesignation,
+           ownerERM.color AS ownerDesignationColor,
+           CASE
+             WHEN ownerERM.icon IS NOT NULL AND CHAR_LENGTH(ownerERM.icon) > 0
+             THEN CASE
+                    WHEN CHAR_LENGTH(ownerERM.icon) = 1 THEN ownerERM.icon
+                    ELSE CONVERT(CAST(ownerERM.icon AS BINARY) USING utf8mb4)
+                  END
+             ELSE NULL
+           END AS ownerDesignationIcon,
            p.owner_assigned_by AS ownerAssignedBy,
            DATE_FORMAT(p.owner_assigned_at, '%Y-%m-%d %H:%i:%s') AS ownerAssignedAt
          FROM programs p
          LEFT JOIN users owner ON owner.id = p.owner_user_id
+         LEFT JOIN users_events ownerUE
+           ON ownerUE.event_id = ? AND ownerUE.user_id = p.owner_user_id
+         LEFT JOIN events_roles_master ownerERM ON ownerERM.role_id = ownerUE.role_id
          WHERE p.id = ?
          LIMIT 1`,
-        [programId]
+        [eventId, programId]
       );
 
       const updated = updatedRows[0];
+      if (updated && updated.ownerDesignationIcon && Buffer.isBuffer(updated.ownerDesignationIcon)) {
+        updated.ownerDesignationIcon = updated.ownerDesignationIcon.toString('utf8');
+      }
       return {
         programId: Number(updated.programId),
         ownerUserId: updated.ownerUserId === null ? null : Number(updated.ownerUserId),
         ownerName: updated.ownerName || null,
+        ownerDesignation: updated.ownerDesignation || null,
+        ownerDesignationColor: updated.ownerDesignationColor || null,
+        ownerDesignationIcon: updated.ownerDesignationIcon || null,
         ownerAssignedBy: updated.ownerAssignedBy === null ? null : Number(updated.ownerAssignedBy),
         ownerAssignedAt: updated.ownerAssignedAt || null
       };

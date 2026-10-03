@@ -488,10 +488,31 @@
   .program-date-separator { color: #64748b; }
 }
 
+.status-container-started .program-date-time-subtitle {
+  .program-date-single, .program-date-start, .program-date-end { color: #10b981; }
+}
+
+.status-container-upcoming .program-date-time-subtitle {
+  .program-date-single, .program-date-start, .program-date-end { color: #f59e0b; }
+}
+
+.status-container-completed .program-date-time-subtitle {
+  .program-date-single, .program-date-start, .program-date-end { color: #64748b; }
+}
+
+.program-date-time-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  width: 100%;
+  min-width: 0;
+}
+
 .program-time-range {
   flex-shrink: 0;
   margin-right: 4px;
-  font-size: 0.68rem;
+  font-size: 0.62rem;
   font-weight: 600;
   white-space: nowrap;
 }

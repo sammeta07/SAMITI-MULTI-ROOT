@@ -60,6 +60,9 @@ export const programDetailsTypes = `
     createdAt: String
     ownerUserId: Int
     ownerName: String
+    ownerDesignation: String
+    ownerDesignationColor: String
+    ownerDesignationIcon: String
     ownerAssignedBy: Int
     ownerAssignedAt: String
     canAssignOwner: Boolean!
@@ -99,11 +102,24 @@ export const programDetailsResolvers = {
            e.committee_id AS committeeId,
            p.owner_user_id AS ownerUserId,
            owner.name AS ownerName,
+           UPPER(COALESCE(NULLIF(TRIM(ownerUE.designation), ''), 'MEMBER')) AS ownerDesignation,
+           ownerERM.color AS ownerDesignationColor,
+           CASE
+             WHEN ownerERM.icon IS NOT NULL AND CHAR_LENGTH(ownerERM.icon) > 0
+             THEN CASE
+                    WHEN CHAR_LENGTH(ownerERM.icon) = 1 THEN ownerERM.icon
+                    ELSE CONVERT(CAST(ownerERM.icon AS BINARY) USING utf8mb4)
+                  END
+             ELSE NULL
+           END AS ownerDesignationIcon,
            p.owner_assigned_by AS ownerAssignedBy,
            DATE_FORMAT(p.owner_assigned_at, '%Y-%m-%d %H:%i:%s') AS ownerAssignedAt
          FROM programs p
          LEFT JOIN events e ON e.id = p.event_id
          LEFT JOIN users owner ON owner.id = p.owner_user_id
+         LEFT JOIN users_events ownerUE
+           ON ownerUE.event_id = p.event_id AND ownerUE.user_id = p.owner_user_id
+         LEFT JOIN events_roles_master ownerERM ON ownerERM.role_id = ownerUE.role_id
          WHERE p.id = ?
          LIMIT 1`,
         [programId]
@@ -114,6 +130,9 @@ export const programDetailsResolvers = {
       }
 
       const program = programRows[0];
+      if (program && program.ownerDesignationIcon && Buffer.isBuffer(program.ownerDesignationIcon)) {
+        program.ownerDesignationIcon = program.ownerDesignationIcon.toString('utf8');
+      }
       const visibility = String(program.visibility || '').toUpperCase();
       const ownerPermissionRows = await query<any[]>(
         `SELECT
@@ -194,6 +213,9 @@ export const programDetailsResolvers = {
         createdAt: program.createdAt,
         ownerUserId: program.ownerUserId === null ? null : Number(program.ownerUserId),
         ownerName: program.ownerName || null,
+        ownerDesignation: program.ownerDesignation || null,
+        ownerDesignationColor: program.ownerDesignationColor || null,
+        ownerDesignationIcon: program.ownerDesignationIcon || null,
         ownerAssignedBy: program.ownerAssignedBy === null ? null : Number(program.ownerAssignedBy),
         ownerAssignedAt: program.ownerAssignedAt || null,
         canAssignOwner

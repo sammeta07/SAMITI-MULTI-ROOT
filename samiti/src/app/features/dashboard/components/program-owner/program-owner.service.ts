@@ -33,6 +33,9 @@ export class ProgramOwnerService {
         programId
         ownerUserId
         ownerName
+        ownerDesignation
+        ownerDesignationColor
+        ownerDesignationIcon
         ownerAssignedBy
         ownerAssignedAt
       }

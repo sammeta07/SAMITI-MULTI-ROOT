@@ -10,6 +10,9 @@ export interface ProgramOwnerPayload {
   programId: number;
   ownerUserId: number | null;
   ownerName: string | null;
+  ownerDesignation: string | null;
+  ownerDesignationColor: string | null;
+  ownerDesignationIcon: string | null;
   ownerAssignedBy: number | null;
   ownerAssignedAt: string | null;
 }

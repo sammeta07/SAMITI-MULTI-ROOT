@@ -38,25 +38,30 @@
               </span>
             }
 
+            <!-- Start Time - End Time -->
+            @if (programStartTime || programEndTime) {
+              <span class="meta-pill time-pill {{ timePillStatusClass() }}">
+                <mat-icon>schedule</mat-icon>
+                <span>{{ formattedProgramTimeRange || (formattedProgramStartTime + ' - ' + formattedProgramEndTime) }}</span>
+              </span>
+            }
+
             <!-- Recurring / One-Time -->
             @if (programData()?.isRecurring) {
               <span class="meta-pill recurring-pill">
                 <mat-icon>repeat</mat-icon>
                 <span>DAILY</span>
               </span>
-            }
-
-            <!-- Start Time - End Time -->
-            @if (programStartTime || programEndTime) {
-              <span class="meta-pill time-pill {{ timePillStatusClass() }}">
-                <mat-icon>schedule</mat-icon>
-                <span>{{ formattedProgramStartTime }} - {{ formattedProgramEndTime }}</span>
+            } @else {
+              <span class="meta-pill one-time-pill">
+                <mat-icon>repeat</mat-icon>
+                <span>ONE_TIME</span>
               </span>
             }
 
             <!-- Visibility Pill -->
             @if (programData()?.visibility) {
-              <span class="meta-pill type-pill" [class.type-private]="programData()?.visibility !== 'VISIBLE'">
+              <span class="meta-pill type-pill" [class.type-private]="programData()?.visibility !== 'VISIBLE'" [class.type-visible]="programData()?.visibility === 'VISIBLE'">
                 <mat-icon>{{ programData()?.visibility === 'VISIBLE' ? 'public' : 'lock' }}</mat-icon>
                 <span>{{ programData()?.visibility }}</span>
               </span>
@@ -68,8 +73,20 @@
         <!-- Right Side: Owner -->
         <div class="program-header-side">
           <div class="program-owner-row">
-            <span class="owner-label">Owner :</span>
-            <span class="owner-value">{{ programOwnerDisplay }}</span>
+            @if (programData()?.ownerDesignation) {
+              <span class="owner-designation-pill"
+                    [class.owner-unassigned]="!programData()?.ownerName"
+                    [style.background]="programData()?.ownerDesignationColor ? programData()?.ownerDesignationColor + '20' : null"
+                    [style.color]="programData()?.ownerDesignationColor || null"
+                    [style.border-color]="programData()?.ownerDesignationColor || null">
+                <span class="owner-pill-text">OWNER : {{ programOwnerDisplay }}</span>
+                @if (programData()?.ownerDesignationIcon) {
+                  <mat-icon class="owner-designation-icon" [style.color]="programData()?.ownerDesignationColor || null">{{ programData()?.ownerDesignationIcon }}</mat-icon>
+                }
+              </span>
+            } @else {
+              <span class="owner-pill-text" [class.owner-unassigned]="!programData()?.ownerName">OWNER : {{ programOwnerDisplay }}</span>
+            }
           </div>
           <div class="action-buttons-area">
             <button mat-button class="btn-action btn-edit" (click)="onEditProgram()">

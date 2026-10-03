@@ -662,8 +662,43 @@ export class DashboardHierarchyTreeComponent implements OnInit {
     }
 
     const period = hours >= 12 ? 'PM' : 'AM';
-    const displayHours = hours % 12 || 12;
+    const displayHours = String(hours % 12 || 12).padStart(2, '0');
     return `${displayHours}:${String(minutes).padStart(2, '0')} ${period}`;
+  }
+
+  public formatProgramTimeRange(startTime: string | undefined, endTime: string | undefined): string {
+    if (!startTime || !endTime) {
+      return '';
+    }
+
+    const startMatch = startTime.match(/^(\d{1,2}):(\d{2})(?::\d{2})?$/);
+    const endMatch = endTime.match(/^(\d{1,2}):(\d{2})(?::\d{2})?$/);
+
+    if (!startMatch || !endMatch) {
+      return `${this.formatProgramTime(startTime)} - ${this.formatProgramTime(endTime)}`;
+    }
+
+    const startHours = Number(startMatch[1]);
+    const endHours = Number(endMatch[1]);
+    const startMinutes = Number(startMatch[2]);
+    const endMinutes = Number(endMatch[2]);
+
+    if (startHours > 23 || endHours > 23 || startMinutes > 59 || endMinutes > 59) {
+      return `${this.formatProgramTime(startTime)} - ${this.formatProgramTime(endTime)}`;
+    }
+
+    const startPeriod = startHours >= 12 ? 'PM' : 'AM';
+    const endPeriod = endHours >= 12 ? 'PM' : 'AM';
+
+    if (startPeriod === endPeriod) {
+      const startDisplay = `${String(startHours % 12 || 12).padStart(2, '0')}:${String(startMinutes).padStart(2, '0')}`;
+      const endDisplay = `${String(endHours % 12 || 12).padStart(2, '0')}:${String(endMinutes).padStart(2, '0')}`;
+      return `${startDisplay} - ${endDisplay} ${startPeriod}`;
+    }
+
+    const startDisplay = `${String(startHours % 12 || 12).padStart(2, '0')}:${String(startMinutes).padStart(2, '0')} ${startPeriod}`;
+    const endDisplay = `${String(endHours % 12 || 12).padStart(2, '0')}:${String(endMinutes).padStart(2, '0')} ${endPeriod}`;
+    return `${startDisplay} - ${endDisplay}`;
   }
 
   public formatDisplayDate(value: string): string {
