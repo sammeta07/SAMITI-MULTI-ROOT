@@ -326,7 +326,7 @@ const programNode: InternalTreeNode = {
           startTime: programRow.start_time ? String(programRow.start_time) : null,
           endTime: programRow.end_time ? String(programRow.end_time) : null,
           ownerUserId: programRow.ownerUserId === null || programRow.ownerUserId === undefined ? null : Number(programRow.ownerUserId),
-          isRecurring: programRow.is_recurring === null || programRow.is_recurring === undefined ? null : Boolean(programRow.is_recurring),
+          isRecurring: programRow.isRecurring === null || programRow.isRecurring === undefined ? false : Boolean(programRow.isRecurring),
           visibility: programRow.visibility ? String(programRow.visibility) : null,
           votingPhaseState: null,
           children: [],
@@ -446,7 +446,7 @@ const taskNode: InternalTreeNode = {
         startTime: node.startTime ?? null,
         endTime: node.endTime ?? null,
         ownerUserId: node.ownerUserId ?? null,
-        isRecurring: node.isRecurring ?? null,
+        isRecurring: node.isRecurring ?? false,
         visibility: node.visibility ?? null,
         votingPhaseState: node.votingPhaseState ?? null,
         children: node.children.map((childNode) => serializeNode(childNode))
@@ -481,5 +481,4 @@ const taskNode: InternalTreeNode = {
     }
   }
 };
-
 

@@ -177,10 +177,10 @@ export class GroupDetailsComponent implements OnInit {
     const endYear = endMatch[1];
 
     if (startYear === endYear && startMatch[2] === endMatch[2]) {
-      return `${startDay} - ${endDay}-${endMonth}-${endYear.slice(-2)}`;
+      return `${startDay} To ${endDay}-${endMonth}-${endYear.slice(-2)}`;
     }
 
-    return `${startDay}-${startMonth}-${startYear.slice(-2)} to ${endDay}-${endMonth}-${endYear.slice(-2)}`;
+    return `${startDay}-${startMonth}-${startYear.slice(-2)} To ${endDay}-${endMonth}-${endYear.slice(-2)}`;
   }
 
   public clearSearch(): void {

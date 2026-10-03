@@ -151,15 +151,15 @@ export class ProgramDetailsComponent implements OnInit {
     const endMonth = this.formatMonth(eDate);
 
     if (sDate.getFullYear() !== eDate.getFullYear()) {
-      return `${this.formatDate(sDate)} - ${this.formatDate(eDate)}`;
+      return `${this.formatDate(sDate)} To ${this.formatDate(eDate)}`;
     }
     if (sDate.getMonth() !== eDate.getMonth()) {
-      return `${startDay} ${startMonth} - ${endDay} ${endMonth} ${eDate.getFullYear()}`;
+      return `${startDay} ${startMonth} To ${endDay} ${endMonth} ${eDate.getFullYear()}`;
     }
     if (sDate.getDate() === eDate.getDate()) {
       return this.formatDate(sDate);
     }
-    return `${startDay} - ${endDay} ${endMonth} ${eDate.getFullYear()}`;
+    return `${startDay} To ${endDay} ${endMonth} ${eDate.getFullYear()}`;
   });
 
   public get programOwnerDisplay(): string {

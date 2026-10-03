@@ -317,17 +317,25 @@ body.resizing-col {
   color: #64748b;
 }
 
+.tab-name-text {
+  padding: 0 4px;
+}
+
+.year-tab-text {
+  padding: 0 4px;
+}
+
 .tab-badge {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  min-width: 16px;
-  height: 16px;
-  padding: 0 4px;
-  border-radius: 999px;
-  background: #cbd5e1;
-  color: #1e293b;
-  font-size: 0.6rem;
+  min-width: 18px;
+  height: 18px;
+  padding: 1px 6px;
+  border-radius: 6px;
+  background: #e2e8f0;
+  color: #475569;
+  font-size: 0.68rem;
   font-weight: 700;
 }
 
@@ -635,6 +643,7 @@ body.resizing-col {
     line-height: 14px !important;
     padding: 0 !important;
     color: #94a3b8;
+    align-self: center;
     mat-icon { font-size: 0.75rem; width: 0.75rem; height: 0.75rem; }
     &:hover { color: #f97316; }
     .copy-icon-success { color: #22c55e !important; }
@@ -764,6 +773,7 @@ body.resizing-col {
 
       .mat-mdc-tab-labels {
         gap: 3px !important;
+        align-items: center !important;
       }
 
       .mat-mdc-tab {
@@ -780,6 +790,7 @@ body.resizing-col {
           color: #64748b !important;
           font-size: 0.72rem !important;
           font-weight: 600 !important;
+          line-height: 1.4 !important;
         }
 
         &.mdc-tab--active {
@@ -1065,37 +1076,27 @@ body.resizing-col {
   margin-top: 1px;
 }
 
-.event-meta-chip {
+.event-date-range-subtitle {
   display: inline-flex;
   align-items: center;
-  gap: 3px;
-  height: 19px;
-  padding: 0 5px;
-  border-radius: 3px;
-  font-size: 0.65rem;
-  font-weight: 600;
-  background: #f8fafc;
+  gap: 2px;
+  font-size: 0.62rem;
+  font-weight: 500;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  color: #64748b;
+  background: #f1f5f9;
+  padding: 1px 8px;
+  border-radius: 4px;
   border: 1px solid #e2e8f0;
-  color: #334155;
-  width: 100%;
-  justify-content: center;
 
-  mat-icon {
-    font-size: 0.68rem;
-    width: 0.68rem;
-    height: 0.68rem;
-    color: #64748b;
-  }
+  .date-separator { color: #94a3b8; }
+  .date-start, .date-end { color: #10b981; }
 
-  .date-separator {
-    font-size: 0.58rem;
-    color: #94a3b8;
-    margin: 0 2px;
-  }
-
-  &.date-started { background: #ecfdf5; border-color: #a7f3d0; color: #047857; mat-icon { color: #059669; } }
-  &.date-upcoming { background: #fffbeb; border-color: #fde68a; color: #b45309; mat-icon { color: #d97706; } }
-  &.date-completed { background: #f8fafc; border-color: #e2e8f0; color: #64748b; }
+  &.date-started { background: #ecfdf5; border-color: #a7f3d0; .date-start, .date-end { color: #10b981; } }
+  &.date-upcoming { background: #fffbeb; border-color: #fde68a; .date-start, .date-end { color: #f59e0b; } }
+  &.date-completed { background: #f8fafc; border-color: #e2e8f0; .date-start, .date-end { color: #64748b; } }
 }
 
 /* ==========================================================================

@@ -757,10 +757,10 @@ export class DashboardHierarchyTreeComponent implements OnInit {
     const endMatch = endDate.match(/^(\d{4})-(\d{2})-(\d{2})$/);
 
     if (startMatch && endMatch && startMatch[1] === endMatch[1] && startMatch[2] === endMatch[2]) {
-      return `${startMatch[3]} - ${this.formatDisplayDate(endDate)}`;
+      return `${startMatch[3]} To ${this.formatDisplayDate(endDate)}`;
     }
 
-    return `${this.formatDisplayDate(startDate)} to ${this.formatDisplayDate(endDate)}`;
+    return `${this.formatDisplayDate(startDate)} To ${this.formatDisplayDate(endDate)}`;
   }
 
   public getNodeDesignation(node: TreeNode): string | null {

@@ -219,7 +219,6 @@
                 @for (year of getCommitteeYearTabs(committee); track year) {
                   <mat-tab>
                     <ng-template mat-tab-label>
-                      <mat-icon class="tab-leading-icon">calendar_month</mat-icon>
                       <span>{{ year }}</span>
                     </ng-template>
                     
@@ -303,15 +302,9 @@
 
                                 <div class="event-card-meta">
                                   @if (event.startDate || event.endDate) {
-                                    <span class="event-meta-chip" [class]="getDateColorClass(event)">
+                                    <span class="event-date-range-subtitle" [class]="getDateColorClass(event)">
                                       @if (event.startDate) {
-                                        <mat-icon>calendar_today</mat-icon>{{ event.startDate | date:'dd MMM yyyy' }}
-                                      }
-                                      @if (event.startDate && event.endDate) {
-                                        <span class="date-separator">To</span>
-                                      }
-                                      @if (event.endDate) {
-                                        <mat-icon>event_available</mat-icon>{{ event.endDate | date:'dd MMM yyyy' }}
+                                        <span class="date-start">{{ formatEventDateRange(event.startDate, event.endDate || event.startDate) }}</span>
                                       }
                                     </span>
                                   }
@@ -350,7 +343,7 @@
             <mat-tab>
               <ng-template mat-tab-label>
                 <mat-icon class="tab-leading-icon">adjust</mat-icon>
-                <span>Near By</span>
+                <span class="tab-name-text">Near By</span>
                 <span class="tab-badge">{{ filteredNearbyGroups().length }}</span>
               </ng-template>
 
@@ -399,7 +392,7 @@
             <mat-tab>
               <ng-template mat-tab-label>
                 <mat-icon class="tab-leading-icon">adjust</mat-icon>
-                <span>Near By</span>
+                <span class="tab-name-text">Near By</span>
                 <span class="tab-badge">{{ filteredNearbyGroups().length }}</span>
               </ng-template>
 
@@ -428,7 +421,7 @@
             <mat-tab>
               <ng-template mat-tab-label>
                 <mat-icon class="tab-leading-icon">favorite_border</mat-icon>
-                <span>Favourites</span>
+                <span class="tab-name-text">Favourites</span>
                 <span class="tab-badge">{{ filteredFavouriteGroups().length }}</span>
               </ng-template>
 
@@ -457,7 +450,7 @@
             <mat-tab>
               <ng-template mat-tab-label>
                 <mat-icon class="tab-leading-icon">preview</mat-icon>
-                <span>Preview</span>
+                <span class="tab-name-text">Preview</span>
                 <span class="tab-badge">{{ filteredPreviewGroups().length }}</span>
               </ng-template>
 
@@ -555,7 +548,7 @@
           <mat-tab>
             <ng-template mat-tab-label>
               <mat-icon class="tab-leading-icon">favorite</mat-icon>
-              <span>Favourites</span>
+              <span class="tab-name-text">Favourites</span>
               <span class="tab-badge">0</span>
             </ng-template>
             <div class="sidebar-scroll">

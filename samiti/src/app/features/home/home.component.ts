@@ -268,6 +268,23 @@ export class HomeComponent implements OnDestroy, AfterViewChecked {
     return 'date-upcoming';
   }
 
+  formatDisplayDate(value: string): string {
+    const match = value.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+    if (!match) return value;
+    const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+    const monthName = months[Number(match[2]) - 1] || match[2];
+    return `${match[3]}-${monthName}-${match[1].slice(-2)}`;
+  }
+
+  formatEventDateRange(startDate: string, endDate: string): string {
+    const startMatch = startDate.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+    const endMatch = endDate.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+    if (startMatch && endMatch && startMatch[1] === endMatch[1] && startMatch[2] === endMatch[2]) {
+      return `${startMatch[3]} To ${this.formatDisplayDate(endDate)}`;
+    }
+    return `${this.formatDisplayDate(startDate)} To ${this.formatDisplayDate(endDate)}`;
+  }
+
   getYearOrdinal(year: number): string {
     if (year % 100 >= 11 && year % 100 <= 13) return `${year}th`;
     switch (year % 10) {
@@ -296,14 +313,19 @@ export class HomeComponent implements OnDestroy, AfterViewChecked {
     );
     if (!shell) return;
     const shellElement = shell.nativeElement as HTMLElement;
-    const firstStarted = shellElement.querySelector('.event-card-started') as HTMLElement | null;
-    if (firstStarted) {
-      const leftPadding = parseFloat(getComputedStyle(shellElement).paddingLeft) || 0;
-      shellElement.scrollTo({
-        left: Math.max(0, firstStarted.offsetLeft - leftPadding),
-        behavior: 'smooth'
-      });
-    }
+
+    const started = shellElement.querySelector('.event-status-border-started') as HTMLElement | null;
+    const upcoming = shellElement.querySelector('.event-status-border-upcoming') as HTMLElement | null;
+    const completed = shellElement.querySelectorAll('.event-status-border-completed');
+
+    const target = started || upcoming || (completed.length ? (completed[completed.length - 1] as HTMLElement) : null);
+    if (!target) return;
+
+    const leftPadding = parseFloat(getComputedStyle(shellElement).paddingLeft) || 0;
+    shellElement.scrollTo({
+      left: Math.max(0, target.offsetLeft - leftPadding),
+      behavior: 'smooth'
+    });
   }
 
   getDefaultYearTabIndex(committee: CommitteesList): number {
