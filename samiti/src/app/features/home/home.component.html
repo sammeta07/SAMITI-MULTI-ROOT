@@ -26,6 +26,11 @@
             <input class="ssp-input" type="text" placeholder="Search Committees…"
               [ngModel]="committeeSearchQuery()" (ngModelChange)="committeeSearchQuery.set($event)"
               (focus)="onSearchFocus()" (blur)="onSearchBlur()" />
+            @if (committeeSearchQuery()) {
+              <button type="button" class="clear-search-trigger" (mousedown)="clearSearch()">
+                <mat-icon>close</mat-icon>
+              </button>
+            }
             <span class="ssp-divider"></span>
             <mat-icon class="ssp-km-icon">radar</mat-icon>
             <select class="ssp-select" name="committeeRadius" [(ngModel)]="selectedCommitteeRadius"
@@ -34,11 +39,6 @@
                 <option [value]="radius">{{ radius }} km</option>
               }
             </select>
-            @if (committeeSearchQuery()) {
-              <button type="button" class="clear-search-trigger" (mousedown)="clearSearch()">
-                <mat-icon>close</mat-icon>
-              </button>
-            }
           </div>
         </div>
       </div>
@@ -519,19 +519,19 @@
             <input class="ssp-input" type="text" placeholder="Search Programs…"
               [ngModel]="programSearchQuery()" (ngModelChange)="programSearchQuery.set($event)"
               (focus)="onSearchFocus()" (blur)="onSearchBlur()" />
-            <span class="ssp-divider"></span>
-            <mat-icon class="ssp-km-icon">radar</mat-icon>
-            <select class="ssp-select" name="programRadius" [(ngModel)]="selectedCommitteeRadius"
-              (change)="onRadiusChange($event)">
-              @for (radius of radiusOptions; track radius) {
-                <option [value]="radius">{{ radius }} km</option>
-              }
-            </select>
             @if (programSearchQuery()) {
               <button type="button" class="clear-search-trigger" (mousedown)="clearProgramSearch()">
                 <mat-icon>close</mat-icon>
               </button>
             }
+            <span class="ssp-divider"></span>
+            <mat-icon class="ssp-km-icon">radar</mat-icon>
+            <select class="ssp-select" name="programRadius" [(ngModel)]="selectedProgramRadius"
+              (change)="onProgramRadiusChange($event)">
+              @for (radius of radiusOptions; track radius) {
+                <option [value]="radius">{{ radius }} km</option>
+              }
+            </select>
           </div>
         </div>
       </div>

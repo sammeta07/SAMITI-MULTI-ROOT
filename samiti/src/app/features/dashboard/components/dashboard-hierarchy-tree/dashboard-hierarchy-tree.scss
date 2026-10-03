@@ -434,16 +434,56 @@
 }
 
 .event-role-subtitle {
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
-  font-size: 0.6rem;
-  font-weight: 600;
-  color: #64748b;
-  text-transform: uppercase;
-  letter-spacing: 0.2px;
-  white-space: nowrap;
-}
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    font-size: 0.6rem;
+    font-weight: 600;
+    color: #64748b;
+    text-transform: uppercase;
+    letter-spacing: 0.2px;
+    white-space: nowrap;
+  }
+
+  .program-node-badges {
+    display: inline-flex;
+    align-items: center;
+    gap: 2px;
+    margin-left: auto;
+    flex-shrink: 0;
+  }
+
+  .program-badge-icon {
+    font-size: 0.8rem;
+    width: 0.8rem;
+    height: 0.8rem;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 50%;
+    padding: 2px;
+    line-height: 1;
+  }
+
+  .program-badge-visible {
+    color: #000000;
+    background: rgba(0, 0, 0, 0.08);
+  }
+
+  .program-badge-hidden {
+    color: #64748b;
+    background: rgba(100, 116, 139, 0.12);
+  }
+
+  .program-badge-recurring {
+    color: #7c3aed;
+    background: rgba(124, 58, 237, 0.12);
+  }
+
+  .program-badge-owner {
+    color: #f59e0b;
+    background: rgba(245, 158, 11, 0.14);
+  }
 
 .status-container-started .event-role-designation-icon { color: #10b981; }
 .status-container-upcoming .event-role-designation-icon { color: #f59e0b; }

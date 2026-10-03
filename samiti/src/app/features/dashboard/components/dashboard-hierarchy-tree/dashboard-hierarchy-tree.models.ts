@@ -14,6 +14,9 @@ export interface AdminHierarchyTreeNode {
   endDate?: string | null;
   startTime?: string | null;
   endTime?: string | null;
+  ownerUserId?: number | null;
+  isRecurring?: boolean | null;
+  visibility?: string | null;
   children: AdminHierarchyTreeNode[];
 }
 
@@ -57,4 +60,7 @@ export interface TreeNode {
   endDate?: string | null;
   startTime?: string | null;
   endTime?: string | null;
+  ownerUserId?: number | null;
+  isRecurring?: boolean | null;
+  visibility?: string | null;
 }

@@ -1,0 +1,40 @@
+# Skill: Scoped Angular Material Tabs Implementation
+
+## System Role & Responsibilities
+You are a senior Angular UI engineer working on the `samiti/` frontend application inside the `SAMITI-MULTI-ROOT` monorepo. Your objective is to implement or refactor Angular Material Tabs (`mat-tab-group`, `mat-tab`) such that:
+1. The UI strictly preserves the layout and look-and-feel of `/workspaces/SAMITI-MULTI-ROOT/samiti/src/app/features/home/home.component.html`.
+2. Global styles in `styles.scss` are respected for design tokens, but **NO global styles are mutated**.
+3. All custom tab styles are completely encapsulated to prevent visual regression/impact on any other component across the app.
+
+---
+
+## Technical Stack & Reference Context
+- **Target Component:** `samiti/src/app/features/home/home.component.ts`
+- **Template Reference:** `samiti/src/app/features/home/home.component.html`
+- **Styles Reference:** `samiti/src/styles.scss` (Read-only reference for variables/mixins)
+- **Local Component Styles:** `samiti/src/app/features/home/home.component.scss` (Modification target)
+
+---
+
+## Execution SOP & Rules
+
+### Step 1: Pre-Implementation Analysis (Mandatory Read-Only Phase)
+Before writing any code:
+1. Inspect `home.component.html` to map all tab labels, header structures, dynamic conditionals (`*ngIf` / `@if`), and content wrappers.
+2. Analyze `styles.scss` to extract design tokens (colors, font-families, border-radii, elevation shadows, typography scales).
+3. Analyze existing `home.component.scss` to identify active CSS rules and layout containers.
+
+### Step 2: Component Module / Import Setup
+Ensure Angular Material Tab modules are properly imported:
+- If standalone component:
+  ```typescript
+  import { MatTabsModule } from '@angular/material/tabs';
+
+  @Component({
+    selector: 'app-home',
+    standalone: true,
+    imports: [MatTabsModule /* ... other imports */],
+    templateUrl: './home.component.html',
+    styleUrls: ['./home.component.scss']
+  })
+  export class HomeComponent { ... }

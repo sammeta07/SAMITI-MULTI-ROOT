@@ -20,6 +20,7 @@ import { MatFormFieldModule } from '@angular/material/form-field';
 import { HttpErrorResponse } from '@angular/common/http';
 import { filter } from 'rxjs/operators';
 import { DashboardHierarchyTreeService } from './dashboard-hierarchy-tree.service';
+import { AuthService } from '../../../../core/services/auth.service';
 import { NotifierService } from '../../../../shared/notifier/notifier.service';
 import { LoadingStateService } from '../../../../shared/services/loading-state.service';
 import { AdminHierarchyTreeNode, RoleNode, TreeNode } from './dashboard-hierarchy-tree.models';
@@ -45,6 +46,7 @@ import { getEventComputedStatus } from '../../../../shared/services/event-status
 })
 export class DashboardHierarchyTreeComponent implements OnInit {
   private readonly treeService = inject(DashboardHierarchyTreeService);
+  private readonly authService = inject(AuthService);
   private readonly notifier = inject(NotifierService);
   private readonly router = inject(Router);
   private readonly selectedYearService = inject(SelectedYearService);
@@ -211,6 +213,9 @@ export class DashboardHierarchyTreeComponent implements OnInit {
       endDate: node.endDate ?? undefined,
       startTime: node.startTime ?? undefined,
       endTime: node.endTime ?? undefined,
+      ownerUserId: mappedType === 'program' ? (node.ownerUserId ?? undefined) : undefined,
+      isRecurring: mappedType === 'program' ? (node.isRecurring ?? undefined) : undefined,
+      visibility: mappedType === 'program' ? (node.visibility ?? undefined) : undefined,
       children: mappedChildren.length > 0 ? mappedChildren : undefined
     };
   }
@@ -736,6 +741,26 @@ export class DashboardHierarchyTreeComponent implements OnInit {
       return null;
     }
     return node.roleScope === 'master_admin' ? 'Master Admin' : 'Admin';
+  }
+
+  public isProgramVisibilityVisible(node: TreeNode): boolean {
+    return node.type === 'program' && (node.visibility || '').toUpperCase() === 'VISIBLE';
+  }
+
+  public isProgramVisibilityHidden(node: TreeNode): boolean {
+    return node.type === 'program' && (node.visibility || '').toUpperCase() === 'HIDDEN';
+  }
+
+  public isProgramRecurring(node: TreeNode): boolean {
+    return node.type === 'program' && node.isRecurring === true;
+  }
+
+  public isProgramOwner(node: TreeNode): boolean {
+    if (node.type !== 'program' || !node.ownerUserId) {
+      return false;
+    }
+    const currentUser = this.authService.getStoredUserData();
+    return Boolean(currentUser) && currentUser!.id === node.ownerUserId;
   }
 
   public shouldShowEventRole(node: TreeNode): boolean {

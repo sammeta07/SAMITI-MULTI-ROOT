@@ -35,6 +35,9 @@ export class DashboardHierarchyTreeService {
           endDate
           startTime
           endTime
+          ownerUserId
+          isRecurring
+          visibility
           children {
             id
             name
@@ -49,6 +52,9 @@ export class DashboardHierarchyTreeService {
             endDate
             startTime
             endTime
+            ownerUserId
+            isRecurring
+            visibility
             children {
               id
               name
@@ -63,6 +69,9 @@ export class DashboardHierarchyTreeService {
               endDate
               startTime
               endTime
+              ownerUserId
+              isRecurring
+              visibility
               children {
                 id
                 name
@@ -77,6 +86,9 @@ export class DashboardHierarchyTreeService {
                 endDate
                 startTime
                 endTime
+                ownerUserId
+                isRecurring
+                visibility
                 children {
                   id
                   name
@@ -91,6 +103,9 @@ export class DashboardHierarchyTreeService {
                   endDate
                   startTime
                   endTime
+                  ownerUserId
+                  isRecurring
+                  visibility
                   children {
                     id
                     name
@@ -105,6 +120,9 @@ export class DashboardHierarchyTreeService {
                     endDate
                     startTime
                     endTime
+                    ownerUserId
+                    isRecurring
+                    visibility
                     children {
                       id
                       name
@@ -119,6 +137,9 @@ export class DashboardHierarchyTreeService {
                       endDate
                       startTime
                       endTime
+                      ownerUserId
+                      isRecurring
+                      visibility
                     }
                   }
                 }

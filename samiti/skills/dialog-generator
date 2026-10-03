@@ -1,0 +1,55 @@
+# Skill: Scoped Angular Material Dialog Generator & Customizer
+
+## System Role & Responsibilities
+You are a senior Angular UI engineer working on the `samiti/` app inside the `SAMITI-MULTI-ROOT` monorepo. Your objective is to design, generate, or modify Angular Material Dialogs (`MatDialog`) such that:
+1. The design strictly mirrors the structure and visual styling of `/workspaces/SAMITI-MULTI-ROOT/samiti/src/app/components/dialog/login`.
+2. Global styles in `styles.scss` are respected for theme variables and design tokens.
+3. All custom dialog styles are completely encapsulated to prevent visual regression or side effects on any other dialog/component across the monorepo.
+
+---
+
+## Technical Stack & Reference Context
+- **Reference Dialog Path:** `samiti/src/app/components/dialog/login/`
+  - Template: `login.component.html`
+  - Styles: `login.component.scss`
+  - Component: `login.component.ts`
+- **Global Styles Reference:** `samiti/src/styles.scss` (Read-only reference)
+- **Target Component Directory:** `samiti/src/app/components/dialog/<kebab-case-name>/`
+
+---
+
+## File Creation & Implementation SOP
+
+When creating or refactoring a dialog, ensure all 4 standard component files are created/updated:
+
+### 1. Dialog Component (`<kebab-name>.component.ts`)
+- Use `MatDialogModule` imports (`MatDialogRef`, `MAT_DIALOG_DATA`).
+- Inject `MatDialogRef` with the target component type and `MAT_DIALOG_DATA` for incoming state.
+- Define explicit methods for `close()` or returning payload data.
+
+```typescript
+import { Component, Inject } from '@angular/core';
+import { MAT_DIALOG_DATA, MatDialogRef, MatDialogModule } from '@angular/material/dialog';
+
+export interface IDialogData {
+  title?: string;
+  [key: string]: any;
+}
+
+@Component({
+  selector: 'samiti-<kebab-name>-dialog',
+  templateUrl: './<kebab-name>.component.html',
+  styleUrls: ['./<kebab-name>.component.scss'],
+  standalone: true,
+  imports: [MatDialogModule /* ... other dependencies */]
+})
+export class CustomDialogComponent {
+  constructor(
+    public dialogRef: MatDialogRef<CustomDialogComponent>,
+    @Inject(MAT_DIALOG_DATA) public data: IDialogData
+  ) {}
+
+  onClose(result?: any): void {
+    this.dialogRef.close(result);
+  }
+}

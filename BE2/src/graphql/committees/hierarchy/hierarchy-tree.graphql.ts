@@ -8,18 +8,21 @@ export const hierarchyTreeTypes = `
     icon: String
   }
 
-  type HierarchyTreeNode {
-    id: String!
-    name: String!
-    type: String!
-    logo: String
-    roles: [HierarchyEventRole!]!
-    startDate: String
-    endDate: String
-    startTime: String
-    endTime: String
-    children: [HierarchyTreeNode!]!
-  }
+type HierarchyTreeNode {
+  id: String!
+  name: String!
+  type: String!
+  logo: String
+  roles: [HierarchyEventRole!]!
+  startDate: String
+  endDate: String
+  startTime: String
+  endTime: String
+  ownerUserId: Int
+  isRecurring: Boolean
+  visibility: String
+  children: [HierarchyTreeNode!]!
+}
 
   type HierarchyRole {
     roleName: String!
@@ -41,6 +44,9 @@ type InternalTreeNode = {
   endDate?: string | null;
   startTime?: string | null;
   endTime?: string | null;
+  ownerUserId?: number | null;
+  isRecurring?: boolean | null;
+  visibility?: string | null;
   children: InternalTreeNode[];
   childIds: Set<string>;
 };
@@ -67,6 +73,9 @@ export type SerializedHierarchyTreeNode = {
   endDate: string | null;
   startTime: string | null;
   endTime: string | null;
+  ownerUserId: number | null;
+  isRecurring: boolean | null;
+  visibility: string | null;
   children: SerializedHierarchyTreeNode[];
 };
 
@@ -279,6 +288,9 @@ export const hierarchyTreeResolvers = {
              id AS program_id,
              event_id,
              name AS program_name,
+             owner_user_id AS ownerUserId,
+             is_recurring AS isRecurring,
+             visibility,
              DATE_FORMAT(start_date, '%Y-%m-%d') AS start_date,
              DATE_FORMAT(end_date, '%Y-%m-%d') AS end_date,
              TIME_FORMAT(start_time, '%H:%i:%s') AS start_time,
@@ -306,6 +318,9 @@ export const hierarchyTreeResolvers = {
             endDate: programRow.end_date ? String(programRow.end_date) : null,
             startTime: programRow.start_time ? String(programRow.start_time) : null,
             endTime: programRow.end_time ? String(programRow.end_time) : null,
+            ownerUserId: programRow.ownerUserId === null || programRow.ownerUserId === undefined ? null : Number(programRow.ownerUserId),
+            isRecurring: programRow.isRecurring === null || programRow.isRecurring === undefined ? null : Boolean(programRow.isRecurring),
+            visibility: programRow.visibility ? String(programRow.visibility) : null,
             children: [],
             childIds: new Set<string>()
           };
@@ -421,6 +436,9 @@ export const hierarchyTreeResolvers = {
         endDate: node.endDate ?? null,
         startTime: node.startTime ?? null,
         endTime: node.endTime ?? null,
+        ownerUserId: node.ownerUserId ?? null,
+        isRecurring: node.isRecurring ?? null,
+        visibility: node.visibility ?? null,
         children: node.children.map((childNode) => serializeNode(childNode))
       });
 

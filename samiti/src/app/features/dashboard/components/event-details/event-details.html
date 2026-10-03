@@ -73,7 +73,6 @@
           <div class="card-main-info-area">
             <h2 class="event-display-name">{{ (evt.eventDisplayName || evt.eventName || 'Untitled Event') | titlecase }}</h2>
             <div class="card-location-row" [title]="evt.committeeAddress || 'General Event'">
-              <mat-icon class="location-icon">location_on</mat-icon>
               <span class="location-text-trim">{{ (evt.committeeAddress || evt.category || 'General event') | titlecase }}</span>
             </div>
           </div>
@@ -85,24 +84,17 @@
               {{ calculatedEventStatus | uppercase }}
             </span>
 
+            @if (evt.startDate; as startDate) {
+              <span class="meta-pill date-pill date-pill-status-{{calculatedEventStatus}}" title="Event Dates">
+                <mat-icon>event</mat-icon>
+                <span>{{ formatEventDateRange(startDate, evt.endDate) }}</span>
+              </span>
+            }
+
             @if (eventYear; as evtYear) {
               <span class="meta-pill year-pill">
                 <mat-icon>event_repeat</mat-icon>
                 <span>{{ formatEventYear(evtYear) }}</span>
-              </span>
-            }
-
-            @if (evt.startDate; as startDate) {
-              <span class="meta-pill date-pill date-pill-status-{{calculatedEventStatus}}" title="Start Date">
-                <mat-icon>event</mat-icon>
-                <span>{{ startDate | date:'dd MMM yyyy' }}</span>
-              </span>
-            }
-
-            @if (evt.endDate; as endDate) {
-              <span class="meta-pill date-pill date-end-pill date-pill-status-{{calculatedEventStatus}}" title="End Date">
-                <mat-icon>event_available</mat-icon>
-                <span>{{ endDate | date:'dd MMM yyyy' }}</span>
               </span>
             }
 

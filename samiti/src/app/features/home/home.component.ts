@@ -520,6 +520,11 @@ export class HomeComponent implements OnDestroy, AfterViewChecked {
     this.getCommitteeListByRange();
   }
 
+  onProgramRadiusChange(event: Event) {
+    const target = event.target as HTMLSelectElement;
+    this.selectedProgramRadius = Number(target.value);
+  }
+
   getPendingRoleLabel(pendingRole: string | null | undefined): string {
     if (!pendingRole) return '';
     if (pendingRole === 'COMMITTEE_ADMIN') return 'Admin Role';

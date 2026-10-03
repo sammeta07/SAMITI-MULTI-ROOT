@@ -171,7 +171,6 @@
               <h2 class="committee-display-name">{{ groupData()?.committeeName | titlecase }}</h2>
             </div>
             <div class="card-location-row">
-              <mat-icon class="location-icon">location_on</mat-icon>
               <span class="location-text-trim">{{ groupData()?.address | textFormatPipe:'title' }}</span>
             </div>
           </div>
@@ -212,7 +211,7 @@
                 </span>
               }
               <span class="user-role-badge" [ngClass]="currentUserRoleBadgeClass()">
-                <mat-icon class="role-badge-icon">verified</mat-icon>{{ currentUserRoleLabel() }}
+                {{ currentUserRoleLabel() }}
               </span>
             </div>
           </div>
@@ -235,13 +234,9 @@
                 matTooltip="Edit group profile" matTooltipPosition="above">
                 <mat-icon>edit</mat-icon>Edit Profile
               </button>
-              <button mat-button class="action-btn delete-btn" (click)="onDeleteCommitteeWorkspace()" [disabled]="!isCurrentUserMasterAdmin()"
-                matTooltip="Delete group" matTooltipPosition="above">
+<button mat-button class="action-btn delete-btn" (click)="onDeleteCommitteeWorkspace()" [disabled]="!isCurrentUserMasterAdmin()"
+                 matTooltip="Delete group" matTooltipPosition="above">
                 <mat-icon>delete</mat-icon>Delete
-              </button>
-              <button mat-button class="action-btn create-event-btn" (click)="onCreateEvent('PUBLIC')" [disabled]="!isCurrentUserMasterAdmin() && !isCurrentUserAdmin()"
-                matTooltip="Create a public event">
-                <mat-icon>add_circle</mat-icon>+ Public Event
               </button>
             }
           </div>
@@ -341,7 +336,7 @@
               <div class="header-title-left">
                 <mat-icon class="icon-accent-member">group</mat-icon>
                 <span class="title-text">Group Members</span>
-                <span class="count-pill">{{ membersList().length }}</span>
+                <span class="count-pill">{{ filteredMembersList().length }}</span>
               </div>
               @if (membersList().length > 4) {
                 <div class="section-search-pill">
@@ -400,6 +395,14 @@
               <span class="title-text">All Events</span>
               <span class="count-pill">{{ committeeEvents().length }}</span>
             </div>
+            <div class="header-title-right">
+              @if (isCurrentUserMasterAdmin() || isCurrentUserAdmin()) {
+                <button mat-button class="action-btn create-event-btn outlined" (click)="onCreateEvent('PUBLIC')" [disabled]="!isCurrentUserMasterAdmin() && !isCurrentUserAdmin()"
+                  matTooltip="Create a public event">
+                  <mat-icon>add_circle</mat-icon>+ Public Event
+                </button>
+              }
+            </div>
           </div>
 
           <div class="horizontal-list-container" #eventsScrollContainer>
@@ -440,14 +443,10 @@
                         </span>
                         <span class="event-pill event-date-pill">
                           <mat-icon>calendar_month</mat-icon>
-                          <span class="label">Start:</span> {{ event.startDate ? (event.startDate | date:'dd MMM yyyy') : 'N/A' }}
-                        </span>
-                        <span class="event-pill event-date-pill">
-                          <mat-icon>event_busy</mat-icon>
-                          <span class="label">End:</span> {{ event.endDate ? (event.endDate | date:'dd MMM yyyy') : 'N/A' }}
+                          <span>{{ formatEventDateRange(event.startDate, event.endDate) }}</span>
                         </span>
                         <span class="event-pill event-category-pill">
-                          <mat-icon>category</mat-icon>{{ (event.category || 'Standard') | titlecase }}
+                          <mat-icon>category</mat-icon>{{ (event.category || 'Standard') | uppercase }}
                         </span>
                         <span class="event-pill event-type-pill" [ngClass]="event.type === 'PUBLIC' ? 'type-public' : 'type-private'">
                           <mat-icon>{{ event.type === 'PUBLIC' ? 'public' : 'lock' }}</mat-icon>{{ event.type }}
@@ -476,7 +475,7 @@
                               }
                             </span>
                             <div class="designation-info">
-                              <span class="role-name-hindi">{{ role.hindiName ? role.hindiName.replace(/_/g, ' ') : '' }}</span>
+                              <span class="role-name-hindi">{{ (role.hindiName ? role.hindiName.replace(/_/g, ' ') : '') | titlecase }}</span>
                               <span class="role-name-english">{{ (role.englishName || role.roleName || '').replace(/_/g, ' ') | titlecase }}</span>
                               @if (role.winnerName) {
                                 <span class="winner-name" [style.color]="role.color || '#15803d'">{{ role.winnerName | titlecase }}</span>

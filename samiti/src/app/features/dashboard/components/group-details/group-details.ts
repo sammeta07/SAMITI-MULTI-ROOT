@@ -155,6 +155,34 @@ export class GroupDetailsComponent implements OnInit {
     return getEventComputedStatus(event.startDate, event.endDate);
   }
 
+  public formatEventDateRange(startDate: string | null | undefined, endDate: string | null | undefined): string {
+    const startMatch = (startDate || '').match(/^(\d{4})-(\d{2})-(\d{2})$/);
+    const endMatch = (endDate || '').match(/^(\d{4})-(\d{2})-(\d{2})$/);
+
+    if (!startMatch) {
+      return 'N/A';
+    }
+
+    const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+    const startMonth = months[Number(startMatch[2]) - 1] || startMatch[2];
+    const startDay = startMatch[3];
+    const startYear = startMatch[1];
+
+    if (!endMatch) {
+      return `${startDay}-${startMonth}-${startYear.slice(-2)}`;
+    }
+
+    const endMonth = months[Number(endMatch[2]) - 1] || endMatch[2];
+    const endDay = endMatch[3];
+    const endYear = endMatch[1];
+
+    if (startYear === endYear && startMatch[2] === endMatch[2]) {
+      return `${startDay} - ${endDay}-${endMonth}-${endYear.slice(-2)}`;
+    }
+
+    return `${startDay}-${startMonth}-${startYear.slice(-2)} to ${endDay}-${endMonth}-${endYear.slice(-2)}`;
+  }
+
   public clearSearch(): void {
     this.searchQuery.set('');
   }
