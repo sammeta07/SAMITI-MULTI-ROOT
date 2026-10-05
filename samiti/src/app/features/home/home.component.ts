@@ -83,10 +83,6 @@ export class HomeComponent implements OnDestroy, AfterViewChecked {
   hasProgramListError = signal<boolean>(false);
   selectedProgramTabIndex = 0;
   readonly programStatuses = ['LIVE', 'UPCOMING', 'COMPLETED'] as const;
-  readonly programYearOptions = Array.from(
-    { length: 16 },
-    (_, index) => new Date().getFullYear() + 5 - index
-  );
   private programRequestId = 0;
   copiedCommitteeId: string | null = null;
   isCommitteeListLoading: boolean = true;
@@ -112,7 +108,7 @@ export class HomeComponent implements OnDestroy, AfterViewChecked {
   public clearSearch(): void { this.committeeSearchQuery.set(''); }
   public clearProgramSearch(): void { this.programSearchQuery.set(''); }
 
-  public readonly committeesWidth = signal<number>(70);
+  public readonly committeesWidth = signal<number>(75);
   public readonly activeFilterMode = signal<'ACTIVE' | 'ALL'>('ACTIVE');
 
   public isActiveFilterModeActive(): boolean {
@@ -331,6 +327,44 @@ export class HomeComponent implements OnDestroy, AfterViewChecked {
     return 'upcoming';
   }
 
+  getProgramComputedStatus(program: ProgramItem): 'live' | 'upcoming' | 'completed' {
+    const now = new Date();
+    const start = this.parseProgramDateTime(program.startDate, program.startTime);
+    const end = this.parseProgramDateTime(program.endDate, program.endTime);
+
+    if (!start || !end || now.getTime() < start.getTime()) return 'upcoming';
+    if (now.getTime() > end.getTime()) return 'completed';
+    return 'live';
+  }
+
+  private parseProgramDateTime(
+    dateValue: string | null | undefined,
+    timeValue: string | null | undefined
+  ): Date | null {
+    const dateMatch = dateValue?.slice(0, 10).match(/^(\d{4})-(\d{2})-(\d{2})$/);
+    const timeMatch = timeValue?.match(/^(\d{1,2}):(\d{2})(?::(\d{2}))?$/);
+    if (!dateMatch || !timeMatch) return null;
+
+    const year = Number(dateMatch[1]);
+    const month = Number(dateMatch[2]);
+    const day = Number(dateMatch[3]);
+    const hours = Number(timeMatch[1]);
+    const minutes = Number(timeMatch[2]);
+    const seconds = Number(timeMatch[3] || 0);
+    if (hours > 23 || minutes > 59 || seconds > 59) return null;
+
+    const date = new Date(year, month - 1, day, hours, minutes, seconds);
+    if (
+      date.getFullYear() !== year ||
+      date.getMonth() !== month - 1 ||
+      date.getDate() !== day
+    ) {
+      return null;
+    }
+
+    return date;
+  }
+
   getDateColorClass(event: CommitteeEvent): string {
     const status = this.getEventComputedStatus(event);
     if (status === 'completed') return 'date-completed';
@@ -353,6 +387,96 @@ export class HomeComponent implements OnDestroy, AfterViewChecked {
       return `${startMatch[3]} To ${this.formatDisplayDate(endDate)}`;
     }
     return `${this.formatDisplayDate(startDate)} To ${this.formatDisplayDate(endDate)}`;
+  }
+
+  formatProgramTime(value: string): string {
+    const match = value.match(/^(\d{1,2}):(\d{2})(?::\d{2})?$/);
+    if (!match) return value;
+    const hours = Number(match[1]);
+    const minutes = Number(match[2]);
+    if (hours > 23 || minutes > 59) return value;
+    const period = hours >= 12 ? 'PM' : 'AM';
+    const displayHours = String(hours % 12 || 12).padStart(2, '0');
+    return `${displayHours}:${String(minutes).padStart(2, '0')} ${period}`;
+  }
+
+  formatProgramTimeRange(
+    startTime: string | null | undefined,
+    endTime: string | null | undefined
+  ): string {
+    if (!startTime || !endTime) return '';
+    const startMatch = startTime.match(/^(\d{1,2}):(\d{2})(?::\d{2})?$/);
+    const endMatch = endTime.match(/^(\d{1,2}):(\d{2})(?::\d{2})?$/);
+    if (!startMatch || !endMatch) {
+      return `${this.formatProgramTime(startTime)} - ${this.formatProgramTime(endTime)}`;
+    }
+    const startHours = Number(startMatch[1]);
+    const endHours = Number(endMatch[1]);
+    const startMinutes = Number(startMatch[2]);
+    const endMinutes = Number(endMatch[2]);
+    if (startHours > 23 || endHours > 23 || startMinutes > 59 || endMinutes > 59) {
+      return `${this.formatProgramTime(startTime)} - ${this.formatProgramTime(endTime)}`;
+    }
+    const startPeriod = startHours >= 12 ? 'PM' : 'AM';
+    const endPeriod = endHours >= 12 ? 'PM' : 'AM';
+    if (startPeriod === endPeriod) {
+      const startDisplay = `${String(startHours % 12 || 12).padStart(2, '0')}:${String(startMinutes).padStart(2, '0')}`;
+      const endDisplay = `${String(endHours % 12 || 12).padStart(2, '0')}:${String(endMinutes).padStart(2, '0')}`;
+      return `${startDisplay} - ${endDisplay} ${startPeriod}`;
+    }
+    const startDisplay = `${String(startHours % 12 || 12).padStart(2, '0')}:${String(startMinutes).padStart(2, '0')} ${startPeriod}`;
+    const endDisplay = `${String(endHours % 12 || 12).padStart(2, '0')}:${String(endMinutes).padStart(2, '0')} ${endPeriod}`;
+    return `${startDisplay} - ${endDisplay}`;
+  }
+
+  formatProgramDateRange(
+    startDate: string | null | undefined,
+    endDate: string | null | undefined
+  ): string {
+    if (!startDate) return endDate ? this.formatDisplayDate(endDate) : '';
+    if (!endDate || startDate === endDate) return this.formatDisplayDate(startDate);
+
+    const startMatch = startDate.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+    const endMatch = endDate.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+    if (startMatch && endMatch && startMatch[1] === endMatch[1] && startMatch[2] === endMatch[2]) {
+      return `${startMatch[3]} To ${this.formatDisplayDate(endDate)}`;
+    }
+    return `${this.formatDisplayDate(startDate)} To ${this.formatDisplayDate(endDate)}`;
+  }
+
+  getProgramCountdownText(program: ProgramItem): string | null {
+    const status = this.getProgramComputedStatus(program);
+    if (status !== 'live' && status !== 'upcoming') return null;
+
+    const now = new Date();
+
+    if (status === 'live') {
+      const endDateTime = this.parseProgramDateTime(program.endDate, program.endTime);
+      if (!endDateTime) return null;
+      const diffMs = endDateTime.getTime() - now.getTime();
+      if (diffMs <= 0) return 'Ending soon';
+      return this.formatDuration(diffMs, 'left');
+    }
+
+    const startDateTime = this.parseProgramDateTime(program.startDate, program.startTime || '00:00:00');
+    if (!startDateTime) return null;
+    const diffMs = startDateTime.getTime() - now.getTime();
+    if (diffMs <= 0) return 'Starting soon';
+    return `Starts in ${this.formatDuration(diffMs, '')}`;
+  }
+
+  private formatDuration(diffMs: number, suffix: string): string {
+    const totalMinutes = Math.max(1, Math.floor(diffMs / 60000));
+    const days = Math.floor(totalMinutes / 1440);
+    const hours = Math.floor((totalMinutes % 1440) / 60);
+    const minutes = totalMinutes % 60;
+
+    const parts: string[] = [];
+    if (days > 0) parts.push(`${days}d`);
+    if (hours > 0) parts.push(`${hours}h`);
+    if (minutes > 0 && days === 0) parts.push(`${minutes}m`);
+
+    return `${parts.join(' ')} ${suffix}`.trim();
   }
 
   getYearOrdinal(year: number): string {
@@ -470,11 +594,6 @@ export class HomeComponent implements OnDestroy, AfterViewChecked {
     this.loadProgramsByRange();
   }
 
-  onProgramYearChange(event: Event): void {
-    this.selectedProgramYear = Number((event.target as HTMLSelectElement).value);
-    this.loadProgramsByRange();
-  }
-
   private loadProgramsByRange(): void {
     const requestId = ++this.programRequestId;
     const locationCoords = this.userLocationCords();
@@ -540,6 +659,17 @@ export class HomeComponent implements OnDestroy, AfterViewChecked {
   openCommitteeInMaps(committee: CommitteesList, event: Event): void {
     event.stopPropagation();
     const address = (committee.address || '').trim();
+    if (!address) {
+      this.notifier.warn('No address available for navigation');
+      return;
+    }
+    const mapsUrl = `https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(address)}`;
+    window.open(mapsUrl, '_blank', 'noopener,noreferrer');
+  }
+
+  openProgramInMaps(program: ProgramItem, event: Event): void {
+    event.stopPropagation();
+    const address = (program.address || '').trim();
     if (!address) {
       this.notifier.warn('No address available for navigation');
       return;

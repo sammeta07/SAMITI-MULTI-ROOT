@@ -525,14 +525,6 @@
                 <option [value]="radius">{{ radius }} km</option>
               }
             </select>
-            <span class="ssp-divider"></span>
-            <mat-icon class="ssp-km-icon">calendar_month</mat-icon>
-            <select class="ssp-select" name="programYear" [value]="selectedProgramYear"
-              (change)="onProgramYearChange($event)" aria-label="Program year">
-              @for (year of programYearOptions; track year) {
-                <option [value]="year">{{ year }}</option>
-              }
-            </select>
           </div>
         </div>
       </div>
@@ -552,12 +544,12 @@
           } @else if (filteredPrograms().length === 0) {
             <div class="sidebar-empty">
               <mat-icon>event_busy</mat-icon>
-              <p>No {{ selectedProgramTabIndex === 0 ? 'live' : selectedProgramTabIndex === 1 ? 'upcoming' : 'completed' }} programs within {{ selectedProgramRadius }} km for {{ selectedProgramYear }}.</p>
+              <p>No {{ selectedProgramTabIndex === 0 ? 'live' : selectedProgramTabIndex === 1 ? 'upcoming' : 'completed' }} programs within {{ selectedProgramRadius }} km.</p>
             </div>
           } @else {
             <div class="programs-card-list">
               @for (program of filteredPrograms(); track program.id) {
-                <article class="program-card">
+                <article class="program-card program-card-status-{{ getProgramComputedStatus(program) }}">
                   <div class="program-card-image">
                     @if (program.bannerImages.length > 1) {
                       <div class="banner-carousel">
@@ -583,31 +575,46 @@
                         <mat-icon>event</mat-icon>
                       </div>
                     }
-                    <div class="program-banner-overlay">
-                      <span class="program-banner-name">{{ program.programName | titlecase }}</span>
-                    </div>
-                    <span class="program-distance">
-                      {{ (program.distanceMeters / 1000) | number:'1.0-1' }} km
-                    </span>
                   </div>
                   <div class="program-card-content">
                     <div class="program-card-title-row">
-                      <h3>{{ program.programName | titlecase }}</h3>
-                      <span class="program-km-pill">{{ (program.distanceMeters / 1000) | number:'1.0-1' }} km</span>
-                    </div>
-                    <p class="program-committee">{{ program.committeeName }}</p>
-                    @if (program.address) {
-                      <p class="program-address">
-                        <span>{{ program.address }}</span>
-                      </p>
-                    }
-                    <p class="program-schedule">
-                      <mat-icon>schedule</mat-icon>
-                      <span>
-                        {{ program.startDate | date:'MMM d, y' }}
-                        @if (program.startTime) { · {{ program.startTime | slice:0:5 }} }
+                      <h3>
+                        {{ program.programName | titlecase }}
+                        @if (program.isRecurring) {
+                          <mat-icon class="program-recurring-icon" title="Daily" aria-label="Recurring program">repeat</mat-icon>
+                        }
+                      </h3>
+                      <span class="program-schedule-pill program-schedule-pill-{{ getProgramComputedStatus(program) }}">
+                        <mat-icon>schedule</mat-icon>
+                        <span>
+                          {{ formatProgramDateRange(program.startDate, program.endDate || program.startDate) }}
+                          @if (program.startTime || program.endTime) { · {{ formatProgramTimeRange(program.startTime, program.endTime) }} }
+                        </span>
                       </span>
-                    </p>
+                    </div>
+                    <div class="program-card-meta-row">
+                      <div class="program-card-meta-left">
+                        <p class="program-committee">{{ program.committeeName }}</p>
+                        @if (program.address) {
+                          <p class="program-address">
+                            <span>{{ program.address | titlecase }}</span>
+                          </p>
+                        }
+                      </div>
+                      <button type="button" class="proximity-display-row"
+                        (click)="openProgramInMaps(program, $event)"
+                        matTooltip="Open in Google Maps" matTooltipPosition="above">
+                        <mat-icon class="compass-pointer-icon">directions</mat-icon>
+                        <span class="spatial-distance-metric">{{ program.distanceMeters }} m</span>
+                      </button>
+                    </div>
+                    @if (getProgramComputedStatus(program) !== 'completed') {
+                      <div class="program-countdown-row">
+                        <span class="program-countdown-pill program-countdown-pill-{{ getProgramComputedStatus(program) }}">
+                          {{ getProgramCountdownText(program) }}
+                        </span>
+                      </div>
+                    }
                   </div>
                 </article>
               }

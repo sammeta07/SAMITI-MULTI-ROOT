@@ -233,6 +233,7 @@ export class HomeService {
         endDate
         startTime
         endTime
+        isRecurring
         bannerImages
         distanceMeters
         committeeName

@@ -28,7 +28,7 @@
 
 /* GROUPS PANEL */
 .committees-col {
-  flex: 0 1 70%;
+  flex: 0 1 75%;
   min-width: 0;
   display: flex;
   flex-direction: column;
@@ -426,13 +426,15 @@ body.resizing-col {
    PROGRAM CARD ARCHITECTURE (Same height as event cards)
    -------------------------------------------------------------------------- */
 .program-card {
-  height: 205px;
+  height: 240px;
   width: 100%;
   display: flex;
   flex-direction: column;
   min-width: 0;
   overflow: hidden;
   border: 1px solid #e2e8f0;
+  border-left-width: 4px;
+  border-left-color: #cbd5e1;
   border-radius: 8px;
   background: #ffffff;
   box-shadow: 0 1px 3px rgba(15, 23, 42, 0.04);
@@ -441,6 +443,16 @@ body.resizing-col {
   &:hover {
     transform: translateY(-1px);
     box-shadow: 0 4px 10px rgba(15, 23, 42, 0.08);
+  }
+
+  &.program-card-status-live {
+    border-left-color: #10b981 !important;
+  }
+  &.program-card-status-upcoming {
+    border-left-color: #f59e0b !important;
+  }
+  &.program-card-status-completed {
+    border-left-color: #64748b !important;
   }
 }
 
@@ -483,26 +495,14 @@ body.resizing-col {
   display: block;
 }
 
-.program-distance {
-  position: absolute;
-  left: 5px;
-  bottom: 5px;
-  padding: 2px 5px;
-  border-radius: 4px;
-  background: rgba(255, 255, 255, 0.94);
-  color: #c2410c;
-  font-size: 0.62rem;
-  font-weight: 700;
-}
-
 /* Content Body: 35% Height with Tight Rows */
 .program-card-content {
   height: 35%;
-  flex: 0 0 35%;
-  padding: 5px 8px;
+  flex: 1 1 35%;
+  padding: 4px 8px;
   display: flex;
   flex-direction: column;
-  justify-content: space-between;
+  gap: 1px;
   box-sizing: border-box;
   min-width: 0;
 }
@@ -525,20 +525,96 @@ body.resizing-col {
   }
 }
 
-.program-km-pill {
+.program-recurring-icon {
+  width: 0.85rem;
+  height: 0.85rem;
+  margin-left: 3px;
+  vertical-align: -2px;
+  color: #64748b;
+  font-size: 0.85rem;
+}
+
+.program-schedule-pill {
   flex: 0 0 auto;
-  padding: 2px 5px;
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  padding: 2px 4px;
   border-radius: 4px;
-  background: #f1f5f9;
+  background: transparent;
   color: #0f172a;
+  font-size: 0.58rem;
+  font-weight: 700;
+  white-space: nowrap;
+
+  mat-icon {
+    width: 0.75rem;
+    height: 0.75rem;
+    font-size: 0.75rem;
+  }
+
+  span {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+}
+
+.program-schedule-pill-live {
+  color: #10b981;
+}
+
+.program-schedule-pill-upcoming {
+  color: #f59e0b;
+}
+
+.program-schedule-pill-completed {
+  color: #64748b;
+}
+
+.program-countdown-row {
+  display: flex;
+  justify-content: flex-end;
+}
+
+.program-countdown-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  padding: 2px 6px;
+  border-radius: 4px;
   font-size: 0.58rem;
   font-weight: 700;
   white-space: nowrap;
 }
 
+.program-countdown-pill-live {
+  background: #10b981;
+  color: #ffffff;
+}
+
+.program-countdown-pill-upcoming {
+  background: #f59e0b;
+  color: #ffffff;
+}
+
+.program-card-meta-row {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 5px;
+  min-width: 0;
+}
+
+.program-card-meta-left {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
 .program-committee,
-.program-address,
-.program-schedule {
+.program-address {
   margin: 0;
   color: #64748b;
   font-size: 0.66rem;
@@ -550,18 +626,10 @@ body.resizing-col {
   font-weight: 600;
 }
 
-.program-address,
-.program-schedule {
-  display: flex;
-  min-width: 0;
-  align-items: center;
-  gap: 3px;
-
-  span {
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-  }
+.program-address {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 /* ==========================================================================
@@ -1116,36 +1184,6 @@ body.resizing-col {
   background: linear-gradient(135deg, #f59e0b, #d97706);
   color: #ffffff;
   box-shadow: 0 1px 2px rgba(0, 0, 0, 0.15);
-}
-
-.program-banner-overlay {
-  position: absolute;
-  inset: 0;
-  display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  padding: 3px 4px;
-  pointer-events: none;
-}
-
-.program-banner-name {
-  font-size: 0.52rem;
-  font-weight: 700;
-  letter-spacing: 0.3px;
-  padding: 0 4px;
-  height: 15px;
-  line-height: 14px;
-  box-sizing: border-box;
-  border-radius: 3px;
-  color: #ffffff;
-  background: rgba(15, 23, 42, 0.7);
-  border: 1px solid rgba(255, 255, 255, 0.2);
-  backdrop-filter: blur(4px);
-  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.15);
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-  max-width: 100%;
 }
 
 .banner-carousel {

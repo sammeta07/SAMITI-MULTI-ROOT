@@ -17,6 +17,7 @@ export const programsByDistanceTypes = `
     endDate: String
     startTime: String
     endTime: String
+    isRecurring: Boolean!
     bannerImages: [String!]!
     distanceMeters: Float!
     committeeName: String!
@@ -60,9 +61,8 @@ export const programsByDistanceResolvers = {
       }
 
       const statusCondition = {
-        LIVE: `CURRENT_DATE BETWEEN p.start_date AND p.end_date
-          AND (CURRENT_DATE > p.start_date OR CURRENT_TIME >= p.start_time)
-          AND (CURRENT_DATE < p.end_date OR CURRENT_TIME <= p.end_time)`,
+        LIVE: `TIMESTAMP(p.start_date, p.start_time) <= CURRENT_TIMESTAMP
+          AND TIMESTAMP(p.end_date, p.end_time) >= CURRENT_TIMESTAMP`,
         UPCOMING: 'TIMESTAMP(p.start_date, p.start_time) > CURRENT_TIMESTAMP',
         COMPLETED: 'TIMESTAMP(p.end_date, p.end_time) < CURRENT_TIMESTAMP'
       }[status];
@@ -80,6 +80,7 @@ export const programsByDistanceResolvers = {
            DATE_FORMAT(p.end_date, '%Y-%m-%d') AS endDate,
            TIME_FORMAT(p.start_time, '%H:%i:%s') AS startTime,
            TIME_FORMAT(p.end_time, '%H:%i:%s') AS endTime,
+           p.is_recurring AS isRecurring,
            (6371 * ACOS(LEAST(1, GREATEST(-1,
              COS(RADIANS(?)) * COS(RADIANS(e.latitude)) *
              COS(RADIANS(e.longitude) - RADIANS(?)) +
@@ -132,6 +133,7 @@ export const programsByDistanceResolvers = {
         endDate: program.endDate || null,
         startTime: program.startTime || null,
         endTime: program.endTime || null,
+        isRecurring: Number(program.isRecurring) === 1,
         bannerImages: bannerImagesByProgram[Number(program.id)] || [],
         distanceMeters: Math.round(Number(program.distanceKm) * 1000),
         committeeName: program.committeeName,
