@@ -1,4 +1,4 @@
-import { Component, inject, effect, ChangeDetectorRef, OnDestroy, signal, computed, ViewChildren, QueryList, ElementRef, AfterViewChecked } from '@angular/core';
+import { Component, inject, effect, ChangeDetectorRef, OnDestroy, signal, computed, ViewChildren, QueryList, ElementRef, AfterViewChecked, NgZone } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
@@ -17,7 +17,7 @@ import { AuthService } from '../../core/services/auth.service';
 import { CreateCommitteeDialogComponent } from '../../components/dialog/create-committee/create-committee.component';
 import { ConfirmDialogService } from '../../components/dialog/confirm/confirm-dialog.service';
 import { ConfirmDialogData } from '../../components/dialog/confirm/confirm-dialog.models';
-import { CommitteeListResponseGuestUser, CommitteeListRequestBackend, CommitteeAuthItem, CommitteesList, CommitteeEvent, JoinCommitteeRequestBody, JoinCommitteeApiResponse, ToggleCommitteeFavouriteResponse, CancelRequestApiResponse } from './home.models';
+import { CommitteeListResponseGuestUser, CommitteeListRequestBackend, CommitteeAuthItem, CommitteesList, CommitteeEvent, JoinCommitteeRequestBody, JoinCommitteeApiResponse, ToggleCommitteeFavouriteResponse, CancelRequestApiResponse, ProgramItem, ProgramListRequestBackend } from './home.models';
 import { TextFormatPipe } from '../../shared/pipe/text-format-pipe.pipe';
 import { StartupLoaderService } from '../../core/services/startup-loader.service';
 import { UiToggleService } from '../../shared/services/ui-toggle.service';
@@ -56,6 +56,7 @@ export class HomeComponent implements OnDestroy, AfterViewChecked {
   private readonly startupLoaderService = inject(StartupLoaderService);
   private readonly imageAssetService = inject(ImageAssetService);
   private readonly selectedYearService = inject(SelectedYearService);
+  private readonly ngZone = inject(NgZone);
 
   private nearbyExpandedCommitteeIds = new Set<number>();
   private favouriteExpandedCommitteeIds = new Set<number>();
@@ -63,6 +64,8 @@ export class HomeComponent implements OnDestroy, AfterViewChecked {
   private readonly uploadingLogoCommitteeIds = new Set<number>();
   private readonly carouselIndices = new Map<number, number>();
   private readonly carouselTimers = new Map<number, ReturnType<typeof setTimeout>>();
+  private readonly programBannerIndices = new Map<number, number>();
+  private readonly programBannerTimers = new Map<number, ReturnType<typeof setTimeout>>();
   private readonly CAROUSEL_MIN_INTERVAL_MS = 3000;
   private readonly CAROUSEL_MAX_INTERVAL_MS = 5000;
   private readonly loadingCommitteeYearEvents = new Map<string, boolean>();
@@ -72,8 +75,19 @@ export class HomeComponent implements OnDestroy, AfterViewChecked {
   radiusOptions: number[] = [1, 5, 10, 25, 100, 1000];
   selectedCommitteeRadius: number = 5;
   selectedProgramRadius: number = 5;
+  selectedProgramYear = this.selectedYearService.selectedYear();
   selectedTabIndex: number = 2;
   committeeList = signal<CommitteesList[]>([]);
+  programList = signal<ProgramItem[]>([]);
+  isProgramListLoading = signal<boolean>(false);
+  hasProgramListError = signal<boolean>(false);
+  selectedProgramTabIndex = 0;
+  readonly programStatuses = ['LIVE', 'UPCOMING', 'COMPLETED'] as const;
+  readonly programYearOptions = Array.from(
+    { length: 16 },
+    (_, index) => new Date().getFullYear() + 5 - index
+  );
+  private programRequestId = 0;
   copiedCommitteeId: string | null = null;
   isCommitteeListLoading: boolean = true;
   private hasAppliedDefaultPreviewExpansion = false;
@@ -82,6 +96,15 @@ export class HomeComponent implements OnDestroy, AfterViewChecked {
 
   public readonly committeeSearchQuery = signal<string>('');
   public readonly programSearchQuery = signal<string>('');
+  public readonly filteredPrograms = computed(() => {
+    const query = this.programSearchQuery().trim().toLowerCase();
+    const programs = this.programList();
+    if (!query) return programs;
+    return programs.filter((program) =>
+      [program.programName, program.category, program.address, program.committeeName]
+        .some((value) => value?.toLowerCase().includes(query))
+    );
+  });
   public readonly isSearchFocused = signal<boolean>(false);
 
   public onSearchFocus(): void { this.isSearchFocused.set(true); }
@@ -101,23 +124,55 @@ export class HomeComponent implements OnDestroy, AfterViewChecked {
     const homeBody = (event.currentTarget as HTMLElement).parentElement;
     if (!homeBody) return;
 
-    const rect = homeBody.getBoundingClientRect();
+    const committeesCol = homeBody.querySelector('.committees-col') as HTMLElement;
+    if (!committeesCol) return;
+
+    const homeRect = homeBody.getBoundingClientRect();
+    const bodyWidth = homeRect.width;
+    const minPct = 28;
+    const maxPct = 82;
+
     document.body.classList.add('resizing-col');
+    document.body.style.userSelect = 'none';
+
+    // Hint to browser: optimize this element for width changes
+    committeesCol.style.willChange = 'width';
+    committeesCol.style.contain = 'layout';
+
+    let lastPct = this.committeesWidth();
+    let rafId: number | null = null;
 
     const onMove = (e: MouseEvent) => {
-      let pct = ((e.clientX - rect.left) / rect.width) * 100;
-      pct = Math.min(Math.max(pct, 28), 82);
-      this.committeesWidth.set(pct);
+      const clientX = e.clientX;
+      if (rafId !== null) return;
+      rafId = requestAnimationFrame(() => {
+        rafId = null;
+        let pct = ((clientX - homeRect.left) / bodyWidth) * 100;
+        pct = Math.min(Math.max(pct, minPct), maxPct);
+        lastPct = pct;
+        committeesCol.style.flexBasis = pct + '%';
+      });
     };
 
     const onUp = () => {
+      if (rafId !== null) {
+        cancelAnimationFrame(rafId);
+        rafId = null;
+      }
+      committeesCol.style.willChange = '';
+      committeesCol.style.contain = '';
       document.body.classList.remove('resizing-col');
+      document.body.style.userSelect = '';
+      this.committeesWidth.set(lastPct);
       window.removeEventListener('mousemove', onMove);
       window.removeEventListener('mouseup', onUp);
     };
 
-    window.addEventListener('mousemove', onMove);
-    window.addEventListener('mouseup', onUp);
+    // Register listeners outside Angular's zone to prevent change-detection delays
+    this.ngZone.runOutsideAngular(() => {
+      window.addEventListener('mousemove', onMove);
+      window.addEventListener('mouseup', onUp);
+    });
   }
 
   public readonly filteredNearbyGroups = computed(() => {
@@ -245,9 +300,24 @@ export class HomeComponent implements OnDestroy, AfterViewChecked {
   }
 
   getEventsByYear(committee: CommitteesList, year: number): CommitteeEvent[] {
+    const statusOrder: Record<string, number> = {
+      completed: 0,
+      started: 1,
+      upcoming: 2,
+    };
+
     return committee.events
       .filter((event) => this.extractEventYear(event) === year)
       .sort((a, b) => {
+        const aStatus = this.getEventComputedStatus(a);
+        const bStatus = this.getEventComputedStatus(b);
+        const aOrder = statusOrder[aStatus] ?? 99;
+        const bOrder = statusOrder[bStatus] ?? 99;
+
+        if (aOrder !== bOrder) {
+          return aOrder - bOrder;
+        }
+
         const aDate = a.startDate ? new Date(a.startDate).getTime() : 0;
         const bDate = b.startDate ? new Date(b.startDate).getTime() : 0;
         return aDate - bDate;
@@ -395,6 +465,55 @@ export class HomeComponent implements OnDestroy, AfterViewChecked {
     this.loadCommitteeYearEvents(committee, year);
   }
 
+  onProgramTabChange(index: number): void {
+    this.selectedProgramTabIndex = index;
+    this.loadProgramsByRange();
+  }
+
+  onProgramYearChange(event: Event): void {
+    this.selectedProgramYear = Number((event.target as HTMLSelectElement).value);
+    this.loadProgramsByRange();
+  }
+
+  private loadProgramsByRange(): void {
+    const requestId = ++this.programRequestId;
+    const locationCoords = this.userLocationCords();
+    if (!locationCoords) {
+      this.programList.set([]);
+      this.isProgramListLoading.set(false);
+      this.hasProgramListError.set(false);
+      return;
+    }
+
+    const body: ProgramListRequestBackend = {
+      latitude: locationCoords.lat,
+      longitude: locationCoords.long,
+      distanceKm: this.selectedProgramRadius,
+      year: this.selectedProgramYear,
+      status: this.programStatuses[this.selectedProgramTabIndex]
+    };
+
+    this.isProgramListLoading.set(true);
+    this.hasProgramListError.set(false);
+    this.homeService.getProgramsByDistanceKm(body).subscribe({
+      next: (programs) => {
+        if (requestId !== this.programRequestId) return;
+        this.programList.set(programs);
+        this.isProgramListLoading.set(false);
+        this.stopProgramBannerAutoPlay();
+        this.startProgramBannerAutoPlay();
+      },
+      error: (error) => {
+        if (requestId !== this.programRequestId) return;
+        console.error('Failed to fetch nearby programs:', error);
+        this.programList.set([]);
+        this.isProgramListLoading.set(false);
+        this.hasProgramListError.set(true);
+        this.stopProgramBannerAutoPlay();
+      }
+    });
+  }
+
   onCommitteePanelOpened(committee: CommitteesList, panelPrefix: 'nearby' | 'favourite' | 'preview'): void {
     this.scrollToFirstOngoingEvent(committee.id);
     window.setTimeout(() => {
@@ -501,8 +620,73 @@ export class HomeComponent implements OnDestroy, AfterViewChecked {
     this.carouselTimers.clear();
   }
 
+  // ─── Program banner carousel helpers ──────────────────────────────
+  getProgramBannerIndex(programId: number): number {
+    return this.programBannerIndices.get(programId) ?? 0;
+  }
+
+  nextProgramBanner(programId: number, count: number, e: Event): void {
+    e.stopPropagation();
+    const current = this.getProgramBannerIndex(programId);
+    this.programBannerIndices.set(programId, (current + 1) % count);
+  }
+
+  prevProgramBanner(programId: number, count: number, e: Event): void {
+    e.stopPropagation();
+    const current = this.getProgramBannerIndex(programId);
+    this.programBannerIndices.set(programId, (current - 1 + count) % count);
+  }
+
+  private startProgramBannerAutoPlay(): void {
+    const programs = this.programList();
+    const rotatingPrograms = programs.filter((program) => (program.bannerImages?.length ?? 0) > 1);
+    const rotatingProgramIds = new Set(rotatingPrograms.map((program) => program.id));
+
+    for (const [programId, timer] of this.programBannerTimers) {
+      if (!rotatingProgramIds.has(programId)) {
+        clearTimeout(timer);
+        this.programBannerTimers.delete(programId);
+      }
+    }
+
+    for (const program of rotatingPrograms) {
+      if (!this.programBannerTimers.has(program.id)) {
+        const staggeredDelay = ((program.id * 137) % 2000) + 500;
+        this.scheduleProgramBannerAdvance(program.id, staggeredDelay);
+      }
+    }
+  }
+
+  private scheduleProgramBannerAdvance(programId: number, initialDelayMs?: number): void {
+    const interval = this.CAROUSEL_MIN_INTERVAL_MS + Math.floor(
+      Math.random() * (this.CAROUSEL_MAX_INTERVAL_MS - this.CAROUSEL_MIN_INTERVAL_MS + 1)
+    );
+    const delay = initialDelayMs ?? interval;
+    const timer = setTimeout(() => {
+      this.programBannerTimers.delete(programId);
+      const program = this.programList().find((currentProgram) => currentProgram.id === programId);
+      const bannerCount = program?.bannerImages?.length ?? 0;
+      if (bannerCount < 2) return;
+
+      const current = this.programBannerIndices.get(programId) ?? 0;
+      this.programBannerIndices.set(programId, (current + 1) % bannerCount);
+      this.cdr.detectChanges();
+      this.scheduleProgramBannerAdvance(programId);
+    }, delay);
+
+    this.programBannerTimers.set(programId, timer);
+  }
+
+  private stopProgramBannerAutoPlay(): void {
+    for (const timer of this.programBannerTimers.values()) clearTimeout(timer);
+    this.programBannerTimers.clear();
+    this.programBannerIndices.clear();
+  }
+
   ngOnDestroy(): void {
+    this.programRequestId += 1;
     this.stopCarouselAutoPlay();
+    this.stopProgramBannerAutoPlay();
   }
 
   constructor(
@@ -513,6 +697,9 @@ export class HomeComponent implements OnDestroy, AfterViewChecked {
       const coords = this.userLocationCords();
       if (coords) {
         this.getCommitteeListByRange();
+        this.loadProgramsByRange();
+      } else {
+        this.loadProgramsByRange();
       }
     });
 
@@ -545,6 +732,7 @@ export class HomeComponent implements OnDestroy, AfterViewChecked {
   onProgramRadiusChange(event: Event) {
     const target = event.target as HTMLSelectElement;
     this.selectedProgramRadius = Number(target.value);
+    this.loadProgramsByRange();
   }
 
   getPendingRoleLabel(pendingRole: string | null | undefined): string {

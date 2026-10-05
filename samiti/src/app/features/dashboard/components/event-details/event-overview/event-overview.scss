@@ -545,17 +545,17 @@
 
 .program-owner-edit {
   color: #15803d;
-  width: 28px !important;
-  height: 28px !important;
+  width: 34px !important;
+  height: 34px !important;
   padding: 0 !important;
   display: inline-flex !important;
   align-items: center !important;
   justify-content: center !important;
 
   mat-icon {
-    font-size: 0.9rem !important;
-    width: 0.9rem !important;
-    height: 0.9rem !important;
+    font-size: 0.95rem !important;
+    width: 0.95rem !important;
+    height: 0.95rem !important;
   }
 
   &:hover:not(:disabled) {
@@ -616,8 +616,8 @@
   }
 
   .program-owner-cancel-btn {
-    width: 28px !important;
-    height: 28px !important;
+    width: 34px !important;
+    height: 34px !important;
     padding: 0 !important;
     display: inline-flex !important;
     align-items: center !important;
@@ -633,9 +633,9 @@
     }
 
     mat-icon {
-      font-size: 0.9rem !important;
-      width: 0.9rem !important;
-      height: 0.9rem !important;
+      font-size: 0.95rem !important;
+      width: 0.95rem !important;
+      height: 0.95rem !important;
     }
   }
 }

@@ -525,65 +525,127 @@
                 <option [value]="radius">{{ radius }} km</option>
               }
             </select>
+            <span class="ssp-divider"></span>
+            <mat-icon class="ssp-km-icon">calendar_month</mat-icon>
+            <select class="ssp-select" name="programYear" [value]="selectedProgramYear"
+              (change)="onProgramYearChange($event)" aria-label="Program year">
+              @for (year of programYearOptions; track year) {
+                <option [value]="year">{{ year }}</option>
+              }
+            </select>
           </div>
         </div>
       </div>
 
-      <mat-tab-group class="sidebar-tabs samiti-nav-tabs" animationDuration="150ms">
+      <ng-template #programListTemplate>
+        <div class="sidebar-scroll">
+          @if (isProgramListLoading()) {
+            <div class="sidebar-empty">
+              <mat-progress-spinner mode="indeterminate" diameter="28"></mat-progress-spinner>
+              <p>Loading programs...</p>
+            </div>
+          } @else if (hasProgramListError()) {
+            <div class="sidebar-empty">
+              <mat-icon>error_outline</mat-icon>
+              <p>Programs could not be loaded. Please try changing the filters.</p>
+            </div>
+          } @else if (filteredPrograms().length === 0) {
+            <div class="sidebar-empty">
+              <mat-icon>event_busy</mat-icon>
+              <p>No {{ selectedProgramTabIndex === 0 ? 'live' : selectedProgramTabIndex === 1 ? 'upcoming' : 'completed' }} programs within {{ selectedProgramRadius }} km for {{ selectedProgramYear }}.</p>
+            </div>
+          } @else {
+            <div class="programs-card-list">
+              @for (program of filteredPrograms(); track program.id) {
+                <article class="program-card">
+                  <div class="program-card-image">
+                    @if (program.bannerImages.length > 1) {
+                      <div class="banner-carousel">
+                        <img [src]="program.bannerImages[getProgramBannerIndex(program.id)]" [alt]="program.programName" class="program-banner-img" />
+                        <button class="carousel-btn carousel-btn-prev" (click)="prevProgramBanner(program.id, program.bannerImages.length, $event)" aria-label="Previous">
+                          <mat-icon>chevron_left</mat-icon>
+                        </button>
+                        <button class="carousel-btn carousel-btn-next" (click)="nextProgramBanner(program.id, program.bannerImages.length, $event)" aria-label="Next">
+                          <mat-icon>chevron_right</mat-icon>
+                        </button>
+                        <div class="carousel-dots">
+                          @for (img of program.bannerImages; track $index) {
+                            <span class="carousel-dot" [class.active]="getProgramBannerIndex(program.id) === $index"></span>
+                          }
+                        </div>
+                      </div>
+                    } @else if (program.bannerImages.length > 0) {
+                      <img [src]="program.bannerImages[0]" [alt]="program.programName" class="program-banner-img" />
+                    } @else if (program.programLogo) {
+                      <img [src]="program.programLogo" [alt]="program.programName" class="program-banner-img" />
+                    } @else {
+                      <div class="program-card-image-fallback">
+                        <mat-icon>event</mat-icon>
+                      </div>
+                    }
+                    <div class="program-banner-overlay">
+                      <span class="program-banner-name">{{ program.programName | titlecase }}</span>
+                    </div>
+                    <span class="program-distance">
+                      {{ (program.distanceMeters / 1000) | number:'1.0-1' }} km
+                    </span>
+                  </div>
+                  <div class="program-card-content">
+                    <div class="program-card-title-row">
+                      <h3>{{ program.programName | titlecase }}</h3>
+                      <span class="program-km-pill">{{ (program.distanceMeters / 1000) | number:'1.0-1' }} km</span>
+                    </div>
+                    <p class="program-committee">{{ program.committeeName }}</p>
+                    @if (program.address) {
+                      <p class="program-address">
+                        <span>{{ program.address }}</span>
+                      </p>
+                    }
+                    <p class="program-schedule">
+                      <mat-icon>schedule</mat-icon>
+                      <span>
+                        {{ program.startDate | date:'MMM d, y' }}
+                        @if (program.startTime) { · {{ program.startTime | slice:0:5 }} }
+                      </span>
+                    </p>
+                  </div>
+                </article>
+              }
+            </div>
+          }
+        </div>
+      </ng-template>
+
+      <mat-tab-group class="sidebar-tabs samiti-nav-tabs" [selectedIndex]="selectedProgramTabIndex"
+        (selectedIndexChange)="onProgramTabChange($event)" animationDuration="150ms">
         <mat-tab>
           <ng-template mat-tab-label>
-            <mat-icon class="tab-leading-icon">apps</mat-icon>
-            <span>All</span>
-            <span class="tab-badge">0</span>
+            <mat-icon class="tab-leading-icon">sensors</mat-icon>
+            <span>Live</span>
           </ng-template>
-          <div class="sidebar-scroll">
-            <div class="sidebar-empty">
-              <mat-icon>apps_outage</mat-icon>
-              <p>No programs available within {{selectedCommitteeRadius}} km.</p>
-            </div>
-          </div>
+          <ng-template matTabContent>
+            <ng-container [ngTemplateOutlet]="programListTemplate"></ng-container>
+          </ng-template>
         </mat-tab>
 
-        @if (isLoggedIn) {
-          <mat-tab>
-            <ng-template mat-tab-label>
-              <mat-icon class="tab-leading-icon">favorite</mat-icon>
-              <span class="tab-name-text">Favourites</span>
-              <span class="tab-badge">0</span>
-            </ng-template>
-            <div class="sidebar-scroll">
-              <div class="sidebar-empty">
-                <mat-icon>favorite_border</mat-icon>
-                <p>Mark programs as favourite to see them here.</p>
-              </div>
-            </div>
-          </mat-tab>
-        }
-
         <mat-tab>
           <ng-template mat-tab-label>
-            <mat-icon class="tab-leading-icon">sports_cricket</mat-icon>
-            <span>Cricket</span>
+            <mat-icon class="tab-leading-icon">upcoming</mat-icon>
+            <span>Upcoming</span>
           </ng-template>
-          <div class="sidebar-scroll">
-            <div class="sidebar-empty">
-              <mat-icon>sports_cricket</mat-icon>
-              <p>No cricket programs available.</p>
-            </div>
-          </div>
+          <ng-template matTabContent>
+            <ng-container [ngTemplateOutlet]="programListTemplate"></ng-container>
+          </ng-template>
         </mat-tab>
 
         <mat-tab>
           <ng-template mat-tab-label>
-            <mat-icon class="tab-leading-icon">sports_soccer</mat-icon>
-            <span>Football</span>
+            <mat-icon class="tab-leading-icon">event_available</mat-icon>
+            <span>Completed</span>
           </ng-template>
-          <div class="sidebar-scroll">
-            <div class="sidebar-empty">
-              <mat-icon>sports_soccer</mat-icon>
-              <p>No football programs available.</p>
-            </div>
-          </div>
+          <ng-template matTabContent>
+            <ng-container [ngTemplateOutlet]="programListTemplate"></ng-container>
+          </ng-template>
         </mat-tab>
       </mat-tab-group>
     </aside>

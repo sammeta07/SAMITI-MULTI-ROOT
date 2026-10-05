@@ -2,7 +2,7 @@ import { HttpClient, HttpContext } from '@angular/common/http';
 import { inject, Injectable, signal } from '@angular/core';
 import { Observable } from 'rxjs';
 import { map } from 'rxjs/operators';
-import { CommitteeListResponseGuestUser, CommitteeListRequestBackend, JoinCommitteeApiResponse, CancelRequestApiResponse, ToggleCommitteeFavouriteResponse, SubmitCommitteeMembershipRequestInput, CommitteeYearInfo } from './home.models';
+import { CommitteeListResponseGuestUser, CommitteeListRequestBackend, JoinCommitteeApiResponse, CancelRequestApiResponse, ToggleCommitteeFavouriteResponse, SubmitCommitteeMembershipRequestInput, CommitteeYearInfo, ProgramItem, ProgramListRequestBackend, ProgramListResponse } from './home.models';
 import { environment } from '../../../environments/environment';
 import { JoinCommitteeRequestBody } from './home.models';
 import { CommitteeMembershipRequestService } from '../../core/services/committee-membership-request.service';
@@ -218,36 +218,81 @@ export class HomeService {
         );
     }
 
-    updateCommitteeLogo(committeeId: number, logo: string): Observable<{ committeeId: number; logo: string | null }> {
-        const url = this.graphqlUrl;
-        const query = `mutation UpdateCommitteeLogo($input: UpdateCommitteeLogoInput!) {
-          updateCommitteeLogo(input: $input) {
-            data {
-              committeeId
-              logo
-            }
-          }
-        }`;
+    getProgramsByDistanceKm(body: ProgramListRequestBackend): Observable<ProgramListResponse> {
+    const url = this.graphqlUrl;
+    const query = `query ProgramsByDistance($latitude: Float!, $longitude: Float!, $distanceKm: Float!, $year: Int!, $status: String!) {
+      programsByDistance(latitude: $latitude, longitude: $longitude, distanceKm: $distanceKm, year: $year, status: $status) {
+        id
+        programName
+        category
+        address
+        programLogo
+        latitude
+        longitude
+        startDate
+        endDate
+        startTime
+        endTime
+        bannerImages
+        distanceMeters
+        committeeName
+        committeeId
+      }
+    }`;
 
-        return this.http.post<GraphQLResponseEnvelope<{ updateCommitteeLogo: { data: { committeeId: number; logo: string | null } } }>>(url, {
-          query,
-          variables: {
-            input: {
-              committeeId,
-              logo
-            }
-          }
-        }).pipe(
-          map((res) => {
-            if (res.errors?.length) {
-              throw new Error(res.errors[0].message || 'Failed to update committee logo');
-            }
-            const data = res.data?.updateCommitteeLogo?.data;
-            return {
-              committeeId: Number(data?.committeeId ?? committeeId),
-              logo: sanitizeCloudinaryLogoUrl(data?.logo ?? logo)
-            };
-          })
-        );
-    }
+    return this.http.post<GraphQLResponseEnvelope<{ programsByDistance: ProgramItem[] }>>(url, {
+      query,
+      variables: {
+        latitude: body.latitude,
+        longitude: body.longitude,
+        distanceKm: body.distanceKm,
+        year: body.year,
+        status: body.status ?? null
+      }
+    }).pipe(
+      map((res) => {
+        if (res.errors?.length) {
+          throw new Error(res.errors[0].message || 'Failed to fetch programs');
+        }
+        return (res.data?.programsByDistance ?? []).map((item) => ({
+          ...item,
+          programLogo: sanitizeCloudinaryLogoUrl(item.programLogo),
+          bannerImages: item.bannerImages ?? []
+        }));
+      })
+    );
+  }
+
+  updateCommitteeLogo(committeeId: number, logo: string): Observable<{ committeeId: number; logo: string | null }> {
+    const url = this.graphqlUrl;
+    const query = `mutation UpdateCommitteeLogo($input: UpdateCommitteeLogoInput!) {
+      updateCommitteeLogo(input: $input) {
+        data {
+          committeeId
+          logo
+        }
+      }
+    }`;
+
+    return this.http.post<GraphQLResponseEnvelope<{ updateCommitteeLogo: { data: { committeeId: number; logo: string | null } } }>>(url, {
+      query,
+      variables: {
+        input: {
+          committeeId,
+          logo
+        }
+      }
+    }).pipe(
+      map((res) => {
+        if (res.errors?.length) {
+          throw new Error(res.errors[0].message || 'Failed to update committee logo');
+        }
+        const data = res.data?.updateCommitteeLogo?.data;
+        return {
+          committeeId: Number(data?.committeeId ?? committeeId),
+          logo: sanitizeCloudinaryLogoUrl(data?.logo ?? logo)
+        };
+      })
+    );
+  }
 }

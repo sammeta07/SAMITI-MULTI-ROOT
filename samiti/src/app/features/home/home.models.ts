@@ -2,6 +2,11 @@ export type ItemCategory = 'committee' | 'event' | 'program';
 
 export type CancelRequestApiResponse = Record<string, any>;
 
+export interface ToggleCommitteeFavouriteResponse {
+  committeeId: number;
+  isFavourite: number;
+}
+
 export interface CommitteeListRequestBackend {
   distanceKm: number;
   latitude: number;
@@ -73,7 +78,30 @@ export interface JoinCommitteeRequestBody {
   role: CommitteeMembershipRequestRole;
 }
 
-export interface ToggleCommitteeFavouriteResponse {
+export interface ProgramItem {
+  id: number;
+  programName: string;
+  category?: string | null;
+  address?: string | null;
+  programLogo?: string | null;
+  latitude?: number | null;
+  longitude?: number | null;
+  startDate?: string | null;
+  endDate?: string | null;
+  startTime?: string | null;
+  endTime?: string | null;
+  bannerImages: string[];
+  distanceMeters: number;
+  committeeName: string;
   committeeId: number;
-  isFavourite: number;
 }
+
+export interface ProgramListRequestBackend {
+  distanceKm: number;
+  latitude: number;
+  longitude: number;
+  year: number;
+  status: 'LIVE' | 'UPCOMING' | 'COMPLETED';
+}
+
+export type ProgramListResponse = ProgramItem[];

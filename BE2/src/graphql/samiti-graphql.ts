@@ -38,6 +38,7 @@ import { updateProgramTypes, updateProgramMutationFields, updateProgramResolvers
 import { uploadProgramBannerImagesTypes, uploadProgramBannerImagesMutationFields, uploadProgramBannerImagesResolvers } from './programs/upload-program-banner-images.graphql';
 import { programDetailsTypes, programDetailsQueryFields, programDetailsResolvers } from './programs/program-details-by-id.graphql';
 import { programOwnerTypes, programOwnerQueryFields, programOwnerMutationFields, programOwnerResolvers } from './programs/program-owner.graphql';
+import { programsByDistanceTypes, programsByDistanceQueryFields, programsByDistanceResolvers } from './programs/programs-by-distance.graphql';
 import { authCommitteeTypes, authCommitteeQueryFields, authCommitteesResolvers } from './committees/committees-list/auth-user-committees-list.graphql';
 import { guestCommitteeTypes, guestCommitteeQueryFields, guestCommitteesResolvers } from './committees/committees-list/guest-user-committees-list.graphql';
 import { committeeYearInfoTypes } from './committees/committees-list/committee-year-info.graphql';
@@ -79,6 +80,7 @@ export const typeDefs = `
   ${uploadProgramBannerImagesTypes}
   ${programDetailsTypes}
   ${programOwnerTypes}
+  ${programsByDistanceTypes}
    ${eventVotingTypes}
    ${eventVoteTypes}
    ${eventInterestTypes}
@@ -108,6 +110,7 @@ export const typeDefs = `
     ${committeeDetailsQueryFields}
     ${programDetailsQueryFields}
     ${programOwnerQueryFields}
+    ${programsByDistanceQueryFields}
     ${eventDetailsQueryFields}
     ${eventOverviewQueryFields}
     ${eventDetailsHeaderQueryFields}
@@ -166,6 +169,7 @@ export const resolvers = {
     ...committeeDetailsResolvers.Query,
     ...programDetailsResolvers.Query,
     ...programOwnerResolvers.Query,
+    ...programsByDistanceResolvers.Query,
     ...eventDetailsResolvers.Query,
     ...eventOverviewResolvers.Query,
     ...eventDetailsHeaderResolvers.Query,
