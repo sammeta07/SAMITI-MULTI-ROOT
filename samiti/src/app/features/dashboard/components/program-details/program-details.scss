@@ -422,63 +422,145 @@
 /* BANNER IMAGES SECTION */
 .banner-images-section {
   background: #ffffff;
-  border: 1px solid #ede9fe;
-  border-radius: 6px;
+  border: 1px solid #e2e8f0;
+  border-radius: 10px;
   overflow: hidden;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.02);
+  padding: 10px;
+  flex-shrink: 0;
 
   .banner-header-bg {
     display: flex;
     align-items: center;
     justify-content: space-between;
-    background: linear-gradient(90deg, rgba(124, 58, 237, 0.08), transparent);
-    border-bottom: 2px solid rgba(124, 58, 237, 0.15);
+    background: #f0f9ff;
+    border-bottom: 1px solid #bae6fd;
+    padding: 0 12px;
+    min-height: 42px;
+    margin: -10px -10px 12px -10px;
 
-    .icon-accent-banner { color: #7c3aed; font-size: 1rem; width: 1rem; height: 1rem; }
+    .header-title-left {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 0.88rem;
+      font-weight: 700;
+      color: #1e293b;
+
+      .icon-accent-banner { color: #0284c7; font-size: 1.15rem; width: 1.15rem; height: 1.15rem; }
+      .count-pill { font-size: 0.72rem; font-weight: 700; background: #e0f2fe; color: #0369a1; padding: 2px 8px; border-radius: 999px; }
+    }
+  }
+}
+
+.banner-header-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+
+  .banner-btn-delete mat-progress-spinner {
+    display: inline-block;
+    vertical-align: middle;
+    margin-right: 6px;
+  }
+}
+
+/* BANNER ACTION BUTTONS (matching reference) */
+.banner-header-actions .btn-action {
+  height: 34px !important;
+  padding: 0 14px !important;
+  font-size: 0.82rem !important;
+  font-weight: 600 !important;
+  border-radius: 8px !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center;
+  gap: 6px !important;
+  cursor: pointer;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1) !important;
+  border: 1px solid transparent !important;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.04);
+
+  mat-icon {
+    font-size: 1.15rem !important;
+    width: 1.15rem !important;
+    height: 1.15rem !important;
+  }
+
+  &:disabled {
+    opacity: 0.45 !important;
+    cursor: not-allowed !important;
+    box-shadow: none !important;
+    filter: grayscale(1) !important;
+  }
+
+  &:hover:not(:disabled) {
+    transform: translateY(-1.5px);
+  }
+}
+
+.banner-header-actions .btn-delete {
+  background: #fef2f2 !important;
+  color: #dc2626 !important;
+  border-color: #fca5a5 !important;
+
+  &:hover:not(:disabled) {
+    background: #dc2626 !important;
+    color: #ffffff !important;
+    border-color: #dc2626 !important;
+    box-shadow: 0 4px 12px rgba(220, 38, 38, 0.25) !important;
   }
 }
 
 .banner-grid {
-  display: grid;
-  grid-template-columns: repeat(5, 1fr);
-  gap: 8px;
-  padding: 10px;
+  display: flex;
+  flex-wrap: nowrap;
+  gap: 10px;
+  max-width: 100%;
+  overflow-x: auto;
+  overflow-y: hidden;
+  padding: 4px 2px;
+  scroll-snap-type: x mandatory;
+
+  .banner-image-card,
+  .banner-upload-tile {
+    box-sizing: border-box;
+    flex: 0 0 160px;
+    width: 160px;
+    height: 100px;
+    scroll-snap-align: start;
+  }
 }
 
 .banner-image-card {
   position: relative;
-  aspect-ratio: 16 / 10;
-  border-radius: 6px;
+  border-radius: 8px;
   overflow: hidden;
   border: 1px solid #e2e8f0;
-  background: #f1f5f9;
+  background: #f8fafc;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.05);
 
-  .banner-img {
-    width: 100%;
-    height: 100%;
-    object-fit: cover;
-    display: block;
-  }
+  .banner-img { width: 100%; height: 100%; object-fit: cover; display: block; }
 
   .banner-delete-btn {
     position: absolute;
-    top: 4px;
-    right: 4px;
-    width: 24px !important;
-    height: 24px !important;
-    line-height: 24px !important;
-    background: rgba(15, 23, 42, 0.6) !important;
+    top: 6px;
+    right: 6px;
+    width: 28px !important;
+    height: 28px !important;
+    line-height: 28px !important;
+    background: rgba(15,23,42,0.6) !important;
     color: #fff !important;
     border-radius: 50% !important;
     display: inline-flex !important;
     align-items: center;
     justify-content: center;
     opacity: 0;
-    transition: opacity 0.15s, background 0.15s;
+    transition: opacity 0.2s, background 0.2s;
 
-    mat-icon { font-size: 0.95rem; width: 0.95rem; height: 0.95rem; }
-    &:hover { background: rgba(220, 38, 38, 0.9) !important; }
+    mat-icon { font-size: 1rem !important; width: 1rem !important; height: 1rem !important; margin: 0 !important; }
+    &:hover { background: #dc2626 !important; }
   }
-
   &:hover .banner-delete-btn { opacity: 1; }
 
   &.selected {
@@ -488,8 +570,8 @@
 
   .banner-select-overlay {
     position: absolute;
-    top: 4px;
-    left: 4px;
+    top: 6px;
+    left: 6px;
     z-index: 2;
     background: rgba(15, 23, 42, 0.55);
     border-radius: 6px;
@@ -499,36 +581,25 @@
   &.selected .banner-img { opacity: 0.75; }
 }
 
-.banner-header-actions {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-
-  .banner-delete-selected-btn mat-progress-spinner {
-    display: inline-block;
-    vertical-align: middle;
-    margin-right: 6px;
-  }
-}
-
 .banner-upload-tile {
-  border: 1px dashed #c4b5fd;
-  border-radius: 6px;
-  background: #faf5ff;
-  color: #6d28d9;
+  aspect-ratio: 16 / 10;
+  border: 2px dashed #bae6fd;
+  border-radius: 8px;
+  background: #f0f9ff;
+  color: #0284c7;
+  cursor: pointer;
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 4px;
-  cursor: pointer;
-  min-height: 88px;
-  font-size: 0.7rem;
+  gap: 6px;
+  font-size: 0.78rem;
   font-weight: 600;
+  transition: all 0.2s ease;
 
-  mat-icon { font-size: 1.2rem; width: 1.2rem; height: 1.2rem; }
-  &:hover:not(:disabled) { background: #f5f3ff; border-color: #a78bfa; }
-  &:disabled { opacity: 0.45; cursor: not-allowed; }
+  mat-icon { font-size: 1.6rem; width: 1.6rem; height: 1.6rem; }
+  &:hover:not(:disabled) { background: #e0f2fe; border-color: #38bdf8; transform: translateY(-1px); }
+  &:disabled { opacity: 0.5; cursor: not-allowed; }
 }
 
 .banner-empty-state {
@@ -536,21 +607,12 @@
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 6px;
-  padding: 16px 12px;
-  color: #6b7280;
+  gap: 12px;
+  padding: 40px 20px;
+  color: #64748b;
 
-  mat-icon {
-    color: #a78bfa;
-    font-size: 1.4rem;
-    width: 1.4rem;
-    height: 1.4rem;
-  }
-
-  p {
-    margin: 0;
-    font-size: 0.75rem;
-  }
+  mat-icon { font-size: 2.5rem; width: 2.5rem; height: 2.5rem; color: #cbd5e1; }
+  p { margin: 0; font-size: 0.88rem; color: #64748b; }
 }
 
 /* TASKS SECTION */

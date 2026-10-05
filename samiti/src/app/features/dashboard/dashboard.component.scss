@@ -135,8 +135,7 @@
 .content-view-scroller {
   height: 100%;
   width: 100%;
-  overflow-y: auto;
-  overflow-x: hidden;
+  overflow: hidden;
   box-sizing: border-box;
 
   &::-webkit-scrollbar {

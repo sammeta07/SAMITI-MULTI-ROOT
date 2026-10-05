@@ -27,6 +27,7 @@ import { AdminHierarchyTreeNode, RoleNode, TreeNode } from './dashboard-hierarch
 import { sanitizeCloudinaryLogoUrl } from '../../../../shared/services/cloudinary-logo.util';
 import { SelectedYearService } from '../../../../shared/services/selected-year.service';
 import { getEventComputedStatus } from '../../../../shared/services/event-status.util';
+import { compareByScheduleAndStatus } from '../../../../shared/services/program-schedule-sort.util';
 
 @Component({
   selector: 'app-dashboard-hierarchy-tree',
@@ -180,6 +181,7 @@ export class DashboardHierarchyTreeComponent implements OnInit {
         this.expandAllTreeNodes();
         this.isLoading.set(false);
         this.syncActiveNodeFromRawUrl();
+        this.scrollRelevantEventIntoView();
         this.cdr.markForCheck();
       },
       error: (err: HttpErrorResponse) => {
@@ -298,48 +300,18 @@ export class DashboardHierarchyTreeComponent implements OnInit {
   }
 
   private sortTreeChildren(nodes: TreeNode[]): void {
-    const statusOrder: Record<string, number> = {
-      COMPLETED: 0,
-      STARTED: 1,
-      UPCOMING: 2
-    };
-
     nodes.sort((left, right) => {
       const isLeftEvent = left.type === 'event';
       const isRightEvent = right.type === 'event';
       const isLeftProgram = left.type === 'program';
       const isRightProgram = right.type === 'program';
 
-      if ((isLeftEvent && isRightEvent) || (isLeftProgram && isRightProgram)) {
-        const leftStatus = this.getEventStatus(left);
-        const rightStatus = this.getEventStatus(right);
-        const leftOrder = statusOrder[leftStatus] ?? 99;
-        const rightOrder = statusOrder[rightStatus] ?? 99;
+      if (isLeftProgram && isRightProgram) {
+        return compareByScheduleAndStatus(left, right);
+      }
 
-        if (leftOrder !== rightOrder) {
-          return leftOrder - rightOrder;
-        }
-
-        const leftDate = left.startDate ?? '';
-        const rightDate = right.startDate ?? '';
-
-        if (leftDate !== rightDate) {
-          if (!leftDate) return 1;
-          if (!rightDate) return -1;
-          return leftDate < rightDate ? -1 : 1;
-        }
-
-        if (isLeftProgram && isRightProgram) {
-          const leftEndDate = left.endDate ?? '';
-          const rightEndDate = right.endDate ?? '';
-          if (leftEndDate !== rightEndDate) {
-            if (!leftEndDate) return 1;
-            if (!rightEndDate) return -1;
-            return leftEndDate < rightEndDate ? -1 : 1;
-          }
-        }
-
-        return left.name.localeCompare(right.name);
+      if (isLeftEvent && isRightEvent) {
+        return compareByScheduleAndStatus(left, right);
       }
 
       return left.name.localeCompare(right.name);
@@ -474,24 +446,45 @@ export class DashboardHierarchyTreeComponent implements OnInit {
     return null;
   }
 
+  private scrollRelevantEventIntoView(): void {
+    const events = this.getEventNodes(this.dataSource.data).sort(compareByScheduleAndStatus);
+    const targetEvent =
+      events.find((event) => this.getEventStatus(event) === 'STARTED') ??
+      events.find((event) => this.getEventStatus(event) === 'UPCOMING') ??
+      events.filter((event) => this.getEventStatus(event) === 'COMPLETED').at(-1);
+
+    if (targetEvent?.id) {
+      this.scrollElementIntoView(`[data-auto-scroll-event-id="${targetEvent.id}"]`);
+    }
+  }
+
+  private getEventNodes(nodes: TreeNode[]): TreeNode[] {
+    return nodes.flatMap((node) => [
+      ...(node.type === 'event' ? [node] : []),
+      ...this.getEventNodes(node.children ?? [])
+    ]);
+  }
+
   private scrollSelectedNodeIntoView(): void {
+    this.scrollElementIntoView('.samiti-fluent-tree .node-interactive-strip.is-selected');
+  }
+
+  private scrollElementIntoView(selector: string): void {
     setTimeout(() => {
-      const selectedTreeNodeElement = document.querySelector(
-        '.samiti-fluent-tree .node-interactive-strip.is-selected'
-      ) as HTMLElement | null;
+      const targetElement = document.querySelector(selector) as HTMLElement | null;
       const treeViewportElement = document.querySelector('.tree-scroll-viewport') as HTMLElement | null;
 
-      if (!selectedTreeNodeElement || !treeViewportElement) {
+      if (!targetElement || !treeViewportElement) {
         return;
       }
 
       const viewportRect = treeViewportElement.getBoundingClientRect();
-      const selectedRect = selectedTreeNodeElement.getBoundingClientRect();
+      const targetRect = targetElement.getBoundingClientRect();
       const currentScrollTop = treeViewportElement.scrollTop;
       const targetScrollTop =
         currentScrollTop +
-        (selectedRect.top - viewportRect.top) -
-        (viewportRect.height / 2 - selectedRect.height / 2);
+        (targetRect.top - viewportRect.top) -
+        (viewportRect.height / 2 - targetRect.height / 2);
 
       treeViewportElement.scrollTo({
         top: targetScrollTop,

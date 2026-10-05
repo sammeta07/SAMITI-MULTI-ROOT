@@ -82,7 +82,8 @@
               <div class="node-interactive-strip"
                    (click)="onNodeClick(node)"
                    [ngClass]="['type-' + node.type, isNodeSelected(node) ? 'is-selected' : '', getCommitteeLogoRoleClass(node), ((node.type === 'event' || node.type === 'program') ? 'status-container-' + getEventStatus(node).toLowerCase() : '')]"
-                   [class.is-just-selected]="isNodeHighlighted(node)">
+                   [class.is-just-selected]="isNodeHighlighted(node)"
+                   [attr.data-auto-scroll-event-id]="node.type === 'event' ? node.id : null">
 
                 @if (node.type !== 'program') {
                   <div class="node-logo-avatar-wrapper branch-leaf-avatar"
@@ -112,17 +113,17 @@
                     }
                     @if (node.type === 'program') {
                       <span class="program-node-badges">
-                        @if (isProgramVisibilityVisible(node)) {
-                          <mat-icon class="program-badge-icon program-badge-visible" title="Visible to all">visibility</mat-icon>
-                        }
-                        @if (isProgramVisibilityHidden(node)) {
-                          <mat-icon class="program-badge-icon program-badge-hidden" title="Hidden from others">visibility_off</mat-icon>
-                        }
                         @if (isProgramRecurring(node)) {
                           <mat-icon class="program-badge-icon program-badge-recurring" title="Recurring program">repeat</mat-icon>
                         }
                         @if (isProgramOwner(node)) {
                           <mat-icon class="program-badge-icon program-badge-owner" title="You are the owner">admin_panel_settings</mat-icon>
+                        }
+                        @if (isProgramVisibilityVisible(node)) {
+                          <mat-icon class="program-badge-icon program-badge-visible" title="Visible to all">visibility_off</mat-icon>
+                        }
+                        @if (isProgramVisibilityHidden(node)) {
+                          <mat-icon class="program-badge-icon program-badge-hidden" title="Hidden from others">visibility</mat-icon>
                         }
                       </span>
                     }
@@ -177,7 +178,8 @@
                 <div class="node-interactive-strip"
                      (click)="onNodeClick(node)"
                      [ngClass]="['type-' + node.type, isNodeExpanded(node) ? 'is-active-expanded' : '', isNodeSelected(node) ? 'is-selected' : '', getCommitteeLogoRoleClass(node), ((node.type === 'event' || node.type === 'program') ? 'status-container-' + getEventStatus(node).toLowerCase() : '')]"
-                     [class.is-just-selected]="isNodeHighlighted(node)">
+                     [class.is-just-selected]="isNodeHighlighted(node)"
+                     [attr.data-auto-scroll-event-id]="node.type === 'event' ? node.id : null">
 
                   @if (node.type !== 'program') {
                     <div class="node-logo-avatar-wrapper"
@@ -214,10 +216,10 @@
                       @if (node.type === 'program') {
                         <span class="program-node-badges">
                           @if (isProgramVisibilityVisible(node)) {
-                            <mat-icon class="program-badge-icon program-badge-visible" title="Visible to all">visibility</mat-icon>
+                            <mat-icon class="program-badge-icon program-badge-visible" title="Visible to all">visibility_off</mat-icon>
                           }
                           @if (isProgramVisibilityHidden(node)) {
-                            <mat-icon class="program-badge-icon program-badge-hidden" title="Hidden from others">visibility_off</mat-icon>
+                            <mat-icon class="program-badge-icon program-badge-hidden" title="Hidden from others">visibility</mat-icon>
                           }
                           @if (isProgramRecurring(node)) {
                             <mat-icon class="program-badge-icon program-badge-recurring" title="Recurring program">repeat</mat-icon>

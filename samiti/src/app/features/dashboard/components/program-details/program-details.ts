@@ -22,6 +22,7 @@ import { ConfirmDialogService } from '../../../../components/dialog/confirm/conf
 import { ConfirmDialogData } from '../../../../components/dialog/confirm/confirm-dialog.models';
 import { ProgramOwnerService } from '../program-owner/program-owner.service';
 import { ProgramOwnerCandidate, ProgramOwnerPayload } from '../program-owner/program-owner.models';
+import { ImageCropperDialogComponent } from '../../../../shared/components/image-cropper-dialog/image-cropper-dialog.component';
 
 @Component({
   selector: 'app-program-details',
@@ -40,6 +41,7 @@ import { ProgramOwnerCandidate, ProgramOwnerPayload } from '../program-owner/pro
 })
 export class ProgramDetailsComponent implements OnInit {
   @ViewChild('programBannerFileInput') private readonly programBannerFileInput?: ElementRef<HTMLInputElement>;
+  @ViewChild('programBannerSingleFileInput') private readonly programBannerSingleFileInput?: ElementRef<HTMLInputElement>;
 
   private readonly route = inject(ActivatedRoute);
   private readonly dialog = inject(MatDialog);
@@ -326,6 +328,14 @@ export class ProgramDetailsComponent implements OnInit {
     return this.bannerCount < this.MAX_BANNERS;
   }
 
+  public get canManageEvent(): boolean {
+    return Boolean(this.programData()?.canAssignOwner);
+  }
+
+  public get canDeleteBanners(): boolean {
+    return this.canManageEvent;
+  }
+
   ngOnInit(): void {
     this.route.params.subscribe((params) => {
       const programId = params['id'];
@@ -473,6 +483,15 @@ this.programOwnerService.assignOwner(currentProgram.programId, ownerUserId).subs
     this.programBannerFileInput.nativeElement.click();
   }
 
+  public onAddSingleProgramBannerClick(): void {
+    if (!this.programBannerSingleFileInput?.nativeElement) {
+      this.notifier.error('File picker is not ready. Please try again.');
+      return;
+    }
+    this.programBannerSingleFileInput.nativeElement.value = '';
+    this.programBannerSingleFileInput.nativeElement.click();
+  }
+
   public async onProgramBannerFilesSelected(event: Event): Promise<void> {
     const input = event.target as HTMLInputElement;
     const selectedFiles = Array.from(input.files || []);
@@ -524,6 +543,59 @@ this.programOwnerService.assignOwner(currentProgram.programId, ownerUserId).subs
     } finally {
       this.isBannerUploading.set(false);
     }
+  }
+
+  public async onSingleProgramBannerFileSelected(event: Event): Promise<void> {
+    const input = event.target as HTMLInputElement;
+    const file = input.files?.[0];
+    if (!file) return;
+    const currentProgram = this.programData();
+    if (!currentProgram?.programId) return;
+    if (this.bannerCount >= this.MAX_BANNERS) {
+      this.notifier.warn(`Maximum ${this.MAX_BANNERS} banner images allowed. Delete existing banners first.`);
+      return;
+    }
+
+    const croppedFile = await this.openProgramBannerCropDialog(file);
+    if (!croppedFile) return;
+
+    try {
+      const uploadedAssets = await firstValueFrom(
+        this.imageAssetService.uploadMultipleImagesForEventBanners([croppedFile])
+      );
+      const urls = uploadedAssets.map((asset) => asset.publicAbsoluteUrl);
+      const result = await firstValueFrom(
+        this.programDetailsService.uploadProgramBannerImages(currentProgram.programId, urls)
+      );
+
+      this.programData.update((prev) =>
+        prev
+          ? {
+              ...prev,
+              bannerImages: result.bannerImages,
+              programBanner: result.bannerImages[0] || prev.programBanner || null
+            }
+          : prev
+      );
+      this.cdr.detectChanges();
+      this.notifier.success('Banner image uploaded successfully.');
+    } catch (err: any) {
+      this.notifier.error(err?.error?.message || err?.message || 'Failed to upload program banner image.');
+    }
+  }
+
+  private async openProgramBannerCropDialog(file: File): Promise<File | null> {
+    return firstValueFrom(
+      this.dialog.open(ImageCropperDialogComponent, {
+        width: 'min(92vw, 920px)',
+        data: {
+          file,
+          title: 'Crop Banner Image',
+          maintainAspectRatio: true,
+          aspectRatio: 2
+        }
+      }).afterClosed()
+    );
   }
 
   public onDeleteProgramBanner(imageUrl: string): void {

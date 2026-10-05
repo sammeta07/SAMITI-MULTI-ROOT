@@ -8,7 +8,7 @@ import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatCheckboxModule } from '@angular/material/checkbox';
 import { MatSlideToggleModule } from '@angular/material/slide-toggle';
 import { MatSelectModule } from '@angular/material/select';
-import { MatAutocompleteModule } from '@angular/material/autocomplete';
+import { MatAutocompleteModule, MatAutocompleteTrigger } from '@angular/material/autocomplete';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
 import { FormsModule } from '@angular/forms';
@@ -31,6 +31,8 @@ import { ProgramOwnerService } from '../../program-owner/program-owner.service';
 import { ProgramOwnerCandidate, ProgramOwnerPayload } from '../../program-owner/program-owner.models';
 import { EventVotingService } from '../event-voting/event-voting.service';
 import { EventDirectAssignMember } from '../event-voting/event-voting.models';
+import { getEventComputedStatus } from '../../../../../shared/services/event-status.util';
+import { compareByScheduleAndStatus } from '../../../../../shared/services/program-schedule-sort.util';
 
 @Component({
   selector: 'app-event-overview',
@@ -80,6 +82,7 @@ export class EventOverviewComponent implements OnInit {
   public readonly programOwnerCandidates = signal<ProgramOwnerCandidate[]>([]);
   public readonly programsUpdatingOwner = signal<Set<number>>(new Set<number>());
   public readonly editingProgramOwnerIds = signal<Set<number>>(new Set<number>());
+  public readonly focusedProgramOwnerInputIds = signal<Set<number>>(new Set<number>());
   public readonly allCommitteeMembers = signal<EventDirectAssignMember[]>([]);
   public programOwnerInputText: Record<number, string | number | null> = {};
 
@@ -134,6 +137,16 @@ export class EventOverviewComponent implements OnInit {
     return this.editingProgramOwnerIds().has(programId);
   }
 
+  public isProgramOwnerInputFocused(programId: number): boolean {
+    return this.focusedProgramOwnerInputIds().has(programId);
+  }
+
+  public onProgramOwnerInputFocus(program: EventProgramEntry, trigger: MatAutocompleteTrigger): void {
+    this.programOwnerInputText = { ...this.programOwnerInputText, [program.programId]: '' };
+    this.focusedProgramOwnerInputIds.update((ids) => new Set(ids).add(program.programId));
+    trigger.openPanel();
+  }
+
   public editProgramOwner(program: EventProgramEntry): void {
     if (!this.canAssignProgramOwner || this.programsUpdatingOwner().has(program.programId)) {
       return;
@@ -152,11 +165,27 @@ export class EventOverviewComponent implements OnInit {
     const editingProgramIds = new Set(this.editingProgramOwnerIds());
     editingProgramIds.delete(program.programId);
     this.editingProgramOwnerIds.set(editingProgramIds);
+    this.focusedProgramOwnerInputIds.update((ids) => {
+      const next = new Set(ids);
+      next.delete(program.programId);
+      return next;
+    });
     this.programOwnerInputText = { ...this.programOwnerInputText, [program.programId]: program.ownerName || '' };
   }
 
   public onProgramOwnerSearch(programId: number, query: string): void {
     this.programOwnerInputText = { ...this.programOwnerInputText, [programId]: query };
+  }
+
+  public hasProgramOwnerSearch(programId: number): boolean {
+    const value = this.programOwnerInputText[programId];
+    return typeof value === 'string' && value.length > 0;
+  }
+
+  public clearProgramOwnerSearch(program: EventProgramEntry, trigger: MatAutocompleteTrigger, event: MouseEvent): void {
+    event.preventDefault();
+    this.programOwnerInputText = { ...this.programOwnerInputText, [program.programId]: '' };
+    trigger.openPanel();
   }
 
   public onProgramOwnerSelect(program: EventProgramEntry, event: { option: { value: number | string } }): void {
@@ -275,6 +304,10 @@ export class EventOverviewComponent implements OnInit {
     return this.isEventMasterAdmin || this.isEventAdmin;
   }
 
+  public getProgramStatus(program: EventProgramEntry): 'started' | 'upcoming' | 'completed' {
+    return getEventComputedStatus(program.startDate, program.endDate).toLowerCase() as 'started' | 'upcoming' | 'completed';
+  }
+
   public get bannerCount(): number {
     return this.eventData?.bannerImages?.length ?? 0;
   }
@@ -354,6 +387,41 @@ export class EventOverviewComponent implements OnInit {
     return `${displayHours}:${String(minutes).padStart(2, '0')} ${period}`;
   }
 
+  public formatProgramTimeRange(startTime: string | undefined, endTime: string | undefined): string {
+    if (!startTime || !endTime) {
+      return '';
+    }
+
+    const startMatch = startTime.match(/^(\d{1,2}):(\d{2})(?::\d{2})?$/);
+    const endMatch = endTime.match(/^(\d{1,2}):(\d{2})(?::\d{2})?$/);
+
+    if (!startMatch || !endMatch) {
+      return `${this.formatProgramTime(startTime)} - ${this.formatProgramTime(endTime)}`;
+    }
+
+    const startHours = Number(startMatch[1]);
+    const endHours = Number(endMatch[1]);
+    const startMinutes = Number(startMatch[2]);
+    const endMinutes = Number(endMatch[2]);
+
+    if (startHours > 23 || endHours > 23 || startMinutes > 59 || endMinutes > 59) {
+      return `${this.formatProgramTime(startTime)} - ${this.formatProgramTime(endTime)}`;
+    }
+
+    const startPeriod = startHours >= 12 ? 'PM' : 'AM';
+    const endPeriod = endHours >= 12 ? 'PM' : 'AM';
+
+    if (startPeriod === endPeriod) {
+      const startDisplay = `${String(startHours % 12 || 12).padStart(2, '0')}:${String(startMinutes).padStart(2, '0')}`;
+      const endDisplay = `${String(endHours % 12 || 12).padStart(2, '0')}:${String(endMinutes).padStart(2, '0')}`;
+      return `${startDisplay} - ${endDisplay} ${startPeriod}`;
+    }
+
+    const startDisplay = `${String(startHours % 12 || 12).padStart(2, '0')}:${String(startMinutes).padStart(2, '0')} ${startPeriod}`;
+    const endDisplay = `${String(endHours % 12 || 12).padStart(2, '0')}:${String(endMinutes).padStart(2, '0')} ${endPeriod}`;
+    return `${startDisplay} - ${endDisplay}`;
+  }
+
   public formatDisplayDate(value: string): string {
     const match = value.match(/^(\d{4})-(\d{2})-(\d{2})$/);
     if (!match) {
@@ -368,6 +436,17 @@ export class EventOverviewComponent implements OnInit {
     const monthName = months[month - 1] || match[2];
 
     return `${day}-${monthName}-${year}`;
+  }
+
+  public formatProgramDateRange(startDate: string, endDate: string): string {
+    const startMatch = startDate.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+    const endMatch = endDate.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+
+    if (startMatch && endMatch && startMatch[1] === endMatch[1] && startMatch[2] === endMatch[2]) {
+      return `${startMatch[3]} To ${this.formatDisplayDate(endDate)}`;
+    }
+
+    return `${this.formatDisplayDate(startDate)} To ${this.formatDisplayDate(endDate)}`;
   }
 
   public updateProgramVisibility(program: EventProgramEntry, visible: boolean): void {
@@ -462,13 +541,20 @@ export class EventOverviewComponent implements OnInit {
     const editingProgramIds = new Set(this.editingProgramOwnerIds());
     editingProgramIds.delete(programId);
     this.editingProgramOwnerIds.set(editingProgramIds);
+    this.focusedProgramOwnerInputIds.update((ids) => {
+      const next = new Set(ids);
+      next.delete(programId);
+      return next;
+    });
   }
 
   private loadEventPrograms(eventId: string): void {
     this.isLoadingPrograms = true;
     this.programsService.getEventPrograms(eventId).subscribe({
       next: (data) => {
-        this.eventPrograms = data.entries ?? [];
+        const programs = data.entries ?? [];
+        this.sortPrograms(programs);
+        this.eventPrograms = programs;
         this.isLoadingPrograms = false;
         this.eventPrograms.forEach((program) => {
           this.programOwnerInputText[program.programId] = program.ownerName || '';
@@ -480,6 +566,10 @@ export class EventOverviewComponent implements OnInit {
         this.notifier.error(err?.error?.message || 'Failed to load event programs.');
       }
     });
+  }
+
+  private sortPrograms(programs: EventProgramEntry[]): void {
+    programs.sort(compareByScheduleAndStatus);
   }
 
   private loadEventOverview(eventId: string): void {
