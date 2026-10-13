@@ -203,7 +203,7 @@
                       (click)="openCommitteeInMaps(committee, $event)"
                       matTooltip="Open in Google Maps" matTooltipPosition="above">
                       <mat-icon class="compass-pointer-icon">directions</mat-icon>
-                      <span class="spatial-distance-metric">{{ committee.distanceMeters }} m</span>
+                      <span class="spatial-distance-metric">{{ formatDistance(committee.distanceMeters) }}</span>
                     </button>
                   </div>
 
@@ -551,6 +551,13 @@
               @for (program of filteredPrograms(); track program.id) {
                 <article class="program-card program-card-status-{{ getProgramComputedStatus(program) }}">
                   <div class="program-card-image">
+                    @if (getProgramComputedStatus(program) !== 'completed') {
+                      <div class="program-countdown-row program-countdown-overlay">
+                        <span class="program-countdown-pill program-countdown-pill-{{ getProgramComputedStatus(program) }}">
+                          {{ getProgramCountdownText(program) }}
+                        </span>
+                      </div>
+                    }
                     @if (program.bannerImages.length > 1) {
                       <div class="banner-carousel">
                         <img [src]="program.bannerImages[getProgramBannerIndex(program.id)]" [alt]="program.programName" class="program-banner-img" />
@@ -605,16 +612,9 @@
                         (click)="openProgramInMaps(program, $event)"
                         matTooltip="Open in Google Maps" matTooltipPosition="above">
                         <mat-icon class="compass-pointer-icon">directions</mat-icon>
-                        <span class="spatial-distance-metric">{{ program.distanceMeters }} m</span>
+                        <span class="spatial-distance-metric">{{ formatDistance(program.distanceMeters) }}</span>
                       </button>
                     </div>
-                    @if (getProgramComputedStatus(program) !== 'completed') {
-                      <div class="program-countdown-row">
-                        <span class="program-countdown-pill program-countdown-pill-{{ getProgramComputedStatus(program) }}">
-                          {{ getProgramCountdownText(program) }}
-                        </span>
-                      </div>
-                    }
                   </div>
                 </article>
               }

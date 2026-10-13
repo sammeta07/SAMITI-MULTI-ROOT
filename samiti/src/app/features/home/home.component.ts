@@ -66,6 +66,7 @@ export class HomeComponent implements OnDestroy, AfterViewChecked {
   private readonly carouselTimers = new Map<number, ReturnType<typeof setTimeout>>();
   private readonly programBannerIndices = new Map<number, number>();
   private readonly programBannerTimers = new Map<number, ReturnType<typeof setTimeout>>();
+  private countdownTimer: ReturnType<typeof setInterval> | null = null;
   private readonly CAROUSEL_MIN_INTERVAL_MS = 3000;
   private readonly CAROUSEL_MAX_INTERVAL_MS = 5000;
   private readonly loadingCommitteeYearEvents = new Map<string, boolean>();
@@ -108,7 +109,7 @@ export class HomeComponent implements OnDestroy, AfterViewChecked {
   public clearSearch(): void { this.committeeSearchQuery.set(''); }
   public clearProgramSearch(): void { this.programSearchQuery.set(''); }
 
-  public readonly committeesWidth = signal<number>(75);
+  public readonly committeesWidth = signal<number>(65);
   public readonly activeFilterMode = signal<'ACTIVE' | 'ALL'>('ACTIVE');
 
   public isActiveFilterModeActive(): boolean {
@@ -365,6 +366,17 @@ export class HomeComponent implements OnDestroy, AfterViewChecked {
     return date;
   }
 
+  private parseProgramDateTimeForDate(dateValue: Date, timeValue: string | null | undefined): Date | null {
+    const timeMatch = timeValue?.match(/^(\d{1,2}):(\d{2})(?::(\d{2}))?$/);
+    if (!timeMatch) return null;
+    const hours = Number(timeMatch[1]);
+    const minutes = Number(timeMatch[2]);
+    const seconds = Number(timeMatch[3] || 0);
+    if (hours > 23 || minutes > 59 || seconds > 59) return null;
+    const date = new Date(dateValue.getFullYear(), dateValue.getMonth(), dateValue.getDate(), hours, minutes, seconds);
+    return date;
+  }
+
   getDateColorClass(event: CommitteeEvent): string {
     const status = this.getEventComputedStatus(event);
     if (status === 'completed') return 'date-completed';
@@ -448,35 +460,80 @@ export class HomeComponent implements OnDestroy, AfterViewChecked {
     const status = this.getProgramComputedStatus(program);
     if (status !== 'live' && status !== 'upcoming') return null;
 
-    const now = new Date();
-
-    if (status === 'live') {
-      const endDateTime = this.parseProgramDateTime(program.endDate, program.endTime);
-      if (!endDateTime) return null;
-      const diffMs = endDateTime.getTime() - now.getTime();
-      if (diffMs <= 0) return 'Ending soon';
-      return this.formatDuration(diffMs, 'left');
+    const isLive = status === 'live';
+    const targetDateTime = this.parseProgramDateTime(
+      isLive ? program.endDate : program.startDate,
+      isLive ? program.endTime : program.startTime
+    );
+    if (targetDateTime) {
+      return `${isLive ? 'Ends' : 'Starts'} in ${this.formatCountdown(targetDateTime)}`;
     }
 
-    const startDateTime = this.parseProgramDateTime(program.startDate, program.startTime || '00:00:00');
-    if (!startDateTime) return null;
-    const diffMs = startDateTime.getTime() - now.getTime();
-    if (diffMs <= 0) return 'Starting soon';
-    return `Starts in ${this.formatDuration(diffMs, '')}`;
+    const date = isLive ? program.endDate : program.startDate;
+    const time = isLive ? program.endTime : program.startTime;
+    const parts = [
+      isLive ? 'Ends' : 'Starts',
+      date ? this.formatDisplayDate(date) : '',
+      time ? this.formatProgramTime(time) : ''
+    ].filter(Boolean);
+    return parts.join(' · ');
   }
 
-  private formatDuration(diffMs: number, suffix: string): string {
-    const totalMinutes = Math.max(1, Math.floor(diffMs / 60000));
-    const days = Math.floor(totalMinutes / 1440);
-    const hours = Math.floor((totalMinutes % 1440) / 60);
-    const minutes = totalMinutes % 60;
+  private formatCountdown(targetDateTime: Date): string {
+    const now = new Date();
+    if (targetDateTime.getTime() <= now.getTime()) {
+      return '0s';
+    }
 
-    const parts: string[] = [];
-    if (days > 0) parts.push(`${days}d`);
-    if (hours > 0) parts.push(`${hours}h`);
-    if (minutes > 0 && days === 0) parts.push(`${minutes}m`);
+    let totalMonths = Math.max(
+      0,
+      (targetDateTime.getFullYear() - now.getFullYear()) * 12
+        + targetDateTime.getMonth() - now.getMonth()
+    );
+    let calendarCursor = this.addCalendarMonths(now, totalMonths);
+    if (calendarCursor.getTime() > targetDateTime.getTime()) {
+      totalMonths -= 1;
+      calendarCursor = this.addCalendarMonths(now, totalMonths);
+    }
 
-    return `${parts.join(' ')} ${suffix}`.trim();
+    let remainingSeconds = Math.max(
+      0,
+      Math.floor((targetDateTime.getTime() - calendarCursor.getTime()) / 1000)
+    );
+    const days = Math.floor(remainingSeconds / 86400);
+    remainingSeconds %= 86400;
+    const hours = Math.floor(remainingSeconds / 3600);
+    remainingSeconds %= 3600;
+    const minutes = Math.floor(remainingSeconds / 60);
+    const seconds = remainingSeconds % 60;
+
+    const units = [
+      [Math.floor(totalMonths / 12), 'y'],
+      [totalMonths % 12, 'mo'],
+      [days, 'd'],
+      [hours, 'h'],
+      [minutes, 'm'],
+      [seconds, 's']
+    ] as const;
+
+    return units
+      .filter(([value]) => value > 0)
+      .map(([value, unit]) => `${value}${unit}`)
+      .join(' ');
+  }
+
+  private addCalendarMonths(date: Date, months: number): Date {
+    const result = new Date(date);
+    const day = result.getDate();
+    result.setDate(1);
+    result.setMonth(result.getMonth() + months);
+    const lastDayOfMonth = new Date(
+      result.getFullYear(),
+      result.getMonth() + 1,
+      0
+    ).getDate();
+    result.setDate(Math.min(day, lastDayOfMonth));
+    return result;
   }
 
   getYearOrdinal(year: number): string {
@@ -817,11 +874,18 @@ export class HomeComponent implements OnDestroy, AfterViewChecked {
     this.programRequestId += 1;
     this.stopCarouselAutoPlay();
     this.stopProgramBannerAutoPlay();
+    if (this.countdownTimer !== null) clearInterval(this.countdownTimer);
   }
 
   constructor(
     public uiService: UiToggleService
   ) {
+    this.ngZone.runOutsideAngular(() => {
+      this.countdownTimer = setInterval(() => {
+        this.ngZone.run(() => this.cdr.detectChanges());
+      }, 1000);
+    });
+
     // Effect to watch location coordinates
     effect(() => {
       const coords = this.userLocationCords();
@@ -1132,6 +1196,11 @@ export class HomeComponent implements OnDestroy, AfterViewChecked {
   getDistanceFromUser(committee: any): string {
     if (committee?.distance == null) return '';
     const distanceMeters = committee.distance;
+    return this.formatDistance(distanceMeters);
+  }
+
+  formatDistance(distanceMeters: number | null | undefined): string {
+    if (distanceMeters == null || Number.isNaN(distanceMeters)) return '';
     if (distanceMeters < 1000) return `${Math.round(distanceMeters)} m`;
     return `${Number((distanceMeters / 1000).toFixed(1))} km`;
   }

@@ -484,8 +484,10 @@
   }
 
   .program-badge-recurring {
-    color: #7c3aed;
-    background: rgba(124, 58, 237, 0.12);
+    color: #64748b;
+    background: transparent;
+    padding: 0;
+    border-radius: 0;
   }
 
   .program-badge-owner {
