@@ -24,7 +24,7 @@ import { UiToggleService } from '../../shared/services/ui-toggle.service';
 import { ImageAssetService } from '../../core/services/image-asset.service';
 import { ImageCropperDialogComponent } from '../../shared/components/image-cropper-dialog/image-cropper-dialog.component';
 import { SelectedYearService } from '../../shared/services/selected-year.service';
-import { getEventComputedStatus, isProgramEndDateInFuture } from '../../shared/services/event-status.util';
+import { getEventComputedStatus, isProgramEndDateInFuture, parseLocalDate } from '../../shared/services/event-status.util';
 
 @Component({
   selector: 'app-home',
@@ -104,8 +104,17 @@ export class HomeComponent implements OnDestroy, AfterViewChecked {
   });
   public readonly isSearchFocused = signal<boolean>(false);
 
-  public shouldShowProgramRepeatIcon(endDate: string | null | undefined): boolean {
-    return isProgramEndDateInFuture(endDate);
+  public shouldShowProgramRepeatIcon(endDate: string | null | undefined, startDate?: string | null): boolean {
+    if (!startDate) return isProgramEndDateInFuture(endDate);
+    
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    
+    const start = parseLocalDate(startDate);
+    const end = isProgramEndDateInFuture(endDate) ? parseLocalDate(endDate) : null;
+    
+    return start !== null && start.getTime() <= today.getTime() &&
+           end !== null && end.getTime() > today.getTime();
   }
 
   public onSearchFocus(): void { this.isSearchFocused.set(true); }

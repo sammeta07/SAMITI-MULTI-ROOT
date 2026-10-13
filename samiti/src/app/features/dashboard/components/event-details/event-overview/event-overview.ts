@@ -31,7 +31,7 @@ import { ProgramOwnerService } from '../../program-owner/program-owner.service';
 import { ProgramOwnerCandidate, ProgramOwnerPayload } from '../../program-owner/program-owner.models';
 import { EventVotingService } from '../event-voting/event-voting.service';
 import { EventDirectAssignMember } from '../event-voting/event-voting.models';
-import { getEventComputedStatus, isProgramEndDateInFuture } from '../../../../../shared/services/event-status.util';
+import { getEventComputedStatus, isProgramEndDateInFuture, parseLocalDate } from '../../../../../shared/services/event-status.util';
 import { compareByScheduleAndStatus } from '../../../../../shared/services/program-schedule-sort.util';
 
 @Component({
@@ -309,7 +309,14 @@ export class EventOverviewComponent implements OnInit {
   }
 
   public shouldShowProgramRepeatIcon(program: EventProgramEntry): boolean {
-    return isProgramEndDateInFuture(program.endDate);
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    
+    const start = parseLocalDate(program.startDate);
+    const end = parseLocalDate(program.endDate);
+    
+    return start !== null && start.getTime() <= today.getTime() &&
+           end !== null && end.getTime() > today.getTime();
   }
 
   public get bannerCount(): number {

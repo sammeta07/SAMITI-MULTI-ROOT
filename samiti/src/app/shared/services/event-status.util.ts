@@ -1,6 +1,6 @@
 export type EventComputedStatus = 'UPCOMING' | 'STARTED' | 'COMPLETED';
 
-function parseLocalDate(value: string | null | undefined): Date | null {
+export function parseLocalDate(value: string | null | undefined): Date | null {
   if (!value) return null;
 
   const [year, month, day] = String(value).slice(0, 10).split('-').map(Number);

@@ -603,14 +603,14 @@
 }
 
 .program-owner-autocomplete-field {
-  width: 240px;
+  width: 280px;
   font-size: 0.72rem;
   border-radius: 6px;
   background: #ffffff;
-  height: 30px;
+  height: 40px;
 
   .mat-mdc-text-field-wrapper {
-    height: 30px !important;
+    height: 40px !important;
     padding: 0 4px !important;
     border: none !important;
     background: transparent !important;
@@ -623,7 +623,7 @@
   .mat-mdc-form-field-infix {
     padding-top: 2px !important;
     padding-bottom: 2px !important;
-    min-height: 26px !important;
+    min-height: 34px !important;
     border: none !important;
   }
 
@@ -699,7 +699,6 @@
   background: #ffffff;
   height: 34px;
   border: none !important;
-  max-width: 260px;
   overflow: hidden;
 }
 
@@ -708,7 +707,7 @@
   align-items: center;
   justify-content: center;
   padding: 2px;
-  border-radius: 6px;
+  border-radius: 17px;
   border: 1.5px solid #cbd5e1;
   background: #ffffff;
   height: 30px;
@@ -730,18 +729,20 @@
   border: 1.5px solid #cbd5e1;
   background: #ffffff;
   height: 34px;
+  min-width: 280px;
 }
 
 .program-owner-unassigned .program-owner-text-box {
   border-color: #ef4444;
   background: #fef2f2;
+  min-width: 280px;
 }
 
 .program-owner-action-box {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  border-radius: 6px;
+  border-radius: 17px;
   border: 1.5px solid #cbd5e1;
   background: #ffffff;
   height: 34px;

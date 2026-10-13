@@ -27,7 +27,7 @@ import { LoadingStateService } from '../../../../shared/services/loading-state.s
 import { AdminHierarchyTreeNode, RoleNode, TreeNode } from './dashboard-hierarchy-tree.models';
 import { sanitizeCloudinaryLogoUrl } from '../../../../shared/services/cloudinary-logo.util';
 import { SelectedYearService } from '../../../../shared/services/selected-year.service';
-import { getEventComputedStatus, isProgramEndDateInFuture } from '../../../../shared/services/event-status.util';
+import { parseLocalDate, getEventComputedStatus, isProgramEndDateInFuture } from '../../../../shared/services/event-status.util';
 import { compareByScheduleAndStatus } from '../../../../shared/services/program-schedule-sort.util';
 
 @Component({
@@ -779,7 +779,16 @@ export class DashboardHierarchyTreeComponent implements OnInit, OnDestroy {
 
   public shouldShowProgramRepeatIcon(node: TreeNode): boolean {
     this.currentDate();
-    return node.type === 'program' && isProgramEndDateInFuture(node.endDate);
+    if (node.type !== 'program') return false;
+    
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    
+    const startDate = node.startDate ? parseLocalDate(node.startDate) : null;
+    const endDate = node.endDate ? parseLocalDate(node.endDate) : null;
+    
+    return startDate !== null && startDate.getTime() <= today.getTime() &&
+           endDate !== null && endDate.getTime() > today.getTime();
   }
 
   private scheduleDateRefresh(): void {

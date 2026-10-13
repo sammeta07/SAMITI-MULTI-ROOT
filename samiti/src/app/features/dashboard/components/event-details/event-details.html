@@ -147,25 +147,27 @@
     <!-- Tab Strip & Dropdown Bar -->
     <div class="inner-tabs">
       <div class="inner-tabs-header-actions">
-        <div class="tab-mode-selector">
-          <span class="mode-caption">Mode:</span>
-          <mat-select [disabled]="votingPhaseState > 5 || votingPhaseState < 1 || !isMasterAdmin"
-                      [value]="currentVotingMode"
-                      (selectionChange)="onVotingModeChange($event.value)"
-                      class="mode-dropdown"
-                      appearance="outline"
-                      hideRequiredMarker>
-            <mat-option value="VOTING">Voting Mode</mat-option>
-            <mat-option value="DIRECT">Direct Mode</mat-option>
-          </mat-select>
-        </div>
+        @if (votingPhaseState < 6 || selectedTabIndex === 0) {
+          <div class="tab-mode-selector">
+            <span class="mode-caption">Mode:</span>
+            <mat-select [disabled]="votingPhaseState > 5 || votingPhaseState < 1 || !isMasterAdmin"
+                        [value]="currentVotingMode"
+                        (selectionChange)="onVotingModeChange($event.value)"
+                        class="mode-dropdown"
+                        appearance="outline"
+                        hideRequiredMarker>
+              <mat-option value="VOTING">Voting</mat-option>
+              <mat-option value="DIRECT">Direct</mat-option>
+            </mat-select>
+          </div>
+        }
       </div>
 
       <mat-tab-group class="inner-tab-group samiti-nav-tabs" animationDuration="150ms" [(selectedIndex)]="selectedTabIndex" (selectedIndexChange)="onTabChange($event)">
         <mat-tab>
           <ng-template mat-tab-label>
             <mat-icon class="tab-leading-icon">how_to_vote</mat-icon>
-            <span>Voting</span>
+            <span>Election</span>
           </ng-template>
         </mat-tab>
 
