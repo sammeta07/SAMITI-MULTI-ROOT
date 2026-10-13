@@ -90,7 +90,6 @@ export interface ProgramItem {
   endDate?: string | null;
   startTime?: string | null;
   endTime?: string | null;
-  isRecurring: boolean;
   bannerImages: string[];
   distanceMeters: number;
   committeeName: string;

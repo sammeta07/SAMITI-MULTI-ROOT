@@ -8,6 +8,7 @@ import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatCheckboxModule } from '@angular/material/checkbox';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { MatSelectModule } from '@angular/material/select';
+import { MatExpansionModule } from '@angular/material/expansion';
 import { HttpErrorResponse } from '@angular/common/http';
 import { firstValueFrom, finalize } from 'rxjs';
 import { ProgramDetailsPayload, ProgramTask } from './program-details.models';
@@ -34,7 +35,8 @@ import { ImageCropperDialogComponent } from '../../../../shared/components/image
     MatProgressSpinnerModule,
     MatCheckboxModule,
     MatTooltipModule,
-    MatSelectModule
+    MatSelectModule,
+    MatExpansionModule
   ],
   templateUrl: './program-details.html',
   styleUrl: './program-details.scss'
@@ -448,8 +450,7 @@ this.programOwnerService.assignOwner(currentProgram.programId, ownerUserId).subs
         startDate: currentProgram.startDate,
         endDate: currentProgram.endDate,
         startTime: currentProgram.startTime,
-        endTime: currentProgram.endTime,
-        isRecurring: currentProgram.isRecurring
+        endTime: currentProgram.endTime
       }
     });
 

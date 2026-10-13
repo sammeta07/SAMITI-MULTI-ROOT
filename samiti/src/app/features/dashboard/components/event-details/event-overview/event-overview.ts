@@ -6,7 +6,7 @@ import { MatIconModule } from '@angular/material/icon';
 import { MatButtonModule } from '@angular/material/button';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatCheckboxModule } from '@angular/material/checkbox';
-import { MatSlideToggleModule } from '@angular/material/slide-toggle';
+import { MatExpansionModule } from '@angular/material/expansion';
 import { MatSelectModule } from '@angular/material/select';
 import { MatAutocompleteModule, MatAutocompleteTrigger } from '@angular/material/autocomplete';
 import { MatFormFieldModule } from '@angular/material/form-field';
@@ -31,7 +31,7 @@ import { ProgramOwnerService } from '../../program-owner/program-owner.service';
 import { ProgramOwnerCandidate, ProgramOwnerPayload } from '../../program-owner/program-owner.models';
 import { EventVotingService } from '../event-voting/event-voting.service';
 import { EventDirectAssignMember } from '../event-voting/event-voting.models';
-import { getEventComputedStatus } from '../../../../../shared/services/event-status.util';
+import { getEventComputedStatus, isProgramEndDateInFuture } from '../../../../../shared/services/event-status.util';
 import { compareByScheduleAndStatus } from '../../../../../shared/services/program-schedule-sort.util';
 
 @Component({
@@ -43,7 +43,7 @@ import { compareByScheduleAndStatus } from '../../../../../shared/services/progr
     MatButtonModule,
     MatProgressSpinnerModule,
     MatCheckboxModule,
-    MatSlideToggleModule,
+    MatExpansionModule,
     MatSelectModule,
     MatAutocompleteModule,
     MatFormFieldModule,
@@ -308,6 +308,10 @@ export class EventOverviewComponent implements OnInit {
     return getEventComputedStatus(program.startDate, program.endDate).toLowerCase() as 'started' | 'upcoming' | 'completed';
   }
 
+  public shouldShowProgramRepeatIcon(program: EventProgramEntry): boolean {
+    return isProgramEndDateInFuture(program.endDate);
+  }
+
   public get bannerCount(): number {
     return this.eventData?.bannerImages?.length ?? 0;
   }
@@ -467,8 +471,7 @@ export class EventOverviewComponent implements OnInit {
       startDate: program.startDate,
       endDate: program.endDate,
       startTime: program.startTime,
-      endTime: program.endTime,
-      isRecurring: program.isRecurring
+      endTime: program.endTime
     }).subscribe({
       next: (updatedProgram) => {
         this.eventPrograms = this.eventPrograms.map((entry) =>

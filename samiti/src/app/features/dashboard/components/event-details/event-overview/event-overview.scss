@@ -342,12 +342,16 @@
 
 /* BANNER IMAGES SECTION */
 .banner-images-section {
+  display: block;
+  width: 100%;
+  box-sizing: border-box;
   background: #ffffff; 
   border: 1px solid #e2e8f0; 
   border-radius: 10px; 
   overflow: hidden;
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.02);
-  padding: 10px;
+  padding: 0;
+  margin: 0 !important;
   flex-shrink: 0;
 
   .banner-header-bg {
@@ -357,8 +361,9 @@
     background: #f0f9ff;
     border-bottom: 1px solid #bae6fd;
     padding: 0 12px;
+    height: 42px;
     min-height: 42px;
-    margin: -10px -10px 12px -10px;
+    margin: 0;
     
     .header-title-left {
       display: inline-flex; 
@@ -372,6 +377,40 @@
       .count-pill { font-size: 0.72rem; font-weight: 700; background: #e0f2fe; color: #0369a1; padding: 2px 8px; border-radius: 999px; }
     }
   }
+}
+
+.banner-images-section.skeleton-card {
+  padding: 10px;
+
+  .banner-header-bg {
+    margin: -10px -10px 12px;
+  }
+}
+
+::ng-deep .banner-images-section .mat-expansion-panel-header {
+  box-sizing: border-box;
+  height: 42px !important;
+  min-height: 42px !important;
+  padding: 0 12px !important;
+  border-radius: 0 !important;
+}
+
+::ng-deep .banner-images-section .mat-expansion-panel-header .mat-content {
+  justify-content: space-between;
+}
+
+::ng-deep .banner-images-section .mat-expansion-panel-header:hover,
+::ng-deep .banner-images-section .mat-expansion-panel-header:focus {
+  background: #f0f9ff !important;
+}
+
+::ng-deep .banner-images-section .mat-expansion-panel-header.mat-expanded {
+  height: 42px !important;
+  min-height: 42px !important;
+}
+
+::ng-deep .banner-images-section .mat-expansion-panel-body {
+  padding: 12px 10px 10px !important;
 }
 
 .program-details-section {
@@ -924,6 +963,15 @@
   color: #0f172a;
 }
 
+.program-repeat-icon {
+  width: 0.85rem;
+  height: 0.85rem;
+  margin-left: 3px;
+  vertical-align: -2px;
+  color: #64748b;
+  font-size: 0.85rem;
+}
+
 .program-details-grid {
   display: grid;
   grid-template-columns: 1fr auto;
@@ -1040,20 +1088,6 @@
   }
 }
 
-.daily-program-pill {
-  display: inline-flex;
-  align-items: center;
-  height: 20px;
-  padding: 0 8px;
-  border-radius: 999px;
-  background: #f0fdf4;
-  color: #15803d;
-  border: 1px solid #bbf7d0;
-  font-size: 0.68rem;
-  font-weight: 700;
-  letter-spacing: 0.3px;
-  white-space: nowrap;
-}
 
 .visibility-toggle-btn {
   height: 28px !important;
@@ -1234,6 +1268,7 @@
   display: flex;
   align-items: center;
   gap: 8px;
+  margin-right: 8px;
 
   .btn-delete mat-progress-spinner {
     display: inline-block;

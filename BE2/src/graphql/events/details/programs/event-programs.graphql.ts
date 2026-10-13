@@ -50,7 +50,6 @@ export const eventProgramsTypes = `
     endDate: String!
     startTime: String!
     endTime: String!
-    isRecurring: Boolean!
     visibility: String!
     address: String
     programImage: String
@@ -125,7 +124,6 @@ export const eventProgramsResolvers = {
            DATE_FORMAT(p.end_date, '%Y-%m-%d') AS endDate,
            TIME_FORMAT(p.start_time, '%H:%i:%s') AS startTime,
            TIME_FORMAT(p.end_time, '%H:%i:%s') AS endTime,
-           p.is_recurring AS is_recurring,
            p.visibility,
            p.address,
            p.program_image AS program_image,
@@ -170,7 +168,6 @@ export const eventProgramsResolvers = {
           endDate: program.endDate,
           startTime: program.startTime,
           endTime: program.endTime,
-          isRecurring: Boolean(program.is_recurring),
           visibility: program.visibility,
           address: program.address,
           programImage: programWithImage.program_image,

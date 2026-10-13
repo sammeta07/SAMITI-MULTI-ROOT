@@ -45,19 +45,6 @@
               </span>
             }
 
-            <!-- Recurring / One-Time -->
-            @if (programData()?.isRecurring) {
-              <span class="meta-pill recurring-pill">
-                <mat-icon>repeat</mat-icon>
-                <span>DAILY</span>
-              </span>
-            } @else {
-              <span class="meta-pill one-time-pill">
-                <mat-icon>repeat</mat-icon>
-                <span>ONE_TIME</span>
-              </span>
-            }
-
             <!-- Visibility Pill -->
             @if (programData()?.visibility) {
               <span class="meta-pill type-pill" [class.type-private]="programData()?.visibility !== 'VISIBLE'" [class.type-visible]="programData()?.visibility === 'VISIBLE'">
@@ -103,15 +90,15 @@
     </section>
 
     <!-- BANNER IMAGES SECTION -->
-    <section class="banner-images-section">
-      <div class="panel-card-header banner-header-bg">
+    <mat-expansion-panel #bannerExpansionPanel class="banner-images-section" [expanded]="true">
+      <mat-expansion-panel-header class="panel-card-header banner-header-bg">
         <div class="header-title-left">
           <mat-icon class="icon-accent-banner">photo_library</mat-icon>
           <span class="title-text">Program Banner Images</span>
           <span class="count-pill">{{ bannerCount }}/{{ MAX_BANNERS }}</span>
         </div>
-        <div class="banner-header-actions">
-          @if (canManageEvent && bannerCount > 0) {
+        <div class="banner-header-actions" (click)="$event.stopPropagation()">
+          @if (bannerExpansionPanel.expanded && canManageEvent && bannerCount > 0) {
             @if (isSelectionMode()) {
               <button mat-button class="btn-action btn-cancel" type="button" (click)="toggleSelectionMode()" [disabled]="isDeletingBanners()">
                 <mat-icon>close</mat-icon>
@@ -133,7 +120,7 @@
             }
           }
         </div>
-      </div>
+      </mat-expansion-panel-header>
 
       <div class="banner-grid">
         @if (bannerCount === 0 && canUploadMoreBanners && canManageEvent && !isSelectionMode()) {
@@ -178,7 +165,7 @@
           </div>
         }
       </div>
-    </section>
+    </mat-expansion-panel>
 
     <input
       #programBannerFileInput

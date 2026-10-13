@@ -113,8 +113,8 @@
                     }
                     @if (node.type === 'program') {
                       <span class="program-node-badges">
-                        @if (isProgramRecurring(node)) {
-                          <mat-icon class="program-badge-icon program-badge-recurring" title="Recurring program">repeat</mat-icon>
+                        @if (shouldShowProgramRepeatIcon(node)) {
+                          <mat-icon class="program-badge-icon program-badge-repeat" title="Program has not ended">repeat</mat-icon>
                         }
                         @if (isProgramOwner(node)) {
                           <mat-icon class="program-badge-icon program-badge-owner" title="You are the owner">admin_panel_settings</mat-icon>
@@ -221,8 +221,8 @@
                           @if (isProgramVisibilityHidden(node)) {
                             <mat-icon class="program-badge-icon program-badge-hidden" title="Hidden from others">visibility</mat-icon>
                           }
-                          @if (isProgramRecurring(node)) {
-                            <mat-icon class="program-badge-icon program-badge-recurring" title="Recurring program">repeat</mat-icon>
+                          @if (shouldShowProgramRepeatIcon(node)) {
+                            <mat-icon class="program-badge-icon program-badge-repeat" title="Program has not ended">repeat</mat-icon>
                           }
                           @if (isProgramOwner(node)) {
                             <mat-icon class="program-badge-icon program-badge-owner" title="You are the owner">admin_panel_settings</mat-icon>

@@ -54,7 +54,6 @@ export const programDetailsTypes = `
     endDate: String
     startTime: String
     endTime: String
-    isRecurring: Boolean
     createdBy: Int!
     updatedBy: Int
     createdAt: String
@@ -95,7 +94,6 @@ export const programDetailsResolvers = {
            DATE_FORMAT(p.end_date, '%Y-%m-%d') AS endDate,
            p.start_time AS startTime,
            p.end_time AS endTime,
-           p.is_recurring AS isRecurring,
            p.created_by AS createdBy,
            p.updated_by AS updatedBy,
            p.created_at AS createdAt,
@@ -207,7 +205,6 @@ export const programDetailsResolvers = {
         endDate: program.endDate,
         startTime: program.startTime,
         endTime: program.endTime,
-        isRecurring: program.isRecurring,
         createdBy: program.createdBy,
         updatedBy: program.updatedBy,
         createdAt: program.createdAt,

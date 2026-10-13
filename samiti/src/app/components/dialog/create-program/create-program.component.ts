@@ -9,8 +9,6 @@ import { MatInputModule } from '@angular/material/input';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatIconModule } from '@angular/material/icon';
 import { MatToolbar } from '@angular/material/toolbar';
-import { MatCheckboxModule } from '@angular/material/checkbox';
-import { MatSlideToggleModule } from '@angular/material/slide-toggle';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { provideNativeDateAdapter } from '@angular/material/core';
 import { CreateProgramService } from './create-program.service';
@@ -34,8 +32,6 @@ import { TextFormatService } from '../../../shared/services/text-format-service.
     MatFormFieldModule,
     MatIconModule,
     MatToolbar,
-    MatCheckboxModule,
-    MatSlideToggleModule,
     MatTooltipModule,
   ],
   templateUrl: './create-program.component.html',
@@ -60,7 +56,6 @@ export class CreateProgramDialogComponent implements OnInit {
   public endDate: Date | null = null;
   public startTime: Date | null = null;
   public endTime: Date | null = null;
-  public isRecurring: boolean = false;
 
   public readonly isSubmitting = signal<boolean>(false);
   public readonly isEditMode = signal<boolean>(false);
@@ -116,11 +111,6 @@ export class CreateProgramDialogComponent implements OnInit {
     const injectedEndTime = this.injectedData?.endTime;
     if (typeof injectedEndTime === 'string' && injectedEndTime.trim().length > 0) {
       this.endTime = this.parseTime(injectedEndTime.trim());
-    }
-
-    const injectedIsRecurring = this.injectedData?.isRecurring;
-    if (typeof injectedIsRecurring === 'boolean') {
-      this.isRecurring = injectedIsRecurring;
     }
 
     const injectedLatitude = Number(this.injectedData?.latitude);
@@ -294,8 +284,7 @@ export class CreateProgramDialogComponent implements OnInit {
       startDate: this.toDateString(this.startDate) || '',
       endDate: this.toDateString(this.endDate) || '',
       startTime: this.formatTimeForApi(this.startTime!),
-      endTime: this.formatTimeForApi(this.endTime!),
-      isRecurring: this.isRecurring
+      endTime: this.formatTimeForApi(this.endTime!)
     };
 
     const request$ = this.isEditMode()

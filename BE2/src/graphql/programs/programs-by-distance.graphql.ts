@@ -17,7 +17,6 @@ export const programsByDistanceTypes = `
     endDate: String
     startTime: String
     endTime: String
-    isRecurring: Boolean!
     bannerImages: [String!]!
     distanceMeters: Float!
     committeeName: String!
@@ -80,7 +79,6 @@ export const programsByDistanceResolvers = {
            DATE_FORMAT(p.end_date, '%Y-%m-%d') AS endDate,
            TIME_FORMAT(p.start_time, '%H:%i:%s') AS startTime,
            TIME_FORMAT(p.end_time, '%H:%i:%s') AS endTime,
-           p.is_recurring AS isRecurring,
            (6371 * ACOS(LEAST(1, GREATEST(-1,
              COS(RADIANS(?)) * COS(RADIANS(e.latitude)) *
              COS(RADIANS(e.longitude) - RADIANS(?)) +
@@ -133,7 +131,6 @@ export const programsByDistanceResolvers = {
         endDate: program.endDate || null,
         startTime: program.startTime || null,
         endTime: program.endTime || null,
-        isRecurring: Number(program.isRecurring) === 1,
         bannerImages: bannerImagesByProgram[Number(program.id)] || [],
         distanceMeters: Math.round(Number(program.distanceKm) * 1000),
         committeeName: program.committeeName,

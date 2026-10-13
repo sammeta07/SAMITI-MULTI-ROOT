@@ -65,7 +65,8 @@ async function executeSqlStatementsFromFile(connection: mysql.Connection, migrat
     '059-remove-event-status.sql',
     '062-refactor-programs-table.sql',
     '064-remove-program-status.sql',
-    '065-remove-event-visibility.sql'
+    '065-remove-event-visibility.sql',
+    '066-remove-program-recurring.sql'
   ]);
 
   for (const statement of statements) {

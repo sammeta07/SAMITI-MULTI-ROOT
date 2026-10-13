@@ -24,7 +24,6 @@ export class EventProgramsService {
           endDate
           startTime
           endTime
-          isRecurring
           visibility
           address
           programImage

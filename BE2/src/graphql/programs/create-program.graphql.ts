@@ -105,7 +105,6 @@ export const createProgramTypes = `
     endDate: String!
     startTime: String!
     endTime: String!
-    isRecurring: Boolean!
     createdBy: Int!
     updatedBy: Int
     createdAt: String!
@@ -120,7 +119,6 @@ export const createProgramTypes = `
     endDate: String!
     startTime: String!
     endTime: String!
-    isRecurring: Boolean
   }
 `;
 
@@ -142,7 +140,6 @@ export const createProgramResolvers = {
       const endDate = normalizeDate(input.endDate, 'endDate');
       const startTime = normalizeTime(input.startTime, 'startTime');
       const endTime = normalizeTime(input.endTime, 'endTime');
-      const isRecurring = Boolean(input.isRecurring);
 
       if (!Number.isInteger(eventId) || eventId <= 0) {
         throwProgramError('BAD_REQUEST', 'eventId must be a positive integer');
@@ -197,13 +194,12 @@ export const createProgramResolvers = {
            end_date,
            start_time,
            end_time,
-           is_recurring,
            address,
            visibility,
            created_by,
            updated_by,
            created_at
-         ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW())`,
+         ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW())`,
         [
           eventId,
           programName,
@@ -211,7 +207,6 @@ export const createProgramResolvers = {
           endDate,
           startTime,
           endTime,
-          isRecurring ? 1 : 0,
           address,
           visibility,
           loggedInUserId,
@@ -231,7 +226,6 @@ export const createProgramResolvers = {
            DATE_FORMAT(end_date, '%Y-%m-%d') AS endDate,
            start_time AS startTime,
            end_time AS endTime,
-           is_recurring AS isRecurring,
            address,
            visibility,
            created_by AS createdBy,

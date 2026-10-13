@@ -587,8 +587,8 @@
                     <div class="program-card-title-row">
                       <h3>
                         {{ program.programName | titlecase }}
-                        @if (program.isRecurring) {
-                          <mat-icon class="program-recurring-icon" title="Daily" aria-label="Recurring program">repeat</mat-icon>
+                        @if (shouldShowProgramRepeatIcon(program.endDate)) {
+                          <mat-icon class="program-repeat-icon" title="Program has not ended" aria-label="Program has not ended">repeat</mat-icon>
                         }
                       </h3>
                       <span class="program-schedule-pill program-schedule-pill-{{ getProgramComputedStatus(program) }}">

@@ -7,7 +7,6 @@ export interface EventProgramEntry {
   endDate: string;
   startTime: string;
   endTime: string;
-  isRecurring: boolean;
   visibility: string;
   address?: string | null;
   programImage?: string | null;

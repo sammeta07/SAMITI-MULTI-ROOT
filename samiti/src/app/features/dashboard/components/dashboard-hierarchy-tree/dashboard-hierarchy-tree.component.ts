@@ -4,6 +4,7 @@ import {
   effect,
   EventEmitter,
   inject,
+  OnDestroy,
   OnInit,
   Output,
   signal
@@ -26,7 +27,7 @@ import { LoadingStateService } from '../../../../shared/services/loading-state.s
 import { AdminHierarchyTreeNode, RoleNode, TreeNode } from './dashboard-hierarchy-tree.models';
 import { sanitizeCloudinaryLogoUrl } from '../../../../shared/services/cloudinary-logo.util';
 import { SelectedYearService } from '../../../../shared/services/selected-year.service';
-import { getEventComputedStatus } from '../../../../shared/services/event-status.util';
+import { getEventComputedStatus, isProgramEndDateInFuture } from '../../../../shared/services/event-status.util';
 import { compareByScheduleAndStatus } from '../../../../shared/services/program-schedule-sort.util';
 
 @Component({
@@ -45,7 +46,7 @@ import { compareByScheduleAndStatus } from '../../../../shared/services/program-
   templateUrl: './dashboard-hierarchy-tree.html',
   styleUrl: './dashboard-hierarchy-tree.scss'
 })
-export class DashboardHierarchyTreeComponent implements OnInit {
+export class DashboardHierarchyTreeComponent implements OnInit, OnDestroy {
   private readonly treeService = inject(DashboardHierarchyTreeService);
   private readonly authService = inject(AuthService);
   private readonly notifier = inject(NotifierService);
@@ -83,6 +84,8 @@ export class DashboardHierarchyTreeComponent implements OnInit {
 
   private readonly selectedNode = signal<TreeNode | null>(null);
   private readonly highlightedNodeToken = signal<string>('');
+  private readonly currentDate = signal(new Date());
+  private dateRefreshTimer: ReturnType<typeof setTimeout> | null = null;
 
   private readonly currentYear = new Date().getFullYear();
   public readonly availableYears = signal<number[]>(
@@ -109,6 +112,7 @@ export class DashboardHierarchyTreeComponent implements OnInit {
 
   ngOnInit(): void {
     this.fetchAdminNavigationTree();
+    this.scheduleDateRefresh();
 
     this.router.events.pipe(
       filter(event => event instanceof NavigationEnd)
@@ -237,7 +241,6 @@ export class DashboardHierarchyTreeComponent implements OnInit {
       startTime: node.startTime ?? undefined,
       endTime: node.endTime ?? undefined,
       ownerUserId: mappedType === 'program' ? (node.ownerUserId ?? undefined) : undefined,
-      isRecurring: mappedType === 'program' ? (node.isRecurring ?? undefined) : undefined,
       visibility: mappedType === 'program' ? (node.visibility ?? undefined) : undefined,
       votingPhaseState: node.votingPhaseState ?? undefined,
       children: mappedChildren.length > 0 ? mappedChildren : undefined
@@ -774,8 +777,22 @@ export class DashboardHierarchyTreeComponent implements OnInit {
     return node.type === 'program' && (node.visibility || '').toUpperCase() === 'HIDDEN';
   }
 
-  public isProgramRecurring(node: TreeNode): boolean {
-    return node.type === 'program' && node.isRecurring === true;
+  public shouldShowProgramRepeatIcon(node: TreeNode): boolean {
+    this.currentDate();
+    return node.type === 'program' && isProgramEndDateInFuture(node.endDate);
+  }
+
+  private scheduleDateRefresh(): void {
+    const now = new Date();
+    const nextMidnight = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1);
+    this.dateRefreshTimer = setTimeout(() => {
+      this.currentDate.set(new Date());
+      this.scheduleDateRefresh();
+    }, nextMidnight.getTime() - now.getTime() + 25);
+  }
+
+  ngOnDestroy(): void {
+    if (this.dateRefreshTimer !== null) clearTimeout(this.dateRefreshTimer);
   }
 
   public isProgramOwner(node: TreeNode): boolean {

@@ -242,20 +242,6 @@
     mat-icon { color: #64748b; }
   }
 
-  &.recurring-pill {
-    background: #f5f3ff;
-    color: #7c3aed;
-    border-color: #ddd6fe;
-    mat-icon { color: #7c3aed; }
-  }
-
-  &.one-time-pill {
-    background: #f5f3ff;
-    color: #7c3aed;
-    border-color: #ddd6fe;
-    mat-icon { color: #7c3aed; }
-  }
-
   &.type-pill.type-private {
     background: #fdf2f8;
     color: #be185d;
@@ -421,12 +407,16 @@
 
 /* BANNER IMAGES SECTION */
 .banner-images-section {
+  display: block;
+  width: 100%;
+  box-sizing: border-box;
   background: #ffffff;
   border: 1px solid #e2e8f0;
   border-radius: 10px;
   overflow: hidden;
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.02);
-  padding: 10px;
+  padding: 0;
+  margin: 0 !important;
   flex-shrink: 0;
 
   .banner-header-bg {
@@ -436,8 +426,9 @@
     background: #f0f9ff;
     border-bottom: 1px solid #bae6fd;
     padding: 0 12px;
+    height: 42px;
     min-height: 42px;
-    margin: -10px -10px 12px -10px;
+    margin: 0;
 
     .header-title-left {
       display: inline-flex;
@@ -453,10 +444,37 @@
   }
 }
 
+::ng-deep .banner-images-section .mat-expansion-panel-header {
+  box-sizing: border-box;
+  height: 42px !important;
+  min-height: 42px !important;
+  padding: 0 12px !important;
+  border-radius: 0 !important;
+}
+
+::ng-deep .banner-images-section .mat-expansion-panel-header .mat-content {
+  justify-content: space-between;
+}
+
+::ng-deep .banner-images-section .mat-expansion-panel-header:hover,
+::ng-deep .banner-images-section .mat-expansion-panel-header:focus {
+  background: #f0f9ff !important;
+}
+
+::ng-deep .banner-images-section .mat-expansion-panel-header.mat-expanded {
+  height: 42px !important;
+  min-height: 42px !important;
+}
+
+::ng-deep .banner-images-section .mat-expansion-panel-body {
+  padding: 12px 10px 10px !important;
+}
+
 .banner-header-actions {
   display: flex;
   align-items: center;
   gap: 8px;
+  margin-right: 8px;
 
   .banner-btn-delete mat-progress-spinner {
     display: inline-block;

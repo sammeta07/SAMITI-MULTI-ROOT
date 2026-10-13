@@ -25,7 +25,6 @@ export class CreateProgramService {
         endDate
         startTime
         endTime
-        isRecurring
         createdBy
         updatedBy
         createdAt
@@ -54,7 +53,6 @@ export class CreateProgramService {
         endDate
         startTime
         endTime
-        isRecurring
         createdBy
         updatedBy
         createdAt

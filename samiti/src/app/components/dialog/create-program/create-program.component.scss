@@ -157,38 +157,6 @@
   font-weight: 600;
 }
 
-.recurring-field-wrapper {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 16px;
-  width: 100%;
-  padding: 10px 10px;
-  border: 1px solid #6e7176;
-  border-radius: 4px;
-  background: #ffffff;
-  box-sizing: border-box;
-  transition: all 0.2s ease;
-
-  &:hover {
-    border-color: #7c3aed;
-    background: #faf5ff;
-  }
-}
-
-.recurring-toggle {
-  display: flex;
-  align-items: center;
-}
-
-.recurring-label {
-  font-size: 0.85rem;
-  font-weight: 600;
-  color: #334155;
-  text-align: right;
-  line-height: 1.4;
-}
-
 /* FOOTER */
 .drawer-action-footer {
   height: 55px;

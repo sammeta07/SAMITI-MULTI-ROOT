@@ -20,3 +20,10 @@ export function getEventComputedStatus(startDate: string | null | undefined, end
   if (start && start.getTime() <= today.getTime()) return 'STARTED';
   return 'UPCOMING';
 }
+
+export function isProgramEndDateInFuture(endDate: string | null | undefined): boolean {
+  const end = parseLocalDate(endDate);
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  return end !== null && end.getTime() > today.getTime();
+}

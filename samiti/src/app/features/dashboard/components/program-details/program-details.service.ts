@@ -32,7 +32,6 @@ export class ProgramDetailsService {
         endDate
         startTime
         endTime
-        isRecurring
         createdBy
         updatedBy
         createdAt

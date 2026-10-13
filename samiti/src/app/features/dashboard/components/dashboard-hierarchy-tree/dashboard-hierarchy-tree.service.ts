@@ -25,7 +25,6 @@ const nodeFields = `
   startTime
   endTime
   ownerUserId
-  isRecurring
   visibility
   votingPhaseState
 `;

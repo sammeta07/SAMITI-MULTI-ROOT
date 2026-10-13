@@ -15,7 +15,6 @@ export interface AdminHierarchyTreeNode {
   startTime?: string | null;
   endTime?: string | null;
   ownerUserId?: number | null;
-  isRecurring?: boolean | null;
   visibility?: string | null;
   votingPhaseState?: number | null;
   children: AdminHierarchyTreeNode[];
@@ -62,7 +61,6 @@ export interface TreeNode {
   startTime?: string | null;
   endTime?: string | null;
   ownerUserId?: number | null;
-  isRecurring?: boolean | null;
   visibility?: string | null;
   votingPhaseState?: number | null;
 }

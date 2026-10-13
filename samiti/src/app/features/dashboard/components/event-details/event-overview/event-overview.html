@@ -20,16 +20,16 @@
   } @else {
 
     <!-- BANNER SECTION -->
-    <section class="banner-images-section">
-      <div class="panel-card-header banner-header-bg">
+    <mat-expansion-panel #bannerExpansionPanel class="banner-images-section" [expanded]="true">
+      <mat-expansion-panel-header class="panel-card-header banner-header-bg">
         <div class="header-title-left">
           <mat-icon class="icon-accent-banner">photo_library</mat-icon>
           <span class="title-text">Event Banner Images</span>
           <span class="count-pill">{{ bannerCount }}/{{ MAX_BANNERS }}</span>
         </div>
 
-        <div class="banner-header-actions">
-          @if (canManageEvent && bannerCount > 0) {
+        <div class="banner-header-actions" (click)="$event.stopPropagation()">
+          @if (bannerExpansionPanel.expanded && canManageEvent && bannerCount > 0) {
             @if (isSelectionMode()) {
               <button mat-button class="btn-action btn-cancel" type="button" (click)="toggleSelectionMode()" [disabled]="isDeletingBanners()">
                 <mat-icon>close</mat-icon>
@@ -51,7 +51,7 @@
             }
           }
         </div>
-      </div>
+      </mat-expansion-panel-header>
 
       <div class="banner-grid">
         @if (bannerCount === 0 && canUploadMoreBanners && canManageEvent && !isSelectionMode()) {
@@ -96,7 +96,7 @@
           </div>
         }
       </div>
-    </section>
+    </mat-expansion-panel>
 
     <!-- PROGRAM DETAILS SECTION -->
     <section class="program-details-section">
@@ -128,7 +128,12 @@
                     <div class="program-card-layout">
                       <div class="program-card-content">
                         <div class="program-title-group">
-                          <h3 class="program-name">{{ program.programName | titlecase }}</h3>
+                          <h3 class="program-name">
+                            {{ program.programName | titlecase }}
+                            @if (shouldShowProgramRepeatIcon(program)) {
+                              <mat-icon class="program-repeat-icon" title="Program has not ended" aria-label="Program has not ended">repeat</mat-icon>
+                            }
+                          </h3>
                           <span class="program-address-text">{{ program.address | titlecase }}</span>
                         </div>
 
@@ -138,7 +143,7 @@
                             <span class="program-detail-text">
                               <span class="program-detail-row">
                                 <strong>Date</strong>
-                                @if (program.isRecurring || program.startDate !== program.endDate) {
+                                @if (program.startDate !== program.endDate) {
                                   {{ formatProgramDateRange(program.startDate, program.endDate) }}
                                 } @else {
                                   {{ formatDisplayDate(program.startDate) }}
@@ -152,12 +157,6 @@
                               </span>
                             </span>
                           </div>
-                          @if (program.isRecurring) {
-                            <div class="program-detail">
-                              <mat-icon>repeat</mat-icon>
-                              <span class="daily-program-pill">Daily Program</span>
-                            </div>
-                          }
                         </div>
                       </div>
                       <div class="program-card-action">

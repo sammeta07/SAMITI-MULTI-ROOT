@@ -7,7 +7,6 @@ export interface CreateProgramPayload {
   endDate: string;
   startTime: string;
   endTime: string;
-  isRecurring?: boolean;
 }
 
 export interface CreateProgramResponse {
@@ -21,7 +20,6 @@ export interface CreateProgramResponse {
   endDate: string;
   startTime: string;
   endTime: string;
-  isRecurring: boolean;
   createdBy: number;
   updatedBy?: number | null;
   createdAt: string;
@@ -42,7 +40,6 @@ export interface UpdateProgramResponse {
   endDate: string;
   startTime: string;
   endTime: string;
-  isRecurring: boolean;
   createdBy: number;
   updatedBy?: number | null;
   createdAt: string;

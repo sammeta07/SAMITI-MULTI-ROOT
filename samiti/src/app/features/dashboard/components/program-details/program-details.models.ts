@@ -11,7 +11,6 @@ export interface ProgramDetailsPayload {
   endDate?: string | null;
   startTime?: string | null;
   endTime?: string | null;
-  isRecurring?: boolean | null;
   createdBy?: number | null;
   updatedBy?: number | null;
   createdAt?: string | null;
