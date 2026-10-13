@@ -184,40 +184,58 @@
     />
 
     <!-- TASKS SECTION -->
-    <section class="horizontal-full-card tasks-section-style">
-      <div class="panel-card-header">
-        <div class="header-title-left">
-          <mat-icon class="icon-accent-task">task_alt</mat-icon>
-          <span class="title-text">Tasks</span>
-          <span class="count-pill">{{ tasks().length }}</span>
-        </div>
-        <button mat-button class="btn-action btn-task" (click)="onAddTask()">
-          <mat-icon>add</mat-icon>
-          <span>Task</span>
-        </button>
-      </div>
-      <div class="horizontal-list-container">
-        @for (task of tasks(); track task.id) {
-        <div class="task-aligned-row">
-          <div class="task-col-info">
-            <span class="main-title">{{ task.taskName }}</span>
-            <span class="secondary-sub-lbl">{{ task.assignedTo || 'Unassigned' }}</span>
-          </div>
-          <div class="task-col-status">
-            <span class="status-tag tag-{{ task.status.toLowerCase() }}">{{ task.status }}</span>
-          </div>
-          <div class="task-col-actions">
-            <div class="row-action-deck">
-              <button mat-icon-button class="circle-btn view-btn" title="View"><mat-icon>visibility</mat-icon></button>
-              <button mat-icon-button class="circle-btn delete-btn" title="Delete"><mat-icon>delete</mat-icon></button>
+    <mat-tab-group class="tasks-tabs samiti-nav-tabs" animationDuration="150ms">
+      <mat-tab>
+        <ng-template mat-tab-label>
+          <mat-icon class="tab-leading-icon">checklist</mat-icon>
+          <span>To Do</span>
+          <span class="tab-badge">{{ tasks().length }}</span>
+        </ng-template>
+
+        <section class="horizontal-full-card tasks-section-style">
+          <div class="panel-card-header">
+            <div class="header-title-left">
+              <mat-icon class="icon-accent-task">task_alt</mat-icon>
+              <span class="title-text">Tasks</span>
+              <span class="count-pill">{{ tasks().length }}</span>
             </div>
+            <button mat-button class="btn-action btn-task" (click)="onAddTask()">
+              <mat-icon>add</mat-icon>
+              <span>Task</span>
+            </button>
           </div>
-        </div>
-        } @empty {
-        <div class="mini-empty-state">No tasks available yet</div>
-        }
-      </div>
-    </section>
+          <div class="horizontal-list-container">
+            @for (task of tasks(); track task.id) {
+              <div class="task-aligned-row">
+                <div class="task-col-info">
+                  <span class="main-title">{{ task.taskName }}</span>
+                  <span class="secondary-sub-lbl">{{ task.assignedTo || 'Unassigned' }}</span>
+                </div>
+                <div class="task-col-status">
+                  <span class="status-tag tag-{{ task.status.toLowerCase() }}">{{ task.status }}</span>
+                </div>
+                <div class="task-col-actions">
+                  <div class="row-action-deck">
+                    <button mat-icon-button class="circle-btn view-btn" title="View"><mat-icon>visibility</mat-icon></button>
+                    <button mat-icon-button class="circle-btn delete-btn" title="Delete"><mat-icon>delete</mat-icon></button>
+                  </div>
+                </div>
+              </div>
+            } @empty {
+              <div class="mini-empty-state">No tasks available yet</div>
+            }
+          </div>
+        </section>
+      </mat-tab>
+
+      <mat-tab>
+        <ng-template mat-tab-label>
+          <mat-icon class="tab-leading-icon">notes</mat-icon>
+          <span>Notes</span>
+        </ng-template>
+        <div class="notes-tab-empty-state">Notes are not available for this program yet.</div>
+      </mat-tab>
+    </mat-tab-group>
 
   </div>
   } @else {

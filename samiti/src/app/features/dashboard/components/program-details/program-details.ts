@@ -9,6 +9,7 @@ import { MatCheckboxModule } from '@angular/material/checkbox';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { MatSelectModule } from '@angular/material/select';
 import { MatExpansionModule } from '@angular/material/expansion';
+import { MatTabsModule } from '@angular/material/tabs';
 import { HttpErrorResponse } from '@angular/common/http';
 import { firstValueFrom, finalize } from 'rxjs';
 import { ProgramDetailsPayload, ProgramTask } from './program-details.models';
@@ -36,7 +37,8 @@ import { ImageCropperDialogComponent } from '../../../../shared/components/image
     MatCheckboxModule,
     MatTooltipModule,
     MatSelectModule,
-    MatExpansionModule
+    MatExpansionModule,
+    MatTabsModule
   ],
   templateUrl: './program-details.html',
   styleUrl: './program-details.scss'

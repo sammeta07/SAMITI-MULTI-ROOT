@@ -634,6 +634,25 @@
 }
 
 /* TASKS SECTION */
+.tasks-tabs {
+  display: flex;
+  flex: 1 1 auto;
+  flex-direction: column;
+  min-height: 0;
+  overflow: hidden;
+
+  ::ng-deep .mat-mdc-tab-body-wrapper {
+    flex: 1 1 auto;
+    min-height: 0;
+    overflow: hidden;
+  }
+
+  ::ng-deep .mat-mdc-tab-body-content {
+    height: 100%;
+    overflow: hidden;
+  }
+}
+
 .horizontal-full-card {
   background: #ffffff;
   border: 1px solid #ede9fe;
@@ -641,6 +660,11 @@
   display: flex;
   flex-direction: column;
   overflow: hidden;
+
+  &.tasks-section-style {
+    height: 100%;
+    min-height: 0;
+  }
 
   &.tasks-section-style .panel-card-header {
     background: linear-gradient(90deg, rgba(139, 92, 246, 0.07), transparent);
@@ -680,15 +704,25 @@
 }
 
 .horizontal-list-container {
-  padding: 4px;
+  padding: 4px 4px 10px;
   display: flex;
   flex-direction: column;
+  flex: 1 1 auto;
+  min-height: 0;
   gap: 4px;
-  max-height: 320px;
   overflow-y: auto;
 
   &::-webkit-scrollbar { width: 3px; }
   &::-webkit-scrollbar-thumb { background: #ddd6fe; border-radius: 2px; }
+}
+
+.notes-tab-empty-state {
+  display: grid;
+  height: 100%;
+  min-height: 0;
+  place-items: center;
+  color: #64748b;
+  font-size: 0.85rem;
 }
 
 .task-aligned-row {
