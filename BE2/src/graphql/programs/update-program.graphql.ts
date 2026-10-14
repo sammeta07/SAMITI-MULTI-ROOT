@@ -108,6 +108,7 @@ export const updateProgramTypes = `
     createdBy: Int!
     updatedBy: Int
     createdAt: String!
+    price: Float!
   }
 
   input UpdateProgramInput {
@@ -120,6 +121,7 @@ export const updateProgramTypes = `
     endDate: String!
     startTime: String!
     endTime: String!
+    price: Float
   }
 `;
 
@@ -142,6 +144,7 @@ export const updateProgramResolvers = {
       const endDate = normalizeDate(input.endDate, 'endDate');
       const startTime = normalizeTime(input.startTime, 'startTime');
       const endTime = normalizeTime(input.endTime, 'endTime');
+      const price = Number(input.price) || 0;
 
       if (!Number.isInteger(programId) || programId <= 0) {
         throwProgramError('BAD_REQUEST', 'programId must be a positive integer');
@@ -218,6 +221,7 @@ export const updateProgramResolvers = {
              end_time = ?,
              address = ?,
              visibility = ?,
+             price = ?,
              updated_by = ?
          WHERE id = ?`,
         [
@@ -228,6 +232,7 @@ export const updateProgramResolvers = {
           endTime,
           address,
           visibility,
+          price,
           loggedInUserId,
           programId
         ]
@@ -245,6 +250,7 @@ export const updateProgramResolvers = {
            end_time AS endTime,
            address,
            visibility,
+           price AS price,
            created_by AS createdBy,
            updated_by AS updatedBy,
            created_at AS createdAt

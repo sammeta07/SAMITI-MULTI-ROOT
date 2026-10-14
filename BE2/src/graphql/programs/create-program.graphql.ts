@@ -108,6 +108,7 @@ export const createProgramTypes = `
     createdBy: Int!
     updatedBy: Int
     createdAt: String!
+    price: Float!
   }
 
   input CreateProgramInput {
@@ -119,6 +120,7 @@ export const createProgramTypes = `
     endDate: String!
     startTime: String!
     endTime: String!
+    price: Float
   }
 `;
 
@@ -140,6 +142,7 @@ export const createProgramResolvers = {
       const endDate = normalizeDate(input.endDate, 'endDate');
       const startTime = normalizeTime(input.startTime, 'startTime');
       const endTime = normalizeTime(input.endTime, 'endTime');
+      const price = Number(input.price) || 0;
 
       if (!Number.isInteger(eventId) || eventId <= 0) {
         throwProgramError('BAD_REQUEST', 'eventId must be a positive integer');
@@ -196,10 +199,11 @@ export const createProgramResolvers = {
            end_time,
            address,
            visibility,
+           price,
            created_by,
            updated_by,
            created_at
-         ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW())`,
+         ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW())`,
         [
           eventId,
           programName,
@@ -209,6 +213,7 @@ export const createProgramResolvers = {
           endTime,
           address,
           visibility,
+          price,
           loggedInUserId,
           loggedInUserId
         ]
@@ -230,7 +235,8 @@ export const createProgramResolvers = {
            visibility,
            created_by AS createdBy,
            updated_by AS updatedBy,
-           created_at AS createdAt
+           created_at AS createdAt,
+           price AS price
          FROM programs
          WHERE id = ?
          LIMIT 1`,

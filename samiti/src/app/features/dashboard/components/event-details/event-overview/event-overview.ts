@@ -478,7 +478,8 @@ export class EventOverviewComponent implements OnInit {
       startDate: program.startDate,
       endDate: program.endDate,
       startTime: program.startTime,
-      endTime: program.endTime
+      endTime: program.endTime,
+      price: 0
     }).subscribe({
       next: (updatedProgram) => {
         this.eventPrograms = this.eventPrograms.map((entry) =>

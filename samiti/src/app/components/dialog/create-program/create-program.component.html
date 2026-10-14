@@ -42,7 +42,7 @@
           </mat-form-field>
         </div>
 
-        <!-- LATITUDE & LONGITUDE -->
+<!-- LATITUDE & LONGITUDE -->
         <div class="form-row-coords">
           <mat-form-field appearance="outline" class="samiti-custom-field coords-field" subscriptSizing="dynamic">
             <mat-label>Latitude</mat-label>
@@ -57,7 +57,7 @@
           </mat-form-field>
 
           <div class="fetch-location-wrapper">
-            <button mat-fab type="button" class="fetch-location-btn" (click)="fetchUserLocation()" aria-label="Fetch location" matTooltip="Fetch current location" matTooltipPosition="above">
+            <button mat-fab type="button" class="fetch-location-btn" (click)="fetchUserLocation()" aria-label="Fetch current location" matTooltip="Fetch current location" matTooltipPosition="above">
               <mat-icon>gps_fixed</mat-icon>
             </button>
           </div>
@@ -65,6 +65,24 @@
         @if (isFetchingLocation()) {
           <div class="fetching-hint-row">Fetching current location...</div>
         }
+        <!-- PROGRAM PRICE -->
+        <div class="form-row-full">
+          <mat-form-field appearance="outline" class="samiti-custom-field">
+            <mat-label>Program Price (₹)</mat-label>
+            <input matInput type="number" [(ngModel)]="price" name="price" min="0" step="0.01" placeholder="0 for free" [readonly]="!isPriceEditable()">
+            <mat-icon matPrefix>monetization_on</mat-icon>
+            @if (!isPriceEditable()) {
+              <button mat-icon-button matSuffix type="button" class="address-edit-trigger" (click)="enablePriceEdit()" aria-label="Edit price" matTooltip="Edit price" matTooltipPosition="above">
+                <mat-icon>edit</mat-icon>
+              </button>
+            } @else {
+              <button mat-icon-button matSuffix type="button" class="address-edit-trigger" (click)="resetPrice()" aria-label="Reset price" matTooltip="Reset price" matTooltipPosition="above">
+                <mat-icon>refresh</mat-icon>
+              </button>
+            }
+          </mat-form-field>
+        </div>
+
       </div>
 
       <!-- DATE & TIME -->

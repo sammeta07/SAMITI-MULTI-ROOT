@@ -7,6 +7,7 @@ export interface CreateProgramPayload {
   endDate: string;
   startTime: string;
   endTime: string;
+  price: number;
 }
 
 export interface CreateProgramResponse {
@@ -20,6 +21,7 @@ export interface CreateProgramResponse {
   endDate: string;
   startTime: string;
   endTime: string;
+  price: number;
   createdBy: number;
   updatedBy?: number | null;
   createdAt: string;
@@ -40,6 +42,7 @@ export interface UpdateProgramResponse {
   endDate: string;
   startTime: string;
   endTime: string;
+  price: number;
   createdBy: number;
   updatedBy?: number | null;
   createdAt: string;

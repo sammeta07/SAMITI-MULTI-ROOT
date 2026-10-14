@@ -56,6 +56,7 @@ export class CreateProgramDialogComponent implements OnInit {
   public endDate: Date | null = null;
   public startTime: Date | null = null;
   public endTime: Date | null = null;
+  public price: number = 0;
 
   public readonly isSubmitting = signal<boolean>(false);
   public readonly isEditMode = signal<boolean>(false);
@@ -63,6 +64,8 @@ export class CreateProgramDialogComponent implements OnInit {
   public readonly isAddressEditable = signal<boolean>(false);
   public readonly isFetchingLocation = signal<boolean>(false);
   private readonly originalAddress = signal<string>('');
+  public readonly isPriceEditable = signal<boolean>(false);
+  private readonly originalPrice = signal<number>(0);
 
   ngOnInit(): void {
     const injectedProgramId = Number(this.injectedData?.programId);
@@ -121,6 +124,12 @@ export class CreateProgramDialogComponent implements OnInit {
     const injectedLongitude = Number(this.injectedData?.longitude);
     if (!Number.isNaN(injectedLongitude)) {
       this.longitude = injectedLongitude;
+    }
+
+    const injectedPrice = Number(this.injectedData?.price);
+    if (!Number.isNaN(injectedPrice)) {
+      this.price = injectedPrice;
+      this.originalPrice.set(injectedPrice);
     }
 
     if (this.latitude === null || this.longitude === null) {
@@ -183,9 +192,19 @@ export class CreateProgramDialogComponent implements OnInit {
     this.isAddressEditable.set(true);
   }
 
+  public enablePriceEdit(): void {
+    this.originalPrice.set(this.price);
+    this.isPriceEditable.set(true);
+  }
+
   public resetAddress(): void {
     this.address = this.originalAddress();
     this.isAddressEditable.set(false);
+  }
+
+  public resetPrice(): void {
+    this.price = this.originalPrice();
+    this.isPriceEditable.set(false);
   }
 
   public fetchUserLocation(): void {
@@ -284,7 +303,8 @@ export class CreateProgramDialogComponent implements OnInit {
       startDate: this.toDateString(this.startDate) || '',
       endDate: this.toDateString(this.endDate) || '',
       startTime: this.formatTimeForApi(this.startTime!),
-      endTime: this.formatTimeForApi(this.endTime!)
+      endTime: this.formatTimeForApi(this.endTime!),
+      price: this.price
     };
 
     const request$ = this.isEditMode()

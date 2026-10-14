@@ -25,6 +25,7 @@ export class CreateProgramService {
         endDate
         startTime
         endTime
+        price
         createdBy
         updatedBy
         createdAt
@@ -53,6 +54,7 @@ export class CreateProgramService {
         endDate
         startTime
         endTime
+        price
         createdBy
         updatedBy
         createdAt
