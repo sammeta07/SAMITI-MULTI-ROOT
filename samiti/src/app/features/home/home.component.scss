@@ -65,8 +65,8 @@
   }
 }
 
-/* RESIZER DIVIDER */
-.col-resizer {
+/* Keep the resize hit area in the original divider position between both panels. */
+.home-resize-handle {
   flex: 0 0 6px;
   align-self: stretch;
   cursor: col-resize;
@@ -77,31 +77,26 @@
   &::before {
     content: '';
     position: absolute;
-    top: 0;
-    bottom: 0;
+    top: 5px;
+    bottom: 5px;
     left: 50%;
     transform: translateX(-50%);
-    width: 3px;
+    width: 4px;
     background: #cbd5e1;
-    transition: background 0.15s ease;
+    transition: background 0.15s ease, box-shadow 0.15s ease;
   }
 
   &:hover::before,
-  &:active::before {
-    background: #f97316;
-  }
-
-  &.hidden {
-    display: none;
+  &:focus-visible::before,
+  &.is-resizing::before {
+    background: var(--clr-accent, #f97316);
+    // box-shadow: 0 0 0 1px #ffffff, 0 0 0 2px var(--clr-accent, #f97316);
   }
 }
 
-body.resizing-col {
-  cursor: col-resize;
-  user-select: none;
+.home-body.is-resizing {
   .committees-col,
-  .sidebar-col,
-  .col-resizer {
+  .sidebar-col {
     transition: none !important;
   }
 }

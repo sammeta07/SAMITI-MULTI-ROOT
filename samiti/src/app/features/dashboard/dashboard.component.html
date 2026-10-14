@@ -1,9 +1,12 @@
 <div class="samiti-workspace-shell">
-  <mat-sidenav-container class="workspace-sidenav-container">
+  <mat-sidenav-container class="workspace-sidenav-container"
+                         autosize
+                         [class.is-resizing]="isResizing()">
     <mat-sidenav #sidenav
                  [class.panel-collapsed]="!isHierarchyMenuOpen()"
                  mode="side"
                  [opened]="isHierarchyMenuOpen()"
+                 [style.width.px]="isHierarchyMenuOpen() ? sidenavWidth() : 0"
                  [class.sidebar-collapsed]="!isHierarchyMenuOpen()"
                  (closedStart)="closeSideMenu()">
 
@@ -11,7 +14,22 @@
          <div class="sidebar-tree-wrapper">
           <app-dashboard-hierarchy-tree></app-dashboard-hierarchy-tree>
         </div>
-        </div>
+
+        <div class="sidenav-resize-handle"
+             role="separator"
+             aria-orientation="vertical"
+             aria-label="Resize hierarchy panel"
+             tabindex="0"
+             [attr.aria-valuenow]="sidenavWidth()"
+             aria-valuemin="240"
+             aria-valuemax="560"
+             [class.is-resizing]="isResizing()"
+             matTooltip="Drag to resize · double-click to reset"
+             matTooltipPosition="below"
+             (mousedown)="onSidenavResizeStart($event)"
+             (dblclick)="resetSidenavWidth()"
+             (keydown)="onSidenavResizeKeydown($event)"></div>
+      </div>
     </mat-sidenav>
 
     <!-- Main Workspace Outlet Container -->

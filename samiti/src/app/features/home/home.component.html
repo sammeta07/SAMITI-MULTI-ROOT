@@ -1,12 +1,11 @@
 <div class="home-page" [class.dashboard-mode]="isLoggedIn">
-  <div class="home-body">
+  <div class="home-body" [class.is-resizing]="isResizing()">
 
     <!-- GROUPS / COMMITTEES SECTION -->
     <section class="committees-col" 
              [style.flex-basis]="committeesWidth() + '%'"
              [class.panel-collapsed]="!(uiService.isCommitteesSectionVisible$ | async)" 
              aria-label="Committees Management Panel">
-      
       <!-- Top Search & Controls -->
       <div class="col-search-bar">
         <div class="col-header-row">
@@ -484,14 +483,22 @@
       </div>
     </section>
 
-    <!-- Resizer Divider -->
-    <div class="col-resizer"
-         (mousedown)="onResizeStart($event)"
-         [class.hidden]="!(uiService.isCommitteesSectionVisible$ | async)"
-         role="separator"
-         aria-orientation="vertical"
-         matTooltip="Drag to resize"
-         matTooltipPosition="above"></div>
+    @if (uiService.isCommitteesSectionVisible$ | async) {
+      <div class="home-resize-handle"
+           role="separator"
+           aria-orientation="vertical"
+           aria-label="Resize groups and programs panels"
+           tabindex="0"
+           [attr.aria-valuenow]="committeesWidth()"
+           aria-valuemin="28"
+           aria-valuemax="82"
+           [class.is-resizing]="isResizing()"
+           matTooltip="Drag to resize · double-click to reset"
+           matTooltipPosition="above"
+           (mousedown)="onResizeStart($event)"
+           (dblclick)="resetCommitteesWidth()"
+           (keydown)="onResizeKeydown($event)"></div>
+    }
 
     <!-- PROGRAMS SIDEBAR SECTION -->
     <aside class="sidebar-col" 

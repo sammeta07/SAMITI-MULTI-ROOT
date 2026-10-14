@@ -123,7 +123,12 @@ export class HomeComponent implements OnDestroy, AfterViewChecked {
   public clearProgramSearch(): void { this.programSearchQuery.set(''); }
 
   public readonly committeesWidth = signal<number>(65);
+  public readonly isResizing = signal<boolean>(false);
   public readonly activeFilterMode = signal<'ACTIVE' | 'ALL'>('ACTIVE');
+
+  private static readonly COMMITTEES_MIN_WIDTH = 28;
+  private static readonly COMMITTEES_MAX_WIDTH = 82;
+  private static readonly COMMITTEES_KEYBOARD_STEP = 3;
 
   public isActiveFilterModeActive(): boolean {
     return this.activeFilterMode() === 'ACTIVE';
@@ -131,36 +136,31 @@ export class HomeComponent implements OnDestroy, AfterViewChecked {
 
   public onResizeStart(event: MouseEvent): void {
     event.preventDefault();
-    const homeBody = (event.currentTarget as HTMLElement).parentElement;
+    if (!(event.currentTarget instanceof HTMLElement)) return;
+    const homeBody = event.currentTarget.closest('.home-body');
     if (!homeBody) return;
 
-    const committeesCol = homeBody.querySelector('.committees-col') as HTMLElement;
-    if (!committeesCol) return;
-
-    const homeRect = homeBody.getBoundingClientRect();
-    const bodyWidth = homeRect.width;
-    const minPct = 28;
-    const maxPct = 82;
-
+    const startX = event.clientX;
+    const startWidth = this.committeesWidth();
     document.body.classList.add('resizing-col');
     document.body.style.userSelect = 'none';
+    document.body.style.cursor = 'col-resize';
+    this.isResizing.set(true);
 
-    // Hint to browser: optimize this element for width changes
-    committeesCol.style.willChange = 'width';
-    committeesCol.style.contain = 'layout';
-
-    let lastPct = this.committeesWidth();
+    let latestClientX = startX;
     let rafId: number | null = null;
 
-    const onMove = (e: MouseEvent) => {
-      const clientX = e.clientX;
+    const onMove = (moveEvent: MouseEvent) => {
+      latestClientX = moveEvent.clientX;
       if (rafId !== null) return;
       rafId = requestAnimationFrame(() => {
         rafId = null;
-        let pct = ((clientX - homeRect.left) / bodyWidth) * 100;
-        pct = Math.min(Math.max(pct, minPct), maxPct);
-        lastPct = pct;
-        committeesCol.style.flexBasis = pct + '%';
+        const containerWidth = homeBody.getBoundingClientRect().width;
+        if (containerWidth > 0) {
+          this.committeesWidth.set(
+            this.clampCommitteesWidth(startWidth + ((latestClientX - startX) / containerWidth) * 100)
+          );
+        }
       });
     };
 
@@ -169,20 +169,64 @@ export class HomeComponent implements OnDestroy, AfterViewChecked {
         cancelAnimationFrame(rafId);
         rafId = null;
       }
-      committeesCol.style.willChange = '';
-      committeesCol.style.contain = '';
+      const containerWidth = homeBody.getBoundingClientRect().width;
+      if (containerWidth > 0) {
+        this.committeesWidth.set(
+          this.clampCommitteesWidth(startWidth + ((latestClientX - startX) / containerWidth) * 100)
+        );
+      }
+      this.isResizing.set(false);
       document.body.classList.remove('resizing-col');
       document.body.style.userSelect = '';
-      this.committeesWidth.set(lastPct);
+      document.body.style.cursor = '';
       window.removeEventListener('mousemove', onMove);
       window.removeEventListener('mouseup', onUp);
     };
 
-    // Register listeners outside Angular's zone to prevent change-detection delays
-    this.ngZone.runOutsideAngular(() => {
-      window.addEventListener('mousemove', onMove);
-      window.addEventListener('mouseup', onUp);
-    });
+    window.addEventListener('mousemove', onMove);
+    window.addEventListener('mouseup', onUp);
+  }
+
+  public onResizeKeydown(event: KeyboardEvent): void {
+    const step = HomeComponent.COMMITTEES_KEYBOARD_STEP;
+    let nextWidth: number | null = null;
+
+    switch (event.key) {
+      case 'ArrowLeft':
+        nextWidth = this.committeesWidth() - step;
+        break;
+      case 'ArrowRight':
+        nextWidth = this.committeesWidth() + step;
+        break;
+      case 'Home':
+        nextWidth = HomeComponent.COMMITTEES_MIN_WIDTH;
+        break;
+      case 'End':
+        nextWidth = HomeComponent.COMMITTEES_MAX_WIDTH;
+        break;
+      case 'Enter':
+        this.resetCommitteesWidth();
+        event.preventDefault();
+        return;
+      default:
+        return;
+    }
+
+    event.preventDefault();
+    this.committeesWidth.set(this.clampCommitteesWidth(nextWidth));
+  }
+
+  public resetCommitteesWidth(): void {
+    this.committeesWidth.set(65);
+  }
+
+  private clampCommitteesWidth(width: number): number {
+    return Math.round(
+      Math.min(
+        Math.max(width, HomeComponent.COMMITTEES_MIN_WIDTH),
+        HomeComponent.COMMITTEES_MAX_WIDTH
+      ) * 10
+    ) / 10;
   }
 
   public readonly filteredNearbyGroups = computed(() => {
