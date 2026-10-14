@@ -283,6 +283,15 @@ body.resizing-col {
   overflow: hidden;
   padding: 0;
 
+  ::ng-deep .mat-mdc-tab-header {
+    min-height: 30px !important;
+
+    .mat-mdc-tab {
+      min-height: 30px !important;
+      height: 30px !important;
+    }
+  }
+
   ::ng-deep .mat-mdc-tab-body-wrapper {
     flex: 1;
     overflow: hidden;

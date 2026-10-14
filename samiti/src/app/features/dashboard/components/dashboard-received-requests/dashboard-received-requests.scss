@@ -57,6 +57,16 @@
 
   .inner-tab-group {
     padding: 0;
+
+    ::ng-deep .mat-mdc-tab-header {
+      min-height: 30px !important;
+
+      .mat-mdc-tab {
+        min-height: 30px !important;
+        height: 30px !important;
+      }
+    }
+
     ::ng-deep .mat-mdc-tab-body-wrapper {
       display: none !important;
     }
