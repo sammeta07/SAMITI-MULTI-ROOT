@@ -237,6 +237,7 @@ export class HomeService {
         distanceMeters
         committeeName
         committeeId
+        price
       }
     }`;
 

@@ -10,6 +10,7 @@ export interface EventProgramEntry {
   visibility: string;
   address?: string | null;
   programImage?: string | null;
+  price?: number | null;
   ownerUserId?: number | null;
   ownerName?: string | null;
   ownerAssignedBy?: number | null;

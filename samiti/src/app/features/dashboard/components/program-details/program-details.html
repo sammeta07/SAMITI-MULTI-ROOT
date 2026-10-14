@@ -53,6 +53,14 @@
               </span>
             }
 
+            <!-- Price Pill -->
+            @if (programData()?.price !== null && programData()?.price !== undefined) {
+              <span class="meta-pill price-pill" [class.price-free]="programData()!.price === 0" [class.price-paid]="programData()!.price > 0">
+                <mat-icon>{{ programData()!.price === 0 ? 'attach_money' : 'paid' }}</mat-icon>
+                <span>{{ programData()!.price === 0 ? 'FREE' : 'PAID' }}</span>
+              </span>
+            }
+
           </div>
         </div>
 

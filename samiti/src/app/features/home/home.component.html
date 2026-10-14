@@ -569,6 +569,14 @@
                         </span>
                       </div>
                     }
+                    @if (program.price > 0) {
+                      <div class="program-buy-pass-row program-buy-pass-overlay">
+                        <button type="button" mat-flat-button class="buy-pass-btn" (click)="onBuyPassClick(program, $event)">
+                          <mat-icon>local_activity</mat-icon>
+                          <span>Buy Pass</span>
+                        </button>
+                      </div>
+                    }
                     @if (program.bannerImages.length > 1) {
                       <div class="banner-carousel">
                         <img [src]="program.bannerImages[getProgramBannerIndex(program.id)]" [alt]="program.programName" class="program-banner-img" />

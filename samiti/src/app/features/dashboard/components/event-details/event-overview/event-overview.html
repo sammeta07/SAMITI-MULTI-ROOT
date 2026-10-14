@@ -155,6 +155,11 @@
                                 <strong>Time</strong>
                                 {{ formatProgramTimeRange(program.startTime, program.endTime) }}
                               </span>
+                              <span class="program-detail-row">
+                                @if (program.price && program.price > 0) {
+                                  <span class="price-badge price-paid">PAID - ₹{{ program.price }}</span>
+                                }
+                              </span>
                             </span>
                           </div>
                         </div>

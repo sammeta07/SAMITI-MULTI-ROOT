@@ -243,6 +243,7 @@ export class DashboardHierarchyTreeComponent implements OnInit, OnDestroy {
       ownerUserId: mappedType === 'program' ? (node.ownerUserId ?? undefined) : undefined,
       visibility: mappedType === 'program' ? (node.visibility ?? undefined) : undefined,
       votingPhaseState: node.votingPhaseState ?? undefined,
+      price: node.price ?? undefined,
       children: mappedChildren.length > 0 ? mappedChildren : undefined
     };
   }

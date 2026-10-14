@@ -792,6 +792,11 @@ export class HomeComponent implements OnDestroy, AfterViewChecked {
     window.open(mapsUrl, '_blank', 'noopener,noreferrer');
   }
 
+  onBuyPassClick(program: ProgramItem, event: Event): void {
+    event.stopPropagation();
+    this.notifier.info(`Pass purchase for "${program.programName}" coming soon.`);
+  }
+
   openEventDetails(eventId: number, event: Event): void {
     event.stopPropagation();
     if (!eventId) {

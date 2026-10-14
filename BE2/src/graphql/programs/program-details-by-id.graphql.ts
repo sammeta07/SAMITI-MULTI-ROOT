@@ -65,6 +65,7 @@ export const programDetailsTypes = `
     ownerAssignedBy: Int
     ownerAssignedAt: String
     canAssignOwner: Boolean!
+    price: Float!
   }
 `;
 
@@ -90,6 +91,7 @@ export const programDetailsResolvers = {
            p.name AS programName,
            p.address,
            p.visibility,
+           p.price AS price,
            DATE_FORMAT(p.start_date, '%Y-%m-%d') AS startDate,
            DATE_FORMAT(p.end_date, '%Y-%m-%d') AS endDate,
            p.start_time AS startTime,
@@ -215,7 +217,8 @@ export const programDetailsResolvers = {
         ownerDesignationIcon: program.ownerDesignationIcon || null,
         ownerAssignedBy: program.ownerAssignedBy === null ? null : Number(program.ownerAssignedBy),
         ownerAssignedAt: program.ownerAssignedAt || null,
-        canAssignOwner
+        canAssignOwner,
+        price: Number(program.price)
       };
     }
   }

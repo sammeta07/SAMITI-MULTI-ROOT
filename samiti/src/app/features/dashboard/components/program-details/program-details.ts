@@ -452,7 +452,8 @@ this.programOwnerService.assignOwner(currentProgram.programId, ownerUserId).subs
         startDate: currentProgram.startDate,
         endDate: currentProgram.endDate,
         startTime: currentProgram.startTime,
-        endTime: currentProgram.endTime
+        endTime: currentProgram.endTime,
+        price: currentProgram.price
       }
     });
 

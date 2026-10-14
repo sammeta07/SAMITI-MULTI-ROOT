@@ -43,6 +43,7 @@ export class ProgramDetailsService {
         ownerAssignedBy
         ownerAssignedAt
         canAssignOwner
+        price
       }
     }`;
 

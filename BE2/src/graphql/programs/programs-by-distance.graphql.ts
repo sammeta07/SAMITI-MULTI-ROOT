@@ -21,6 +21,7 @@ export const programsByDistanceTypes = `
     distanceMeters: Float!
     committeeName: String!
     committeeId: Int!
+    price: Float!
   }
 `;
 
@@ -79,6 +80,7 @@ export const programsByDistanceResolvers = {
            DATE_FORMAT(p.end_date, '%Y-%m-%d') AS endDate,
            TIME_FORMAT(p.start_time, '%H:%i:%s') AS startTime,
            TIME_FORMAT(p.end_time, '%H:%i:%s') AS endTime,
+           p.price AS price,
            (6371 * ACOS(LEAST(1, GREATEST(-1,
              COS(RADIANS(?)) * COS(RADIANS(e.latitude)) *
              COS(RADIANS(e.longitude) - RADIANS(?)) +
@@ -119,23 +121,24 @@ export const programsByDistanceResolvers = {
         }
       }
 
-      return programRows.map((program) => ({
-        id: Number(program.id),
-        programName: program.programName,
-        category: program.category || null,
-        address: program.address || null,
-        programLogo: program.programLogo || null,
-        latitude: program.latitude === null ? null : Number(program.latitude),
-        longitude: program.longitude === null ? null : Number(program.longitude),
-        startDate: program.startDate || null,
-        endDate: program.endDate || null,
-        startTime: program.startTime || null,
-        endTime: program.endTime || null,
-        bannerImages: bannerImagesByProgram[Number(program.id)] || [],
-        distanceMeters: Math.round(Number(program.distanceKm) * 1000),
-        committeeName: program.committeeName,
-        committeeId: Number(program.committeeId)
-      }));
+return programRows.map((program) => ({
+         id: Number(program.id),
+         programName: program.programName,
+         category: program.category || null,
+         address: program.address || null,
+         programLogo: program.programLogo || null,
+         latitude: program.latitude === null ? null : Number(program.latitude),
+         longitude: program.longitude === null ? null : Number(program.longitude),
+         startDate: program.startDate || null,
+         endDate: program.endDate || null,
+         startTime: program.startTime || null,
+         endTime: program.endTime || null,
+         bannerImages: bannerImagesByProgram[Number(program.id)] || [],
+         distanceMeters: Math.round(Number(program.distanceKm) * 1000),
+         committeeName: program.committeeName,
+         committeeId: Number(program.committeeId),
+         price: Number(program.price)
+       }));
     }
   }
 };

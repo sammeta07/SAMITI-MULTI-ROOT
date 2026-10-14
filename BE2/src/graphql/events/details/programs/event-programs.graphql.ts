@@ -53,6 +53,7 @@ export const eventProgramsTypes = `
     visibility: String!
     address: String
     programImage: String
+    price: Float!
     ownerUserId: Int
     ownerName: String
     ownerAssignedBy: Int
@@ -124,9 +125,10 @@ export const eventProgramsResolvers = {
            DATE_FORMAT(p.end_date, '%Y-%m-%d') AS endDate,
            TIME_FORMAT(p.start_time, '%H:%i:%s') AS startTime,
            TIME_FORMAT(p.end_time, '%H:%i:%s') AS endTime,
-           p.visibility,
-           p.address,
-           p.program_image AS program_image,
+p.visibility,
+            p.address,
+            p.price AS price,
+            p.program_image AS program_image,
            p.owner_user_id AS ownerUserId,
            owner.name AS ownerName,
            p.owner_assigned_by AS ownerAssignedBy,
@@ -160,21 +162,22 @@ export const eventProgramsResolvers = {
         };
 
         entries.push({
-          id: program.id,
-          programId: program.programId,
-          eventId: program.eventId,
-          programName: program.programName,
-          startDate: program.startDate,
-          endDate: program.endDate,
-          startTime: program.startTime,
-          endTime: program.endTime,
-          visibility: program.visibility,
-          address: program.address,
-          programImage: programWithImage.program_image,
-          ownerUserId: program.ownerUserId === null ? null : Number(program.ownerUserId),
-          ownerName: program.ownerName || null,
-          ownerAssignedBy: program.ownerAssignedBy === null ? null : Number(program.ownerAssignedBy),
-          ownerAssignedAt: program.ownerAssignedAt || null
+            id: program.id,
+            programId: program.programId,
+            eventId: program.eventId,
+            programName: program.programName,
+            startDate: program.startDate,
+            endDate: program.endDate,
+            startTime: program.startTime,
+            endTime: program.endTime,
+            visibility: program.visibility,
+            address: program.address,
+            programImage: programWithImage.program_image,
+            price: Number(program.price),
+            ownerUserId: program.ownerUserId === null ? null : Number(program.ownerUserId),
+            ownerName: program.ownerName || null,
+            ownerAssignedBy: program.ownerAssignedBy === null ? null : Number(program.ownerAssignedBy),
+            ownerAssignedAt: program.ownerAssignedAt || null
         });
       }
 

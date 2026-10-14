@@ -94,6 +94,7 @@ export interface ProgramItem {
   distanceMeters: number;
   committeeName: string;
   committeeId: number;
+  price: number;
 }
 
 export interface ProgramListRequestBackend {

@@ -119,6 +119,9 @@
                         @if (isProgramOwner(node)) {
                           <mat-icon class="program-badge-icon program-badge-owner" title="You are the owner">admin_panel_settings</mat-icon>
                         }
+                        @if (node.price != null && node.price > 0) {
+                          <mat-icon class="program-badge-icon money-icon" title="Price">currency_rupee</mat-icon>
+                        }
                         @if (isProgramVisibilityVisible(node)) {
                           <mat-icon class="program-badge-icon program-badge-visible" title="Visible to all">visibility_off</mat-icon>
                         }
@@ -215,6 +218,9 @@
                       }
                       @if (node.type === 'program') {
                         <span class="program-node-badges">
+                          @if (node.price != null && node.price > 0) {
+                            <mat-icon class="program-badge-icon money-icon" title="Price">currency_rupee</mat-icon>
+                          }
                           @if (isProgramVisibilityVisible(node)) {
                             <mat-icon class="program-badge-icon program-badge-visible" title="Visible to all">visibility_off</mat-icon>
                           }

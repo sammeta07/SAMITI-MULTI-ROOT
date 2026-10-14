@@ -22,6 +22,7 @@ type HierarchyTreeNode {
   ownerUserId: Int
   visibility: String
   votingPhaseState: Int
+  price: Float
   children: [HierarchyTreeNode!]!
 }
 
@@ -48,6 +49,7 @@ type InternalTreeNode = {
   ownerUserId?: number | null;
   visibility?: string | null;
   votingPhaseState?: number | null;
+  price?: number | null;
   children: InternalTreeNode[];
   childIds: Set<string>;
 };
@@ -77,6 +79,7 @@ export type SerializedHierarchyTreeNode = {
   ownerUserId: number | null;
   visibility: string | null;
   votingPhaseState: number | null;
+  price: number | null;
   children: SerializedHierarchyTreeNode[];
 };
 
@@ -294,6 +297,7 @@ const committeeIds = Array.from(committeeNodeById.keys());
              name AS program_name,
              owner_user_id AS ownerUserId,
              visibility,
+             price AS price,
              DATE_FORMAT(start_date, '%Y-%m-%d') AS start_date,
              DATE_FORMAT(end_date, '%Y-%m-%d') AS end_date,
              TIME_FORMAT(start_time, '%H:%i:%s') AS start_time,
@@ -324,6 +328,7 @@ const programNode: InternalTreeNode = {
           ownerUserId: programRow.ownerUserId === null || programRow.ownerUserId === undefined ? null : Number(programRow.ownerUserId),
           visibility: programRow.visibility ? String(programRow.visibility) : null,
           votingPhaseState: null,
+          price: programRow.price === null || programRow.price === undefined ? null : Number(programRow.price),
           children: [],
           childIds: new Set<string>()
         };
@@ -443,6 +448,7 @@ const taskNode: InternalTreeNode = {
         ownerUserId: node.ownerUserId ?? null,
         visibility: node.visibility ?? null,
         votingPhaseState: node.votingPhaseState ?? null,
+        price: node.price ?? null,
         children: node.children.map((childNode) => serializeNode(childNode))
       });
 

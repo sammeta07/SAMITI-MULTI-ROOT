@@ -27,6 +27,7 @@ export class EventProgramsService {
           visibility
           address
           programImage
+          price
           ownerUserId
           ownerName
           ownerAssignedBy

@@ -284,6 +284,20 @@
     border-color: #cbd5e1;
     mat-icon { color: #64748b; }
   }
+
+  &.price-free {
+    background: #f0fdf4;
+    color: #059669;
+    border-color: #bbf7d0;
+    mat-icon { color: #10b981; }
+  }
+
+  &.price-paid {
+    background: #fef2f2;
+    color: #dc2626;
+    border-color: #fca5a5;
+    mat-icon { color: #dc2626; }
+  }
 }
 
 .owner-designation-pill {

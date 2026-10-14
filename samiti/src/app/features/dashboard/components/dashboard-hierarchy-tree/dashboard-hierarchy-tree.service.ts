@@ -27,6 +27,7 @@ const nodeFields = `
   ownerUserId
   visibility
   votingPhaseState
+  price
 `;
 
 // Recursively build a `children { ... }` block up to `depth` levels deep.

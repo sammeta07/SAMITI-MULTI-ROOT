@@ -1058,6 +1058,34 @@
   flex: 0 0 auto;
 }
 
+.price-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  height: 22px;
+  padding: 0 10px;
+  border-radius: 999px;
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0.2px;
+  white-space: nowrap;
+  border: 1px solid #e2e8f0;
+  background: #f8fafc;
+  color: #475569;
+
+  &.price-free {
+    background: #f0fdf4;
+    color: #059669;
+    border-color: #bbf7d0;
+  }
+
+  &.price-paid {
+    background: #fef2f2;
+    color: #dc2626;
+    border-color: #fca5a5;
+  }
+}
+
 .program-detail {
   display: flex;
   align-items: center;

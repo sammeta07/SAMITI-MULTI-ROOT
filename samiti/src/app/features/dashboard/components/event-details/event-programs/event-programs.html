@@ -13,22 +13,25 @@
     <div class="horizontal-list-container">
       @for (program of eventData ?? []; track program.programId) {
       <article class="event-program-row" (click)="onOpenProgram(program.programId)">
-        <div class="program-row-left">
-          @if (program.programImage) {
-          <img [src]="program.programImage" [alt]="program.programName" class="program-row-banner" />
-          } @else {
-          <div class="program-row-banner-fallback">{{ program.programName.charAt(0).toUpperCase() }}</div>
-          }
-          <div class="program-row-info">
-            <div class="main-title">{{ program.programName }}</div>
-            <div class="secondary-sub-lbl">
-              {{ program.startDate }} – {{ program.endDate }}
+<div class="program-row-left">
+           @if (program.programImage) {
+           <img [src]="program.programImage" [alt]="program.programName" class="program-row-banner" />
+           } @else {
+           <div class="program-row-banner-fallback">{{ program.programName.charAt(0).toUpperCase() }}</div>
+           }
+<div class="program-row-info">
+              <div class="main-title">{{ program.programName }}</div>
+              @if (program.price && program.price > 0) {
+                <span class="meta-pill price-pill price-paid">PAID - ₹{{ program.price }}</span>
+              }
+              <div class="secondary-sub-lbl">
+                {{ program.startDate }} – {{ program.endDate }}
+              </div>
+              <div class="secondary-sub-lbl">
+                {{ program.startTime }} – {{ program.endTime }}
+              </div>
             </div>
-            <div class="secondary-sub-lbl">
-              {{ program.startTime }} – {{ program.endTime }}
-            </div>
-          </div>
-        </div>
+         </div>
         <div class="program-row-right">
           <span class="status-tag tag-{{ program.visibility.toLowerCase() }}">{{ program.visibility }}</span>
           <button mat-icon-button class="circle-btn view-btn" type="button" title="Open program"

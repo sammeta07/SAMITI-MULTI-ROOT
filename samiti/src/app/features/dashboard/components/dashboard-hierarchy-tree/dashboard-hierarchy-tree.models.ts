@@ -17,6 +17,7 @@ export interface AdminHierarchyTreeNode {
   ownerUserId?: number | null;
   visibility?: string | null;
   votingPhaseState?: number | null;
+  price?: number | null;
   children: AdminHierarchyTreeNode[];
 }
 
@@ -63,4 +64,5 @@ export interface TreeNode {
   ownerUserId?: number | null;
   visibility?: string | null;
   votingPhaseState?: number | null;
+  price?: number | null;
 }

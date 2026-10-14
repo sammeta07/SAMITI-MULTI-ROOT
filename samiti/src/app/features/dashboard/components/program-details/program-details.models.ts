@@ -22,6 +22,7 @@ export interface ProgramDetailsPayload {
   ownerAssignedBy?: number | null;
   ownerAssignedAt?: string | null;
   canAssignOwner: boolean;
+  price: number;
 }
 
 export interface ProgramTask {
