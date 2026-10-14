@@ -38,6 +38,7 @@
     }
 
     /* 🛑 ABSOLUTE OVERRIDE TO KILL INTERNAL DOUBLE SCROLLBARS */
+
     .mat-drawer-inner-container,
     .mat-sidenav-inner-container {
       display: flex !important;
@@ -49,6 +50,7 @@
       box-shadow: none !important;
       transform: none !important;
       transition: none !important;
+      // padding: 10px !important;
     }
 
     .mdc-dialog,
@@ -90,6 +92,10 @@
   height: 100%;
   width: 100%;
   overflow: hidden;
+  // background-color:rgb(217, 227, 232);
+  padding: 10px;
+  // margin: 10px;
+  border-radius: 8px;
 }
 
 /* 🌳 TREE WRAPPER (SOLE Y-SCROLL CONTEXT) */
