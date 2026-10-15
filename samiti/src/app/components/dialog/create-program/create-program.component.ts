@@ -66,6 +66,7 @@ export class CreateProgramDialogComponent implements OnInit {
   private readonly originalAddress = signal<string>('');
   public readonly isPriceEditable = signal<boolean>(false);
   private readonly originalPrice = signal<number>(0);
+  private hasInjectedPrice = false;
 
   ngOnInit(): void {
     const injectedProgramId = Number(this.injectedData?.programId);
@@ -127,9 +128,10 @@ export class CreateProgramDialogComponent implements OnInit {
     }
 
     const injectedPrice = Number(this.injectedData?.price);
-    if (!Number.isNaN(injectedPrice)) {
+    if (this.injectedData?.price !== undefined && this.injectedData?.price !== null && !Number.isNaN(injectedPrice)) {
       this.price = injectedPrice;
       this.originalPrice.set(injectedPrice);
+      this.hasInjectedPrice = true;
     }
 
     if (this.latitude === null || this.longitude === null) {
@@ -310,7 +312,8 @@ export class CreateProgramDialogComponent implements OnInit {
     const request$ = this.isEditMode()
       ? this.createProgramService.updateProgram({
           ...payload,
-          programId: Number(this.editingProgramId())
+          programId: Number(this.editingProgramId()),
+          ...(this.hasInjectedPrice ? {} : { price: undefined })
         })
       : this.createProgramService.createProgram(payload);
 

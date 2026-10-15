@@ -1,0 +1,59 @@
+<div class="drawer-layout-shell">
+  <mat-toolbar class="drawer-synchronized-header">
+    <div class="drawer-title-group">
+      <mat-icon class="mode-indicator-icon">task_alt</mat-icon>
+      <div class="drawer-title-text">
+        <h2>Create Task</h2>
+        <p>Add an internal task to this event</p>
+      </div>
+    </div>
+    <button mat-icon-button type="button" class="drawer-close-btn" (click)="onCancel()" aria-label="Close dialog">
+      <mat-icon>close</mat-icon>
+    </button>
+  </mat-toolbar>
+
+  <div class="dialog-body">
+    <form class="create-task-form" (ngSubmit)="onSubmit()">
+      <mat-form-field appearance="outline" class="full-width">
+        <mat-label>Task name</mat-label>
+        <input
+          matInput
+          name="taskName"
+          [(ngModel)]="taskName"
+          maxlength="255"
+          placeholder="e.g. Arrange lighting"
+          required
+          autofocus
+        />
+        <mat-icon matPrefix>checklist</mat-icon>
+        <mat-hint align="end">{{ taskName.length }}/255</mat-hint>
+      </mat-form-field>
+
+      <mat-form-field appearance="outline" class="full-width">
+        <mat-label>Parent task (optional)</mat-label>
+        <mat-select name="parentTaskId" [(ngModel)]="parentTaskId">
+          <mat-option [value]="null">No parent task</mat-option>
+          @for (task of data.parentTasks; track task.taskId) {
+            <mat-option [value]="task.taskId">{{ task.taskName }}</mat-option>
+          }
+        </mat-select>
+        <mat-icon matPrefix>account_tree</mat-icon>
+        <mat-hint>Select this to create a subtask.</mat-hint>
+      </mat-form-field>
+    </form>
+  </div>
+
+  <footer class="drawer-action-footer">
+    <button mat-button type="button" class="btn-cancel-flat" (click)="onCancel()">Cancel</button>
+    <button
+      mat-flat-button
+      type="button"
+      class="submit-action-btn"
+      [disabled]="!isFormValid || isSubmitting()"
+      (click)="onSubmit()"
+    >
+      <mat-icon>{{ isSubmitting() ? 'hourglass_top' : 'add' }}</mat-icon>
+      <span>{{ isSubmitting() ? 'Creating...' : 'Create Task' }}</span>
+    </button>
+  </footer>
+</div>

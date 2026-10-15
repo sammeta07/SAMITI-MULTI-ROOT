@@ -1,6 +1,6 @@
 // Environment configuration for Production
 
-const LOCAL_BACKEND_URL = 'http://localhost:3000';
+const LOCAL_BACKEND_URL = 'http://localhost:3001';
 
 export const environment = {
     production: true,

@@ -144,7 +144,12 @@ export const updateProgramResolvers = {
       const endDate = normalizeDate(input.endDate, 'endDate');
       const startTime = normalizeTime(input.startTime, 'startTime');
       const endTime = normalizeTime(input.endTime, 'endTime');
-      const price = Number(input.price) || 0;
+      const hasPriceUpdate = input.price !== undefined && input.price !== null;
+      const price = hasPriceUpdate ? Number(input.price) : null;
+
+      if (hasPriceUpdate && (!Number.isFinite(price) || (price as number) < 0)) {
+        throwProgramError('BAD_REQUEST', 'price must be a non-negative number');
+      }
 
       if (!Number.isInteger(programId) || programId <= 0) {
         throwProgramError('BAD_REQUEST', 'programId must be a positive integer');
@@ -212,30 +217,38 @@ export const updateProgramResolvers = {
         throwProgramError('FORBIDDEN', 'Only committee admins can update programs');
       }
 
+      const updateAssignments = [
+        'name = ?',
+        'start_date = ?',
+        'end_date = ?',
+        'start_time = ?',
+        'end_time = ?',
+        'address = ?',
+        'visibility = ?'
+      ];
+      const updateParams: any[] = [
+        programName,
+        startDate,
+        endDate,
+        startTime,
+        endTime,
+        address,
+        visibility
+      ];
+
+      if (hasPriceUpdate) {
+        updateAssignments.push('price = ?');
+        updateParams.push(price);
+      }
+
+      updateAssignments.push('updated_by = ?');
+      updateParams.push(loggedInUserId, programId);
+
       await execute(
         `UPDATE programs
-         SET name = ?,
-             start_date = ?,
-             end_date = ?,
-             start_time = ?,
-             end_time = ?,
-             address = ?,
-             visibility = ?,
-             price = ?,
-             updated_by = ?
+         SET ${updateAssignments.join(',\n             ')}
          WHERE id = ?`,
-        [
-          programName,
-          startDate,
-          endDate,
-          startTime,
-          endTime,
-          address,
-          visibility,
-          price,
-          loggedInUserId,
-          programId
-        ]
+        updateParams
       );
 
       const updatedRows = await query<any[]>(

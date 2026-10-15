@@ -142,7 +142,12 @@ export const createProgramResolvers = {
       const endDate = normalizeDate(input.endDate, 'endDate');
       const startTime = normalizeTime(input.startTime, 'startTime');
       const endTime = normalizeTime(input.endTime, 'endTime');
-      const price = Number(input.price) || 0;
+      const hasPrice = input.price !== undefined && input.price !== null;
+      const price = hasPrice ? Number(input.price) : 0;
+
+      if (hasPrice && (!Number.isFinite(price) || price < 0)) {
+        throwProgramError('BAD_REQUEST', 'price must be a non-negative number');
+      }
 
       if (!Number.isInteger(eventId) || eventId <= 0) {
         throwProgramError('BAD_REQUEST', 'eventId must be a positive integer');

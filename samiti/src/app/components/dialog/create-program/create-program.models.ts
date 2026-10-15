@@ -7,7 +7,7 @@ export interface CreateProgramPayload {
   endDate: string;
   startTime: string;
   endTime: string;
-  price: number;
+  price?: number;
 }
 
 export interface CreateProgramResponse {

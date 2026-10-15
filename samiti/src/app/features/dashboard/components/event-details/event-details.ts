@@ -107,12 +107,12 @@ export class EventDetailsComponent implements OnInit, OnDestroy {
     const url = this.router.url;
     if (url.includes('/overview')) this.selectedTabIndex = 1;
     else if (url.includes('/programs')) this.selectedTabIndex = 2;
-    else if (url.includes('/people')) this.selectedTabIndex = 3;
+    else if (url.includes('/tasks')) this.selectedTabIndex = 3;
     else this.selectedTabIndex = 0;
   }
 
   public onTabChange(index: number): void {
-    const tabs: Array<'voting' | 'overview' | 'programs' | 'people'> = ['voting', 'overview', 'programs', 'people'];
+    const tabs: Array<'voting' | 'overview' | 'programs' | 'tasks'> = ['voting', 'overview', 'programs', 'tasks'];
     const tab = tabs[index];
     const eventId = this.eventData?.eventId ?? this.route.snapshot.params['id'];
     if (!eventId) return;
@@ -136,7 +136,7 @@ export class EventDetailsComponent implements OnInit, OnDestroy {
     if (url.includes('/voting')) return 'voting';
     if (url.includes('/overview')) return 'overview';
     if (url.includes('/programs')) return 'programs';
-    if (url.includes('/people')) return 'people';
+    if (url.includes('/tasks')) return 'tasks';
     return 'voting';
   }
 

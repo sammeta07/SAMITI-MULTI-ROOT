@@ -26,6 +26,7 @@ import { eventOverviewTypes, eventOverviewQueryFields, eventOverviewResolvers } 
 import { eventDetailsHeaderTypes, eventDetailsHeaderQueryFields, eventDetailsHeaderResolvers } from './events/details/header/event-details-header.graphql';
 import { eventPeopleTypes, eventPeopleQueryFields, eventPeopleResolvers } from './events/details/people/event-people.graphql';
 import { eventProgramsTypes, eventProgramsQueryFields, eventProgramsResolvers } from './events/details/programs/event-programs.graphql';
+import { eventTasksTypes, eventTasksQueryFields, createEventTaskMutationFields, eventTasksResolvers } from './events/details/tasks/event-tasks.graphql';
 import { eventVotingDetailsTypes, eventVotingDetailsQueryFields, eventVotingDetailsResolvers } from './events/details/voting/event-voting.graphql';
 import { uploadEventBannerImagesTypes, uploadEventBannerImagesMutationFields, uploadEventBannerImagesResolvers } from './events/media/upload-event-banner-images.graphql';
 import { deleteEventTypes, deleteEventMutationFields, deleteEventResolvers } from './events/management/delete-event.graphql';
@@ -88,9 +89,10 @@ export const typeDefs = `
     ${eventDetailsTypes}
     ${eventOverviewTypes}
     ${eventDetailsHeaderTypes}
-    ${eventPeopleTypes}
-   ${eventProgramsTypes}
-    ${eventVotingDetailsTypes}
+     ${eventPeopleTypes}
+    ${eventProgramsTypes}
+     ${eventTasksTypes}
+     ${eventVotingDetailsTypes}
     ${uploadEventBannerImagesTypes}
    ${deleteEventTypes}
 
@@ -114,9 +116,10 @@ export const typeDefs = `
     ${eventDetailsQueryFields}
     ${eventOverviewQueryFields}
     ${eventDetailsHeaderQueryFields}
-    ${eventPeopleQueryFields}
-    ${eventProgramsQueryFields}
-    ${eventVotingDetailsQueryFields}
+     ${eventPeopleQueryFields}
+     ${eventProgramsQueryFields}
+     ${eventTasksQueryFields}
+     ${eventVotingDetailsQueryFields}
     ${eventVotingQueryFields}
     ${eventInterestQueryFields}
     ${eventVoteQueryFields}
@@ -142,6 +145,7 @@ export const typeDefs = `
     ${eventInterestMutationFields}
     ${eventVoteMutationFields}
     ${updateEventVotingModeMutationFields}
+    ${createEventTaskMutationFields}
     ${toggleCommitteeFavouriteMutationFields}
     ${cancelCommitteeMembershipRequestMutationFields}
     ${submitCommitteeMembershipRequestMutationFields}
@@ -175,6 +179,7 @@ export const resolvers = {
     ...eventDetailsHeaderResolvers.Query,
     ...eventPeopleResolvers.Query,
     ...eventProgramsResolvers.Query,
+    ...eventTasksResolvers.Query,
     ...eventVotingDetailsResolvers.Query,
     ...eventInterestResolvers.Query,
     ...eventVoteResolvers.Query,
@@ -207,6 +212,7 @@ export const resolvers = {
     ...eventInterestResolvers.Mutation,
     ...eventVoteResolvers.Mutation,
     ...updateEventVotingModeResolvers.Mutation,
+    ...eventTasksResolvers.Mutation,
     ...toggleCommitteeFavouriteResolvers.Mutation,
   }
 };

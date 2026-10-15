@@ -93,8 +93,8 @@ export const routes: Routes = [
             loadComponent: () => import('./features/dashboard/components/event-details/event-programs/event-programs').then(m => m.EventProgramsComponent)
           },
           {
-            path: 'people',
-            loadComponent: () => import('./features/dashboard/components/event-details/event-people/event-people').then(m => m.EventPeopleComponent)
+            path: 'tasks',
+            loadComponent: () => import('./features/dashboard/components/event-details/event-tasks/event-tasks').then(m => m.EventTasksComponent)
           },
           {
             path: '',

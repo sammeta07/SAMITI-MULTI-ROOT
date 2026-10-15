@@ -1,47 +1,235 @@
 <div class="programs-tab-content">
-  <section class="horizontal-full-card programs-section-style">
-    <div class="panel-card-header">
+  <section class="program-details-section">
+    <div class="panel-card-header program-header-bg">
       <div class="header-title-left">
         <mat-icon class="icon-accent-program">event_note</mat-icon>
-        <span class="title-text">Programs</span>
-        <span class="count-pill">{{ programsCount }}</span>
+        <span class="title-text">Program Details</span>
+        <span class="count-pill">{{ eventPrograms.length }}</span>
       </div>
-      <button mat-stroked-button class="action-btn create-program-btn" (click)="onCreateProgram()">
-        <mat-icon>add</mat-icon>Program
-      </button>
+      @if (canCreateProgram) {
+        <button mat-stroked-button class="btn-action btn-add-program" type="button" (click)="onCreateProgram()">
+          <mat-icon>add</mat-icon>
+          <span>Program</span>
+        </button>
+      }
     </div>
-    <div class="horizontal-list-container">
-      @for (program of eventData ?? []; track program.programId) {
-      <article class="event-program-row" (click)="onOpenProgram(program.programId)">
-<div class="program-row-left">
-           @if (program.programImage) {
-           <img [src]="program.programImage" [alt]="program.programName" class="program-row-banner" />
-           } @else {
-           <div class="program-row-banner-fallback">{{ program.programName.charAt(0).toUpperCase() }}</div>
-           }
-<div class="program-row-info">
-              <div class="main-title">{{ program.programName }}</div>
-               @if (program.price && program.price > 0) {
-                 <span class="meta-pill price-pill price-paid">{{ formatProgramPriceLabel(program.price) }}</span>
-               }
-              <div class="secondary-sub-lbl">
-                {{ program.startDate }} – {{ program.endDate }}
-              </div>
-              <div class="secondary-sub-lbl">
-                {{ program.startTime }} – {{ program.endTime }}
-              </div>
-            </div>
-         </div>
-        <div class="program-row-right">
-          <span class="status-tag tag-{{ program.visibility.toLowerCase() }}">{{ program.visibility }}</span>
-          <button mat-icon-button class="circle-btn view-btn" type="button" title="Open program"
-                  (click)="onOpenProgram(program.programId); $event.stopPropagation()">
-            <mat-icon>open_in_new</mat-icon>
-          </button>
+
+    <div class="program-details-body">
+      @if (isLoadingPrograms) {
+        <div class="program-empty-state">
+          <p class="program-empty-text">Loading programs...</p>
         </div>
-      </article>
-      } @empty {
-      <div class="mini-empty-state">No programs available</div>
+      } @else {
+        @if (eventPrograms.length > 0) {
+          <div class="program-list">
+            @for (program of eventPrograms; track program.programId + '-' + program.startDate) {
+              <article class="program-card">
+                <div class="program-card-info">
+                  <div class="program-card-layout">
+                    <div class="program-card-content">
+                      <div class="program-title-group">
+                        <h3 class="program-name">
+                          {{ program.programName | titlecase }}
+                          @if (shouldShowProgramRepeatIcon(program)) {
+                            <mat-icon class="program-repeat-icon" title="Program has not ended" aria-label="Program has not ended">repeat</mat-icon>
+                          }
+                        </h3>
+                        <span class="program-address-text">{{ program.address | titlecase }}</span>
+                      </div>
+
+                      <div class="program-details-grid">
+                        <div class="program-detail program-detail-combined date-time-status-{{ getProgramStatus(program) }}">
+                          <mat-icon>event</mat-icon>
+                          <span class="program-detail-text">
+                            <span class="program-detail-row">
+                              <strong>Date</strong>
+                              @if (program.startDate !== program.endDate) {
+                                {{ formatProgramDateRange(program.startDate, program.endDate) }}
+                              } @else {
+                                {{ formatDisplayDate(program.startDate) }}
+                              }
+                            </span>
+                            <span class="program-detail-separator">|</span>
+                            <span class="program-detail-row">
+                              <mat-icon class="program-time-icon">schedule</mat-icon>
+                              <strong>Time</strong>
+                              {{ formatProgramTimeRange(program.startTime, program.endTime) }}
+                            </span>
+                            <span class="program-detail-row">
+                              @if (program.price && program.price > 0) {
+                                <span class="price-badge price-paid">{{ formatProgramPriceLabel(program.price) }}</span>
+                              }
+                            </span>
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+                    <div class="program-card-action">
+                      <div class="program-owner-row">
+                        @if (canAssignProgramOwner && isEditingProgramOwner(program.programId)) {
+                          <div class="program-owner-edit-layout">
+                            <span class="program-owner-autocomplete-box">
+                              <mat-form-field class="program-owner-autocomplete-field" appearance="fill" subscriptSizing="dynamic">
+                                <span matPrefix class="da-input-icon"><mat-icon>search</mat-icon></span>
+                                <input
+                                  type="text"
+                                  matInput
+                                  autocomplete="off"
+                                  [(ngModel)]="programOwnerInputText[program.programId]"
+                                  (input)="onProgramOwnerSearch(program.programId, $any($event.target).value)"
+                                  (focus)="onProgramOwnerInputFocus(program, programOwnerTrigger)"
+                                  placeholder="Search member..."
+                                  [matAutocomplete]="autoProgramOwner"
+                                  #programOwnerTrigger="matAutocompleteTrigger"
+                                  [disabled]="programsUpdatingOwner().has(program.programId)"
+                                  aria-label="Assign program owner"
+                                />
+                                @if (programsUpdatingOwner().has(program.programId)) {
+                                  <span matSuffix class="program-owner-saving">
+                                    @if (getProgramOwnerCandidate(program); as ownerCandidate) {
+                                      @if (ownerCandidate.icon && !isProgramOwnerInputFocused(program.programId)) {
+                                        <span class="program-owner-designation" [ngStyle]="{'color': ownerCandidate.color || getRoleColor(ownerCandidate.committeeRole)}">{{ ownerCandidate.icon }}</span>
+                                      }
+                                    }
+                                    <mat-progress-spinner mode="indeterminate" diameter="14" strokeWidth="2"></mat-progress-spinner>
+                                    <span>Saving...</span>
+                                  </span>
+                                } @else if (isEditingProgramOwner(program.programId)) {
+                                  <span matSuffix class="program-owner-input-suffix">
+                                    @if (hasProgramOwnerSearch(program.programId)) {
+                                      <button
+                                        class="program-owner-clear-btn"
+                                        type="button"
+                                        title="Clear search"
+                                        aria-label="Clear member search"
+                                        (mousedown)="clearProgramOwnerSearch(program, programOwnerTrigger, $event)"
+                                      >
+                                        <mat-icon>close</mat-icon>
+                                      </button>
+                                    }
+                                    @if (getProgramOwnerCandidate(program); as ownerCandidate) {
+                                      @if (ownerCandidate.icon && !isProgramOwnerInputFocused(program.programId)) {
+                                        <span class="program-owner-designation" [ngStyle]="{'color': ownerCandidate.color || getRoleColor(ownerCandidate.committeeRole)}">{{ ownerCandidate.icon }}</span>
+                                      }
+                                    }
+                                  </span>
+                                } @else {
+                                  <span matSuffix class="da-input-icon"><mat-icon>expand_more</mat-icon></span>
+                                }
+                                <mat-autocomplete
+                                  #autoProgramOwner="matAutocomplete"
+                                  class="da-program-owner-autocomplete"
+                                  [displayWith]="displayProgramOwnerName"
+                                  hideSingleSelectionIndicator
+                                  (optionSelected)="onProgramOwnerSelect(program, $event)"
+                                >
+                                  @for (candidate of getFilteredCandidates(program); track candidate.userId) {
+                                    <mat-option
+                                      [value]="candidate.userId"
+                                      [disabled]="candidate.userId === program.ownerUserId"
+                                      class="da-opt-row"
+                                      [ngClass]="getRoleColorClass(candidate.committeeRole)"
+                                    >
+                                      <div class="mat-auto-options">
+                                        <span class="da-opt-avatar" [ngClass]="getRoleColorClass(candidate.committeeRole)">
+                                          @if (candidate.photo) {
+                                            <img [src]="candidate.photo" [alt]="candidate.name" class="da-opt-img" />
+                                          } @else {
+                                            <span class="da-opt-initials">{{ getInitials(candidate.name) }}</span>
+                                          }
+                                        </span>
+                                        <div class="mat-auto-options-name-email">
+                                          <span class="da-opt-name">{{ candidate.name | titlecase }}</span>
+                                          <span class="da-opt-email">{{ candidate.email }}</span>
+                                        </div>
+                                        @if (candidate.icon) {
+                                          <span class="da-opt-cup" [ngStyle]="{'color': candidate.color || getRoleColor(candidate.committeeRole)}">{{ candidate.icon }}</span>
+                                        }
+                                      </div>
+                                    </mat-option>
+                                  }
+                                  @if (getFilteredCandidates(program).length === 0) {
+                                    <mat-option disabled class="da-opt-empty">No members found</mat-option>
+                                  }
+                                </mat-autocomplete>
+                              </mat-form-field>
+                            </span>
+                            @if (!programsUpdatingOwner().has(program.programId)) {
+                              <span class="program-owner-cancel-box">
+                                <button mat-icon-button class="program-owner-cancel-btn" type="button" title="Cancel" aria-label="Cancel edit" (click)="cancelEditProgramOwner(program)">
+                                  <mat-icon>close</mat-icon>
+                                </button>
+                              </span>
+                            }
+                          </div>
+                        } @else {
+                          <div class="program-owner-value-wrap" [class.program-owner-unassigned]="isOwnerUnassigned(program)">
+                            <span class="program-owner-text-box">
+                              <span class="program-owner-label">Owner -</span>
+                              <span class="program-owner-name">{{ (program.ownerName || 'UNASSIGNED') | titlecase }}</span>
+                              @if (getProgramOwnerCandidate(program); as ownerCandidate) {
+                                @if (ownerCandidate.icon) {
+                                  <span class="program-owner-designation" [ngStyle]="{'color': ownerCandidate.color || getRoleColor(ownerCandidate.committeeRole)}">{{ ownerCandidate.icon }}</span>
+                                }
+                              }
+                            </span>
+                            @if (canAssignProgramOwner) {
+                              @if (isEditingProgramOwner(program.programId)) {
+                                <span class="program-owner-action-box">
+                                  <button
+                                    mat-icon-button
+                                    class="program-owner-edit"
+                                    type="button"
+                                    title="Cancel edit"
+                                    aria-label="Cancel edit"
+                                    [disabled]="programsUpdatingOwner().has(program.programId)"
+                                    (click)="cancelEditProgramOwner(program)"
+                                  >
+                                    <mat-icon>close</mat-icon>
+                                  </button>
+                                </span>
+                              } @else {
+                                <span class="program-owner-action-box">
+                                  <button
+                                    mat-icon-button
+                                    class="program-owner-edit"
+                                    type="button"
+                                    title="Edit program owner"
+                                    aria-label="Edit program owner"
+                                    [disabled]="programsUpdatingOwner().has(program.programId)"
+                                    (click)="editProgramOwner(program)"
+                                  >
+                                    <mat-icon>edit</mat-icon>
+                                  </button>
+                                </span>
+                              }
+                            }
+                          </div>
+                        }
+                      </div>
+                      @if (canManageProgramVisibility) {
+                        <button mat-button class="visibility-toggle-btn" type="button" (click)="updateProgramVisibility(program, program.visibility !== 'VISIBLE')" [disabled]="programsUpdatingVisibility().has(program.programId)">
+                          <mat-icon>{{ program.visibility === 'VISIBLE' ? 'visibility_off' : 'visibility' }}</mat-icon>
+                          <span>{{ program.visibility === 'VISIBLE' ? 'HIDE' : 'SHOW' }}</span>
+                        </button>
+                      } @else {
+                        <span class="program-visibility-label" [class.visibility-visible]="program.visibility === 'VISIBLE'" [class.visibility-hidden]="program.visibility !== 'VISIBLE'">
+                          {{ program.visibility === 'VISIBLE' ? 'This program is visible to public' : 'This program is Hidden from public' }}
+                        </span>
+                      }
+                    </div>
+                  </div>
+                </div>
+              </article>
+            }
+          </div>
+        } @else {
+          <div class="program-empty-state">
+            <mat-icon class="program-empty-icon">event_note</mat-icon>
+            <p class="program-empty-text">No programs scheduled for this event yet.</p>
+            <p class="program-empty-subtext">Create a program to get started.</p>
+          </div>
+        }
       }
     </div>
   </section>
