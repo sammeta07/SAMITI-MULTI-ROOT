@@ -1,0 +1,2 @@
+ALTER TABLE tasks
+  MODIFY COLUMN event_id INT NOT NULL;
