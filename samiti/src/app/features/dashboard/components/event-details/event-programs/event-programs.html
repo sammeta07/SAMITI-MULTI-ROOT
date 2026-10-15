@@ -21,9 +21,9 @@
            }
 <div class="program-row-info">
               <div class="main-title">{{ program.programName }}</div>
-              @if (program.price && program.price > 0) {
-                <span class="meta-pill price-pill price-paid">PAID - ₹{{ program.price }}</span>
-              }
+               @if (program.price && program.price > 0) {
+                 <span class="meta-pill price-pill price-paid">{{ formatProgramPriceLabel(program.price) }}</span>
+               }
               <div class="secondary-sub-lbl">
                 {{ program.startDate }} – {{ program.endDate }}
               </div>

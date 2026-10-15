@@ -10,6 +10,7 @@ import { EventProgramsService } from './event-programs.service';
 import { EventProgramEntry } from './event-programs.models';
 import { EventDetailsStateService } from '../event-details-state.service';
 import { Subscription } from 'rxjs';
+import { formatProgramPriceLabel } from '../../../../../shared/services/program-price.util';
 
 @Component({
   selector: 'app-event-programs',
@@ -28,6 +29,10 @@ export class EventProgramsComponent implements OnInit, OnDestroy{
   private readonly dialog = inject(MatDialog);
   private readonly notifier = inject(NotifierService);
   private readonly programsService = inject(EventProgramsService);
+
+  public formatProgramPriceLabel(price: number | null | undefined): string {
+    return formatProgramPriceLabel(price);
+  }
   private readonly stateService = inject(EventDetailsStateService);
   private parentParamsSub?: Subscription;
 

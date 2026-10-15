@@ -20,6 +20,7 @@ import { CreateProgramDialogComponent } from '../../../../components/dialog/crea
 import { ImageAssetService } from '../../../../core/services/image-asset.service';
 import { LoadingStateService } from '../../../../shared/services/loading-state.service';
 import { getEventComputedStatus } from '../../../../shared/services/event-status.util';
+import { formatProgramPriceLabel } from '../../../../shared/services/program-price.util';
 import { ConfirmDialogService } from '../../../../components/dialog/confirm/confirm-dialog.service';
 import { ConfirmDialogData } from '../../../../components/dialog/confirm/confirm-dialog.models';
 import { ProgramOwnerService } from '../program-owner/program-owner.service';
@@ -82,6 +83,8 @@ export class ProgramDetailsComponent implements OnInit {
     if (!program?.startDate) return 'completed';
     return getEventComputedStatus(program.startDate, program.endDate).toLowerCase() as 'started' | 'upcoming' | 'completed';
   });
+
+  public readonly formattedPriceLabel = computed<string>(() => formatProgramPriceLabel(this.programData()?.price));
 
   public readonly timePillStatusClass = computed<string>(() => {
     const program = this.programData();

@@ -33,6 +33,7 @@ import { EventVotingService } from '../event-voting/event-voting.service';
 import { EventDirectAssignMember } from '../event-voting/event-voting.models';
 import { getEventComputedStatus, isProgramEndDateInFuture, parseLocalDate } from '../../../../../shared/services/event-status.util';
 import { compareByScheduleAndStatus } from '../../../../../shared/services/program-schedule-sort.util';
+import { formatProgramPriceLabel } from '../../../../../shared/services/program-price.util';
 
 @Component({
   selector: 'app-event-overview',
@@ -306,6 +307,10 @@ export class EventOverviewComponent implements OnInit {
 
   public getProgramStatus(program: EventProgramEntry): 'started' | 'upcoming' | 'completed' {
     return getEventComputedStatus(program.startDate, program.endDate).toLowerCase() as 'started' | 'upcoming' | 'completed';
+  }
+
+  public formatProgramPriceLabel(price: number | null | undefined): string {
+    return formatProgramPriceLabel(price);
   }
 
   public shouldShowProgramRepeatIcon(program: EventProgramEntry): boolean {
