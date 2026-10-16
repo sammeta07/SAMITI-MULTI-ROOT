@@ -108,6 +108,10 @@ export const routes: Routes = [
         loadComponent: () => import('./features/dashboard/components/program-details/program-details').then(m => m.ProgramDetailsComponent)
       },
       {
+        path: 'task/:id',
+        loadComponent: () => import('./features/dashboard/components/task-details/task-details').then(m => m.TaskDetailsComponent)
+      },
+      {
         path: '',
         redirectTo: 'home',
         pathMatch: 'full'

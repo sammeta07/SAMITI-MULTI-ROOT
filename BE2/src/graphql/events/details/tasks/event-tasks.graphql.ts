@@ -1,6 +1,7 @@
 import { execute, query } from '../../../../config/db';
 import { RowDataPacket } from 'mysql2/promise';
 import { throwEventError, getLoggedInUserId } from '../voting/event-voting-core.graphql';
+import { getTodoAssignees } from '../../../todos/todos.graphql';
 
 export const eventTasksTypes = `
   type EventTaskEntry {
@@ -8,6 +9,7 @@ export const eventTasksTypes = `
     taskId: Int!
     eventId: Int!
     parentTaskId: Int
+    todos: [TodoItem!]!
     taskName: String!
     status: String
     ownerUserId: Int
@@ -17,6 +19,9 @@ export const eventTasksTypes = `
   type EventTasksPayload {
     entries: [EventTaskEntry!]!
     canCreateTasks: Boolean!
+    canManageTodos: Boolean!
+    canToggleTodos: Boolean!
+    todoAssignees: [TodoAssignee!]!
   }
 
   input CreateEventTaskInput {
@@ -34,6 +39,7 @@ export const eventTasksTypes = `
     status: String!
     ownerUserId: Int
     ownerName: String
+    todos: [TodoItem!]!
   }
 `;
 
@@ -103,16 +109,51 @@ export const eventTasksResolvers = {
            t.id AS taskId,
            t.event_id AS eventId,
            t.parent_id AS parentTaskId,
-           COALESCE(NULLIF(TRIM(t.title), ''), NULLIF(TRIM(t.name), ''), 'Untitled Task') AS taskName,
+           COALESCE(NULLIF(TRIM(t.name), ''), 'Untitled Task') AS taskName,
            t.status,
-           t.owner_id AS ownerUserId,
+           t.owner_user_id AS ownerUserId,
            owner.name AS ownerName
          FROM tasks t
-         LEFT JOIN users owner ON owner.id = t.owner_id
+         LEFT JOIN users owner ON owner.id = t.owner_user_id
          WHERE t.event_id = ?
-         ORDER BY t.parent_id ASC, t.created_at ASC, t.id ASC`,
+         ORDER BY t.created_at ASC, t.id ASC`,
         [eventId]
       );
+
+      const taskIds = taskRows.map((row) => Number(row.taskId));
+      const todoRows = taskIds.length > 0
+        ? await query<any[]>(
+          `SELECT
+             todo.id,
+             todo.task_id AS taskId,
+             todo.title,
+             todo.status,
+             todo.is_completed AS isCompleted,
+             todo.assigned_user_id AS assignedUserId,
+             assignee.name AS assignedUserName,
+             DATE_FORMAT(todo.created_at, '%Y-%m-%d %H:%i:%s') AS createdAt
+           FROM todos todo
+           LEFT JOIN users assignee ON assignee.id = todo.assigned_user_id
+           WHERE todo.task_id IN (${taskIds.map(() => '?').join(', ')})
+           ORDER BY todo.created_at ASC, todo.id ASC`,
+          taskIds
+        )
+        : [];
+      const todosByTaskId = new Map<number, any[]>();
+      for (const todo of todoRows) {
+        const taskId = Number(todo.taskId);
+        const items = todosByTaskId.get(taskId) ?? [];
+        items.push({
+          id: Number(todo.id),
+          title: String(todo.title),
+          status: String(todo.status),
+          isCompleted: Boolean(Number(todo.isCompleted)),
+          assignedUserId: todo.assignedUserId === null ? null : Number(todo.assignedUserId),
+          assignedUserName: todo.assignedUserName || null,
+          createdAt: String(todo.createdAt)
+        });
+        todosByTaskId.set(taskId, items);
+      }
 
       return {
         entries: taskRows.map((taskRow) => ({
@@ -123,11 +164,17 @@ export const eventTasksResolvers = {
           taskName: String(taskRow.taskName || 'Untitled Task'),
           status: taskRow.status ? String(taskRow.status) : null,
           ownerUserId: taskRow.ownerUserId === null ? null : Number(taskRow.ownerUserId),
-          ownerName: taskRow.ownerName || null
+          ownerName: taskRow.ownerName || null,
+          todos: todosByTaskId.get(Number(taskRow.taskId)) ?? []
         })),
         canCreateTasks: ['COMMITTEE_ADMIN', 'COMMITTEE_MASTER_ADMIN'].includes(
           String(membership?.committee_role || '')
-        )
+        ),
+        canManageTodos: ['COMMITTEE_ADMIN', 'COMMITTEE_MASTER_ADMIN'].includes(
+          String(membership?.committee_role || '')
+        ),
+        canToggleTodos: hasCommitteeAccess,
+        todoAssignees: await getTodoAssignees(Number(event.committee_id))
       };
     }
   },
@@ -189,9 +236,9 @@ export const eventTasksResolvers = {
       }
 
       const result = await execute(
-        `INSERT INTO tasks (event_id, parent_id, name, title, status)
-         VALUES (?, ?, ?, ?, 'PENDING')`,
-        [eventId, parentTaskId, taskName, taskName]
+        `INSERT INTO tasks (event_id, parent_id, name, status, created_by, updated_by)
+         VALUES (?, ?, ?, 'PENDING', ?, ?)`,
+        [eventId, parentTaskId, taskName, loggedInUserId, loggedInUserId]
       );
 
       const createdRows = await query<any[]>(
@@ -199,12 +246,12 @@ export const eventTasksResolvers = {
            t.id AS taskId,
            t.event_id AS eventId,
            t.parent_id AS parentTaskId,
-           t.title AS taskName,
+           COALESCE(NULLIF(TRIM(t.name), ''), 'Untitled Task') AS taskName,
            t.status,
-           t.owner_id AS ownerUserId,
+           t.owner_user_id AS ownerUserId,
            owner.name AS ownerName
          FROM tasks t
-         LEFT JOIN users owner ON owner.id = t.owner_id
+         LEFT JOIN users owner ON owner.id = t.owner_user_id
          WHERE t.id = ?
          LIMIT 1`,
         [result.insertId]
@@ -218,7 +265,8 @@ export const eventTasksResolvers = {
         taskName: String(task.taskName),
         status: String(task.status),
         ownerUserId: task.ownerUserId === null ? null : Number(task.ownerUserId),
-        ownerName: task.ownerName || null
+        ownerName: task.ownerName || null,
+        todos: []
       };
     }
   }

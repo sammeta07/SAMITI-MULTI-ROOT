@@ -315,23 +315,23 @@ const committeeIds = Array.from(committeeNodeById.keys());
             continue;
           }
 
-const programNode: InternalTreeNode = {
-          id: `program_${Number(programRow.program_id)}`,
-          name: String(programRow.program_name),
-          type: 'PROGRAM',
-          logo: null,
-          roles: new Set<string>(),
-          startDate: programRow.start_date ? String(programRow.start_date) : null,
-          endDate: programRow.end_date ? String(programRow.end_date) : null,
-          startTime: programRow.start_time ? String(programRow.start_time) : null,
-          endTime: programRow.end_time ? String(programRow.end_time) : null,
-          ownerUserId: programRow.ownerUserId === null || programRow.ownerUserId === undefined ? null : Number(programRow.ownerUserId),
-          visibility: programRow.visibility ? String(programRow.visibility) : null,
-          votingPhaseState: null,
-          price: programRow.price === null || programRow.price === undefined ? null : Number(programRow.price),
-          children: [],
-          childIds: new Set<string>()
-        };
+          const programNode: InternalTreeNode = {
+            id: `program_${Number(programRow.program_id)}`,
+            name: String(programRow.program_name),
+            type: 'PROGRAM',
+            logo: null,
+            roles: new Set<string>(),
+            startDate: programRow.start_date ? String(programRow.start_date) : null,
+            endDate: programRow.end_date ? String(programRow.end_date) : null,
+            startTime: programRow.start_time ? String(programRow.start_time) : null,
+            endTime: programRow.end_time ? String(programRow.end_time) : null,
+            ownerUserId: programRow.ownerUserId === null || programRow.ownerUserId === undefined ? null : Number(programRow.ownerUserId),
+            visibility: programRow.visibility ? String(programRow.visibility) : null,
+            votingPhaseState: null,
+            price: programRow.price === null || programRow.price === undefined ? null : Number(programRow.price),
+            children: [],
+            childIds: new Set<string>()
+          };
 
           attachChild(eventNode, programNode);
         }
@@ -342,14 +342,15 @@ const programNode: InternalTreeNode = {
              event_id,
              parent_id,
              name AS task_name,
-             owner_id
+             owner_user_id AS owner_id
            FROM tasks
            WHERE event_id IN (${eventPlaceholders})
-           ORDER BY parent_id ASC, name ASC`,
+           ORDER BY created_at ASC, id ASC`,
           eventIds
         );
 
         const taskNodeById = new Map<number, InternalTreeNode>();
+        const taskEventIdById = new Map<number, number>();
 
         for (const taskRow of taskRows) {
           const taskId = Number(taskRow.task_id);
@@ -364,18 +365,19 @@ const programNode: InternalTreeNode = {
             taskRoles.add('ASSIGNED');
           }
 
-const taskNode: InternalTreeNode = {
-          id: `task_${taskId}`,
-          name: String(taskRow.task_name),
-          type: 'TASK',
-          logo: null,
-          roles: taskRoles,
-          votingPhaseState: null,
-          children: [],
-          childIds: new Set<string>()
-        };
+          const taskNode: InternalTreeNode = {
+            id: `task_${taskId}`,
+            name: String(taskRow.task_name),
+            type: 'TASK',
+            logo: null,
+            roles: taskRoles,
+            votingPhaseState: null,
+            children: [],
+            childIds: new Set<string>()
+          };
 
           taskNodeById.set(taskId, taskNode);
+          taskEventIdById.set(taskId, eventId);
         }
 
         for (const taskRow of taskRows) {
@@ -387,14 +389,14 @@ const taskNode: InternalTreeNode = {
             continue;
           }
 
-          if (parentId && taskNodeById.has(parentId)) {
-            attachChild(taskNodeById.get(parentId)!, taskNode);
-            continue;
-          }
-
-          const eventNode = eventNodeById.get(eventId);
-          if (eventNode) {
-            attachChild(eventNode, taskNode);
+          const parentNode = parentId === null ? undefined : taskNodeById.get(parentId);
+          if (parentId !== null && parentNode && taskEventIdById.get(parentId) === eventId) {
+            attachChild(parentNode, taskNode);
+          } else {
+            const eventNode = eventNodeById.get(eventId);
+            if (eventNode) {
+              attachChild(eventNode, taskNode);
+            }
           }
         }
       }

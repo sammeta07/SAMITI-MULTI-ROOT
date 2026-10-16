@@ -1,5 +1,6 @@
 import { RowDataPacket } from 'mysql2/promise';
 import { query } from '../../config/db';
+import { getTodoAssignees } from '../todos/todos.graphql';
 
 function throwProgramError(code: string, message: string): never {
   throw new Error(`${code}: ${message}`);
@@ -65,6 +66,10 @@ export const programDetailsTypes = `
     ownerAssignedBy: Int
     ownerAssignedAt: String
     canAssignOwner: Boolean!
+    todos: [TodoItem!]!
+    todoAssignees: [TodoAssignee!]!
+    canManageTodos: Boolean!
+    canToggleTodos: Boolean!
     price: Float!
   }
 `;
@@ -158,6 +163,13 @@ export const programDetailsResolvers = {
       );
       const ownerPermission = ownerPermissionRows[0];
       const committeeRole = String(ownerPermission?.committeeRole || '').toUpperCase();
+      const isCommitteeMember = [
+        'COMMITTEE_MEMBER',
+        'COMMITTEE_ADMIN',
+        'COMMITTEE_MASTER_ADMIN'
+      ].includes(committeeRole);
+      const canManageTodos = committeeRole === 'COMMITTEE_ADMIN' ||
+        committeeRole === 'COMMITTEE_MASTER_ADMIN';
       const canAssignOwner = committeeRole === 'COMMITTEE_ADMIN' ||
         committeeRole === 'COMMITTEE_MASTER_ADMIN' ||
         Boolean(Number(ownerPermission?.hasLeadershipDesignation));
@@ -193,6 +205,21 @@ export const programDetailsResolvers = {
          ORDER BY sort_order ASC, id ASC`,
         [programId]
       );
+      const todoRows = await query<any[]>(
+        `SELECT
+           todo.id,
+           todo.title,
+           todo.status,
+           todo.is_completed AS isCompleted,
+           todo.assigned_user_id AS assignedUserId,
+           assignee.name AS assignedUserName,
+           DATE_FORMAT(todo.created_at, '%Y-%m-%d %H:%i:%s') AS createdAt
+         FROM todos todo
+         LEFT JOIN users assignee ON assignee.id = todo.assigned_user_id
+         WHERE todo.program_id = ?
+         ORDER BY todo.created_at ASC, todo.id ASC`,
+        [programId]
+      );
 
       return {
         id: program.id,
@@ -218,6 +245,20 @@ export const programDetailsResolvers = {
         ownerAssignedBy: program.ownerAssignedBy === null ? null : Number(program.ownerAssignedBy),
         ownerAssignedAt: program.ownerAssignedAt || null,
         canAssignOwner,
+        todos: todoRows.map((todo) => ({
+          id: Number(todo.id),
+          title: String(todo.title),
+          status: String(todo.status),
+          isCompleted: Boolean(Number(todo.isCompleted)),
+          assignedUserId: todo.assignedUserId === null ? null : Number(todo.assignedUserId),
+          assignedUserName: todo.assignedUserName || null,
+          createdAt: String(todo.createdAt)
+        })),
+        todoAssignees: isCommitteeMember
+          ? await getTodoAssignees(Number(program.committeeId))
+          : [],
+        canManageTodos,
+        canToggleTodos: isCommitteeMember,
         price: Number(program.price)
       };
     }

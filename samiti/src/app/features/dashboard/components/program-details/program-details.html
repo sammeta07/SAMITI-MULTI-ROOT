@@ -195,35 +195,26 @@
       <mat-tab>
         <ng-template mat-tab-label>
           <mat-icon class="tab-leading-icon">checklist</mat-icon>
-          <span class="tab-name-text">To Do</span>
-          <span class="tab-badge">{{ tasks().length }}</span>
+          <span class="tab-name-text">Checklist</span>
+          <span class="tab-badge">{{ programData()?.todos?.length ?? 0 }}</span>
         </ng-template>
 
         <section class="horizontal-full-card tasks-section-style">
-          <div class="horizontal-list-container">
-            @for (task of tasks(); track task.id) {
-              <div class="task-aligned-row">
-                <div class="task-col-info">
-                  <span class="main-title">{{ task.taskName }}</span>
-                  <span class="secondary-sub-lbl">{{ task.assignedTo || 'Unassigned' }}</span>
-                </div>
-                <div class="task-col-status">
-                  <span class="status-tag tag-{{ task.status.toLowerCase() }}">{{ task.status }}</span>
-                </div>
-                <div class="task-col-actions">
-                  <div class="row-action-deck">
-                    <button mat-icon-button class="circle-btn view-btn" title="View"><mat-icon>visibility</mat-icon></button>
-                    <button mat-icon-button class="circle-btn delete-btn" title="Delete"><mat-icon>delete</mat-icon></button>
-                  </div>
-                </div>
-              </div>
-            } @empty {
-              <div class="tasks-empty-state">
-                <mat-icon>playlist_add_check</mat-icon>
-                <p>No To Dos available yet</p>
-              </div>
-            }
-          </div>
+          <app-todo-checklist
+            parentType="PROGRAM"
+            [parentId]="programData()?.programId ?? 0"
+            [items]="programData()?.todos ?? []"
+            [assignees]="programData()?.todoAssignees ?? []"
+            [canManage]="programData()?.canManageTodos ?? false"
+            [canToggle]="programData()?.canToggleTodos ?? false"
+            (itemsChange)="onProgramTodosChange($event)"
+          />
+          @if (!programData()?.todos?.length) {
+            <div class="tasks-empty-state">
+              <mat-icon>playlist_add_check</mat-icon>
+              <p>No checklist items yet</p>
+            </div>
+          }
         </section>
       </mat-tab>
 

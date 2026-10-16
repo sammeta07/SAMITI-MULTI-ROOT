@@ -129,6 +129,21 @@
   &:hover { background: #f8fafc; border-color: #cbd5e1; }
 }
 
+.event-task-group {
+  min-width: 0;
+  border-left: 2px solid transparent;
+}
+
+.child-task-indicator {
+  display: inline-block;
+  width: 14px;
+  height: 14px;
+  margin-right: 2px;
+  vertical-align: -2px;
+  font-size: 14px;
+  color: #94a3b8;
+}
+
 .task-row-left { display: flex; align-items: center; gap: 8px; min-width: 0; }
 
 .task-row-icon {

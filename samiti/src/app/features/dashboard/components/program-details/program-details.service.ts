@@ -43,6 +43,21 @@ export class ProgramDetailsService {
         ownerAssignedBy
         ownerAssignedAt
         canAssignOwner
+        todos {
+          id
+          title
+          status
+          isCompleted
+          assignedUserId
+          assignedUserName
+          createdAt
+        }
+        todoAssignees {
+          userId
+          name
+        }
+        canManageTodos
+        canToggleTodos
         price
       }
     }`;

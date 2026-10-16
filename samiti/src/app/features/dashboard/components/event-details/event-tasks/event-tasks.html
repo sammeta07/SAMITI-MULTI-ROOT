@@ -24,21 +24,35 @@
       </div>
     } @else if (tasks.length > 0) {
       <div class="horizontal-list-container">
-        @for (task of tasks; track task.taskId) {
+        @for (taskEntry of flattenedTasks; track taskEntry.task.taskId) {
+          <div class="event-task-group" [style.margin-left.px]="taskEntry.depth * 20">
           <article class="event-task-row">
             <div class="task-row-left">
               <div class="task-row-icon" aria-hidden="true">
                 <mat-icon>task_alt</mat-icon>
               </div>
               <div class="task-row-info">
-                <div class="main-title">{{ task.taskName }}</div>
-                <div class="secondary-sub-lbl">{{ task.ownerName || 'Unassigned' }}</div>
+                <div class="main-title">
+                  @if (taskEntry.depth > 0) { <mat-icon class="child-task-indicator">subdirectory_arrow_right</mat-icon> }
+                  {{ taskEntry.task.taskName }}
+                </div>
+                <div class="secondary-sub-lbl">{{ taskEntry.task.ownerName || 'Unassigned' }}</div>
               </div>
             </div>
             <div class="task-row-right">
-              <span class="status-tag {{ statusTagClass(task.status) }}">{{ task.status || 'PENDING' }}</span>
+              <span class="status-tag {{ statusTagClass(taskEntry.task.status) }}">{{ taskEntry.task.status || 'PENDING' }}</span>
             </div>
           </article>
+          <app-todo-checklist
+            parentType="TASK"
+            [parentId]="taskEntry.task.taskId"
+            [items]="taskEntry.task.todos"
+            [assignees]="todoAssignees"
+            [canManage]="canManageTodos"
+            [canToggle]="canToggleTodos"
+            (itemsChange)="onTaskTodosChange(taskEntry.task.taskId, $event)"
+          />
+          </div>
         }
       </div>
     } @else {

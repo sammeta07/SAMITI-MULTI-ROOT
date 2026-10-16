@@ -10,6 +10,8 @@ import { EventTaskEntry, EventTasksPayload } from './event-tasks.models';
 import { NotifierService } from '../../../../../shared/notifier/notifier.service';
 import { CreateTaskDialogComponent } from '../../../../../components/dialog/create-task/create-task.component';
 import { DashboardHierarchyTreeService } from '../../dashboard-hierarchy-tree/dashboard-hierarchy-tree.service';
+import { TodoAssignee, TodoItem } from '../../../models/todo.models';
+import { TodoChecklistComponent } from '../../todo-checklist/todo-checklist.component';
 
 @Component({
   selector: 'app-event-tasks',
@@ -18,7 +20,8 @@ import { DashboardHierarchyTreeService } from '../../dashboard-hierarchy-tree/da
     CommonModule,
     MatDialogModule,
     MatIconModule,
-    MatButtonModule
+    MatButtonModule,
+    TodoChecklistComponent
   ],
   templateUrl: './event-tasks.html',
   styleUrl: './event-tasks.scss'
@@ -35,6 +38,9 @@ export class EventTasksComponent implements OnInit, OnDestroy {
 
   public eventData: EventTaskEntry[] | null = null;
   public canCreateTasks = false;
+  public canManageTodos = false;
+  public canToggleTodos = false;
+  public todoAssignees: TodoAssignee[] = [];
   public isLoading = true;
   public hasLoadError = false;
 
@@ -44,6 +50,42 @@ export class EventTasksComponent implements OnInit, OnDestroy {
 
   public get tasksCount(): number {
     return this.tasks.length;
+  }
+
+  public get flattenedTasks(): Array<{ task: EventTaskEntry; depth: number }> {
+    const byParent = new Map<number | null, EventTaskEntry[]>();
+    const taskIds = new Set(this.tasks.map((task) => task.taskId));
+    for (const task of this.tasks) {
+      const parentId = task.parentTaskId && taskIds.has(task.parentTaskId)
+        ? task.parentTaskId
+        : null;
+      const children = byParent.get(parentId) ?? [];
+      children.push(task);
+      byParent.set(parentId, children);
+    }
+
+    const flattened: Array<{ task: EventTaskEntry; depth: number }> = [];
+    const visited = new Set<number>();
+    const addChildren = (parentId: number | null, depth: number): void => {
+      for (const task of byParent.get(parentId) ?? []) {
+        if (visited.has(task.taskId)) continue;
+        visited.add(task.taskId);
+        flattened.push({ task, depth });
+        addChildren(task.taskId, depth + 1);
+      }
+    };
+    addChildren(null, 0);
+
+    for (const task of this.tasks) {
+      if (!visited.has(task.taskId)) {
+        flattened.push({ task, depth: 0 });
+      }
+    }
+    return flattened;
+  }
+
+  public onTaskTodosChange(taskId: number, todos: TodoItem[]): void {
+    this.eventData = this.tasks.map((task) => task.taskId === taskId ? { ...task, todos } : task);
   }
 
   public statusTagClass(status: string | null | undefined): string {
@@ -105,6 +147,9 @@ export class EventTasksComponent implements OnInit, OnDestroy {
         }
         this.eventData = data.entries ?? [];
         this.canCreateTasks = data.canCreateTasks;
+        this.canManageTodos = data.canManageTodos;
+        this.canToggleTodos = data.canToggleTodos;
+        this.todoAssignees = data.todoAssignees ?? [];
         this.isLoading = false;
       },
       error: (error) => {
@@ -113,6 +158,9 @@ export class EventTasksComponent implements OnInit, OnDestroy {
         }
         this.eventData = [];
         this.canCreateTasks = false;
+        this.canManageTodos = false;
+        this.canToggleTodos = false;
+        this.todoAssignees = [];
         this.isLoading = false;
         this.hasLoadError = true;
         this.notifier.error(error?.error?.errors?.[0]?.message || 'Failed to load event tasks.');

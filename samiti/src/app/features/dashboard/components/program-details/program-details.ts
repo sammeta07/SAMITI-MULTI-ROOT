@@ -12,7 +12,7 @@ import { MatExpansionModule } from '@angular/material/expansion';
 import { MatTabsModule } from '@angular/material/tabs';
 import { HttpErrorResponse } from '@angular/common/http';
 import { firstValueFrom, finalize } from 'rxjs';
-import { ProgramDetailsPayload, ProgramTask } from './program-details.models';
+import { ProgramDetailsPayload } from './program-details.models';
 import { ProgramDetailsService } from './program-details.service';
 import { NotifierService } from '../../../../shared/notifier/notifier.service';
 import { DashboardHierarchyTreeService } from '../dashboard-hierarchy-tree/dashboard-hierarchy-tree.service';
@@ -26,6 +26,8 @@ import { ConfirmDialogData } from '../../../../components/dialog/confirm/confirm
 import { ProgramOwnerService } from '../program-owner/program-owner.service';
 import { ProgramOwnerCandidate, ProgramOwnerPayload } from '../program-owner/program-owner.models';
 import { ImageCropperDialogComponent } from '../../../../shared/components/image-cropper-dialog/image-cropper-dialog.component';
+import { TodoItem } from '../../models/todo.models';
+import { TodoChecklistComponent } from '../todo-checklist/todo-checklist.component';
 
 @Component({
   selector: 'app-program-details',
@@ -39,7 +41,8 @@ import { ImageCropperDialogComponent } from '../../../../shared/components/image
     MatTooltipModule,
     MatSelectModule,
     MatExpansionModule,
-    MatTabsModule
+    MatTabsModule,
+    TodoChecklistComponent
   ],
   templateUrl: './program-details.html',
   styleUrl: './program-details.scss'
@@ -65,7 +68,6 @@ export class ProgramDetailsComponent implements OnInit {
   public readonly isSelectionMode = signal<boolean>(false);
   public readonly selectedBannerUrls = signal<Set<string>>(new Set<string>());
   public readonly programData = signal<ProgramDetailsPayload | null>(null);
-  public readonly tasks = signal<ProgramTask[]>([]);
   public readonly programOwnerCandidates = signal<ProgramOwnerCandidate[]>([]);
   public readonly isUpdatingOwner = signal<boolean>(false);
   public readonly MAX_BANNERS = 5;
@@ -366,7 +368,6 @@ export class ProgramDetailsComponent implements OnInit {
     ).subscribe({
       next: (data: ProgramDetailsPayload) => {
         this.programData.set(data ?? null);
-        this.tasks.set([]);
         if (data?.canAssignOwner && data.eventId) {
           const eventId = data.eventId;
           this.programOwnerService.getCandidates(data.eventId).subscribe({
@@ -384,9 +385,12 @@ export class ProgramDetailsComponent implements OnInit {
       error: (err: HttpErrorResponse) => {
         this.notifier.error(err?.error?.message || 'Failed to load program details.');
         this.programData.set(null);
-        this.tasks.set([]);
       }
     });
+  }
+
+  public onProgramTodosChange(todos: TodoItem[]): void {
+    this.programData.update((current) => current ? { ...current, todos } : current);
   }
 
   public updateProgramOwner(ownerUserId: number | null): void {

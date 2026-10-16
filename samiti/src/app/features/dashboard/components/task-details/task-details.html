@@ -1,0 +1,93 @@
+<main class="task-details-page">
+  @if (isLoading()) {
+    <div class="task-state">
+      <mat-progress-spinner mode="indeterminate" diameter="32"></mat-progress-spinner>
+      <span>Loading task details...</span>
+    </div>
+  } @else if (task(); as details) {
+    <header class="task-header">
+      <div class="task-breadcrumbs">
+        <a [routerLink]="['/dashboard', 'event', details.eventId, 'tasks']">
+          <mat-icon>arrow_back</mat-icon>
+          {{ details.eventName }}
+        </a>
+        @if (details.parentTaskId) {
+          <span class="breadcrumb-separator">/</span>
+          <a [routerLink]="['/dashboard', 'task', details.parentTaskId]">
+            {{ details.parentTaskName || 'Parent task' }}
+          </a>
+        }
+      </div>
+
+      <div class="task-title-row">
+        <div>
+          <p class="eyebrow">Task details</p>
+          <h1>{{ details.taskName }}</h1>
+        </div>
+        <span [ngClass]="['task-status', 'status-' + statusClass(details.status)]">
+          {{ details.status || 'PENDING' }}
+        </span>
+      </div>
+
+      <div class="task-meta">
+        <span><mat-icon>event</mat-icon>{{ details.eventName }}</span>
+        <span><mat-icon>person</mat-icon>{{ details.ownerName || 'Unassigned' }}</span>
+        <span><mat-icon>schedule</mat-icon>Created {{ details.createdAt | date:'mediumDate' }}</span>
+      </div>
+    </header>
+
+    @if (details.children.length > 0 || details.canCreateTasks) {
+      <section class="task-card">
+        <div class="section-heading">
+          <div>
+            <p class="eyebrow">Hierarchy</p>
+            <h2>Subtasks <span class="item-count">{{ details.children.length }}</span></h2>
+          </div>
+        </div>
+        @if (details.children.length > 0) {
+          <div class="subtask-list">
+            @for (child of details.children; track child.taskId) {
+              <a class="subtask-row" [routerLink]="['/dashboard', 'task', child.taskId]">
+                <span class="subtask-icon"><mat-icon>task_alt</mat-icon></span>
+                <span class="subtask-name">{{ child.taskName }}</span>
+                <span [ngClass]="['subtask-status', 'status-' + statusClass(child.status)]">
+                  {{ child.status || 'PENDING' }}
+                </span>
+                <mat-icon class="open-icon">chevron_right</mat-icon>
+              </a>
+            }
+          </div>
+        } @else {
+          <p class="empty-note">No subtasks yet.</p>
+        }
+      </section>
+    }
+
+    <section class="task-card checklist-card">
+      <div class="section-heading">
+        <div>
+          <p class="eyebrow">Checklist</p>
+          <h2>To-do items <span class="item-count">{{ details.todos.length }}</span></h2>
+        </div>
+      </div>
+      <app-todo-checklist
+        parentType="TASK"
+        [parentId]="details.taskId"
+        [items]="details.todos"
+        [assignees]="details.todoAssignees"
+        [canManage]="details.canManageTodos"
+        [canToggle]="details.canToggleTodos"
+        (itemsChange)="onTodosChange($event)"
+      />
+      @if (details.todos.length === 0) {
+        <p class="empty-note">No checklist items yet.</p>
+      }
+    </section>
+  } @else {
+    <div class="task-state task-error">
+      <mat-icon>error_outline</mat-icon>
+      <h1>Task unavailable</h1>
+      <p>The task could not be loaded or you don't have access to it.</p>
+    </div>
+  }
+</main>

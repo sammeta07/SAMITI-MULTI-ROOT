@@ -45,6 +45,8 @@ import { guestCommitteeTypes, guestCommitteeQueryFields, guestCommitteesResolver
 import { committeeYearInfoTypes } from './committees/committees-list/committee-year-info.graphql';
 import { cancelCommitteeMembershipRequestTypes, cancelCommitteeMembershipRequestMutationFields, cancelCommitteeMembershipRequestResolvers } from './committees/user-requests/cancel-committee-membership-request.graphql';
 import { submitCommitteeMembershipRequestTypes, submitCommitteeMembershipRequestMutationFields, submitCommitteeMembershipRequestResolvers } from './committees/user-requests/submit-committee-membership-request.graphql';
+import { todoTypes, todoMutationFields, todoResolvers } from './todos/todos.graphql';
+import { taskDetailsTypes, taskDetailsQueryFields, taskDetailsResolvers } from './tasks/task-details.graphql';
 
 // Single schema — one Query block, one Mutation block
 export const typeDefs = `
@@ -82,6 +84,8 @@ export const typeDefs = `
   ${programDetailsTypes}
   ${programOwnerTypes}
   ${programsByDistanceTypes}
+  ${todoTypes}
+  ${taskDetailsTypes}
    ${eventVotingTypes}
    ${eventVoteTypes}
    ${eventInterestTypes}
@@ -111,6 +115,7 @@ export const typeDefs = `
     ${hierarchyTreeQueryFields}
     ${committeeDetailsQueryFields}
     ${programDetailsQueryFields}
+    ${taskDetailsQueryFields}
     ${programOwnerQueryFields}
     ${programsByDistanceQueryFields}
     ${eventDetailsQueryFields}
@@ -146,6 +151,7 @@ export const typeDefs = `
     ${eventVoteMutationFields}
     ${updateEventVotingModeMutationFields}
     ${createEventTaskMutationFields}
+    ${todoMutationFields}
     ${toggleCommitteeFavouriteMutationFields}
     ${cancelCommitteeMembershipRequestMutationFields}
     ${submitCommitteeMembershipRequestMutationFields}
@@ -172,6 +178,7 @@ export const resolvers = {
     ...hierarchyTreeResolvers.Query,
     ...committeeDetailsResolvers.Query,
     ...programDetailsResolvers.Query,
+    ...taskDetailsResolvers.Query,
     ...programOwnerResolvers.Query,
     ...programsByDistanceResolvers.Query,
     ...eventDetailsResolvers.Query,
@@ -213,6 +220,7 @@ export const resolvers = {
     ...eventVoteResolvers.Mutation,
     ...updateEventVotingModeResolvers.Mutation,
     ...eventTasksResolvers.Mutation,
+    ...todoResolvers.Mutation,
     ...toggleCommitteeFavouriteResolvers.Mutation,
   }
 };

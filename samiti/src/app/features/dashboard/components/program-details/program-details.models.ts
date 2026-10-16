@@ -1,3 +1,5 @@
+import { TodoAssignee, TodoItem } from '../../models/todo.models';
+
 export interface ProgramDetailsPayload {
   id: number;
   programId: number;
@@ -22,12 +24,9 @@ export interface ProgramDetailsPayload {
   ownerAssignedBy?: number | null;
   ownerAssignedAt?: string | null;
   canAssignOwner: boolean;
+  todos: TodoItem[];
+  todoAssignees: TodoAssignee[];
+  canManageTodos: boolean;
+  canToggleTodos: boolean;
   price: number;
-}
-
-export interface ProgramTask {
-  id: number;
-  taskName: string;
-  status: string;
-  assignedTo?: string | null;
 }
