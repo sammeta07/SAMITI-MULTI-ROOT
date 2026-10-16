@@ -1,93 +1,150 @@
-<main class="task-details-page">
+<div class="program-details-workspace drawer-layout-shell">
+
   @if (isLoading()) {
-    <div class="task-state">
+    <div class="spinner-loading-overlay">
       <mat-progress-spinner mode="indeterminate" diameter="32"></mat-progress-spinner>
       <span>Loading task details...</span>
     </div>
-  } @else if (task(); as details) {
-    <header class="task-header">
-      <div class="task-breadcrumbs">
-        <a [routerLink]="['/dashboard', 'event', details.eventId, 'tasks']">
-          <mat-icon>arrow_back</mat-icon>
-          {{ details.eventName }}
-        </a>
-        @if (details.parentTaskId) {
-          <span class="breadcrumb-separator">/</span>
-          <a [routerLink]="['/dashboard', 'task', details.parentTaskId]">
-            {{ details.parentTaskName || 'Parent task' }}
-          </a>
-        }
-      </div>
+  } @else if (task(); as taskDetails) {
 
-      <div class="task-title-row">
-        <div>
-          <p class="eyebrow">Task details</p>
-          <h1>{{ details.taskName }}</h1>
-        </div>
-        <span [ngClass]="['task-status', 'status-' + statusClass(details.status)]">
-          {{ details.status || 'PENDING' }}
-        </span>
-      </div>
+    <div class="workspace-body scrollable-container">
 
-      <div class="task-meta">
-        <span><mat-icon>event</mat-icon>{{ details.eventName }}</span>
-        <span><mat-icon>person</mat-icon>{{ details.ownerName || 'Unassigned' }}</span>
-        <span><mat-icon>schedule</mat-icon>Created {{ details.createdAt | date:'mediumDate' }}</span>
-      </div>
-    </header>
+      <section class="gd-committee-card" [ngClass]="'status-container-' + statusClass(taskDetails.status)">
+        <div class="program-header-grid">
 
-    @if (details.children.length > 0 || details.canCreateTasks) {
-      <section class="task-card">
-        <div class="section-heading">
-          <div>
-            <p class="eyebrow">Hierarchy</p>
-            <h2>Subtasks <span class="item-count">{{ details.children.length }}</span></h2>
-          </div>
-        </div>
-        @if (details.children.length > 0) {
-          <div class="subtask-list">
-            @for (child of details.children; track child.taskId) {
-              <a class="subtask-row" [routerLink]="['/dashboard', 'task', child.taskId]">
-                <span class="subtask-icon"><mat-icon>task_alt</mat-icon></span>
-                <span class="subtask-name">{{ child.taskName }}</span>
-                <span [ngClass]="['subtask-status', 'status-' + statusClass(child.status)]">
-                  {{ child.status || 'PENDING' }}
-                </span>
-                <mat-icon class="open-icon">chevron_right</mat-icon>
+          <div class="card-main-info-area">
+            <div class="card-title-row">
+              <h3 class="committee-display-name">{{ taskDetails.taskName | titlecase }}</h3>
+            </div>
+
+            <div class="card-location-row">
+              <mat-icon class="location-icon">event</mat-icon>
+              <a class="location-text-trim task-event-link" [routerLink]="['/dashboard', 'event', taskDetails.eventId, 'tasks']">
+                {{ taskDetails.eventName | titlecase }}
               </a>
-            }
-          </div>
-        } @else {
-          <p class="empty-note">No subtasks yet.</p>
-        }
-      </section>
-    }
+            </div>
 
-    <section class="task-card checklist-card">
-      <div class="section-heading">
-        <div>
-          <p class="eyebrow">Checklist</p>
-          <h2>To-do items <span class="item-count">{{ details.todos.length }}</span></h2>
+            <div class="card-identity-pills-area">
+              <span class="meta-pill status-pill status-badge-{{ statusClass(taskDetails.status) }}">
+                <span class="status-dot"></span>
+                {{ displayStatus(taskDetails.status) }}
+              </span>
+
+              @if (taskDetails.parentTaskId) {
+                <a
+                  class="meta-pill date-pill task-parent-pill"
+                  [routerLink]="['/dashboard', 'task', taskDetails.parentTaskId]"
+                  title="Parent task"
+                >
+                  <mat-icon>subdirectory_arrow_left</mat-icon>
+                  <span>{{ (taskDetails.parentTaskName || 'Parent task') | titlecase }}</span>
+                </a>
+              }
+
+              <span class="meta-pill date-pill" title="Created">
+                <mat-icon>schedule</mat-icon>
+                <span>Created {{ taskDetails.createdAt | date:'mediumDate' }}</span>
+              </span>
+            </div>
+          </div>
+
+          <div class="program-header-side">
+            <div class="program-owner-row">
+              <span class="owner-pill-text" [class.owner-unassigned]="!taskDetails.ownerName">
+                OWNER : {{ (taskDetails.ownerName || 'UNASSIGNED') | titlecase }}
+              </span>
+            </div>
+            <div class="action-buttons-area">
+              <a
+                mat-button
+                class="btn-action btn-edit"
+                [routerLink]="['/dashboard', 'event', taskDetails.eventId, 'tasks']"
+              >
+                <mat-icon>arrow_back</mat-icon>
+                <span>Event Tasks</span>
+              </a>
+            </div>
+          </div>
+
         </div>
-      </div>
-      <app-todo-checklist
-        parentType="TASK"
-        [parentId]="details.taskId"
-        [items]="details.todos"
-        [assignees]="details.todoAssignees"
-        [canManage]="details.canManageTodos"
-        [canToggle]="details.canToggleTodos"
-        (itemsChange)="onTodosChange($event)"
-      />
-      @if (details.todos.length === 0) {
-        <p class="empty-note">No checklist items yet.</p>
-      }
-    </section>
+      </section>
+
+      <mat-tab-group class="tasks-tabs samiti-nav-tabs" animationDuration="150ms">
+        <mat-tab>
+          <ng-template mat-tab-label>
+            <mat-icon class="tab-leading-icon">account_tree</mat-icon>
+            <span class="tab-name-text">Subtasks</span>
+            <span class="tab-badge">{{ taskDetails.children.length }}</span>
+          </ng-template>
+
+          <section class="horizontal-full-card tasks-section-style task-subtasks-section">
+            <div class="horizontal-list-container">
+              @for (child of taskDetails.children; track child.taskId) {
+                <a class="task-aligned-row task-child-row" [routerLink]="['/dashboard', 'task', child.taskId]">
+                  <div class="task-col-info">
+                    <span class="main-title">{{ child.taskName }}</span>
+                    <span class="secondary-sub-lbl">Open task details</span>
+                  </div>
+                  <div class="task-col-status">
+                    <span class="status-tag" [ngClass]="'tag-' + statusClass(child.status)">
+                      {{ displayStatus(child.status) }}
+                    </span>
+                  </div>
+                  <mat-icon class="task-child-open-icon">chevron_right</mat-icon>
+                </a>
+              } @empty {
+                <div class="tasks-empty-state">
+                  <mat-icon>account_tree</mat-icon>
+                  <p>No subtasks available</p>
+                </div>
+              }
+            </div>
+          </section>
+        </mat-tab>
+
+        <mat-tab>
+          <ng-template mat-tab-label>
+            <mat-icon class="tab-leading-icon">checklist</mat-icon>
+            <span class="tab-name-text">Checklist</span>
+            <span class="tab-badge">{{ taskDetails.todos.length }}</span>
+          </ng-template>
+
+          <section class="horizontal-full-card tasks-section-style">
+            <app-todo-checklist
+              parentType="TASK"
+              [parentId]="taskDetails.taskId"
+              [items]="taskDetails.todos"
+              [assignees]="taskDetails.todoAssignees"
+              [canManage]="taskDetails.canManageTodos"
+              [canToggle]="taskDetails.canToggleTodos"
+              (itemsChange)="onTodosChange($event)"
+            />
+            @if (taskDetails.todos.length === 0) {
+              <div class="tasks-empty-state">
+                <mat-icon>playlist_add_check</mat-icon>
+                <p>No checklist items yet</p>
+              </div>
+            }
+          </section>
+        </mat-tab>
+
+        <mat-tab>
+          <ng-template mat-tab-label>
+            <mat-icon class="tab-leading-icon">notes</mat-icon>
+            <span class="tab-name-text">Notes</span>
+            <span class="tab-badge">0</span>
+          </ng-template>
+          <div class="notes-tab-empty-state">Notes are not available for this task yet.</div>
+        </mat-tab>
+      </mat-tab-group>
+
+    </div>
   } @else {
-    <div class="task-state task-error">
-      <mat-icon>error_outline</mat-icon>
-      <h1>Task unavailable</h1>
+    <div class="empty-layout-shell">
+      <mat-icon class="icon-off">task_alt</mat-icon>
+      <h3>Task Details</h3>
       <p>The task could not be loaded or you don't have access to it.</p>
     </div>
   }
-</main>
+
+</div>

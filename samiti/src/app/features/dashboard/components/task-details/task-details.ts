@@ -3,7 +3,9 @@ import { Component, DestroyRef, inject, OnInit, signal } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { ActivatedRoute, RouterLink } from '@angular/router';
 import { MatIconModule } from '@angular/material/icon';
+import { MatButtonModule } from '@angular/material/button';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
+import { MatTabsModule } from '@angular/material/tabs';
 import { finalize } from 'rxjs';
 import { LoadingStateService } from '../../../../shared/services/loading-state.service';
 import { NotifierService } from '../../../../shared/notifier/notifier.service';
@@ -15,7 +17,15 @@ import { TaskDetailsService } from './task-details.service';
 @Component({
   selector: 'app-task-details',
   standalone: true,
-  imports: [CommonModule, RouterLink, MatIconModule, MatProgressSpinnerModule, TodoChecklistComponent],
+  imports: [
+    CommonModule,
+    RouterLink,
+    MatIconModule,
+    MatButtonModule,
+    MatProgressSpinnerModule,
+    MatTabsModule,
+    TodoChecklistComponent
+  ],
   templateUrl: './task-details.html',
   styleUrl: './task-details.scss'
 })
@@ -34,6 +44,7 @@ export class TaskDetailsComponent implements OnInit {
     this.route.paramMap.pipe(takeUntilDestroyed(this.destroyRef)).subscribe((params) => {
       const taskId = params.get('id');
       if (!taskId || !/^\d+$/.test(taskId) || Number(taskId) <= 0) {
+        this.requestId++;
         this.task.set(null);
         this.isLoading.set(false);
         this.notifier.error('Invalid task ID.');
@@ -48,7 +59,14 @@ export class TaskDetailsComponent implements OnInit {
   }
 
   public statusClass(status: string | null): string {
-    return String(status || 'PENDING').toLowerCase().replace(/[^a-z0-9]+/g, '-');
+    const normalized = String(status || 'PENDING').toUpperCase();
+    if (normalized === 'COMPLETED') return 'completed';
+    if (normalized === 'IN_PROGRESS' || normalized === 'ACTIVE' || normalized === 'ONGOING') return 'started';
+    return 'upcoming';
+  }
+
+  public displayStatus(status: string | null): string {
+    return String(status || 'PENDING').replace(/[_-]+/g, ' ').toUpperCase();
   }
 
   private loadTask(taskId: string): void {
