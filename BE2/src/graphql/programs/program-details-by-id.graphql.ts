@@ -46,6 +46,8 @@ export const programDetailsTypes = `
     id: Int!
     programId: Int!
     eventId: Int
+    parentProgramId: Int
+    parentProgramName: String
     programName: String!
     programBanner: String
     bannerImages: [String!]!
@@ -70,7 +72,17 @@ export const programDetailsTypes = `
     todoAssignees: [TodoAssignee!]!
     canManageTodos: Boolean!
     canToggleTodos: Boolean!
+    canCreateSubprogram: Boolean!
+    subprograms: [ProgramChild!]!
     price: Float!
+  }
+
+  type ProgramChild {
+    programId: Int!
+    programName: String!
+    startDate: String
+    endDate: String
+    visibility: String!
   }
 `;
 
@@ -93,6 +105,7 @@ export const programDetailsResolvers = {
            p.id,
            p.id AS programId,
            p.event_id AS eventId,
+           p.parent_program_id AS parentProgramId,
            p.name AS programName,
            p.address,
            p.visibility,
@@ -170,6 +183,16 @@ export const programDetailsResolvers = {
       ].includes(committeeRole);
       const canManageTodos = committeeRole === 'COMMITTEE_ADMIN' ||
         committeeRole === 'COMMITTEE_MASTER_ADMIN';
+      const parentRows = program.parentProgramId == null
+        ? []
+        : await query<any[]>(
+          `SELECT id AS programId, name AS programName
+           FROM programs
+           WHERE id = ? AND event_id = ?
+             AND (? = 1 OR visibility <> 'HIDDEN')
+           LIMIT 1`,
+          [Number(program.parentProgramId), Number(program.eventId), isCommitteeMember ? 1 : 0]
+        );
       const canAssignOwner = committeeRole === 'COMMITTEE_ADMIN' ||
         committeeRole === 'COMMITTEE_MASTER_ADMIN' ||
         Boolean(Number(ownerPermission?.hasLeadershipDesignation));
@@ -220,11 +243,26 @@ export const programDetailsResolvers = {
          ORDER BY todo.created_at ASC, todo.id ASC`,
         [programId]
       );
+      const subprogramRows = await query<any[]>(
+        `SELECT
+           id AS programId,
+           name AS programName,
+           DATE_FORMAT(start_date, '%Y-%m-%d') AS startDate,
+           DATE_FORMAT(end_date, '%Y-%m-%d') AS endDate,
+           visibility
+         FROM programs
+         WHERE parent_program_id = ? AND event_id = ?
+           AND (? = 1 OR visibility <> 'HIDDEN')
+         ORDER BY start_date ASC, created_at ASC, id ASC`,
+        [programId, Number(program.eventId), isCommitteeMember ? 1 : 0]
+      );
 
       return {
         id: program.id,
         programId: program.programId,
         eventId: program.eventId,
+        parentProgramId: parentRows[0] ? Number(parentRows[0].programId) : null,
+        parentProgramName: parentRows[0]?.programName || null,
         programName: program.programName,
         programBanner: bannerImageRows[0]?.mediaUrl || null,
         bannerImages: bannerImageRows.map((row) => row.mediaUrl),
@@ -259,6 +297,14 @@ export const programDetailsResolvers = {
           : [],
         canManageTodos,
         canToggleTodos: isCommitteeMember,
+        canCreateSubprogram: canManageTodos,
+        subprograms: subprogramRows.map((subprogram) => ({
+          programId: Number(subprogram.programId),
+          programName: String(subprogram.programName || 'Untitled Program'),
+          startDate: subprogram.startDate || null,
+          endDate: subprogram.endDate || null,
+          visibility: String(subprogram.visibility || 'VISIBLE')
+        })),
         price: Number(program.price)
       };
     }

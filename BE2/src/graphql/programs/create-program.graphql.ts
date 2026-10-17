@@ -113,6 +113,7 @@ export const createProgramTypes = `
 
   input CreateProgramInput {
     eventId: Int!
+    parentProgramId: Int
     programName: String!
     address: String
     visibility: String
@@ -135,6 +136,7 @@ export const createProgramResolvers = {
       const input = args?.input || {};
 
       const eventId = Number(input.eventId);
+      const parentProgramId = input.parentProgramId == null ? null : Number(input.parentProgramId);
       const programName = normalizeOptionalText(input.programName);
       const address = normalizeOptionalText(input.address);
       const visibility = normalizeVisibility(input.visibility);
@@ -151,6 +153,10 @@ export const createProgramResolvers = {
 
       if (!Number.isInteger(eventId) || eventId <= 0) {
         throwProgramError('BAD_REQUEST', 'eventId must be a positive integer');
+      }
+
+      if (parentProgramId !== null && (!Number.isInteger(parentProgramId) || parentProgramId <= 0)) {
+        throwProgramError('BAD_REQUEST', 'parentProgramId must be a positive integer');
       }
 
       if (!programName) {
@@ -194,9 +200,23 @@ export const createProgramResolvers = {
         throwProgramError('FORBIDDEN', 'Only committee admins can create programs');
       }
 
+      if (parentProgramId !== null) {
+        const parentRows = await query<any[]>(
+          `SELECT id
+           FROM programs
+           WHERE id = ? AND event_id = ?
+           LIMIT 1`,
+          [parentProgramId, eventId]
+        );
+        if (parentRows.length === 0) {
+          throwProgramError('BAD_REQUEST', 'parentProgramId must belong to the selected event');
+        }
+      }
+
       const result = await execute(
         `INSERT INTO programs (
            event_id,
+           parent_program_id,
            name,
            start_date,
            end_date,
@@ -208,9 +228,10 @@ export const createProgramResolvers = {
            created_by,
            updated_by,
            created_at
-         ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW())`,
+         ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW())`,
         [
           eventId,
+          parentProgramId,
           programName,
           startDate,
           endDate,

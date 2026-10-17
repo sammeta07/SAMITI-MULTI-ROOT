@@ -1,9 +1,19 @@
 import { TodoAssignee, TodoItem } from '../../models/todo.models';
 
+export interface ProgramChild {
+  programId: number;
+  programName: string;
+  startDate: string | null;
+  endDate: string | null;
+  visibility: string;
+}
+
 export interface ProgramDetailsPayload {
   id: number;
   programId: number;
   eventId?: number | null;
+  parentProgramId?: number | null;
+  parentProgramName?: string | null;
   programName: string;
   programBanner?: string | null;
   bannerImages: string[];
@@ -28,5 +38,7 @@ export interface ProgramDetailsPayload {
   todoAssignees: TodoAssignee[];
   canManageTodos: boolean;
   canToggleTodos: boolean;
+  canCreateSubprogram: boolean;
+  subprograms: ProgramChild[];
   price: number;
 }

@@ -105,6 +105,7 @@ CREATE TABLE IF NOT EXISTS events (
 CREATE TABLE IF NOT EXISTS programs (
   id INT NOT NULL AUTO_INCREMENT,
   event_id INT NOT NULL,
+  parent_program_id INT DEFAULT NULL,
   name VARCHAR(255) NOT NULL,
   start_date_time DATETIME NOT NULL,
   end_date_time DATETIME NOT NULL,
@@ -120,9 +121,11 @@ CREATE TABLE IF NOT EXISTS programs (
   created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
   PRIMARY KEY (id),
   KEY event_id (event_id),
+  KEY idx_programs_parent_program_id (parent_program_id),
   KEY fk_programs_created_by (created_by),
   KEY fk_programs_updated_by (updated_by),
   CONSTRAINT fk_programs_event FOREIGN KEY (event_id) REFERENCES events(id) ON DELETE CASCADE,
+  CONSTRAINT fk_programs_parent FOREIGN KEY (parent_program_id) REFERENCES programs(id) ON DELETE CASCADE,
   CONSTRAINT fk_programs_created_by FOREIGN KEY (created_by) REFERENCES users(id) ON DELETE RESTRICT,
   CONSTRAINT fk_programs_updated_by FOREIGN KEY (updated_by) REFERENCES users(id) ON DELETE RESTRICT
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;

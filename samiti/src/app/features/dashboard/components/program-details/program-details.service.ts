@@ -23,6 +23,8 @@ export class ProgramDetailsService {
         id
         programId
         eventId
+        parentProgramId
+        parentProgramName
         programName
         programBanner
         bannerImages
@@ -58,6 +60,14 @@ export class ProgramDetailsService {
         }
         canManageTodos
         canToggleTodos
+        canCreateSubprogram
+        subprograms {
+          programId
+          programName
+          startDate
+          endDate
+          visibility
+        }
         price
       }
     }`;

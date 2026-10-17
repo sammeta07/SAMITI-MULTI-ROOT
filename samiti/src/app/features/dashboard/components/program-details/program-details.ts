@@ -1,6 +1,6 @@
 import { Component, ElementRef, inject, OnInit, signal, computed, ViewChild, ChangeDetectorRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { ActivatedRoute } from '@angular/router';
+import { ActivatedRoute, RouterLink } from '@angular/router';
 import { MatDialog } from '@angular/material/dialog';
 import { MatIconModule } from '@angular/material/icon';
 import { MatButtonModule } from '@angular/material/button';
@@ -34,6 +34,7 @@ import { TodoChecklistComponent } from '../todo-checklist/todo-checklist.compone
   standalone: true,
   imports: [
     CommonModule,
+    RouterLink,
     MatIconModule,
     MatButtonModule,
     MatProgressSpinnerModule,
@@ -391,6 +392,43 @@ export class ProgramDetailsComponent implements OnInit {
 
   public onProgramTodosChange(todos: TodoItem[]): void {
     this.programData.update((current) => current ? { ...current, todos } : current);
+  }
+
+  public onCreateSubprogram(): void {
+    const program = this.programData();
+    if (!program?.eventId || !program.canCreateSubprogram) {
+      return;
+    }
+
+    const dialogRef = this.dialog.open(CreateProgramDialogComponent, {
+      position: { right: '0', top: '0' },
+      height: '100%',
+      width: '50%',
+      autoFocus: true,
+      disableClose: true,
+      hasBackdrop: true,
+      panelClass: 'slide-in-dialog',
+      data: {
+        eventId: program.eventId,
+        parentProgramId: program.programId,
+        address: program.address,
+        startDate: program.startDate,
+        endDate: program.endDate,
+        startTime: program.startTime,
+        endTime: program.endTime,
+        visibility: program.visibility,
+        price: program.price
+      }
+    });
+
+    dialogRef.afterClosed().subscribe((createdProgram) => {
+      if (!createdProgram) {
+        return;
+      }
+      this.fetchProgramDetails(String(program.programId));
+      this.notifier.success(`Subprogram "${createdProgram.programName}" created.`);
+      this.hierarchyTreeService.triggerHierarchyTreeRefresh();
+    });
   }
 
   public updateProgramOwner(ownerUserId: number | null): void {

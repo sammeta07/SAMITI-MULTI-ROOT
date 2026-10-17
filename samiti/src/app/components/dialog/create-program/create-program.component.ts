@@ -144,10 +144,14 @@ export class CreateProgramDialogComponent implements OnInit {
   }
 
   public get dialogTitle(): string {
+    if (this.injectedData?.parentProgramId && !this.isEditMode()) return 'Create Subprogram';
     return this.isEditMode() ? 'Edit Program' : 'Create New Program';
   }
 
   public get submitButtonLabel(): string {
+    if (this.injectedData?.parentProgramId && !this.isEditMode()) {
+      return this.isSubmitting() ? 'Creating...' : 'Create Subprogram';
+    }
     return this.isEditMode() ? (this.isSubmitting() ? 'Saving...' : 'Save Program') : (this.isSubmitting() ? 'Creating...' : 'Create Program');
   }
 
@@ -299,6 +303,7 @@ export class CreateProgramDialogComponent implements OnInit {
 
     const payload = {
       eventId,
+      ...(this.injectedData?.parentProgramId ? { parentProgramId: Number(this.injectedData.parentProgramId) } : {}),
       programName: this.programName.trim(),
       address: this.address.trim() || undefined,
       visibility: this.visibility,

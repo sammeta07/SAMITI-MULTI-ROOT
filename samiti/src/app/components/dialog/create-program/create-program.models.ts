@@ -1,5 +1,6 @@
 export interface CreateProgramPayload {
   eventId: number;
+  parentProgramId?: number;
   programName: string;
   address?: string;
   visibility: 'VISIBLE' | 'HIDDEN';

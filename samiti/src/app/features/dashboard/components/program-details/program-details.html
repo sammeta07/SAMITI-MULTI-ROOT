@@ -37,6 +37,17 @@
               </span>
             }
 
+            @if (programData()?.parentProgramId) {
+              <a
+                class="meta-pill date-pill task-parent-pill"
+                [routerLink]="['/dashboard', 'program', programData()?.parentProgramId]"
+                title="Parent program"
+              >
+                <mat-icon>subdirectory_arrow_left</mat-icon>
+                <span>{{ (programData()?.parentProgramName || 'Parent program') | titlecase }}</span>
+              </a>
+            }
+
             <!-- Start Time - End Time -->
             @if (programStartTime || programEndTime) {
               <span class="meta-pill time-pill {{ timePillStatusClass() }}">
@@ -190,8 +201,57 @@
       (change)="onSingleProgramBannerFileSelected($event)"
     />
 
-    <!-- TASKS SECTION -->
+    <!-- PROGRAM TABS -->
     <mat-tab-group class="tasks-tabs samiti-nav-tabs" animationDuration="150ms">
+      <mat-tab>
+        <ng-template mat-tab-label>
+          <mat-icon class="tab-leading-icon">account_tree</mat-icon>
+          <span class="tab-name-text">Subprogram</span>
+          <span class="tab-badge">{{ programData()?.subprograms?.length ?? 0 }}</span>
+        </ng-template>
+
+        <section class="horizontal-full-card tasks-section-style">
+          <div class="panel-card-header">
+            <div class="header-title-left">
+              <mat-icon>account_tree</mat-icon>
+              <span class="title-text">Subprograms</span>
+              <span class="count-pill">{{ programData()?.subprograms?.length ?? 0 }}</span>
+            </div>
+            @if (programData()?.canCreateSubprogram) {
+              <button mat-stroked-button type="button" (click)="onCreateSubprogram()">
+                <mat-icon>add</mat-icon>
+                <span>Subprogram</span>
+              </button>
+            }
+          </div>
+
+          <div class="horizontal-list-container">
+            @for (subprogram of programData()?.subprograms ?? []; track subprogram.programId) {
+              <a class="task-aligned-row" [routerLink]="['/dashboard', 'program', subprogram.programId]">
+                <div class="task-col-info">
+                  <span class="main-title">{{ subprogram.programName }}</span>
+                  <span class="secondary-sub-lbl">
+                    {{ subprogram.startDate ? (subprogram.startDate | date:'mediumDate') : 'Date not set' }}
+                    @if (subprogram.endDate && subprogram.endDate !== subprogram.startDate) {
+                      – {{ subprogram.endDate | date:'mediumDate' }}
+                    }
+                  </span>
+                </div>
+                <span class="status-tag" [class.tag-completed]="subprogram.visibility === 'HIDDEN'">
+                  {{ subprogram.visibility }}
+                </span>
+                <mat-icon>chevron_right</mat-icon>
+              </a>
+            } @empty {
+              <div class="tasks-empty-state">
+                <mat-icon>account_tree</mat-icon>
+                <p>No subprograms yet</p>
+              </div>
+            }
+          </div>
+        </section>
+      </mat-tab>
+
       <mat-tab>
         <ng-template mat-tab-label>
           <mat-icon class="tab-leading-icon">checklist</mat-icon>
