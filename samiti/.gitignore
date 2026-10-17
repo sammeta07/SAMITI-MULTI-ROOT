@@ -42,10 +42,6 @@ __screenshots__
 # TODO
 TODO.md
 
-# Environment / secrets — never commit API keys or local config
-.env
-.env.*
-!.env.example
 
 # System files
 .DS_Store
