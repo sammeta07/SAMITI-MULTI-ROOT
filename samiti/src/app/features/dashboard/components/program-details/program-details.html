@@ -267,6 +267,7 @@
             [assignees]="programData()?.todoAssignees ?? []"
             [canManage]="programData()?.canManageTodos ?? false"
             [canToggle]="programData()?.canToggleTodos ?? false"
+            [tableView]="true"
             (itemsChange)="onProgramTodosChange($event)"
           />
           @if (!programData()?.todos?.length) {

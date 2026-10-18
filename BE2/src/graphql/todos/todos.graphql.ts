@@ -37,6 +37,7 @@ export const todoTypes = `
 
 export const todoMutationFields = `
   createTodo(input: CreateTodoInput!): TodoItem!
+  updateTodoTitle(todoId: Int!, title: String!): TodoItem!
   setTodoCompleted(todoId: Int!, isCompleted: Boolean!): TodoItem!
   setTodoStatus(todoId: Int!, status: TodoStatus!): TodoItem!
   assignTodo(todoId: Int!, ownerUserId: Int): TodoItem!
@@ -186,6 +187,29 @@ export const todoResolvers = {
         [parentId, title, userId, userId]
       );
       return getTodoItem(result.insertId);
+    },
+
+    async updateTodoTitle(_: any, args: { todoId?: number; title?: string }, context: any) {
+      const todoId = Number(args?.todoId);
+      const title = String(args?.title || '').trim();
+      if (!Number.isInteger(todoId) || todoId <= 0 || !title || title.length > 255) {
+        throwEventError('BAD_REQUEST', 'todoId and a title containing 1 to 255 characters are required');
+      }
+
+      const userId = await getLoggedInUserId(context);
+      const { eventId } = await getTodoEventId(todoId);
+      const permission = await getCommitteePermission(eventId, userId);
+      if (!permission.canManage) {
+        throwEventError('FORBIDDEN', 'Only committee admins can edit checklist items');
+      }
+
+      await execute(
+        `UPDATE todos
+         SET title = ?, updated_by = ?
+         WHERE id = ?`,
+        [title, userId, todoId]
+      );
+      return getTodoItem(todoId);
     },
 
     async setTodoCompleted(_: any, args: { todoId?: number; isCompleted?: boolean }, context: any) {
