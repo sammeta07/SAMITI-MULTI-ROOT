@@ -1,15 +1,85 @@
 <div class="tasks-tab-content">
-    @if (isLoading) {
-      <div class="dashed-empty-state">
-        <span class="empty-state-sub">Loading event tasks...</span>
-      </div>
-    } @else if (hasLoadError) {
-      <div class="dashed-empty-state">
-        <mat-icon class="empty-state-icon">error_outline</mat-icon>
-        <span class="empty-state-title">Tasks could not be loaded</span>
-      </div>
-    } @else if (tasks.length > 0) {
+  @if (isLoading) {
+    <div class="dashed-empty-state">
+      <span class="empty-state-sub">Loading event tasks...</span>
+    </div>
+  } @else if (hasLoadError) {
+    <div class="dashed-empty-state">
+      <mat-icon class="empty-state-icon">error_outline</mat-icon>
+      <span class="empty-state-title">Tasks could not be loaded</span>
+    </div>
+  } @else {
+    @if (tasks.length > 0 || isCreatingTask) {
       <div class="horizontal-list-container">
+        @if (isCreatingTask) {
+          <article class="event-task-row task-inline-create-row">
+            <label class="task-create-title">
+              <span class="task-create-field-label">Task title</span>
+              <input
+                type="text"
+                maxlength="255"
+                placeholder="Enter task title"
+                [value]="newTaskName"
+                (input)="newTaskName = $any($event.target).value"
+                [disabled]="isSavingTask"
+                aria-label="Task title"
+              />
+            </label>
+            <label class="task-create-status">
+              <span class="task-create-field-label">Status</span>
+              <select
+                [value]="newTaskStatus"
+                (change)="newTaskStatus = $any($event.target).value"
+                [disabled]="isSavingTask"
+                aria-label="Task status"
+              >
+                @for (status of taskStatuses; track status) {
+                  <option [value]="status">{{ status.replace('_', ' ') }}</option>
+                }
+              </select>
+            </label>
+            <label class="task-create-assignee">
+              <span class="task-create-field-label">Assigned to</span>
+              <select
+                [value]="newTaskOwnerUserId ?? ''"
+                (change)="onTaskAssigneeChange($any($event.target).value)"
+                [disabled]="isSavingTask"
+                aria-label="Assign task"
+              >
+                <option value="">Unassigned</option>
+                @for (assignee of taskAssignees; track assignee.userId) {
+                  <option [value]="assignee.userId">{{ assignee.name }}</option>
+                }
+              </select>
+            </label>
+            <span class="task-create-datetime">
+              <span class="task-create-field-label">Created</span>
+              <span>{{ newTaskCreatedAt | date: 'medium' }}</span>
+            </span>
+            <div class="task-create-actions">
+              <button
+                type="button"
+                class="task-inline-icon-button task-save-button"
+                [disabled]="!newTaskName.trim() || isSavingTask"
+                (click)="onSaveTask()"
+                aria-label="Save task"
+                title="Save task"
+              >
+                <mat-icon>{{ isSavingTask ? 'hourglass_top' : 'save' }}</mat-icon>
+              </button>
+              <button
+                type="button"
+                class="task-inline-icon-button task-cancel-button"
+                [disabled]="isSavingTask"
+                (click)="onCancelTask()"
+                aria-label="Cancel task creation"
+                title="Cancel"
+              >
+                <mat-icon>close</mat-icon>
+              </button>
+            </div>
+          </article>
+        }
         @for (taskEntry of flattenedTasks; track taskEntry.task.taskId) {
           <div class="event-task-group" [style.margin-left.px]="taskEntry.depth * 20">
           <article class="event-task-row">
@@ -22,7 +92,10 @@
                   @if (taskEntry.depth > 0) { <mat-icon class="child-task-indicator">subdirectory_arrow_right</mat-icon> }
                   {{ taskEntry.task.taskName }}
                 </div>
-                <div class="secondary-sub-lbl">{{ taskEntry.task.ownerName || 'Unassigned' }}</div>
+                <div class="secondary-sub-lbl">
+                  {{ taskEntry.task.ownerName || 'Unassigned' }}
+                  <span class="task-created-at">Created {{ taskEntry.task.createdAt | date: 'medium' }}</span>
+                </div>
               </div>
             </div>
             <div class="task-row-right">
@@ -39,4 +112,5 @@
         <span class="empty-state-sub">Tasks created for this event will appear here.</span>
       </div>
     }
+  }
 </div>

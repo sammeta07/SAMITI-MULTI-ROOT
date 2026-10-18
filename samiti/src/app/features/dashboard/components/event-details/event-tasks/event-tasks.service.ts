@@ -24,8 +24,13 @@ export class EventTasksService {
           status
           ownerUserId
           ownerName
+          createdAt
         }
         canCreateTasks
+        taskAssignees {
+          userId
+          name
+        }
       }
     }`;
 
@@ -49,6 +54,7 @@ export class EventTasksService {
         status
         ownerUserId
         ownerName
+        createdAt
       }
     }`;
 

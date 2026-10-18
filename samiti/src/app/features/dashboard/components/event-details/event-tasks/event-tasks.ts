@@ -1,13 +1,11 @@
 import { Component, inject, OnInit, OnDestroy } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ActivatedRoute } from '@angular/router';
-import { MatDialog, MatDialogModule } from '@angular/material/dialog';
 import { MatIconModule } from '@angular/material/icon';
 import { Subscription } from 'rxjs';
 import { EventTasksService } from './event-tasks.service';
-import { EventTaskEntry, EventTasksPayload } from './event-tasks.models';
+import { EventTaskEntry, EventTasksPayload, TaskAssignee, TaskStatus } from './event-tasks.models';
 import { NotifierService } from '../../../../../shared/notifier/notifier.service';
-import { CreateTaskDialogComponent } from '../../../../../components/dialog/create-task/create-task.component';
 import { DashboardHierarchyTreeService } from '../../dashboard-hierarchy-tree/dashboard-hierarchy-tree.service';
 
 @Component({
@@ -15,7 +13,6 @@ import { DashboardHierarchyTreeService } from '../../dashboard-hierarchy-tree/da
   standalone: true,
   imports: [
     CommonModule,
-    MatDialogModule,
     MatIconModule
   ],
   templateUrl: './event-tasks.html',
@@ -24,7 +21,6 @@ import { DashboardHierarchyTreeService } from '../../dashboard-hierarchy-tree/da
 export class EventTasksComponent implements OnInit, OnDestroy {
   private readonly route = inject(ActivatedRoute);
   private readonly tasksService = inject(EventTasksService);
-  private readonly dialog = inject(MatDialog);
   private readonly notifier = inject(NotifierService);
   private readonly hierarchyTreeService = inject(DashboardHierarchyTreeService);
   private parentParamsSub?: Subscription;
@@ -33,6 +29,14 @@ export class EventTasksComponent implements OnInit, OnDestroy {
 
   public eventData: EventTaskEntry[] | null = null;
   public canCreateTasks = false;
+  public taskAssignees: TaskAssignee[] = [];
+  public readonly taskStatuses = ['PENDING', 'IN_PROGRESS', 'COMPLETED'] as const;
+  public isCreatingTask = false;
+  public isSavingTask = false;
+  public newTaskName = '';
+  public newTaskStatus: TaskStatus = this.taskStatuses[0];
+  public newTaskOwnerUserId: number | null = null;
+  public newTaskCreatedAt = new Date();
   public isLoading = true;
   public hasLoadError = false;
 
@@ -78,32 +82,59 @@ export class EventTasksComponent implements OnInit, OnDestroy {
   }
 
   public onCreateTask(): void {
-    if (!this.canCreateTasks || !this.currentEventId) {
+    if (!this.canCreateTasks || !this.currentEventId || this.isCreatingTask || this.isSavingTask) {
       return;
     }
 
-    document.body.classList.add('dialog-open');
-    const dialogRef = this.dialog.open(CreateTaskDialogComponent, {
-      position: { right: '0', top: '0' },
-      height: '100%',
-      width: '50%',
-      autoFocus: true,
-      disableClose: true,
-      hasBackdrop: true,
-      panelClass: 'slide-in-dialog',
-      data: {
-        eventId: this.currentEventId,
-        parentTasks: this.tasks
+    this.newTaskName = '';
+    this.newTaskStatus = this.taskStatuses[0];
+    this.newTaskOwnerUserId = null;
+    this.newTaskCreatedAt = new Date();
+    this.isCreatingTask = true;
+  }
+
+  public onCancelTask(): void {
+    if (this.isSavingTask) {
+      return;
+    }
+    this.isCreatingTask = false;
+  }
+
+  public onTaskAssigneeChange(value: string): void {
+    this.newTaskOwnerUserId = value ? Number(value) : null;
+  }
+
+  public onSaveTask(): void {
+    const taskName = this.newTaskName.trim();
+    if (!taskName || taskName.length > 255 || this.isSavingTask || !this.currentEventId) {
+      return;
+    }
+
+    const eventId = this.currentEventId;
+    this.isSavingTask = true;
+    this.tasksService.createEventTask({
+      eventId,
+      taskName,
+      status: this.newTaskStatus,
+      ownerUserId: this.newTaskOwnerUserId
+    }).subscribe({
+      next: (task) => {
+        if (this.currentEventId === eventId) {
+          this.eventData = [...this.tasks, task];
+          this.isCreatingTask = false;
+        }
+        this.isSavingTask = false;
+        this.hierarchyTreeService.triggerHierarchyTreeRefresh();
+        this.notifier.success(`Task "${task.taskName}" created.`);
+      },
+      error: (error) => {
+        this.isSavingTask = false;
+        this.notifier.error(
+          error?.error?.errors?.[0]?.message ||
+          error?.error?.message ||
+          'Failed to create task.'
+        );
       }
-    });
-    dialogRef.afterClosed().subscribe((task) => {
-      document.body.classList.remove('dialog-open');
-      if (!task) {
-        return;
-      }
-      this.loadEventTasks(String(this.currentEventId));
-      this.hierarchyTreeService.triggerHierarchyTreeRefresh();
-      this.notifier.success(`Task "${task.taskName}" created.`);
     });
   }
 
@@ -131,6 +162,7 @@ export class EventTasksComponent implements OnInit, OnDestroy {
         }
         this.eventData = data.entries ?? [];
         this.canCreateTasks = data.canCreateTasks;
+        this.taskAssignees = data.taskAssignees ?? [];
         this.isLoading = false;
       },
       error: (error) => {
@@ -139,6 +171,7 @@ export class EventTasksComponent implements OnInit, OnDestroy {
         }
         this.eventData = [];
         this.canCreateTasks = false;
+        this.taskAssignees = [];
         this.isLoading = false;
         this.hasLoadError = true;
         this.notifier.error(error?.error?.errors?.[0]?.message || 'Failed to load event tasks.');
