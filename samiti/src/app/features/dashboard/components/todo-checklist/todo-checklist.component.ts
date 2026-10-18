@@ -64,7 +64,14 @@ export class TodoChecklistComponent {
   public startEditing(item: TodoItem): void {
     if (!this.canManage || this.pendingIds.has(item.id)) return;
     this.editingId = item.id;
-    this.editTitle = item.title;
+    this.editTitle = this.toSentenceCase(item.title);
+  }
+
+  public toSentenceCase(value: string): string {
+    return value.trim().toLowerCase().replace(
+      /(^|[.!?]\s+|\n\s*)(\p{L})/gu,
+      (_, boundary: string, letter: string) => `${boundary}${letter.toUpperCase()}`
+    );
   }
 
   public cancelEditing(): void {
@@ -73,7 +80,7 @@ export class TodoChecklistComponent {
   }
 
   public saveTitle(item: TodoItem): void {
-    const title = this.editTitle.trim();
+    const title = this.toSentenceCase(this.editTitle);
     if (!this.canManage || this.editingId !== item.id || !title || title.length > 255 || this.pendingIds.has(item.id)) return;
     if (title === item.title) {
       this.cancelEditing();
@@ -96,7 +103,7 @@ export class TodoChecklistComponent {
   }
 
   public add(): void {
-    const title = this.newTitle.trim();
+    const title = this.toSentenceCase(this.newTitle);
     if (!title || title.length > 255 || this.isAdding) return;
 
     this.isAdding = true;

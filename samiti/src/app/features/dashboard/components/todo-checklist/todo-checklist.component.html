@@ -3,107 +3,158 @@
     <div class="todo-heading">Checklist</div>
   }
   @if (tableView) {
-    <div class="todo-table-container">
-      <table mat-table [dataSource]="items" class="todo-table">
-        <ng-container matColumnDef="number">
-          <th mat-header-cell *matHeaderCellDef>#</th>
-          <td mat-cell *matCellDef="let item; let i = index">{{ i + 1 }}</td>
-        </ng-container>
-
-        <ng-container matColumnDef="title">
-          <th mat-header-cell *matHeaderCellDef>Checklist item</th>
-          <td mat-cell *matCellDef="let item">
-            @if (editingId === item.id) {
-              <input
-                class="todo-edit-input"
-                [(ngModel)]="editTitle"
-                [ngModelOptions]="{ standalone: true }"
-                [disabled]="pendingIds.has(item.id)"
-                [attr.aria-label]="'Edit ' + item.title"
-                (keydown.enter)="saveTitle(item)"
-                (keydown.escape)="cancelEditing()"
-              />
-            } @else {
-              <span class="todo-title" [class.todo-completed]="item.isCompleted">{{ item.title }}</span>
+    <div class="todo-table-card">
+      @if (canManage) {
+        <div class="todo-toolbar">
+          <form class="todo-add-form table-add-form" (ngSubmit)="add()">
+            <input
+              name="todoTitle"
+              [(ngModel)]="newTitle"
+              maxlength="255"
+              placeholder="Add an item"
+              aria-label="New checklist item"
+            />
+            @if (newTitle.length > 0) {
+              <button type="button" class="todo-clear-button" (click)="newTitle = ''" aria-label="Clear new checklist item">
+                <mat-icon>close</mat-icon>
+              </button>
             }
-          </td>
-        </ng-container>
+            <button type="submit" [disabled]="!newTitle.trim() || isAdding" aria-label="Add checklist item">
+              <mat-icon>{{ isAdding ? 'hourglass_top' : 'add' }}</mat-icon>
+            </button>
+          </form>
+        </div>
+      }
 
-        <ng-container matColumnDef="status">
-          <th mat-header-cell *matHeaderCellDef>Status</th>
-          <td mat-cell *matCellDef="let item">
-            <span
-              class="todo-status-label"
-              [class.todo-status-completed]="item.status === 'COMPLETED'"
-              [class.todo-status-pending]="item.status !== 'COMPLETED'"
-            >
-              {{ item.status === 'COMPLETED' ? 'COMPLETED' : 'PENDING' }}
-            </span>
-          </td>
-        </ng-container>
+      @if (items.length) {
+        <div class="todo-table-container">
+          <table mat-table [dataSource]="items" class="todo-table">
+            <ng-container matColumnDef="number">
+              <th mat-header-cell *matHeaderCellDef>#</th>
+              <td mat-cell *matCellDef="let item; let i = index">{{ i + 1 }}</td>
+            </ng-container>
 
-        @if (canManage || canToggle) {
-          <ng-container matColumnDef="actions">
-            <th mat-header-cell *matHeaderCellDef>Action</th>
-            <td mat-cell *matCellDef="let item">
-              <div class="todo-actions">
-                @if (canToggle) {
-                  <mat-checkbox
-                    [checked]="item.isCompleted"
-                    [disabled]="pendingIds.has(item.id)"
-                    [aria-label]="'Mark ' + item.title + ' as completed'"
-                    (change)="toggleCompleted(item, $event)"
-                  />
+            <ng-container matColumnDef="title">
+              <th mat-header-cell *matHeaderCellDef>Checklist item</th>
+              <td mat-cell *matCellDef="let item">
+                @if (editingId === item.id) {
+                  <div class="todo-edit-field" [class.todo-edit-field-has-clear]="editTitle.length > 0">
+                    <input
+                      class="todo-edit-input"
+                      [(ngModel)]="editTitle"
+                      [ngModelOptions]="{ standalone: true }"
+                      [disabled]="pendingIds.has(item.id)"
+                      [attr.aria-label]="'Edit ' + item.title"
+                      (keydown.enter)="saveTitle(item)"
+                      (keydown.escape)="cancelEditing()"
+                    />
+                    @if (editTitle.length > 0) {
+                      <button
+                        type="button"
+                        class="todo-clear-button"
+                        (click)="editTitle = ''"
+                        [disabled]="pendingIds.has(item.id)"
+                        tabindex="-1"
+                        aria-label="Clear edited checklist item"
+                      >
+                        <mat-icon>close</mat-icon>
+                      </button>
+                    }
+                  </div>
+                } @else {
+                  <span class="todo-title" [class.todo-completed]="item.isCompleted">{{ toSentenceCase(item.title) }}</span>
                 }
-                @if (canManage) {
-                  @if (editingId === item.id) {
-                    <button
-                      type="button"
-                      class="todo-delete"
-                      (click)="saveTitle(item)"
-                      [disabled]="pendingIds.has(item.id)"
-                      aria-label="Save checklist item"
-                    >
-                      <mat-icon>check</mat-icon>
-                    </button>
-                    <button
-                      type="button"
-                      class="todo-delete"
-                      (click)="cancelEditing()"
-                      [disabled]="pendingIds.has(item.id)"
-                      aria-label="Cancel editing checklist item"
-                    >
-                      <mat-icon>close</mat-icon>
-                    </button>
-                  } @else {
-                    <button
-                      type="button"
-                      class="todo-delete"
-                      (click)="startEditing(item)"
-                      [disabled]="pendingIds.has(item.id)"
-                      aria-label="Edit checklist item"
-                    >
-                      <mat-icon>edit</mat-icon>
-                    </button>
-                    <button
-                      type="button"
-                      class="todo-delete"
-                      (click)="remove(item)"
-                      [disabled]="pendingIds.has(item.id)"
-                      aria-label="Delete checklist item"
-                    >
-                      <mat-icon>delete_outline</mat-icon>
-                    </button>
-                  }
-                }
-              </div>
-            </td>
-          </ng-container>
-        }
+              </td>
+            </ng-container>
 
-        <tr mat-header-row *matHeaderRowDef="tableColumns"></tr>
-        <tr mat-row *matRowDef="let row; columns: tableColumns"></tr>
-      </table>
+            <ng-container matColumnDef="status">
+              <th mat-header-cell *matHeaderCellDef>Status</th>
+              <td mat-cell *matCellDef="let item">
+                <span
+                  class="todo-status-label"
+                  [class.todo-status-completed]="item.status === 'COMPLETED'"
+                  [class.todo-status-in-progress]="item.status === 'IN_PROGRESS'"
+                  [class.todo-status-pending]="item.status === 'PENDING'"
+                >
+                  <span class="todo-status-dot" aria-hidden="true"></span>
+                  {{ item.status === 'COMPLETED' ? 'Completed' : item.status === 'IN_PROGRESS' ? 'In progress' : 'Pending' }}
+                </span>
+              </td>
+            </ng-container>
+
+            @if (canManage || canToggle) {
+              <ng-container matColumnDef="actions">
+                <th mat-header-cell *matHeaderCellDef>Action</th>
+                <td mat-cell *matCellDef="let item">
+                  <div class="todo-actions">
+                    @if (canManage) {
+                      @if (editingId === item.id) {
+                        <button
+                          type="button"
+                          class="todo-action-button todo-save-action"
+                          (click)="saveTitle(item)"
+                          [disabled]="pendingIds.has(item.id)"
+                          aria-label="Save checklist item"
+                        >
+                          <mat-icon>check</mat-icon>
+                        </button>
+                        <button
+                          type="button"
+                          class="todo-action-button todo-cancel-action"
+                          (click)="cancelEditing()"
+                          [disabled]="pendingIds.has(item.id)"
+                          aria-label="Cancel editing checklist item"
+                        >
+                          <mat-icon>close</mat-icon>
+                        </button>
+                      } @else {
+                        <button
+                          type="button"
+                          class="todo-action-button"
+                          (click)="startEditing(item)"
+                          [disabled]="pendingIds.has(item.id)"
+                          aria-label="Edit checklist item"
+                        >
+                          <mat-icon>edit</mat-icon>
+                        </button>
+                        <button
+                          type="button"
+                          class="todo-action-button todo-delete-action"
+                          (click)="remove(item)"
+                          [disabled]="pendingIds.has(item.id)"
+                          aria-label="Delete checklist item"
+                        >
+                          <mat-icon>delete_outline</mat-icon>
+                        </button>
+                      }
+                    }
+                    @if (canToggle) {
+                      <mat-checkbox
+                        class="todo-completion-checkbox"
+                        [checked]="item.isCompleted"
+                        [disabled]="pendingIds.has(item.id)"
+                        [aria-label]="'Mark ' + item.title + ' as completed'"
+                        (change)="toggleCompleted(item, $event)"
+                      />
+                    }
+                  </div>
+                </td>
+              </ng-container>
+            }
+
+            <tr mat-header-row *matHeaderRowDef="tableColumns"></tr>
+            <tr mat-row *matRowDef="let row; columns: tableColumns"></tr>
+          </table>
+        </div>
+      } @else {
+        <div class="todo-empty-state">
+          <span class="todo-empty-icon"><mat-icon>playlist_add_check</mat-icon></span>
+          <span class="todo-empty-title">Nothing here yet</span>
+          <span class="todo-empty-description">
+            {{ canManage ? 'Add an item above to start tracking work.' : 'Checklist items will appear here once they are added.' }}
+          </span>
+        </div>
+      }
     </div>
   } @else {
     @for (item of items; track item.id) {
@@ -119,8 +170,8 @@
           <option value="IN_PROGRESS">In progress</option>
           <option value="COMPLETED">Completed</option>
         </select>
-        <span class="todo-title" [class.todo-completed]="item.isCompleted">{{ item.title }}</span>
-        @if (canManage) {
+        <span class="todo-title" [class.todo-completed]="item.isCompleted">{{ toSentenceCase(item.title) }}</span>
+        @if (canManage && !tableView) {
           <select
             class="todo-assignee"
             [value]="item.assignedUserId ?? ''"
@@ -144,7 +195,7 @@
       </div>
     }
   }
-  @if (canManage) {
+  @if (canManage && !tableView) {
     <form class="todo-add-form" (ngSubmit)="add()">
       <input
         name="todoTitle"
@@ -153,6 +204,11 @@
         placeholder="Add a checklist item"
         aria-label="New checklist item"
       />
+      @if (newTitle.length > 0) {
+        <button type="button" class="todo-clear-button" (click)="newTitle = ''" aria-label="Clear new checklist item">
+          <mat-icon>close</mat-icon>
+        </button>
+      }
       <button type="submit" [disabled]="!newTitle.trim() || isAdding" aria-label="Add checklist item">
         <mat-icon>{{ isAdding ? 'hourglass_top' : 'add' }}</mat-icon>
       </button>

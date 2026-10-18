@@ -270,12 +270,6 @@
             [tableView]="true"
             (itemsChange)="onProgramTodosChange($event)"
           />
-          @if (!programData()?.todos?.length) {
-            <div class="tasks-empty-state">
-              <mat-icon>playlist_add_check</mat-icon>
-              <p>No checklist items yet</p>
-            </div>
-          }
         </section>
       </mat-tab>
 
