@@ -6,57 +6,12 @@
 
 .tasks-tab-content {
   height: 100%;
+  min-height: 0;
   box-sizing: border-box;
   display: flex;
   flex-direction: column;
-  gap: 8px;
   overflow-y: auto;
   overflow-x: hidden;
-}
-
-.horizontal-full-card {
-  background: #ffffff;
-  border: 1px solid #e2e8f0;
-  border-radius: 6px;
-  display: flex;
-  flex-direction: column;
-  overflow: hidden;
-  height: 100%;
-
-  &.tasks-section-style .panel-card-header {
-    background: linear-gradient(90deg, rgba(14, 165, 233, 0.06), transparent);
-    border-bottom: 2px solid rgba(14, 165, 233, 0.15);
-  }
-}
-
-.panel-card-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 6px 10px;
-  box-sizing: border-box;
-
-  .header-title-left {
-    display: inline-flex;
-    align-items: center;
-    gap: 6px;
-    font-size: 0.78rem;
-    font-weight: 700;
-    color: #1e293b;
-
-    mat-icon { font-size: 1rem; width: 1rem; height: 1rem; color: #475569; }
-    .icon-accent-task { color: #0ea5e9; }
-  }
-
-  .count-pill {
-    font-size: 0.65rem;
-    font-weight: 700;
-    background: #e2e8f0;
-    color: #475569;
-    padding: 1px 5px;
-    border-radius: 10px;
-    margin-left: 4px;
-  }
 }
 
 /* BASE BUTTON CLASS */
@@ -93,26 +48,13 @@
   }
 }
 
-/* ➕ ADD TASK BUTTON */
-.btn-add-task {
-  background: #ffffff !important;
-  color: #15803d !important;
-  border: 1px solid #16a34a !important;
-  transition: background-color 160ms ease, border-color 160ms ease, box-shadow 160ms ease !important;
-
-  &:hover:not(:disabled) {
-    background: #f0fdf4 !important;
-    border-color: #15803d !important;
-    box-shadow: 0 2px 6px rgba(22, 163, 74, 0.14) !important;
-  }
-}
-
 .horizontal-list-container {
   padding: 4px;
   display: flex;
+  flex: 1 1 auto;
+  min-height: 0;
   flex-direction: column;
   gap: 4px;
-  max-height: 200px;
   overflow-y: auto;
 }
 

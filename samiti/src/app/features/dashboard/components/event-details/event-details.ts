@@ -1,4 +1,4 @@
-import { Component, inject, OnInit, OnDestroy, signal } from '@angular/core';
+import { Component, inject, OnInit, OnDestroy, signal, ViewChild } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ActivatedRoute, Router, RouterModule, RouterOutlet } from '@angular/router';
 import { MatIconModule } from '@angular/material/icon';
@@ -28,7 +28,8 @@ import { ConfirmDialogService } from '../../../../components/dialog/confirm/conf
 import { ConfirmDialogData } from '../../../../components/dialog/confirm/confirm-dialog.models';
 import { DashboardHierarchyTreeService } from '../dashboard-hierarchy-tree/dashboard-hierarchy-tree.service';
 import { CreateEventDialogComponent } from '../../../../components/dialog/create-event/create-event.component';
-import { CreateProgramDialogComponent } from '../../../../components/dialog/create-program/create-program.component';
+import { EventProgramsComponent } from './event-programs/event-programs';
+import { EventTasksComponent } from './event-tasks/event-tasks';
 import { ImageAssetService } from '../../../../core/services/image-asset.service';
 import { ImageCropperDialogComponent } from '../../../../shared/components/image-cropper-dialog/image-cropper-dialog.component';
 import { LoadingStateService } from '../../../../shared/services/loading-state.service';
@@ -54,6 +55,8 @@ import { LoadingStateService } from '../../../../shared/services/loading-state.s
   styleUrl: './event-details.scss'
 })
 export class EventDetailsComponent implements OnInit, OnDestroy {
+  @ViewChild(RouterOutlet) private routerOutlet?: RouterOutlet;
+
   private readonly route = inject(ActivatedRoute);
   private readonly router = inject(Router);
   private readonly notifier = inject(NotifierService);
@@ -204,33 +207,22 @@ export class EventDetailsComponent implements OnInit, OnDestroy {
   }
 
   public onCreateProgram(): void {
-    const currentEvent = this.headerData;
-    if (!currentEvent?.eventId) {
-      this.notifier.error('No event available for program creation');
-      return;
+    const activeComponent = this.routerOutlet?.component;
+    if (activeComponent instanceof EventProgramsComponent) {
+      activeComponent.onCreateProgram();
     }
-    document.body.classList.add('dialog-open');
+  }
 
-    const dialogRef = this.dialog.open(CreateProgramDialogComponent, {
-      position: { right: '0', top: '0' },
-      height: '100%',
-      width: '50%',
-      autoFocus: true,
-      disableClose: true,
-      hasBackdrop: true,
-      panelClass: 'slide-in-dialog',
-      data: { eventId: currentEvent.eventId, address: currentEvent.committeeAddress || '' }
-    });
+  public get canCreateTask(): boolean {
+    const activeComponent = this.routerOutlet?.component;
+    return activeComponent instanceof EventTasksComponent && activeComponent.canCreateTasks;
+  }
 
-    dialogRef.afterClosed().subscribe((result) => {
-      document.body.classList.remove('dialog-open');
-      if (result) {
-        this.notifier.success(`Program "${result.programName}" created successfully!`);
-        if (result.programId) {
-          this.router.navigate(['/dashboard', 'event', currentEvent.eventId, 'overview']);
-        }
-      }
-    });
+  public onCreateTask(): void {
+    const activeComponent = this.routerOutlet?.component;
+    if (activeComponent instanceof EventTasksComponent) {
+      activeComponent.onCreateTask();
+    }
   }
 
   public onVotingModeChange(mode: 'VOTING' | 'DIRECT'): void {

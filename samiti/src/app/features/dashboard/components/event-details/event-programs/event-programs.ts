@@ -224,12 +224,6 @@ export class EventProgramsComponent implements OnInit, OnDestroy {
     return this.userEventRole === 'COMMITTEE_ADMIN';
   }
 
-  public get canCreateProgram(): boolean {
-    if (this.isEventMasterAdmin || this.isEventAdmin) return true;
-    const designation = (this.eventData?.myDesignation?.name || '').trim().toLowerCase();
-    return designation === 'adhyaksha' || designation === 'upadhyaksha';
-  }
-
   public get canManageProgramVisibility(): boolean {
     return this.isEventMasterAdmin || this.isEventAdmin;
   }

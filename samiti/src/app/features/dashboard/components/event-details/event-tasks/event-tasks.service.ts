@@ -24,23 +24,8 @@ export class EventTasksService {
           status
           ownerUserId
           ownerName
-          todos {
-            id
-            title
-            status
-            isCompleted
-            assignedUserId
-            assignedUserName
-            createdAt
-          }
         }
         canCreateTasks
-        canManageTodos
-        canToggleTodos
-        todoAssignees {
-          userId
-          name
-        }
       }
     }`;
 
@@ -64,15 +49,6 @@ export class EventTasksService {
         status
         ownerUserId
         ownerName
-        todos {
-          id
-          title
-          status
-          isCompleted
-          assignedUserId
-          assignedUserName
-          createdAt
-        }
       }
     }`;
 

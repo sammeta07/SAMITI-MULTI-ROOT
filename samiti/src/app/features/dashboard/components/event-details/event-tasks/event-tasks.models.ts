@@ -1,5 +1,3 @@
-import { TodoAssignee, TodoItem } from '../../../models/todo.models';
-
 export interface EventTaskEntry {
   id: number;
   taskId: number;
@@ -9,15 +7,11 @@ export interface EventTaskEntry {
   status: string | null;
   ownerUserId: number | null;
   ownerName: string | null;
-  todos: TodoItem[];
 }
 
 export interface EventTasksPayload {
   entries: EventTaskEntry[];
   canCreateTasks: boolean;
-  canManageTodos: boolean;
-  canToggleTodos: boolean;
-  todoAssignees: TodoAssignee[];
 }
 
 export interface CreateEventTaskPayload {

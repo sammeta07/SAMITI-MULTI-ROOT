@@ -1,4 +1,4 @@
-<div class="program-details-workspace drawer-layout-shell">
+<div class="task-details-workspace">
 
   @if (isLoading()) {
     <div class="spinner-loading-overlay">
@@ -7,32 +7,22 @@
     </div>
   } @else if (task(); as taskDetails) {
 
-    <div class="workspace-body scrollable-container">
+    <div class="task-details-content">
 
-      <section class="gd-committee-card" [ngClass]="'status-container-' + statusClass(taskDetails.status)">
-        <div class="program-header-grid">
+      <section class="task-header-card">
+        <div class="task-header-grid">
 
-          <div class="card-main-info-area">
-            <div class="card-title-row">
-              <h3 class="committee-display-name">{{ taskDetails.taskName | titlecase }}</h3>
-            </div>
-
-            <div class="card-location-row">
-              <mat-icon class="location-icon">event</mat-icon>
-              <a class="location-text-trim task-event-link" [routerLink]="['/dashboard', 'event', taskDetails.eventId, 'tasks']">
-                {{ taskDetails.eventName | titlecase }}
-              </a>
-            </div>
-
-            <div class="card-identity-pills-area">
-              <span class="meta-pill status-pill status-badge-{{ statusClass(taskDetails.status) }}">
+          <div class="task-header-main">
+            <h3 class="task-header-title">{{ taskDetails.taskName | titlecase }}</h3>
+            <div class="task-header-meta">
+              <span class="task-status-pill" [ngClass]="'task-status-' + statusClass(taskDetails.status)">
                 <span class="status-dot"></span>
                 {{ displayStatus(taskDetails.status) }}
               </span>
 
               @if (taskDetails.parentTaskId) {
                 <a
-                  class="meta-pill date-pill task-parent-pill"
+                  class="task-meta-pill task-parent-pill"
                   [routerLink]="['/dashboard', 'task', taskDetails.parentTaskId]"
                   title="Parent task"
                 >
@@ -41,29 +31,18 @@
                 </a>
               }
 
-              <span class="meta-pill date-pill" title="Created">
+              <span class="task-meta-pill" title="Created">
                 <mat-icon>schedule</mat-icon>
                 <span>Created {{ taskDetails.createdAt | date:'mediumDate' }}</span>
               </span>
             </div>
           </div>
 
-          <div class="program-header-side">
-            <div class="program-owner-row">
-              <span class="owner-pill-text" [class.owner-unassigned]="!taskDetails.ownerName">
-                OWNER : {{ (taskDetails.ownerName || 'UNASSIGNED') | titlecase }}
-              </span>
-            </div>
-            <div class="action-buttons-area">
-              <a
-                mat-button
-                class="btn-action btn-edit"
-                [routerLink]="['/dashboard', 'event', taskDetails.eventId, 'tasks']"
-              >
-                <mat-icon>arrow_back</mat-icon>
-                <span>Event Tasks</span>
-              </a>
-            </div>
+          <div class="task-header-side">
+            <span class="task-owner-pill" [class.task-owner-unassigned]="!taskDetails.ownerName">
+              <mat-icon>person</mat-icon>
+              <span>{{ (taskDetails.ownerName || 'Unassigned') | titlecase }}</span>
+            </span>
           </div>
 
         </div>
@@ -135,7 +114,7 @@
 
     </div>
   } @else {
-    <div class="empty-layout-shell">
+    <div class="task-empty-layout">
       <mat-icon class="icon-off">task_alt</mat-icon>
       <h3>Task Details</h3>
       <p>The task could not be loaded or you don't have access to it.</p>

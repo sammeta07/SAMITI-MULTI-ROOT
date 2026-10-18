@@ -1,18 +1,4 @@
 <div class="tasks-tab-content">
-  <section class="horizontal-full-card tasks-section-style">
-    <div class="panel-card-header">
-      <div class="header-title-left">
-        <mat-icon class="icon-accent-task">task_alt</mat-icon>
-        <span class="title-text">Tasks</span>
-        <span class="count-pill">{{ tasksCount }}</span>
-      </div>
-      @if (canCreateTasks) {
-        <button mat-stroked-button class="btn-action btn-add-task" type="button" (click)="onCreateTask()">
-          <mat-icon>add</mat-icon>
-          <span>Task</span>
-        </button>
-      }
-    </div>
     @if (isLoading) {
       <div class="dashed-empty-state">
         <span class="empty-state-sub">Loading event tasks...</span>
@@ -43,15 +29,6 @@
               <span class="status-tag {{ statusTagClass(taskEntry.task.status) }}">{{ taskEntry.task.status || 'PENDING' }}</span>
             </div>
           </article>
-          <app-todo-checklist
-            parentType="TASK"
-            [parentId]="taskEntry.task.taskId"
-            [items]="taskEntry.task.todos"
-            [assignees]="todoAssignees"
-            [canManage]="canManageTodos"
-            [canToggle]="canToggleTodos"
-            (itemsChange)="onTaskTodosChange(taskEntry.task.taskId, $event)"
-          />
           </div>
         }
       </div>
@@ -62,5 +39,4 @@
         <span class="empty-state-sub">Tasks created for this event will appear here.</span>
       </div>
     }
-  </section>
 </div>

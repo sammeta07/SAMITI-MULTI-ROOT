@@ -161,6 +161,20 @@
             </mat-select>
           </div>
         }
+        @if (selectedTabIndex === 2 && canCreateProgram) {
+          <button mat-stroked-button class="btn-action btn-add-program" type="button"
+                  (click)="onCreateProgram()" aria-label="Add program">
+            <mat-icon>add</mat-icon>
+            <span>Program</span>
+          </button>
+        }
+        @if (selectedTabIndex === 3 && canCreateTask) {
+          <button mat-stroked-button class="btn-action btn-add-task" type="button"
+                  (click)="onCreateTask()" aria-label="Add task">
+            <mat-icon>add</mat-icon>
+            <span>Task</span>
+          </button>
+        }
       </div>
 
       <mat-tab-group class="inner-tab-group samiti-nav-tabs" animationDuration="150ms" [(selectedIndex)]="selectedTabIndex" (selectedIndexChange)="onTabChange($event)">

@@ -3,15 +3,12 @@ import { CommonModule } from '@angular/common';
 import { ActivatedRoute } from '@angular/router';
 import { MatDialog, MatDialogModule } from '@angular/material/dialog';
 import { MatIconModule } from '@angular/material/icon';
-import { MatButtonModule } from '@angular/material/button';
 import { Subscription } from 'rxjs';
 import { EventTasksService } from './event-tasks.service';
 import { EventTaskEntry, EventTasksPayload } from './event-tasks.models';
 import { NotifierService } from '../../../../../shared/notifier/notifier.service';
 import { CreateTaskDialogComponent } from '../../../../../components/dialog/create-task/create-task.component';
 import { DashboardHierarchyTreeService } from '../../dashboard-hierarchy-tree/dashboard-hierarchy-tree.service';
-import { TodoAssignee, TodoItem } from '../../../models/todo.models';
-import { TodoChecklistComponent } from '../../todo-checklist/todo-checklist.component';
 
 @Component({
   selector: 'app-event-tasks',
@@ -19,9 +16,7 @@ import { TodoChecklistComponent } from '../../todo-checklist/todo-checklist.comp
   imports: [
     CommonModule,
     MatDialogModule,
-    MatIconModule,
-    MatButtonModule,
-    TodoChecklistComponent
+    MatIconModule
   ],
   templateUrl: './event-tasks.html',
   styleUrl: './event-tasks.scss'
@@ -38,18 +33,11 @@ export class EventTasksComponent implements OnInit, OnDestroy {
 
   public eventData: EventTaskEntry[] | null = null;
   public canCreateTasks = false;
-  public canManageTodos = false;
-  public canToggleTodos = false;
-  public todoAssignees: TodoAssignee[] = [];
   public isLoading = true;
   public hasLoadError = false;
 
   public get tasks(): EventTaskEntry[] {
     return this.eventData ?? [];
-  }
-
-  public get tasksCount(): number {
-    return this.tasks.length;
   }
 
   public get flattenedTasks(): Array<{ task: EventTaskEntry; depth: number }> {
@@ -82,10 +70,6 @@ export class EventTasksComponent implements OnInit, OnDestroy {
       }
     }
     return flattened;
-  }
-
-  public onTaskTodosChange(taskId: number, todos: TodoItem[]): void {
-    this.eventData = this.tasks.map((task) => task.taskId === taskId ? { ...task, todos } : task);
   }
 
   public statusTagClass(status: string | null | undefined): string {
@@ -147,9 +131,6 @@ export class EventTasksComponent implements OnInit, OnDestroy {
         }
         this.eventData = data.entries ?? [];
         this.canCreateTasks = data.canCreateTasks;
-        this.canManageTodos = data.canManageTodos;
-        this.canToggleTodos = data.canToggleTodos;
-        this.todoAssignees = data.todoAssignees ?? [];
         this.isLoading = false;
       },
       error: (error) => {
@@ -158,9 +139,6 @@ export class EventTasksComponent implements OnInit, OnDestroy {
         }
         this.eventData = [];
         this.canCreateTasks = false;
-        this.canManageTodos = false;
-        this.canToggleTodos = false;
-        this.todoAssignees = [];
         this.isLoading = false;
         this.hasLoadError = true;
         this.notifier.error(error?.error?.errors?.[0]?.message || 'Failed to load event tasks.');
