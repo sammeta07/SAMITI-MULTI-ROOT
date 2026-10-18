@@ -117,14 +117,9 @@
               [assignees]="taskDetails.todoAssignees"
               [canManage]="taskDetails.canManageTodos"
               [canToggle]="taskDetails.canToggleTodos"
+              [tableView]="true"
               (itemsChange)="onTodosChange($event)"
             />
-            @if (taskDetails.todos.length === 0) {
-              <div class="tasks-empty-state">
-                <mat-icon>playlist_add_check</mat-icon>
-                <p>No checklist items yet</p>
-              </div>
-            }
           </section>
         </mat-tab>
 

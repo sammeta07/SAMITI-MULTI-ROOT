@@ -11,7 +11,7 @@
               name="todoTitle"
               [(ngModel)]="newTitle"
               maxlength="255"
-              placeholder="Add an item"
+              placeholder="Add a new checklist item..."
               aria-label="New checklist item"
             />
             @if (newTitle.length > 0) {
@@ -31,11 +31,11 @@
           <table mat-table [dataSource]="items" class="todo-table">
             <ng-container matColumnDef="number">
               <th mat-header-cell *matHeaderCellDef>#</th>
-              <td mat-cell *matCellDef="let item; let i = index">{{ i + 1 }}</td>
+              <td mat-cell *matCellDef="let item; let i = index"><span class="row-index">{{ i + 1 }}</span></td>
             </ng-container>
 
             <ng-container matColumnDef="title">
-              <th mat-header-cell *matHeaderCellDef>Checklist item</th>
+              <th mat-header-cell *matHeaderCellDef>Checklist Item</th>
               <td mat-cell *matCellDef="let item">
                 @if (editingId === item.id) {
                   <div class="todo-edit-field" [class.todo-edit-field-has-clear]="editTitle.length > 0">
@@ -84,7 +84,7 @@
 
             @if (canManage || canToggle) {
               <ng-container matColumnDef="actions">
-                <th mat-header-cell *matHeaderCellDef>Action</th>
+                <th mat-header-cell *matHeaderCellDef>Actions</th>
                 <td mat-cell *matCellDef="let item">
                   <div class="todo-actions">
                     @if (canManage) {
@@ -115,7 +115,7 @@
                           [disabled]="pendingIds.has(item.id)"
                           aria-label="Edit checklist item"
                         >
-                          <mat-icon>edit</mat-icon>
+                          <mat-icon>edit_outline</mat-icon>
                         </button>
                         <button
                           type="button"
@@ -149,51 +149,53 @@
       } @else {
         <div class="todo-empty-state">
           <span class="todo-empty-icon"><mat-icon>playlist_add_check</mat-icon></span>
-          <span class="todo-empty-title">Nothing here yet</span>
+          <span class="todo-empty-title">No checklist items yet</span>
           <span class="todo-empty-description">
-            {{ canManage ? 'Add an item above to start tracking work.' : 'Checklist items will appear here once they are added.' }}
+            {{ canManage ? 'Add a new item using the input above to get started.' : 'Checklist items will appear here once added.' }}
           </span>
         </div>
       }
     </div>
   } @else {
-    @for (item of items; track item.id) {
-      <div class="todo-row">
-        <select
-          class="todo-status"
-          [value]="item.status"
-          [disabled]="!canToggle || pendingIds.has(item.id)"
-          [attr.aria-label]="'Status for ' + item.title"
-          (change)="setStatus(item, $event)"
-        >
-          <option value="PENDING">Pending</option>
-          <option value="IN_PROGRESS">In progress</option>
-          <option value="COMPLETED">Completed</option>
-        </select>
-        <span class="todo-title" [class.todo-completed]="item.isCompleted">{{ toSentenceCase(item.title) }}</span>
-        @if (canManage && !tableView) {
+    <div class="todo-list-card">
+      @for (item of items; track item.id) {
+        <div class="todo-row">
           <select
-            class="todo-assignee"
-            [value]="item.assignedUserId ?? ''"
-            [disabled]="pendingIds.has(item.id)"
-            [attr.aria-label]="'Assignee for ' + item.title"
-            (change)="assign(item, $event)"
+            class="todo-status"
+            [value]="item.status"
+            [disabled]="!canToggle || pendingIds.has(item.id)"
+            [attr.aria-label]="'Status for ' + item.title"
+            (change)="setStatus(item, $event)"
           >
-            <option value="">Unassigned</option>
-            @for (assignee of assignees; track assignee.userId) {
-              <option [value]="assignee.userId">{{ assignee.name }}</option>
-            }
+            <option value="PENDING">Pending</option>
+            <option value="IN_PROGRESS">In progress</option>
+            <option value="COMPLETED">Completed</option>
           </select>
-        } @else {
-          <span class="todo-assignee-name">{{ item.assignedUserName || 'Unassigned' }}</span>
-        }
-        @if (canManage) {
-          <button type="button" class="todo-delete" (click)="remove(item)" [disabled]="pendingIds.has(item.id)" aria-label="Delete checklist item">
-            <mat-icon>delete_outline</mat-icon>
-          </button>
-        }
-      </div>
-    }
+          <span class="todo-title" [class.todo-completed]="item.isCompleted">{{ toSentenceCase(item.title) }}</span>
+          @if (canManage && !tableView) {
+            <select
+              class="todo-assignee"
+              [value]="item.assignedUserId ?? ''"
+              [disabled]="pendingIds.has(item.id)"
+              [attr.aria-label]="'Assignee for ' + item.title"
+              (change)="assign(item, $event)"
+            >
+              <option value="">Unassigned</option>
+              @for (assignee of assignees; track assignee.userId) {
+                <option [value]="assignee.userId">{{ assignee.name }}</option>
+              }
+            </select>
+          } @else {
+            <span class="todo-assignee-name">{{ item.assignedUserName || 'Unassigned' }}</span>
+          }
+          @if (canManage) {
+            <button type="button" class="todo-delete" (click)="remove(item)" [disabled]="pendingIds.has(item.id)" aria-label="Delete checklist item">
+              <mat-icon>delete_outline</mat-icon>
+            </button>
+          }
+        </div>
+      }
+    </div>
   }
   @if (canManage && !tableView) {
     <form class="todo-add-form" (ngSubmit)="add()">
@@ -201,7 +203,7 @@
         name="todoTitle"
         [(ngModel)]="newTitle"
         maxlength="255"
-        placeholder="Add a checklist item"
+        placeholder="Add a checklist item..."
         aria-label="New checklist item"
       />
       @if (newTitle.length > 0) {

@@ -4,6 +4,8 @@ import { FormsModule } from '@angular/forms';
 import { MatCheckboxChange, MatCheckboxModule } from '@angular/material/checkbox';
 import { MatIconModule } from '@angular/material/icon';
 import { MatTableModule } from '@angular/material/table';
+import { ConfirmDialogData } from '../../../../components/dialog/confirm/confirm-dialog.models';
+import { ConfirmDialogService } from '../../../../components/dialog/confirm/confirm-dialog.service';
 import { NotifierService } from '../../../../shared/notifier/notifier.service';
 import { TodoAssignee, TodoItem, TodoParentType, TodoStatus } from '../../models/todo.models';
 import { TodoChecklistService } from '../../services/todo-checklist.service';
@@ -18,6 +20,7 @@ import { TodoChecklistService } from '../../services/todo-checklist.service';
 export class TodoChecklistComponent {
   private readonly service = inject(TodoChecklistService);
   private readonly notifier = inject(NotifierService);
+  private readonly confirmDialog = inject(ConfirmDialogService);
 
   @Input({ required: true }) parentType!: TodoParentType;
   @Input({ required: true }) parentId!: number;
@@ -49,7 +52,7 @@ export class TodoChecklistComponent {
     this.pendingIds.add(item.id);
     this.service.setCompleted(item.id, event.checked).subscribe({
       next: (updated) => {
-        this.items = this.items.map((entry) => entry.id === updated.id ? updated : entry);
+        this.items = this.items.map((entry) => (entry.id === updated.id ? updated : entry));
         this.itemsChange.emit(this.items);
         this.pendingIds.delete(item.id);
       },
@@ -68,6 +71,7 @@ export class TodoChecklistComponent {
   }
 
   public toSentenceCase(value: string): string {
+    if (!value) return '';
     return value.trim().toLowerCase().replace(
       /(^|[.!?]\s+|\n\s*)(\p{L})/gu,
       (_, boundary: string, letter: string) => `${boundary}${letter.toUpperCase()}`
@@ -90,7 +94,7 @@ export class TodoChecklistComponent {
     this.pendingIds.add(item.id);
     this.service.updateTitle(item.id, title).subscribe({
       next: (updated) => {
-        this.items = this.items.map((entry) => entry.id === updated.id ? updated : entry);
+        this.items = this.items.map((entry) => (entry.id === updated.id ? updated : entry));
         this.itemsChange.emit(this.items);
         this.pendingIds.delete(item.id);
         this.cancelEditing();
@@ -130,7 +134,7 @@ export class TodoChecklistComponent {
 
     this.service.setStatus(item.id, status).subscribe({
       next: (updated) => {
-        this.items = this.items.map((entry) => entry.id === updated.id ? updated : entry);
+        this.items = this.items.map((entry) => (entry.id === updated.id ? updated : entry));
         this.itemsChange.emit(this.items);
         this.pendingIds.delete(item.id);
       },
@@ -151,7 +155,7 @@ export class TodoChecklistComponent {
 
     this.service.assign(item.id, ownerUserId).subscribe({
       next: (updated) => {
-        this.items = this.items.map((entry) => entry.id === updated.id ? updated : entry);
+        this.items = this.items.map((entry) => (entry.id === updated.id ? updated : entry));
         this.itemsChange.emit(this.items);
         this.pendingIds.delete(item.id);
       },
@@ -165,18 +169,31 @@ export class TodoChecklistComponent {
 
   public remove(item: TodoItem): void {
     if (!this.canManage || this.pendingIds.has(item.id)) return;
-    this.pendingIds.add(item.id);
 
-    this.service.delete(item.id).subscribe({
-      next: () => {
-        this.items = this.items.filter((entry) => entry.id !== item.id);
-        this.itemsChange.emit(this.items);
-        this.pendingIds.delete(item.id);
-      },
-      error: (error) => {
-        this.pendingIds.delete(item.id);
-        this.notifier.error(error?.error?.errors?.[0]?.message || error?.message || 'Failed to remove checklist item.');
-      }
+    const dialogData: ConfirmDialogData = {
+      title: 'Delete checklist item?',
+      message: 'Are you sure you want to permanently delete this checklist item?',
+      confirmText: 'Delete',
+      cancelText: 'Cancel',
+      iconType: 'warning',
+      highlightText: this.toSentenceCase(item.title)
+    };
+
+    this.confirmDialog.open(dialogData).afterClosed().subscribe((result) => {
+      if (!result?.confirmed || this.pendingIds.has(item.id)) return;
+      this.pendingIds.add(item.id);
+
+      this.service.delete(item.id).subscribe({
+        next: () => {
+          this.items = this.items.filter((entry) => entry.id !== item.id);
+          this.itemsChange.emit(this.items);
+          this.pendingIds.delete(item.id);
+        },
+        error: (error) => {
+          this.pendingIds.delete(item.id);
+          this.notifier.error(error?.error?.errors?.[0]?.message || error?.message || 'Failed to remove checklist item.');
+        }
+      });
     });
   }
 }
