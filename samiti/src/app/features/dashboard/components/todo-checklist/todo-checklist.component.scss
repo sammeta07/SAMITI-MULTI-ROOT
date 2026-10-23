@@ -1,10 +1,16 @@
 :host {
   display: block;
   min-width: 0;
+  padding: 8px 12px 14px;
+  box-sizing: border-box;
 }
 
-.todo-checklist {
-  padding: 8px 12px 14px;
+:host(.todo-checklist-table-view) {
+  display: flex;
+  min-height: 0;
+  flex: 1 1 auto;
+  flex-direction: column;
+  padding: 0;
 }
 
 .todo-heading {
@@ -18,10 +24,16 @@
 
 .todo-table-card {
   overflow: hidden;
-  border: 1px solid #e2e8f0;
   border-radius: 12px;
   background: #ffffff;
   box-shadow: 0 4px 6px -1px rgb(0 0 0 / 2%), 0 2px 4px -2px rgb(0 0 0 / 2%);
+}
+
+:host(.todo-checklist-table-view) .todo-table-card {
+  display: flex;
+  min-height: 0;
+  flex: 1 1 auto;
+  flex-direction: column;
 }
 
 .todo-toolbar {
@@ -36,7 +48,8 @@
 }
 
 .todo-table-container {
-  max-height: 380px;
+  min-height: 0;
+  flex: 1 1 auto;
   overflow: auto;
   scrollbar-color: #cbd5e1 transparent;
   scrollbar-width: thin;
@@ -336,8 +349,31 @@
   font-size: 18px;
 }
 
-.todo-clear-button {
+.clear-search-trigger {
+  border: none;
+  background: transparent;
+  width: 16px;
+  height: 16px;
+  padding: 0;
+  cursor: pointer;
   color: #94a3b8;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  margin-left: 2px;
+  flex: 0 0 16px;
+
+  mat-icon {
+    font-size: 1rem;
+    width: 1rem;
+    height: 1rem;
+  }
+
+  &:hover {
+    color: #ef4444;
+    background: rgba(239, 68, 68, 0.1);
+  }
 }
 
 .todo-delete-action,
@@ -356,6 +392,29 @@
   &:hover {
     background: #ecfdf5;
     color: #059669;
+  }
+}
+
+.table-add-form .clear-search-trigger {
+  width: 16px !important;
+  height: 16px !important;
+  flex: 0 0 16px !important;
+  background: transparent !important;
+  color: #94a3b8 !important;
+  border-radius: 50% !important;
+  padding: 0 !important;
+  border: none !important;
+  margin-left: 2px !important;
+
+  mat-icon {
+    font-size: 1rem !important;
+    width: 1rem !important;
+    height: 1rem !important;
+  }
+
+  &:hover {
+    color: #ef4444 !important;
+    background: rgba(239, 68, 68, 0.1) !important;
   }
 }
 
@@ -449,7 +508,7 @@ input:disabled {
 }
 
 @media (max-width: 600px) {
-  .todo-checklist {
+  :host {
     padding: 4px;
   }
 

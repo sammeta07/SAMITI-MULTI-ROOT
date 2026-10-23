@@ -14,6 +14,9 @@ import { TodoChecklistService } from '../../services/todo-checklist.service';
   selector: 'app-todo-checklist',
   standalone: true,
   imports: [CommonModule, FormsModule, MatCheckboxModule, MatIconModule, MatTableModule],
+  host: {
+    '[class.todo-checklist-table-view]': 'tableView'
+  },
   templateUrl: './todo-checklist.component.html',
   styleUrl: './todo-checklist.component.scss'
 })

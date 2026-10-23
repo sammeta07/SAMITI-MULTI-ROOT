@@ -1,4 +1,3 @@
-<section class="todo-checklist">
   @if (!tableView && (items.length > 0 || canManage)) {
     <div class="todo-heading">Checklist</div>
   }
@@ -15,7 +14,7 @@
               aria-label="New checklist item"
             />
             @if (newTitle.length > 0) {
-              <button type="button" class="todo-clear-button" (click)="newTitle = ''" aria-label="Clear new checklist item">
+              <button type="button" class="clear-search-trigger" (mousedown)="newTitle = ''" aria-label="Clear new checklist item">
                 <mat-icon>close</mat-icon>
               </button>
             }
@@ -51,8 +50,8 @@
                     @if (editTitle.length > 0) {
                       <button
                         type="button"
-                        class="todo-clear-button"
-                        (click)="editTitle = ''"
+                        class="clear-search-trigger"
+                        (mousedown)="editTitle = ''"
                         [disabled]="pendingIds.has(item.id)"
                         tabindex="-1"
                         aria-label="Clear edited checklist item"
@@ -207,7 +206,7 @@
         aria-label="New checklist item"
       />
       @if (newTitle.length > 0) {
-        <button type="button" class="todo-clear-button" (click)="newTitle = ''" aria-label="Clear new checklist item">
+        <button type="button" class="clear-search-trigger" (mousedown)="newTitle = ''" aria-label="Clear new checklist item">
           <mat-icon>close</mat-icon>
         </button>
       }
@@ -216,4 +215,3 @@
       </button>
     </form>
   }
-</section>

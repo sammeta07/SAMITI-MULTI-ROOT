@@ -202,29 +202,23 @@
     />
 
     <!-- PROGRAM TABS -->
-    <mat-tab-group class="tasks-tabs samiti-nav-tabs" animationDuration="150ms">
+    <div
+      class="program-tabs-container"
+      [class.show-create-subprogram]="selectedProgramTabIndex === 0 && programData()?.canCreateSubprogram"
+    >
+    <mat-tab-group
+      class="tasks-tabs samiti-nav-tabs"
+      animationDuration="150ms"
+      [(selectedIndex)]="selectedProgramTabIndex"
+    >
       <mat-tab>
         <ng-template mat-tab-label>
           <mat-icon class="tab-leading-icon">account_tree</mat-icon>
-          <span class="tab-name-text">Subprogram</span>
+          <span class="tab-name-text">Sub Program</span>
           <span class="tab-badge">{{ programData()?.subprograms?.length ?? 0 }}</span>
         </ng-template>
 
         <section class="horizontal-full-card tasks-section-style">
-          <div class="panel-card-header">
-            <div class="header-title-left">
-              <mat-icon>account_tree</mat-icon>
-              <span class="title-text">Subprograms</span>
-              <span class="count-pill">{{ programData()?.subprograms?.length ?? 0 }}</span>
-            </div>
-            @if (programData()?.canCreateSubprogram) {
-              <button mat-stroked-button type="button" (click)="onCreateSubprogram()">
-                <mat-icon>add</mat-icon>
-                <span>Subprogram</span>
-              </button>
-            }
-          </div>
-
           <div class="horizontal-list-container">
             @for (subprogram of programData()?.subprograms ?? []; track subprogram.programId) {
               <a class="task-aligned-row" [routerLink]="['/dashboard', 'program', subprogram.programId]">
@@ -282,6 +276,13 @@
         <div class="notes-tab-empty-state">Notes are not available for this program yet.</div>
       </mat-tab>
     </mat-tab-group>
+    @if (selectedProgramTabIndex === 0 && programData()?.canCreateSubprogram) {
+      <button mat-flat-button class="create-subprogram-tab-action" type="button" (click)="onCreateSubprogram()">
+        <mat-icon>add</mat-icon>
+        <span>Sub Program</span>
+      </button>
+    }
+    </div>
 
   </div>
   } @else {

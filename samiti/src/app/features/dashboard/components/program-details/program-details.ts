@@ -69,6 +69,7 @@ export class ProgramDetailsComponent implements OnInit {
   public readonly isSelectionMode = signal<boolean>(false);
   public readonly selectedBannerUrls = signal<Set<string>>(new Set<string>());
   public readonly programData = signal<ProgramDetailsPayload | null>(null);
+  public selectedProgramTabIndex = 0;
   public readonly programOwnerCandidates = signal<ProgramOwnerCandidate[]>([]);
   public readonly isUpdatingOwner = signal<boolean>(false);
   public readonly MAX_BANNERS = 5;

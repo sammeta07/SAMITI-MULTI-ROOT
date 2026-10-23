@@ -637,6 +637,47 @@
 }
 
 /* TASKS SECTION */
+.program-tabs-container {
+  position: relative;
+  display: flex;
+  min-height: 0;
+  flex: 1 1 auto;
+}
+
+.create-subprogram-tab-action {
+  position: absolute;
+  top: 0;
+  right: 8px;
+  z-index: 1;
+  display: inline-flex;
+  height: 30px;
+  min-height: 30px !important;
+  box-sizing: border-box;
+  align-items: center;
+  gap: 6px;
+  padding: 0 12px;
+  border: 1px solid #6d28d9;
+  border-radius: 8px;
+  background: linear-gradient(135deg, #8b5cf6, #6d28d9);
+  box-shadow: 0 2px 5px rgba(109, 40, 217, 0.2);
+  color: #ffffff;
+  font-size: 0.75rem;
+  font-weight: 700;
+  transition: background 150ms ease, box-shadow 150ms ease, transform 150ms ease;
+
+  mat-icon {
+    width: 16px;
+    height: 16px;
+    font-size: 16px;
+  }
+
+  &:hover {
+    background: linear-gradient(135deg, #7c3aed, #5b21b6);
+    box-shadow: 0 3px 8px rgba(109, 40, 217, 0.3);
+    transform: translateY(-1px);
+  }
+}
+
 .tab-leading-icon {
   font-size: 0.8rem !important;
   width: 0.8rem !important;
@@ -671,6 +712,7 @@
   overflow: hidden;
 
   ::ng-deep .mat-mdc-tab-header {
+    box-sizing: border-box;
     flex-shrink: 0;
     min-height: 30px !important;
 
@@ -693,6 +735,10 @@
   }
 }
 
+.program-tabs-container.show-create-subprogram .tasks-tabs ::ng-deep .mat-mdc-tab-header {
+  padding-right: 148px;
+}
+
 .horizontal-full-card {
   background: #ffffff;
   border: 1px solid #ede9fe;
@@ -705,6 +751,12 @@
     height: 100%;
     min-height: 0;
   }
+}
+
+.tasks-section-style app-todo-checklist {
+  display: flex;
+  min-height: 0;
+  flex: 1 1 auto;
 }
 
 .panel-card-header {
