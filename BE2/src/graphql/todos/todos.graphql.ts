@@ -37,8 +37,7 @@ export const todoTypes = `
 
 export const todoMutationFields = `
   createTodo(input: CreateTodoInput!): TodoItem!
-  updateTodoTitle(todoId: Int!, title: String!): TodoItem!
-  setTodoCompleted(todoId: Int!, isCompleted: Boolean!): TodoItem!
+  updateTodo(todoId: Int!, title: String!, isCompleted: Boolean!): TodoItem!
   setTodoStatus(todoId: Int!, status: TodoStatus!): TodoItem!
   assignTodo(todoId: Int!, ownerUserId: Int): TodoItem!
   deleteTodo(todoId: Int!): Boolean!
@@ -189,47 +188,33 @@ export const todoResolvers = {
       return getTodoItem(result.insertId);
     },
 
-    async updateTodoTitle(_: any, args: { todoId?: number; title?: string }, context: any) {
+    async updateTodo(_: any, args: { todoId?: number; title?: string; isCompleted?: boolean }, context: any) {
       const todoId = Number(args?.todoId);
       const title = String(args?.title || '').trim();
-      if (!Number.isInteger(todoId) || todoId <= 0 || !title || title.length > 255) {
-        throwEventError('BAD_REQUEST', 'todoId and a title containing 1 to 255 characters are required');
+      if (!Number.isInteger(todoId) || todoId <= 0 || !title || title.length > 255 || typeof args?.isCompleted !== 'boolean') {
+        throwEventError('BAD_REQUEST', 'todoId, a title containing 1 to 255 characters, and isCompleted are required');
       }
 
       const userId = await getLoggedInUserId(context);
       const { eventId } = await getTodoEventId(todoId);
       const permission = await getCommitteePermission(eventId, userId);
-      if (!permission.canManage) {
+      const currentItem = await getTodoItem(todoId);
+      const titleChanged = title !== currentItem.title;
+      if (titleChanged && !permission.canManage) {
         throwEventError('FORBIDDEN', 'Only committee admins can edit checklist items');
       }
-
-      await execute(
-        `UPDATE todos
-         SET title = ?, updated_by = ?
-         WHERE id = ?`,
-        [title, userId, todoId]
-      );
-      return getTodoItem(todoId);
-    },
-
-    async setTodoCompleted(_: any, args: { todoId?: number; isCompleted?: boolean }, context: any) {
-      const todoId = Number(args?.todoId);
-      if (!Number.isInteger(todoId) || todoId <= 0 || typeof args?.isCompleted !== 'boolean') {
-        throwEventError('BAD_REQUEST', 'todoId and isCompleted are required');
-      }
-
-      const userId = await getLoggedInUserId(context);
-      const { eventId } = await getTodoEventId(todoId);
-      const permission = await getCommitteePermission(eventId, userId);
-      if (!permission.hasCommitteeAccess) {
+      if (!titleChanged && !permission.hasCommitteeAccess) {
         throwEventError('FORBIDDEN', 'You are not allowed to update this checklist');
       }
 
       await execute(
         `UPDATE todos
-         SET is_completed = ?, status = ?, updated_by = ?
+         SET title = ?,
+             status = CASE WHEN is_completed <> ? THEN ? ELSE status END,
+             is_completed = ?,
+             updated_by = ?
          WHERE id = ?`,
-        [args.isCompleted ? 1 : 0, args.isCompleted ? 'COMPLETED' : 'PENDING', userId, todoId]
+        [title, args.isCompleted ? 1 : 0, args.isCompleted ? 'COMPLETED' : 'PENDING', args.isCompleted ? 1 : 0, userId, todoId]
       );
       return getTodoItem(todoId);
     },

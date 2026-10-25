@@ -137,21 +137,38 @@
   gap: 6px;
 }
 
+.todo-completion-checkbox-wrapper {
+  display: inline-flex;
+}
+
+.todo-completion-disabled {
+  cursor: not-allowed;
+}
+
+.todo-completion-disabled .todo-completion-checkbox {
+  pointer-events: none;
+}
+
 .todo-completion-checkbox {
   --mat-checkbox-selected-icon-color: #059669;
   --mat-checkbox-selected-hover-icon-color: #047857;
   --mat-checkbox-selected-focus-icon-color: #047857;
   --mat-checkbox-selected-pressed-icon-color: #047857;
+  --mat-checkbox-disabled-selected-icon-color: #059669;
+  --mat-checkbox-disabled-selected-checkmark-color: #ffffff;
   --mat-checkbox-unselected-icon-color: #d97706;
   --mat-checkbox-unselected-hover-icon-color: #b45309;
   --mat-checkbox-unselected-focus-icon-color: #b45309;
   --mat-checkbox-unselected-pressed-icon-color: #b45309;
+  --mat-checkbox-disabled-unselected-icon-color: #d97706;
 }
 
 .todo-status-label {
   display: inline-flex;
   min-height: 26px;
+  width: 90px;
   align-items: center;
+  justify-content: center;
   gap: 6px;
   padding: 0 10px;
   border: 1px solid transparent;
@@ -160,6 +177,7 @@
   font-weight: 600;
   letter-spacing: 0.02em;
   white-space: nowrap;
+  text-align: center;
 }
 
 .todo-status-dot {

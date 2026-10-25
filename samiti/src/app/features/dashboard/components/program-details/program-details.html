@@ -204,48 +204,13 @@
     <!-- PROGRAM TABS -->
     <div
       class="program-tabs-container"
-      [class.show-create-subprogram]="selectedProgramTabIndex === 0 && programData()?.canCreateSubprogram"
+      [class.show-create-subprogram]="selectedProgramTabIndex === 2 && programData()?.canCreateSubprogram"
     >
     <mat-tab-group
       class="tasks-tabs samiti-nav-tabs"
       animationDuration="150ms"
       [(selectedIndex)]="selectedProgramTabIndex"
     >
-      <mat-tab>
-        <ng-template mat-tab-label>
-          <mat-icon class="tab-leading-icon">account_tree</mat-icon>
-          <span class="tab-name-text">Sub Program</span>
-          <span class="tab-badge">{{ programData()?.subprograms?.length ?? 0 }}</span>
-        </ng-template>
-
-        <section class="horizontal-full-card tasks-section-style">
-          <div class="horizontal-list-container">
-            @for (subprogram of programData()?.subprograms ?? []; track subprogram.programId) {
-              <a class="task-aligned-row" [routerLink]="['/dashboard', 'program', subprogram.programId]">
-                <div class="task-col-info">
-                  <span class="main-title">{{ subprogram.programName }}</span>
-                  <span class="secondary-sub-lbl">
-                    {{ subprogram.startDate ? (subprogram.startDate | date:'mediumDate') : 'Date not set' }}
-                    @if (subprogram.endDate && subprogram.endDate !== subprogram.startDate) {
-                      – {{ subprogram.endDate | date:'mediumDate' }}
-                    }
-                  </span>
-                </div>
-                <span class="status-tag" [class.tag-completed]="subprogram.visibility === 'HIDDEN'">
-                  {{ subprogram.visibility }}
-                </span>
-                <mat-icon>chevron_right</mat-icon>
-              </a>
-            } @empty {
-              <div class="tasks-empty-state">
-                <mat-icon>account_tree</mat-icon>
-                <p>No subprograms yet</p>
-              </div>
-            }
-          </div>
-        </section>
-      </mat-tab>
-
       <mat-tab>
         <ng-template mat-tab-label>
           <mat-icon class="tab-leading-icon">checklist</mat-icon>
@@ -275,8 +240,43 @@
         </ng-template>
         <div class="notes-tab-empty-state">Notes are not available for this program yet.</div>
       </mat-tab>
+
+      <mat-tab>
+        <ng-template mat-tab-label>
+          <mat-icon class="tab-leading-icon">account_tree</mat-icon>
+          <span class="tab-name-text">Sub Program</span>
+          <span class="tab-badge">{{ programData()?.subprograms?.length ?? 0 }}</span>
+        </ng-template>
+
+        <section class="horizontal-full-card tasks-section-style">
+          <div class="horizontal-list-container">
+            @for (subprogram of programData()?.subprograms ?? []; track subprogram.programId) {
+              <a class="task-aligned-row" [routerLink]="['/dashboard', 'program', subprogram.programId]">
+                <div class="task-col-info">
+                  <span class="main-title">{{ subprogram.programName }}</span>
+                  <span class="secondary-sub-lbl">
+                    {{ subprogram.startDate ? (subprogram.startDate | date:'mediumDate') : 'Date not set' }}
+                    @if (subprogram.endDate && subprogram.endDate !== subprogram.startDate) {
+                      – {{ subprogram.endDate | date:'mediumDate' }}
+                    }
+                  </span>
+                </div>
+                <span class="status-tag" [class.tag-completed]="subprogram.visibility === 'HIDDEN'">
+                  {{ subprogram.visibility | uppercase }}
+                </span>
+                <mat-icon>chevron_right</mat-icon>
+              </a>
+            } @empty {
+              <div class="tasks-empty-state">
+                <mat-icon>account_tree</mat-icon>
+                <p>No subprograms yet</p>
+              </div>
+            }
+          </div>
+        </section>
+      </mat-tab>
     </mat-tab-group>
-    @if (selectedProgramTabIndex === 0 && programData()?.canCreateSubprogram) {
+    @if (selectedProgramTabIndex === 2 && programData()?.canCreateSubprogram) {
       <button mat-flat-button class="create-subprogram-tab-action" type="button" (click)="onCreateSubprogram()">
         <mat-icon>add</mat-icon>
         <span>Sub Program</span>

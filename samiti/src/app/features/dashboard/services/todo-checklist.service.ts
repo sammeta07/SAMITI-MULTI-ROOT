@@ -36,9 +36,9 @@ export class TodoChecklistService {
     ).pipe(map((response) => this.extract(response, 'createTodo')));
   }
 
-  public setCompleted(todoId: number, isCompleted: boolean): Observable<TodoItem> {
-    const mutation = `mutation SetTodoCompleted($todoId: Int!, $isCompleted: Boolean!) {
-      setTodoCompleted(todoId: $todoId, isCompleted: $isCompleted) {
+  public updateTodo(todoId: number, title: string, isCompleted: boolean): Observable<TodoItem> {
+    const mutation = `mutation UpdateTodo($todoId: Int!, $title: String!, $isCompleted: Boolean!) {
+      updateTodo(todoId: $todoId, title: $title, isCompleted: $isCompleted) {
         id
         title
         status
@@ -49,31 +49,11 @@ export class TodoChecklistService {
       }
     }`;
 
-    return this.http.post<GraphqlResponse<{ setTodoCompleted: TodoItem }>>(
+    return this.http.post<GraphqlResponse<{ updateTodo: TodoItem }>>(
       this.graphqlUrl,
-      { query: mutation, variables: { todoId, isCompleted } },
+      { query: mutation, variables: { todoId, title, isCompleted } },
       { withCredentials: true }
-    ).pipe(map((response) => this.extract(response, 'setTodoCompleted')));
-  }
-
-  public updateTitle(todoId: number, title: string): Observable<TodoItem> {
-    const mutation = `mutation UpdateTodoTitle($todoId: Int!, $title: String!) {
-      updateTodoTitle(todoId: $todoId, title: $title) {
-        id
-        title
-        status
-        isCompleted
-        assignedUserId
-        assignedUserName
-        createdAt
-      }
-    }`;
-
-    return this.http.post<GraphqlResponse<{ updateTodoTitle: TodoItem }>>(
-      this.graphqlUrl,
-      { query: mutation, variables: { todoId, title } },
-      { withCredentials: true }
-    ).pipe(map((response) => this.extract(response, 'updateTodoTitle')));
+    ).pipe(map((response) => this.extract(response, 'updateTodo')));
   }
 
   public setStatus(todoId: number, status: TodoStatus): Observable<TodoItem> {

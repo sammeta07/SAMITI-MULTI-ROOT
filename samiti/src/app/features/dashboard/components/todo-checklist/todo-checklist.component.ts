@@ -4,6 +4,7 @@ import { FormsModule } from '@angular/forms';
 import { MatCheckboxChange, MatCheckboxModule } from '@angular/material/checkbox';
 import { MatIconModule } from '@angular/material/icon';
 import { MatTableModule } from '@angular/material/table';
+import { MatTooltipModule } from '@angular/material/tooltip';
 import { ConfirmDialogData } from '../../../../components/dialog/confirm/confirm-dialog.models';
 import { ConfirmDialogService } from '../../../../components/dialog/confirm/confirm-dialog.service';
 import { NotifierService } from '../../../../shared/notifier/notifier.service';
@@ -13,7 +14,7 @@ import { TodoChecklistService } from '../../services/todo-checklist.service';
 @Component({
   selector: 'app-todo-checklist',
   standalone: true,
-  imports: [CommonModule, FormsModule, MatCheckboxModule, MatIconModule, MatTableModule],
+  imports: [CommonModule, FormsModule, MatCheckboxModule, MatIconModule, MatTableModule, MatTooltipModule],
   host: {
     '[class.todo-checklist-table-view]': 'tableView'
   },
@@ -39,6 +40,7 @@ export class TodoChecklistComponent {
   public readonly pendingIds = new Set<number>();
   public editingId: number | null = null;
   public editTitle = '';
+  public editCompleted = false;
 
   public get tableColumns(): string[] {
     return this.canManage || this.canToggle
@@ -47,30 +49,15 @@ export class TodoChecklistComponent {
   }
 
   public toggleCompleted(item: TodoItem, event: MatCheckboxChange): void {
-    if (!this.canToggle || this.pendingIds.has(item.id)) {
-      event.source.checked = item.isCompleted;
-      return;
-    }
-
-    this.pendingIds.add(item.id);
-    this.service.setCompleted(item.id, event.checked).subscribe({
-      next: (updated) => {
-        this.items = this.items.map((entry) => (entry.id === updated.id ? updated : entry));
-        this.itemsChange.emit(this.items);
-        this.pendingIds.delete(item.id);
-      },
-      error: (error) => {
-        event.source.checked = item.isCompleted;
-        this.pendingIds.delete(item.id);
-        this.notifier.error(error?.error?.errors?.[0]?.message || error?.message || 'Failed to update checklist item.');
-      }
-    });
+    if (!this.canToggle || this.editingId !== item.id || this.pendingIds.has(item.id)) return;
+    this.editCompleted = event.checked;
   }
 
   public startEditing(item: TodoItem): void {
     if (!this.canManage || this.pendingIds.has(item.id)) return;
     this.editingId = item.id;
     this.editTitle = this.toSentenceCase(item.title);
+    this.editCompleted = item.isCompleted;
   }
 
   public toSentenceCase(value: string): string {
@@ -84,18 +71,19 @@ export class TodoChecklistComponent {
   public cancelEditing(): void {
     this.editingId = null;
     this.editTitle = '';
+    this.editCompleted = false;
   }
 
-  public saveTitle(item: TodoItem): void {
+  public saveChanges(item: TodoItem): void {
     const title = this.toSentenceCase(this.editTitle);
     if (!this.canManage || this.editingId !== item.id || !title || title.length > 255 || this.pendingIds.has(item.id)) return;
-    if (title === item.title) {
+    if (title === item.title && this.editCompleted === item.isCompleted) {
       this.cancelEditing();
       return;
     }
 
     this.pendingIds.add(item.id);
-    this.service.updateTitle(item.id, title).subscribe({
+    this.service.updateTodo(item.id, title, this.editCompleted).subscribe({
       next: (updated) => {
         this.items = this.items.map((entry) => (entry.id === updated.id ? updated : entry));
         this.itemsChange.emit(this.items);
