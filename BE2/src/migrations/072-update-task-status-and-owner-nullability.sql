@@ -1,0 +1,9 @@
+UPDATE tasks
+SET status = 'NEW'
+WHERE status IS NULL OR TRIM(status) = '';
+
+ALTER TABLE tasks
+  MODIFY COLUMN owner_user_id INT DEFAULT NULL,
+  MODIFY COLUMN owner_assigned_by INT DEFAULT NULL,
+  MODIFY COLUMN owner_assigned_at TIMESTAMP NULL DEFAULT NULL,
+  MODIFY COLUMN status VARCHAR(50) NOT NULL DEFAULT 'NEW';

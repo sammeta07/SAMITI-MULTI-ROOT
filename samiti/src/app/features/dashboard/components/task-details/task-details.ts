@@ -7,10 +7,12 @@ import { MatButtonModule } from '@angular/material/button';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatTabsModule } from '@angular/material/tabs';
 import { finalize } from 'rxjs';
+import { AuthService } from '../../../../core/services/auth.service';
 import { LoadingStateService } from '../../../../shared/services/loading-state.service';
 import { NotifierService } from '../../../../shared/notifier/notifier.service';
 import { TodoItem } from '../../models/todo.models';
 import { TodoChecklistComponent } from '../todo-checklist/todo-checklist.component';
+import { TASK_STATUSES, TaskStatus } from '../event-details/event-tasks/event-tasks.models';
 import { TaskDetailsPayload } from './task-details.models';
 import { TaskDetailsService } from './task-details.service';
 
@@ -32,6 +34,7 @@ import { TaskDetailsService } from './task-details.service';
 export class TaskDetailsComponent implements OnInit {
   private readonly route = inject(ActivatedRoute);
   private readonly service = inject(TaskDetailsService);
+  private readonly authService = inject(AuthService);
   private readonly notifier = inject(NotifierService);
   private readonly loadingState = inject(LoadingStateService);
   private readonly destroyRef = inject(DestroyRef);
@@ -39,6 +42,9 @@ export class TaskDetailsComponent implements OnInit {
 
   public readonly isLoading = signal(true);
   public readonly task = signal<TaskDetailsPayload | null>(null);
+  public readonly taskStatuses = TASK_STATUSES;
+  public readonly isUpdatingStatus = signal(false);
+  public readonly isStatusDropdownOpen = signal(false);
 
   public ngOnInit(): void {
     this.route.paramMap.pipe(takeUntilDestroyed(this.destroyRef)).subscribe((params) => {
@@ -62,11 +68,60 @@ export class TaskDetailsComponent implements OnInit {
     const normalized = String(status || 'PENDING').toUpperCase();
     if (normalized === 'COMPLETED') return 'completed';
     if (normalized === 'IN_PROGRESS' || normalized === 'ACTIVE' || normalized === 'ONGOING') return 'started';
+    if (normalized === 'HOLD') return 'hold';
+    if (normalized === 'WONT_FIX') return 'wont-fix';
+    if (normalized === 'ASSIGNED') return 'legacy-assigned';
+    if (normalized === 'NEW') return 'new';
     return 'upcoming';
   }
 
   public displayStatus(status: string | null): string {
     return String(status || 'PENDING').replace(/[_-]+/g, ' ').toUpperCase();
+  }
+
+  public statusValue(status: string | null): string {
+    return String(status || 'NEW').trim().toUpperCase();
+  }
+
+  public canUpdateStatus(task: TaskDetailsPayload): boolean {
+    return task.ownerUserId !== null && task.ownerUserId === this.authService.getStoredUserData()?.id;
+  }
+
+  public onStatusChange(event: Event, task: TaskDetailsPayload): void {
+    const select = event.currentTarget;
+    if (!(select instanceof HTMLSelectElement)) {
+      return;
+    }
+
+    const statusValue = select.value;
+    const status = this.taskStatuses.find((candidate) => candidate === statusValue);
+    if (!status || !this.canUpdateStatus(task) || this.isUpdatingStatus()) {
+      select.value = this.statusValue(task.status);
+      return;
+    }
+
+    this.isUpdatingStatus.set(true);
+    this.service.updateTaskStatus(task.taskId, status).subscribe({
+      next: (updatedTask) => {
+        this.isUpdatingStatus.set(false);
+        this.task.update((current) =>
+          current?.taskId === updatedTask.taskId
+            ? { ...current, status: updatedTask.status, updatedAt: updatedTask.updatedAt }
+            : current
+        );
+        this.notifier.success(`Task status updated to ${this.displayStatus(updatedTask.status)}.`);
+      },
+      error: (error) => {
+        this.isUpdatingStatus.set(false);
+        select.value = this.statusValue(task.status);
+        this.notifier.error(
+          error?.error?.errors?.[0]?.message ||
+          error?.error?.message ||
+          error?.message ||
+          'Failed to update task status.'
+        );
+      }
+    });
   }
 
   private loadTask(taskId: string): void {

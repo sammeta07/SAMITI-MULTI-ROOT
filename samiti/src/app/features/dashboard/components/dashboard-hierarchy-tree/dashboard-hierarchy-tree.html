@@ -130,6 +130,13 @@
                         }
                       </span>
                     }
+                    @if (isTaskOwner(node)) {
+                      <span class="task-node-badges">
+                        <mat-icon class="program-badge-icon program-badge-owner" title="You are the owner">
+                          admin_panel_settings
+                        </mat-icon>
+                      </span>
+                    }
                   </div>
 
                   @if (node.type === 'event' && (node.startDate || node.endDate)) {
@@ -146,18 +153,29 @@
 
                   @if (node.type === 'program' && (node.startDate || node.endDate || node.startTime || node.endTime)) {
                     <span class="program-date-time-row">
-                      <span class="program-date-time-subtitle">
+                      <span class="program-date-time-point">
                         @if (node.startDate) {
-                          @if (node.startDate === node.endDate) {
-                            <span class="program-date-single">{{ formatDisplayDate(node.startDate) }}</span>
-                          } @else {
-                            <span class="program-date-start">{{ formatProgramDateRange(node.startDate, node.endDate) }}</span>
-                          }
+                          <mat-icon aria-hidden="true">event</mat-icon>
+                          <span>{{ formatProgramHeaderDate(node.startDate) }}</span>
+                        }
+                        @if (node.startTime) {
+                          <mat-icon aria-hidden="true">schedule</mat-icon>
+                          <span>{{ formatProgramTime(node.startTime) }}</span>
                         }
                       </span>
-                      @if (node.startTime || node.endTime) {
-                        <span class="program-time-range">{{ formatProgramTimeRange(node.startTime, node.endTime) }}</span>
+                      @if ((node.startDate || node.startTime) && (node.endDate || node.endTime)) {
+                        <mat-icon class="program-date-time-arrow" aria-hidden="true">arrow_forward</mat-icon>
                       }
+                      <span class="program-date-time-point">
+                        @if (node.endDate) {
+                          <mat-icon aria-hidden="true">event</mat-icon>
+                          <span>{{ formatProgramHeaderDate(node.endDate) }}</span>
+                        }
+                        @if (node.endTime) {
+                          <mat-icon aria-hidden="true">schedule</mat-icon>
+                          <span>{{ formatProgramTime(node.endTime) }}</span>
+                        }
+                      </span>
                     </span>
                   }
                 </div>
@@ -235,6 +253,13 @@
                           }
                         </span>
                       }
+                      @if (isTaskOwner(node)) {
+                        <span class="task-node-badges">
+                          <mat-icon class="program-badge-icon program-badge-owner" title="You are the owner">
+                            admin_panel_settings
+                          </mat-icon>
+                        </span>
+                      }
                     </div>
 
                     @if (node.type === 'event' && (node.startDate || node.endDate)) {
@@ -251,18 +276,29 @@
 
                     @if (node.type === 'program' && (node.startDate || node.endDate || node.startTime || node.endTime)) {
                       <span class="program-date-time-row">
-                        <span class="program-date-time-subtitle">
+                        <span class="program-date-time-point">
                           @if (node.startDate) {
-                            @if (node.startDate === node.endDate) {
-                              <span class="program-date-single">{{ formatDisplayDate(node.startDate) }}</span>
-                            } @else {
-                              <span class="program-date-start">{{ formatProgramDateRange(node.startDate, node.endDate) }}</span>
-                            }
+                            <mat-icon aria-hidden="true">event</mat-icon>
+                            <span>{{ formatProgramHeaderDate(node.startDate) }}</span>
+                          }
+                          @if (node.startTime) {
+                            <mat-icon aria-hidden="true">schedule</mat-icon>
+                            <span>{{ formatProgramTime(node.startTime) }}</span>
                           }
                         </span>
-                        @if (node.startTime || node.endTime) {
-                          <span class="program-time-range">{{ formatProgramTimeRange(node.startTime, node.endTime) }}</span>
+                        @if ((node.startDate || node.startTime) && (node.endDate || node.endTime)) {
+                          <mat-icon class="program-date-time-arrow" aria-hidden="true">arrow_forward</mat-icon>
                         }
+                        <span class="program-date-time-point">
+                          @if (node.endDate) {
+                            <mat-icon aria-hidden="true">event</mat-icon>
+                            <span>{{ formatProgramHeaderDate(node.endDate) }}</span>
+                          }
+                          @if (node.endTime) {
+                            <mat-icon aria-hidden="true">schedule</mat-icon>
+                            <span>{{ formatProgramTime(node.endTime) }}</span>
+                          }
+                        </span>
                       </span>
                     }
                   </div>

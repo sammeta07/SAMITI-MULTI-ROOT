@@ -196,6 +196,7 @@
           <ng-template mat-tab-label>
             <mat-icon class="tab-leading-icon">event_note</mat-icon>
             <span>Programs</span>
+            <span class="tab-badge">{{ headerData?.programsCount ?? 0 }}</span>
           </ng-template>
         </mat-tab>
 
@@ -203,6 +204,7 @@
           <ng-template mat-tab-label>
             <mat-icon class="tab-leading-icon">task_alt</mat-icon>
             <span>Tasks</span>
+            <span class="tab-badge">{{ headerData?.tasksCount ?? 0 }}</span>
           </ng-template>
         </mat-tab>
       </mat-tab-group>

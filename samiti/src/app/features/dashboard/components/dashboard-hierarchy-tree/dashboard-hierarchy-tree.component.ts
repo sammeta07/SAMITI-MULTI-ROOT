@@ -698,6 +698,17 @@ export class DashboardHierarchyTreeComponent implements OnInit, OnDestroy {
     return `${displayHours}:${String(minutes).padStart(2, '0')} ${period}`;
   }
 
+  public formatProgramHeaderDate(value: string): string {
+    const match = value.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+    if (!match) {
+      return this.formatDisplayDate(value);
+    }
+
+    const month = Number(match[2]);
+    const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+    return `${match[3]}-${months[month - 1] || match[2]}-${match[1]}`;
+  }
+
   public formatProgramTimeRange(startTime: string | undefined, endTime: string | undefined): string {
     if (!startTime || !endTime) {
       return '';
@@ -811,6 +822,12 @@ export class DashboardHierarchyTreeComponent implements OnInit, OnDestroy {
     }
     const currentUser = this.authService.getStoredUserData();
     return Boolean(currentUser) && currentUser!.id === node.ownerUserId;
+  }
+
+  public isTaskOwner(node: TreeNode): boolean {
+    return node.type === 'task' && Boolean(
+      node.roles?.some((role) => role.name.trim().toUpperCase() === 'OWNER')
+    );
   }
 
   public shouldShowEventRole(node: TreeNode): boolean {

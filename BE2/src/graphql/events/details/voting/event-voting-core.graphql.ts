@@ -310,6 +310,11 @@ async function syncWinnersToUsersEvents(eventId: number): Promise<void> {
     const userId = Number(w.winnerUserId);
     const designation = String(roleInfo.name || 'MEMBER').toUpperCase();
     await query(
+      `DELETE FROM users_events
+       WHERE event_id = ? AND role_id = ? AND user_id <> ?`,
+      [eventId, roleId, userId]
+    );
+    await query(
       `INSERT INTO users_events (event_id, user_id, role_id, designation, status, created_at, updated_at)
        VALUES (?, ?, ?, ?, 'ACTIVE', NOW(), NOW())
        ON DUPLICATE KEY UPDATE role_id = VALUES(role_id), designation = VALUES(designation), updated_at = NOW()`,

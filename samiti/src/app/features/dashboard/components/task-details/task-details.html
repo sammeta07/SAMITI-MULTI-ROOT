@@ -10,41 +10,101 @@
     <div class="task-details-content">
 
       <section class="task-header-card">
-        <div class="task-header-grid">
-
-          <div class="task-header-main">
+        <div class="task-header-main">
+          <div class="task-header-primary">
             <h3 class="task-header-title">{{ taskDetails.taskName | titlecase }}</h3>
-            <div class="task-header-meta">
-              <span class="task-status-pill" [ngClass]="'task-status-' + statusClass(taskDetails.status)">
+            <span
+              class="task-owner-pill"
+              [class.task-owner-unassigned]="!taskDetails.ownerName"
+              [title]="(taskDetails.ownerName || 'Unassigned') | titlecase"
+            >
+              <span class="task-owner-label">OWNER -</span>
+              <span class="task-owner-name">{{ (taskDetails.ownerName || 'Unassigned') | titlecase }}</span>
+            </span>
+            @if (canUpdateStatus(taskDetails)) {
+              <span class="task-status-control">
+                <select
+                  class="task-status-pill task-status-dropdown"
+                  [ngClass]="'task-status-' + statusClass(taskDetails.status)"
+                  [value]="statusValue(taskDetails.status)"
+                  [disabled]="isUpdatingStatus()"
+                  [attr.aria-label]="'Update status for ' + taskDetails.taskName"
+                  title="Change task status"
+                  (click)="$event.stopPropagation()"
+                  (focus)="isStatusDropdownOpen.set(true)"
+                  (blur)="isStatusDropdownOpen.set(false)"
+                  (change)="onStatusChange($event, taskDetails)"
+                >
+                  @if (taskDetails.status === 'ASSIGNED') {
+                    <option value="ASSIGNED" [selected]="statusValue(taskDetails.status) === 'ASSIGNED'" disabled>
+                      ASSIGNED (LEGACY)
+                    </option>
+                  }
+                  @for (status of taskStatuses; track status) {
+                    <option [value]="status" [selected]="status === statusValue(taskDetails.status)">
+                      {{ displayStatus(status) }}
+                    </option>
+                  }
+                </select>
+                <mat-icon class="task-status-dropdown-icon" aria-hidden="true">
+                  {{ isStatusDropdownOpen() ? 'expand_less' : 'expand_more' }}
+                </mat-icon>
+              </span>
+            } @else {
+              <span class="task-status-pill task-header-status" [ngClass]="'task-status-' + statusClass(taskDetails.status)">
                 <span class="status-dot"></span>
                 {{ displayStatus(taskDetails.status) }}
               </span>
+            }
+          </div>
 
+          <div class="task-details-metadata">
+            <div class="task-details-metadata-item">
+              <span class="task-details-metadata-label">Task ID</span>
+              <span class="task-details-metadata-value">#{{ taskDetails.taskId }}</span>
+            </div>
+            <div class="task-details-metadata-item">
+              <span class="task-details-metadata-label">Parent task</span>
               @if (taskDetails.parentTaskId) {
                 <a
-                  class="task-meta-pill task-parent-pill"
+                  class="task-details-metadata-value task-details-parent-link"
                   [routerLink]="['/dashboard', 'task', taskDetails.parentTaskId]"
-                  title="Parent task"
+                  title="Open parent task"
                 >
-                  <mat-icon>subdirectory_arrow_left</mat-icon>
-                  <span>{{ (taskDetails.parentTaskName || 'Parent task') | titlecase }}</span>
+                  {{ (taskDetails.parentTaskName || 'Parent task') | titlecase }}
                 </a>
+              } @else {
+                <span class="task-details-metadata-value">None</span>
               }
-
-              <span class="task-meta-pill" title="Created">
-                <mat-icon>schedule</mat-icon>
-                <span>Created {{ taskDetails.createdAt | date:'mediumDate' }}</span>
+            </div>
+            <div class="task-details-metadata-item">
+              <span class="task-details-metadata-label">Created by</span>
+              <span class="task-details-metadata-value" [title]="(taskDetails.createdByName || 'Unknown') | titlecase">
+                {{ (taskDetails.createdByName || 'Unknown') | titlecase }}
+              </span>
+            </div>
+            <div class="task-details-metadata-item">
+              <span class="task-details-metadata-label">Created</span>
+              <span class="task-details-metadata-value" [title]="taskDetails.createdAt | date: 'medium'">
+                {{ taskDetails.createdAt | date: 'medium' }}
+              </span>
+            </div>
+            <div class="task-details-metadata-item">
+              <span class="task-details-metadata-label">Assigned at</span>
+              <span
+                class="task-details-metadata-value"
+                [title]="taskDetails.ownerAssignedAt ? (taskDetails.ownerAssignedAt | date: 'medium') : 'Not assigned'"
+              >
+                {{ taskDetails.ownerAssignedAt ? (taskDetails.ownerAssignedAt | date: 'medium') : 'Not assigned' }}
+              </span>
+            </div>
+            <div class="task-details-metadata-item">
+              <span class="task-details-metadata-label">Last updated</span>
+              <span class="task-details-metadata-value" [title]="taskDetails.updatedAt | date: 'medium'">
+                {{ taskDetails.updatedAt | date: 'medium' }}
               </span>
             </div>
           </div>
-
-          <div class="task-header-side">
-            <span class="task-owner-pill" [class.task-owner-unassigned]="!taskDetails.ownerName">
-              <mat-icon>person</mat-icon>
-              <span>{{ (taskDetails.ownerName || 'Unassigned') | titlecase }}</span>
-            </span>
-          </div>
-
         </div>
       </section>
 

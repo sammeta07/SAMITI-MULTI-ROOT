@@ -611,10 +611,28 @@
                         }
                       </h3>
                       <span class="program-schedule-pill program-schedule-pill-{{ getProgramComputedStatus(program) }}">
-                        <mat-icon>schedule</mat-icon>
-                        <span>
-                          {{ formatProgramDateRange(program.startDate, program.endDate || program.startDate) }}
-                          @if (program.startTime || program.endTime) { · {{ formatProgramTimeRange(program.startTime, program.endTime) }} }
+                        <span class="program-schedule-point">
+                          @if (program.startDate) {
+                            <mat-icon aria-hidden="true">event</mat-icon>
+                            <span>{{ formatProgramHeaderDate(program.startDate) }}</span>
+                          }
+                          @if (program.startTime) {
+                            <mat-icon aria-hidden="true">schedule</mat-icon>
+                            <span>{{ formatProgramTime(program.startTime) }}</span>
+                          }
+                        </span>
+                        @if ((program.startDate || program.startTime) && (program.endDate || program.endTime)) {
+                          <mat-icon class="program-schedule-range-arrow" aria-hidden="true">arrow_forward</mat-icon>
+                        }
+                        <span class="program-schedule-point">
+                          @if (program.endDate) {
+                            <mat-icon aria-hidden="true">event</mat-icon>
+                            <span>{{ formatProgramHeaderDate(program.endDate) }}</span>
+                          }
+                          @if (program.endTime) {
+                            <mat-icon aria-hidden="true">schedule</mat-icon>
+                            <span>{{ formatProgramTime(program.endTime) }}</span>
+                          }
                         </span>
                       </span>
                     </div>

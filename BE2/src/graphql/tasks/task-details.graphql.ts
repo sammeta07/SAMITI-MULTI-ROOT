@@ -19,7 +19,10 @@ export const taskDetailsTypes = `
     parentTaskName: String
     ownerUserId: Int
     ownerName: String
+    createdByName: String
     createdAt: String!
+    ownerAssignedAt: String
+    updatedAt: String!
     children: [TaskChild!]!
     todos: [TodoItem!]!
     todoAssignees: [TodoAssignee!]!
@@ -53,13 +56,17 @@ export const taskDetailsResolvers = {
            parent.name AS parentTaskName,
            t.owner_user_id AS ownerUserId,
            owner.name AS ownerName,
+           creator.name AS createdByName,
            DATE_FORMAT(t.created_at, '%Y-%m-%d %H:%i:%s') AS createdAt,
+           DATE_FORMAT(t.owner_assigned_at, '%Y-%m-%d %H:%i:%s') AS ownerAssignedAt,
+           DATE_FORMAT(t.updated_at, '%Y-%m-%d %H:%i:%s') AS updatedAt,
            e.committee_id AS committeeId,
            uc.committee_role AS committeeRole
          FROM tasks t
          INNER JOIN events e ON e.id = t.event_id
          LEFT JOIN tasks parent ON parent.id = t.parent_id
          LEFT JOIN users owner ON owner.id = t.owner_user_id
+         LEFT JOIN users creator ON creator.id = t.created_by
          LEFT JOIN users_committees uc
            ON uc.committee_id = e.committee_id AND uc.user_id = ?
          WHERE t.id = ?
@@ -117,7 +124,10 @@ export const taskDetailsResolvers = {
         parentTaskName: task.parentTaskName || null,
         ownerUserId: task.ownerUserId === null ? null : Number(task.ownerUserId),
         ownerName: task.ownerName || null,
+        createdByName: task.createdByName || null,
         createdAt: String(task.createdAt),
+        ownerAssignedAt: task.ownerAssignedAt || null,
+        updatedAt: String(task.updatedAt),
         children: children.map((child) => ({
           taskId: Number(child.taskId),
           taskName: String(child.taskName || 'Untitled Task'),

@@ -29,6 +29,8 @@ export interface EventDetailsHeaderPayload {
   eventLogo?: string | null;
   category?: string | null;
   eventYear?: number | null;
+  programsCount?: number;
+  tasksCount?: number;
   type?: 'PUBLIC' | 'PRIVATE' | string;
   startDate?: string | null;
   endDate?: string | null;

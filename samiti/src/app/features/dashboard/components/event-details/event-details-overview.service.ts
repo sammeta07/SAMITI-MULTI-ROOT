@@ -64,6 +64,8 @@ export class EventDetailsOverviewService {
         eventLogo
         category
         eventYear
+        programsCount
+        tasksCount
         type
         startDate
         endDate

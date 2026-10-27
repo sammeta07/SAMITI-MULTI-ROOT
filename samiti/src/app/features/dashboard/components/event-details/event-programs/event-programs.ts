@@ -4,10 +4,12 @@ import { ActivatedRoute } from '@angular/router';
 import { MatDialog } from '@angular/material/dialog';
 import { MatIconModule } from '@angular/material/icon';
 import { MatButtonModule } from '@angular/material/button';
+import { MatExpansionModule } from '@angular/material/expansion';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatAutocompleteModule, MatAutocompleteTrigger } from '@angular/material/autocomplete';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
+import { MatTooltipModule } from '@angular/material/tooltip';
 import { FormsModule } from '@angular/forms';
 import { HttpErrorResponse } from '@angular/common/http';
 import { Subscription } from 'rxjs';
@@ -35,10 +37,12 @@ import { formatProgramPriceLabel } from '../../../../../shared/services/program-
     CommonModule,
     MatIconModule,
     MatButtonModule,
+    MatExpansionModule,
     MatProgressSpinnerModule,
     MatAutocompleteModule,
     MatFormFieldModule,
     MatInputModule,
+    MatTooltipModule,
     FormsModule
   ],
   templateUrl: './event-programs.html',
@@ -173,6 +177,11 @@ export class EventProgramsComponent implements OnInit, OnDestroy {
     const userId = Number(event.option.value);
     const name = this.getFilteredCandidates(program).find((c) => c.userId === userId)?.name || '';
     this.programOwnerInputText = { ...this.programOwnerInputText, [program.programId]: this.toTitleCase(name) };
+    this.focusedProgramOwnerInputIds.update((ids) => {
+      const next = new Set(ids);
+      next.delete(program.programId);
+      return next;
+    });
     this.updateProgramOwner(program, Number.isInteger(userId) && userId > 0 ? userId : null);
   }
 
@@ -277,6 +286,9 @@ export class EventProgramsComponent implements OnInit, OnDestroy {
       document.body.classList.remove('dialog-open');
       if (result) {
         this.notifier.success(`Program "${result.programName}" created successfully!`);
+        this.stateService.headerData.update((header) =>
+          header ? { ...header, programsCount: (header.programsCount ?? 0) + 1 } : header
+        );
         this.loadEventPrograms(String(currentEvent.eventId));
         this.hierarchyTreeService.triggerHierarchyTreeRefresh();
       }
@@ -310,6 +322,28 @@ export class EventProgramsComponent implements OnInit, OnDestroy {
 
     const period = hours >= 12 ? 'PM' : 'AM';
     const displayHours = hours % 12 || 12;
+    return `${displayHours}:${String(minutes).padStart(2, '0')} ${period}`;
+  }
+
+  public formatProgramDateTimeRange(startDate: string, startTime: string, endDate: string, endTime: string): string {
+    return `${this.formatDisplayDate(startDate)}, ${this.formatProgramTimeWithPaddedHour(startTime)} To ` +
+      `${this.formatDisplayDate(endDate)}, ${this.formatProgramTimeWithPaddedHour(endTime)}`;
+  }
+
+  public formatProgramTimeWithPaddedHour(value: string): string {
+    const match = value.match(/^(\d{1,2}):(\d{2})(?::\d{2})?$/);
+    if (!match) {
+      return this.formatProgramTime(value);
+    }
+
+    const hours = Number(match[1]);
+    const minutes = Number(match[2]);
+    if (hours > 23 || minutes > 59) {
+      return this.formatProgramTime(value);
+    }
+
+    const period = hours >= 12 ? 'PM' : 'AM';
+    const displayHours = String(hours % 12 || 12).padStart(2, '0');
     return `${displayHours}:${String(minutes).padStart(2, '0')} ${period}`;
   }
 
@@ -503,12 +537,16 @@ export class EventProgramsComponent implements OnInit, OnDestroy {
       next: (data) => {
         this.stateService.eventOverview.set(data ?? null);
         this.programOwnerCandidates.set([]);
+        if (data?.eventId) {
+          this.loadDirectAssignMembers(data.eventId);
+        } else {
+          this.allCommitteeMembers.set([]);
+        }
         if (this.canAssignProgramOwner && data?.eventId) {
           this.programOwnerService.getCandidates(data.eventId).subscribe({
             next: (candidates) => this.programOwnerCandidates.set(candidates),
             error: (err: HttpErrorResponse) => this.notifier.error(err?.error?.message || 'Failed to load committee members.')
           });
-          this.loadDirectAssignMembers(data.eventId);
         }
       },
       error: (err: HttpErrorResponse) => {
@@ -525,6 +563,7 @@ export class EventProgramsComponent implements OnInit, OnDestroy {
       },
       error: (err: HttpErrorResponse) => {
         this.allCommitteeMembers.set([]);
+        this.notifier.error(err?.error?.errors?.[0]?.message || err?.error?.message || 'Failed to load program owner designations.');
       }
     });
   }

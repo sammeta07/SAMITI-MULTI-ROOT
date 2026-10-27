@@ -14,6 +14,8 @@ export const eventDetailsHeaderTypes = `
     eventLogo: String
     category: String
     eventYear: Int
+    programsCount: Int!
+    tasksCount: Int!
     type: String
     startDate: String
     endDate: String
@@ -49,6 +51,8 @@ export const eventDetailsHeaderResolvers = {
           ${supportsEventDisplayName ? "COALESCE(NULLIF(TRIM(e.display_name), ''), LEFT(e.name, 20))" : 'LEFT(e.name, 20)'} AS eventDisplayName,
           e.category,
           e.event_year AS eventYear,
+          (SELECT COUNT(*) FROM programs p WHERE p.event_id = e.id) AS programsCount,
+          (SELECT COUNT(*) FROM tasks t WHERE t.event_id = e.id) AS tasksCount,
           e.type,
           DATE_FORMAT(e.start_date, '%Y-%m-%d') AS startDate,
           DATE_FORMAT(e.end_date, '%Y-%m-%d') AS endDate,
@@ -140,6 +144,8 @@ export const eventDetailsHeaderResolvers = {
         eventLogo: event.eventLogo || null,
         category: event.category || null,
         eventYear: event.eventYear ? Number(event.eventYear) : null,
+        programsCount: Number(event.programsCount || 0),
+        tasksCount: Number(event.tasksCount || 0),
         type: event.type || null,
         startDate: event.startDate || null,
         endDate: event.endDate || null,

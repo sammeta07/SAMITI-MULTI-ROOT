@@ -444,7 +444,8 @@
     white-space: nowrap;
   }
 
-  .program-node-badges {
+  .program-node-badges,
+  .task-node-badges {
     display: inline-flex;
     align-items: center;
     gap: 2px;
@@ -525,55 +526,54 @@
   .date-start, .date-end { color: #64748b; }
 }
 
-.program-date-time-subtitle {
-  display: inline-flex;
-  align-items: center;
-  gap: 3px;
-  font-size: 0.62rem;
-  font-weight: 500;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  color: #64748b;
-
-  .program-date-single,
-  .program-date-start,
-  .program-date-end,
-  .program-date-separator { color: #64748b; }
-}
-
-.status-container-started .program-date-time-subtitle {
-  .program-date-single, .program-date-start, .program-date-end { color: #10b981; }
-}
-
-.status-container-upcoming .program-date-time-subtitle {
-  .program-date-single, .program-date-start, .program-date-end { color: #f59e0b; }
-}
-
-.status-container-completed .program-date-time-subtitle {
-  .program-date-single, .program-date-start, .program-date-end { color: #64748b; }
-}
-
 .program-date-time-row {
-  display: flex;
+  display: inline-flex;
+  overflow: hidden;
   align-items: center;
-  justify-content: space-between;
-  gap: 8px;
-  width: 100%;
+  justify-content: flex-start;
+  gap: 5px;
+  max-width: 100%;
   min-width: 0;
-}
-
-.program-time-range {
-  flex-shrink: 0;
-  margin-right: 4px;
   font-size: 0.62rem;
   font-weight: 600;
   white-space: nowrap;
+  text-overflow: ellipsis;
 }
 
-.status-container-started .program-time-range { color: #10b981; }
-.status-container-upcoming .program-time-range { color: #f59e0b; }
-.status-container-completed .program-time-range { color: #64748b; }
+.program-date-time-point {
+  display: inline-flex;
+  overflow: hidden;
+  min-width: 0;
+  align-items: center;
+  gap: 3px;
+
+  > span {
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  mat-icon {
+    flex: 0 0 12px;
+    width: 12px;
+    height: 12px;
+    color: currentColor;
+    font-size: 12px;
+    line-height: 12px;
+  }
+}
+
+.program-date-time-arrow {
+  flex: 0 0 13px;
+  width: 13px;
+  height: 13px;
+  color: #94a3b8;
+  font-size: 13px;
+  line-height: 13px;
+}
+
+.status-container-started .program-date-time-row { color: #10b981; }
+.status-container-upcoming .program-date-time-row { color: #f59e0b; }
+.status-container-completed .program-date-time-row { color: #64748b; }
 
 .tree-flat-node-row.is-selected {
   border-left: 3px solid #f97316;

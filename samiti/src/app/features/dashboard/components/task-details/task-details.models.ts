@@ -16,7 +16,10 @@ export interface TaskDetailsPayload {
   parentTaskName: string | null;
   ownerUserId: number | null;
   ownerName: string | null;
+  createdByName: string | null;
   createdAt: string;
+  ownerAssignedAt: string | null;
+  updatedAt: string;
   children: TaskChild[];
   todos: TodoItem[];
   todoAssignees: TodoAssignee[];
