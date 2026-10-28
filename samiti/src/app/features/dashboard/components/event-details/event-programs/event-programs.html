@@ -1,18 +1,25 @@
 <div class="programs-tab-content">
   @if (isLoadingPrograms) {
     <div class="program-empty-state">
+      <mat-progress-spinner mode="indeterminate" diameter="28" strokeWidth="3"></mat-progress-spinner>
       <p class="program-empty-text">Loading programs...</p>
     </div>
   } @else {
     @if (eventPrograms.length > 0) {
       <mat-accordion class="program-expansion-list" [multi]="true">
         @for (program of eventPrograms; track program.programId + '-' + program.startDate; let programIndex = $index) {
+          @let ownerCandidate = getProgramOwnerCandidate(program);
+          @let progStatus = getProgramStatus(program);
+          @let isUpdatingOwner = programsUpdatingOwner().has(program.programId);
+
           <mat-expansion-panel class="program-expansion-panel" [expanded]="false">
             <mat-expansion-panel-header>
               <div class="program-panel-summary">
+                
+                <!-- Left: Title & Schedule -->
                 <div class="program-panel-title">
                   <span class="program-panel-count">{{ programIndex + 1 }}</span>
-                  <span class="program-panel-title-content">
+                  <div class="program-panel-title-content">
                     <span class="program-name">
                       {{ program.programName | titlecase }}
                       @if (shouldShowProgramRepeatIcon(program)) {
@@ -21,7 +28,7 @@
                     </span>
                     <span
                       class="program-panel-schedule"
-                      [ngClass]="'program-schedule-status-' + getProgramStatus(program)"
+                      [ngClass]="'program-schedule-status-' + progStatus"
                       [attr.aria-label]="formatProgramDateTimeRange(program.startDate, program.startTime, program.endDate, program.endTime)"
                     >
                       <span class="program-schedule-point">
@@ -38,10 +45,12 @@
                         <span>{{ formatProgramTimeWithPaddedHour(program.endTime) }}</span>
                       </span>
                     </span>
-                  </span>
+                  </div>
                 </div>
-                <div class="program-owner-row" (click)="$event.stopPropagation()">
-                  @if (canAssignProgramOwner && isEditingProgramOwner(program.programId)) {
+
+                <!-- Middle: Program Owner Row -->
+                <div class="program-owner-row" (click)="$event.stopPropagation()" (keydown)="$event.stopPropagation()">
+                  @if (canAssignProgramOwner() && isEditingProgramOwner(program.programId)) {
                     <div class="program-owner-edit-layout">
                       <span class="program-owner-autocomplete-box">
                         <mat-form-field
@@ -51,6 +60,17 @@
                           subscriptSizing="dynamic"
                         >
                           <span matPrefix class="da-input-icon"><mat-icon>search</mat-icon></span>
+                          
+                          @if (!isProgramOwnerSearchCleared(program.programId) && ownerCandidate) {
+                            <span matPrefix class="program-owner-edit-avatar">
+                              @if (ownerCandidate.photo) {
+                                <img [src]="ownerCandidate.photo" [alt]="program.ownerName || 'Program owner'" />
+                              } @else {
+                                <span>{{ getInitials(program.ownerName) }}</span>
+                              }
+                            </span>
+                          }
+
                           <input
                             type="text"
                             matInput
@@ -58,28 +78,16 @@
                             [(ngModel)]="programOwnerInputText[program.programId]"
                             (input)="onProgramOwnerSearch(program.programId, $any($event.target).value)"
                             (focus)="onProgramOwnerInputFocus(program, programOwnerTrigger)"
-                            (click)="$event.stopPropagation()"
-                            (keydown)="$event.stopPropagation()"
                             placeholder="Search member..."
                             [matAutocomplete]="autoProgramOwner"
                             #programOwnerTrigger="matAutocompleteTrigger"
-                            [disabled]="programsUpdatingOwner().has(program.programId)"
+                            [disabled]="isUpdatingOwner"
                             aria-label="Assign program owner"
                           />
-                          @if (programsUpdatingOwner().has(program.programId)) {
+
+                          @if (isUpdatingOwner) {
                             <span matSuffix class="program-owner-saving">
-                              @if (getProgramOwnerCandidate(program); as ownerCandidate) {
-                                @if (ownerCandidate.icon) {
-                                  <span
-                                    class="program-owner-designation"
-                                    [ngStyle]="{
-                                      color: ownerCandidate.color || getRoleColor(ownerCandidate.committeeRole),
-                                    }"
-                                    >{{ ownerCandidate.icon }}</span
-                                  >
-                                }
-                              }
-                              <mat-progress-spinner mode="indeterminate" diameter="14" strokeWidth="2"></mat-progress-spinner>
+                              <mat-progress-spinner mode="indeterminate" diameter="13" strokeWidth="2"></mat-progress-spinner>
                               <span>Saving...</span>
                             </span>
                           } @else {
@@ -95,19 +103,9 @@
                                   <mat-icon>close</mat-icon>
                                 </button>
                               }
-                              @if (getProgramOwnerCandidate(program); as ownerCandidate) {
-                                @if (ownerCandidate.icon) {
-                                  <span
-                                    class="program-owner-designation"
-                                    [ngStyle]="{
-                                      color: ownerCandidate.color || getRoleColor(ownerCandidate.committeeRole),
-                                    }"
-                                    >{{ ownerCandidate.icon }}</span
-                                  >
-                                }
-                              }
                             </span>
                           }
+
                           <mat-autocomplete
                             #autoProgramOwner="matAutocomplete"
                             class="da-program-owner-autocomplete"
@@ -135,13 +133,9 @@
                                     <span class="da-opt-email">{{ candidate.email }}</span>
                                   </div>
                                   @if (candidate.icon) {
-                                    <span
-                                      class="da-opt-cup"
-                                      [ngStyle]="{
-                                        color: candidate.color || getRoleColor(candidate.committeeRole),
-                                      }"
-                                      >{{ candidate.icon }}</span
-                                    >
+                                    <span class="da-opt-cup" [ngStyle]="{ color: candidate.color || getRoleColor(candidate.committeeRole) }">
+                                      {{ candidate.icon }}
+                                    </span>
                                   }
                                 </div>
                               </mat-option>
@@ -152,13 +146,13 @@
                           </mat-autocomplete>
                         </mat-form-field>
                       </span>
-                      @if (!programsUpdatingOwner().has(program.programId)) {
-                        <span class="program-owner-cancel-box">
+
+                      @if (!isUpdatingOwner) {
+                        <span class="program-owner-cancel-box" matTooltip="Cancel edit">
                           <button
                             mat-icon-button
                             class="program-owner-cancel-btn"
                             type="button"
-                            title="Cancel"
                             aria-label="Cancel edit"
                             (click)="cancelEditProgramOwner(program)"
                           >
@@ -170,7 +164,7 @@
                   } @else {
                     <div class="program-owner-value-wrap" [class.program-owner-unassigned]="isOwnerUnassigned(program)">
                       <span class="program-owner-text-box">
-                        @if (getProgramOwnerCandidate(program); as ownerCandidate) {
+                        @if (ownerCandidate) {
                           <span class="program-owner-avatar">
                             @if (ownerCandidate.photo) {
                               <img [src]="ownerCandidate.photo" [alt]="program.ownerName || 'Program owner'" />
@@ -179,31 +173,25 @@
                             }
                           </span>
                         }
-                        <span class="program-owner-name">{{ program.ownerName || 'UNASSIGNED' | titlecase }}</span>
-                        @if (getProgramOwnerCandidate(program); as ownerCandidate) {
-                          @if (ownerCandidate.icon) {
-                            <span
-                              class="program-owner-designation"
-                              [ngStyle]="{
-                                color: ownerCandidate.color || getRoleColor(ownerCandidate.committeeRole),
-                              }"
-                              >{{ ownerCandidate.icon }}</span
-                            >
-                          }
+                        <span class="program-owner-name">{{ (program.ownerName || 'UNASSIGNED') | titlecase }}</span>
+                        @if (ownerCandidate?.icon) {
+                          <span class="program-owner-designation" [ngStyle]="{ color: ownerCandidate?.color || getRoleColor(ownerCandidate?.committeeRole) }">
+                            {{ ownerCandidate?.icon }}
+                          </span>
                         }
                       </span>
-                      @if (canAssignProgramOwner) {
+                      @if (canAssignProgramOwner()) {
                         <span
                           class="program-owner-action-box"
-                          [class.program-owner-edit-disabled]="programsUpdatingOwner().has(program.programId) || getProgramStatus(program) === 'completed'"
-                          [matTooltip]="getProgramStatus(program) === 'completed' ? 'Completed programs cannot be reassigned' : 'Edit program owner'"
+                          [class.program-owner-edit-disabled]="isUpdatingOwner || progStatus === 'completed'"
+                          [matTooltip]="progStatus === 'completed' ? 'Completed programs cannot be reassigned' : 'Edit program owner'"
                         >
                           <button
                             mat-icon-button
                             class="program-owner-edit"
                             type="button"
                             aria-label="Edit program owner"
-                            [disabled]="programsUpdatingOwner().has(program.programId) || getProgramStatus(program) === 'completed'"
+                            [disabled]="isUpdatingOwner || progStatus === 'completed'"
                             (click)="editProgramOwner(program)"
                           >
                             <mat-icon>edit</mat-icon>
@@ -213,23 +201,26 @@
                     </div>
                   }
                 </div>
-                @if (canManageProgramVisibility) {
+
+                <!-- Right: Public Visibility Toggle -->
+                @if (canManageProgramVisibility()) {
                   <button
                     mat-icon-button
-                    class="visibility-toggle-btn program-header-visibility-toggle"
+                    class="program-header-visibility-toggle"
                     type="button"
                     (click)="$event.stopPropagation(); updateProgramVisibility(program, program.visibility !== 'VISIBLE')"
                     (keydown)="$event.stopPropagation()"
                     [disabled]="programsUpdatingVisibility().has(program.programId)"
                     [attr.aria-label]="program.visibility === 'VISIBLE' ? 'Hide program' : 'Show program'"
-                    [matTooltip]="program.visibility === 'VISIBLE' ? 'Hide program' : 'Show program'"
+                    [matTooltip]="program.visibility === 'VISIBLE' ? 'Visible to public (Click to hide)' : 'Hidden from public (Click to show)'"
                   >
-                    <mat-icon>{{ program.visibility === 'VISIBLE' ? 'visibility_off' : 'visibility' }}</mat-icon>
+                    <mat-icon>{{ program.visibility === 'VISIBLE' ? 'visibility' : 'visibility_off' }}</mat-icon>
                   </button>
                 }
               </div>
             </mat-expansion-panel-header>
 
+            <!-- Expanded Details Grid -->
             <div class="program-details-grid">
               <div class="program-detail-item">
                 <span class="program-detail-label">Program ID</span>
@@ -265,8 +256,8 @@
               </div>
               <div class="program-detail-item">
                 <span class="program-detail-label">Schedule</span>
-                <span class="program-detail-value" [ngClass]="'program-schedule-status-' + getProgramStatus(program)">
-                  {{ getProgramStatus(program) | titlecase }}
+                <span class="program-detail-value" [ngClass]="'program-schedule-status-' + progStatus">
+                  {{ progStatus | titlecase }}
                   @if (shouldShowProgramRepeatIcon(program)) {
                     <mat-icon class="program-repeat-icon" aria-label="Program has not ended">repeat</mat-icon>
                   }
