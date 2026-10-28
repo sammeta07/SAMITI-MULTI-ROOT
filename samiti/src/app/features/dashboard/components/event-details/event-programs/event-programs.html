@@ -222,58 +222,88 @@
 
             <!-- Expanded Details Grid -->
             <div class="program-details-grid">
-              <div class="program-detail-item">
-                <span class="program-detail-label">Program ID</span>
-                <span class="program-detail-value">#{{ program.programId }}</span>
+              <div class="program-detail-card">
+                <span class="program-detail-icon"><mat-icon>tag</mat-icon></span>
+                <div class="program-detail-body">
+                  <span class="program-detail-label">Program ID</span>
+                  <span class="program-detail-value id-badge">#{{ program.programId }}</span>
+                </div>
               </div>
-              <div class="program-detail-item">
-                <span class="program-detail-label">Address</span>
-                <span class="program-detail-value">{{ (program.address || 'Not specified') | titlecase }}</span>
-              </div>
-              <div class="program-detail-item">
-                <span class="program-detail-label">Date</span>
-                <span class="program-detail-value">
-                  @if (program.startDate !== program.endDate) {
-                    {{ formatProgramDateRange(program.startDate, program.endDate) }}
-                  } @else {
-                    {{ formatDisplayDate(program.startDate) }}
-                  }
-                </span>
-              </div>
-              <div class="program-detail-item">
-                <span class="program-detail-label">Time</span>
-                <span class="program-detail-value">{{ formatProgramTimeRange(program.startTime, program.endTime) }}</span>
-              </div>
-              <div class="program-detail-item">
-                <span class="program-detail-label">Price</span>
-                <span class="program-detail-value">
-                  @if (program.price && program.price > 0) {
-                    <span class="price-badge price-paid">{{ formatProgramPriceLabel(program.price) }}</span>
-                  } @else {
-                    <span class="price-badge price-free">Free</span>
-                  }
-                </span>
-              </div>
-              <div class="program-detail-item">
-                <span class="program-detail-label">Schedule</span>
-                <span class="program-detail-value" [ngClass]="'program-schedule-status-' + progStatus">
-                  {{ progStatus | titlecase }}
-                  @if (shouldShowProgramRepeatIcon(program)) {
-                    <mat-icon class="program-repeat-icon" aria-label="Program has not ended">repeat</mat-icon>
-                  }
-                </span>
-              </div>
-              <div class="program-detail-item program-visibility-detail">
-                <span class="program-detail-label">Visibility</span>
-                <span class="program-detail-value">
-                  <span
-                    class="program-visibility-label"
-                    [class.visibility-visible]="program.visibility === 'VISIBLE'"
-                    [class.visibility-hidden]="program.visibility !== 'VISIBLE'"
-                  >
-                    {{ program.visibility === 'VISIBLE' ? 'Visible to public' : 'Hidden from public' }}
+
+              <div class="program-detail-card">
+                <span class="program-detail-icon"><mat-icon>place</mat-icon></span>
+                <div class="program-detail-body">
+                  <span class="program-detail-label">Address</span>
+                  <span class="program-detail-value" [title]="program.address || 'Not specified'">
+                    {{ (program.address || 'Not specified') | titlecase }}
                   </span>
-                </span>
+                </div>
+              </div>
+
+              <div class="program-detail-card">
+                <span class="program-detail-icon"><mat-icon>calendar_today</mat-icon></span>
+                <div class="program-detail-body">
+                  <span class="program-detail-label">Date Range</span>
+                  <span class="program-detail-value">
+                    @if (program.startDate !== program.endDate) {
+                      {{ formatProgramDateRange(program.startDate, program.endDate) }}
+                    } @else {
+                      {{ formatDisplayDate(program.startDate) }}
+                    }
+                  </span>
+                </div>
+              </div>
+
+              <div class="program-detail-card">
+                <span class="program-detail-icon"><mat-icon>access_time</mat-icon></span>
+                <div class="program-detail-body">
+                  <span class="program-detail-label">Time</span>
+                  <span class="program-detail-value">{{ formatProgramTimeRange(program.startTime, program.endTime) }}</span>
+                </div>
+              </div>
+
+              <div class="program-detail-card">
+                <span class="program-detail-icon"><mat-icon>payments</mat-icon></span>
+                <div class="program-detail-body">
+                  <span class="program-detail-label">Price</span>
+                  <span class="program-detail-value">
+                    @if (program.price && program.price > 0) {
+                      <span class="price-badge price-paid">{{ formatProgramPriceLabel(program.price) }}</span>
+                    } @else {
+                      <span class="price-badge price-free">Free</span>
+                    }
+                  </span>
+                </div>
+              </div>
+
+              <div class="program-detail-card">
+                <span class="program-detail-icon"><mat-icon>timelapse</mat-icon></span>
+                <div class="program-detail-body">
+                  <span class="program-detail-label">Status</span>
+                  <span class="program-detail-value status-pill" [ngClass]="'program-schedule-status-' + progStatus">
+                    {{ progStatus | titlecase }}
+                    @if (shouldShowProgramRepeatIcon(program)) {
+                      <mat-icon class="program-repeat-icon" aria-label="Program has not ended">repeat</mat-icon>
+                    }
+                  </span>
+                </div>
+              </div>
+
+              <div class="program-detail-card program-visibility-card">
+                <span class="program-detail-icon"><mat-icon>public</mat-icon></span>
+                <div class="program-detail-body">
+                  <span class="program-detail-label">Visibility</span>
+                  <span class="program-detail-value">
+                    <span
+                      class="program-visibility-label"
+                      [class.visibility-visible]="program.visibility === 'VISIBLE'"
+                      [class.visibility-hidden]="program.visibility !== 'VISIBLE'"
+                    >
+                      <mat-icon>{{ program.visibility === 'VISIBLE' ? 'check_circle' : 'visibility_off' }}</mat-icon>
+                      {{ program.visibility === 'VISIBLE' ? 'Visible to public' : 'Hidden from public' }}
+                    </span>
+                  </span>
+                </div>
               </div>
             </div>
           </mat-expansion-panel>

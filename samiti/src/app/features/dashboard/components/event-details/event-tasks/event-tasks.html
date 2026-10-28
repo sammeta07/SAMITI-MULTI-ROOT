@@ -310,37 +310,64 @@
 
               <!-- Expanded Details Grid -->
               <div class="task-details-grid">
-                <div class="task-detail-item">
-                  <span class="task-detail-label">Task ID</span>
-                  <span class="task-detail-value">#{{ taskEntry.task.taskId }}</span>
+                <div class="task-detail-card">
+                  <span class="task-detail-icon"><mat-icon>tag</mat-icon></span>
+                  <div class="task-detail-body">
+                    <span class="task-detail-label">Task ID</span>
+                    <span class="task-detail-value id-badge">#{{ taskEntry.task.taskId }}</span>
+                  </div>
                 </div>
-                <div class="task-detail-item">
-                  <span class="task-detail-label">Parent task</span>
-                  <span class="task-detail-value">
-                    @if (taskEntry.task.parentTaskId) {
-                      {{ taskEntry.task.parentTaskName || 'Task' }} (#{{ taskEntry.task.parentTaskId }})
-                    } @else {
-                      None
-                    }
-                  </span>
+
+                <div class="task-detail-card">
+                  <span class="task-detail-icon"><mat-icon>account_tree</mat-icon></span>
+                  <div class="task-detail-body">
+                    <span class="task-detail-label">Parent Task</span>
+                    <span class="task-detail-value" [title]="taskEntry.task.parentTaskName || 'None'">
+                      @if (taskEntry.task.parentTaskId) {
+                        {{ taskEntry.task.parentTaskName || 'Task' }} <span class="muted-id">(#{{ taskEntry.task.parentTaskId }})</span>
+                      } @else {
+                        <span class="muted-text">None</span>
+                      }
+                    </span>
+                  </div>
                 </div>
-                <div class="task-detail-item">
-                  <span class="task-detail-label">Created by</span>
-                  <span class="task-detail-value">{{ taskEntry.task.createdByName || 'Unknown' }}</span>
+
+                <div class="task-detail-card">
+                  <span class="task-detail-icon"><mat-icon>person</mat-icon></span>
+                  <div class="task-detail-body">
+                    <span class="task-detail-label">Created By</span>
+                    <span class="task-detail-value">{{ (taskEntry.task.createdByName || 'Unknown') | titlecase }}</span>
+                  </div>
                 </div>
-                <div class="task-detail-item">
-                  <span class="task-detail-label">Created</span>
-                  <span class="task-detail-value">{{ taskEntry.task.createdAt | date: 'medium' }}</span>
+
+                <div class="task-detail-card">
+                  <span class="task-detail-icon"><mat-icon>calendar_today</mat-icon></span>
+                  <div class="task-detail-body">
+                    <span class="task-detail-label">Created On</span>
+                    <span class="task-detail-value">{{ taskEntry.task.createdAt | date: 'dd-MMM-yyyy, hh:mm a' }}</span>
+                  </div>
                 </div>
-                <div class="task-detail-item">
-                  <span class="task-detail-label">Assigned at</span>
-                  <span class="task-detail-value">
-                    {{ taskEntry.task.ownerAssignedAt ? (taskEntry.task.ownerAssignedAt | date: 'medium') : 'Not assigned' }}
-                  </span>
+
+                <div class="task-detail-card">
+                  <span class="task-detail-icon"><mat-icon>assignment_ind</mat-icon></span>
+                  <div class="task-detail-body">
+                    <span class="task-detail-label">Assigned At</span>
+                    <span class="task-detail-value">
+                      @if (taskEntry.task.ownerAssignedAt) {
+                        {{ taskEntry.task.ownerAssignedAt | date: 'dd-MMM-yyyy, hh:mm a' }}
+                      } @else {
+                        <span class="muted-text">Not assigned</span>
+                      }
+                    </span>
+                  </div>
                 </div>
-                <div class="task-detail-item">
-                  <span class="task-detail-label">Last updated</span>
-                  <span class="task-detail-value">{{ taskEntry.task.updatedAt | date: 'medium' }}</span>
+
+                <div class="task-detail-card">
+                  <span class="task-detail-icon"><mat-icon>update</mat-icon></span>
+                  <div class="task-detail-body">
+                    <span class="task-detail-label">Last Updated</span>
+                    <span class="task-detail-value">{{ taskEntry.task.updatedAt | date: 'dd-MMM-yyyy, hh:mm a' }}</span>
+                  </div>
                 </div>
               </div>
             </mat-expansion-panel>
