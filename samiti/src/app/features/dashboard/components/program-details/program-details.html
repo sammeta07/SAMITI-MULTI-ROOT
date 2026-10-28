@@ -1,296 +1,334 @@
 <div class="program-details-workspace drawer-layout-shell">
 
   @if (isLoading()) {
-  <div class="spinner-loading-overlay">
-    <mat-progress-spinner mode="indeterminate" diameter="32"></mat-progress-spinner>
-    <span>Loading program details...</span>
-  </div>
+    <div class="spinner-loading-overlay">
+      <mat-progress-spinner mode="indeterminate" diameter="28" strokeWidth="3"></mat-progress-spinner>
+      <span>Loading program details...</span>
+    </div>
   } @else if (programData()) {
 
-  <div class="workspace-body scrollable-container">
+    <div class="workspace-body scrollable-container">
 
-    <section class="gd-committee-card" [ngClass]="'status-container-' + calculatedProgramStatus()">
-      <div class="program-header-grid">
+      <!-- TOP SUMMARY CARD -->
+      <section class="gd-committee-card" [ngClass]="'status-container-' + calculatedProgramStatus()">
+        <div class="program-header-grid">
 
-        <!-- Left / Center: Details & Badges -->
-        <div class="card-main-info-area">
-          <div class="card-title-row">
-            <h3 class="committee-display-name">{{ programData()?.programName | titlecase }}</h3>
-          </div>
+          <!-- Left Details & Meta Badges -->
+          <div class="card-main-info-area">
+            <div class="card-title-row">
+              <h3 class="committee-display-name" [title]="programData()?.programName">
+                {{ programData()?.programName | titlecase }}
+              </h3>
+            </div>
 
-          <div class="card-location-row">
-            <span class="location-text-trim">{{ (programData()?.address || 'No address specified') | titlecase }}</span>
-          </div>
+            <div class="card-location-row" [title]="programData()?.address || 'No address specified'">
+              <mat-icon class="location-icon">place</mat-icon>
+              <span class="location-text-trim">{{ (programData()?.address || 'No address specified') | titlecase }}</span>
+            </div>
 
-          <div class="card-identity-pills-area">
-            <!-- Program Status Badge -->
-            <span class="meta-pill status-pill status-badge-{{ calculatedProgramStatus() }}">
-              <span class="status-dot"></span>
-              {{ calculatedProgramStatus() | uppercase }}
-            </span>
-
-            <!-- Start & End Date Badge -->
-            @if (formattedDateRange()) {
-              <span class="meta-pill date-pill date-pill-status-{{ calculatedProgramStatus() }}" title="Program Dates">
-                <mat-icon>event</mat-icon>
-                <span>{{ formattedDateRange() }}</span>
+            <div class="card-identity-pills-area">
+              <!-- Status Badge -->
+              <span class="meta-pill status-pill status-badge-{{ calculatedProgramStatus() }}">
+                <span class="status-dot"></span>
+                <span>{{ calculatedProgramStatus() | uppercase }}</span>
               </span>
-            }
 
-            @if (programData()?.parentProgramId) {
-              <a
-                class="meta-pill date-pill task-parent-pill"
-                [routerLink]="['/dashboard', 'program', programData()?.parentProgramId]"
-                title="Parent program"
-              >
-                <mat-icon>subdirectory_arrow_left</mat-icon>
-                <span>{{ (programData()?.parentProgramName || 'Parent program') | titlecase }}</span>
-              </a>
-            }
+              <!-- Dates Badge -->
+              @if (formattedDateRange()) {
+                <span class="meta-pill date-pill date-pill-status-{{ calculatedProgramStatus() }}" title="Program Dates">
+                  <mat-icon>event</mat-icon>
+                  <span>{{ formattedDateRange() }}</span>
+                </span>
+              }
 
-            <!-- Start Time - End Time -->
-            @if (programStartTime || programEndTime) {
-              <span class="meta-pill time-pill {{ timePillStatusClass() }}">
-                <mat-icon>schedule</mat-icon>
-                <span>{{ formattedProgramTimeRange || (formattedProgramStartTime + ' - ' + formattedProgramEndTime) }}</span>
-              </span>
-            }
+              <!-- Parent Link Pill -->
+              @if (programData()?.parentProgramId) {
+                <a
+                  class="meta-pill date-pill task-parent-pill"
+                  [routerLink]="['/dashboard', 'program', programData()?.parentProgramId]"
+                  title="Parent program"
+                >
+                  <mat-icon>subdirectory_arrow_left</mat-icon>
+                  <span>{{ (programData()?.parentProgramName || 'Parent program') | titlecase }}</span>
+                </a>
+              }
 
-            <!-- Visibility Pill -->
-            @if (programData()?.visibility) {
-              <span class="meta-pill type-pill" [class.type-private]="programData()?.visibility !== 'VISIBLE'" [class.type-visible]="programData()?.visibility === 'VISIBLE'">
-                <mat-icon>{{ programData()?.visibility === 'VISIBLE' ? 'public' : 'lock' }}</mat-icon>
-                <span>{{ programData()?.visibility }}</span>
-              </span>
-            }
+              <!-- Time Badge -->
+              @if (formattedProgramTimeRange()) {
+                <span class="meta-pill time-pill {{ timePillStatusClass() }}" title="Program Timing">
+                  <mat-icon>schedule</mat-icon>
+                  <span>{{ formattedProgramTimeRange() }}</span>
+                </span>
+              }
 
-            <!-- Price Pill -->
-             @if (programData()?.price !== null && programData()?.price !== undefined) {
-               <span class="meta-pill price-pill" [class.price-free]="programData()!.price === 0" [class.price-paid]="programData()!.price > 0">
-                 <span>{{ formattedPriceLabel() }}</span>
-               </span>
-             }
+              <!-- Visibility Badge -->
+              @if (programData()?.visibility) {
+                <span
+                  class="meta-pill type-pill"
+                  [class.type-private]="programData()?.visibility !== 'VISIBLE'"
+                  [class.type-visible]="programData()?.visibility === 'VISIBLE'"
+                >
+                  <mat-icon>{{ programData()?.visibility === 'VISIBLE' ? 'public' : 'lock' }}</mat-icon>
+                  <span>{{ programData()?.visibility }}</span>
+                </span>
+              }
 
+              <!-- Pricing Badge -->
+              @if (programData()?.price !== null && programData()?.price !== undefined) {
+                <span class="meta-pill price-pill" [class.price-free]="programData()!.price === 0" [class.price-paid]="programData()!.price > 0">
+                  <span>{{ formattedPriceLabel() }}</span>
+                </span>
+              }
+            </div>
           </div>
-        </div>
 
-        <!-- Right Side: Owner -->
-        <div class="program-header-side">
-          <div class="program-owner-row">
-            @if (programData()?.ownerDesignation) {
-              <span class="owner-designation-pill"
-                    [class.owner-unassigned]="!programData()?.ownerName"
-                    [style.background]="programData()?.ownerDesignationColor ? programData()?.ownerDesignationColor + '20' : null"
-                    [style.color]="programData()?.ownerDesignationColor || null"
-                    [style.border-color]="programData()?.ownerDesignationColor || null">
-                <span class="owner-pill-text">OWNER : {{ programOwnerDisplay }}</span>
-                @if (programData()?.ownerDesignationIcon) {
-                  <mat-icon class="owner-designation-icon" [style.color]="programData()?.ownerDesignationColor || null">{{ programData()?.ownerDesignationIcon }}</mat-icon>
-                }
-              </span>
-            } @else {
-              <span class="owner-pill-text" [class.owner-unassigned]="!programData()?.ownerName">OWNER : {{ programOwnerDisplay }}</span>
-            }
-          </div>
-          <div class="action-buttons-area">
-            <button mat-button class="btn-action btn-edit" (click)="onEditProgram()">
-              <mat-icon>edit</mat-icon>
-              <span>Edit</span>
-            </button>
-            <button mat-button class="btn-action btn-delete" (click)="onDeleteProgram()">
-              <mat-icon>delete_outline</mat-icon>
-              <span>Delete</span>
-            </button>
-          </div>
-        </div>
+          <!-- Right Side: Owner & Action Buttons -->
+          <div class="program-header-side">
+            <div class="program-owner-row">
+              @if (programData()?.ownerDesignation) {
+                <span
+                  class="owner-designation-pill"
+                  [class.owner-unassigned]="!programData()?.ownerName"
+                  [style.background]="programData()?.ownerDesignationColor ? programData()?.ownerDesignationColor + '18' : null"
+                  [style.color]="programData()?.ownerDesignationColor || null"
+                  [style.border-color]="programData()?.ownerDesignationColor || null"
+                >
+                  <span class="owner-pill-text">OWNER: {{ programOwnerDisplay() }}</span>
+                  @if (programData()?.ownerDesignationIcon) {
+                    <mat-icon class="owner-designation-icon">{{ programData()?.ownerDesignationIcon }}</mat-icon>
+                  }
+                </span>
+              } @else {
+                <span class="owner-pill-text plain" [class.owner-unassigned]="!programData()?.ownerName">
+                  OWNER: {{ programOwnerDisplay() }}
+                </span>
+              }
+            </div>
 
-      </div>
-    </section>
-
-    <!-- BANNER IMAGES SECTION -->
-    <mat-expansion-panel #bannerExpansionPanel class="banner-images-section" [expanded]="true">
-      <mat-expansion-panel-header class="panel-card-header banner-header-bg">
-        <div class="header-title-left">
-          <mat-icon class="icon-accent-banner">photo_library</mat-icon>
-          <span class="title-text">Program Banner Images</span>
-          <span class="count-pill">{{ bannerCount }}/{{ MAX_BANNERS }}</span>
-        </div>
-        <div class="banner-header-actions" (click)="$event.stopPropagation()">
-          @if (bannerExpansionPanel.expanded && canManageEvent && bannerCount > 0) {
-            @if (isSelectionMode()) {
-              <button mat-button class="btn-action btn-cancel" type="button" (click)="toggleSelectionMode()" [disabled]="isDeletingBanners()">
-                <mat-icon>close</mat-icon>
-                <span>Cancel</span>
+            <div class="action-buttons-area">
+              <button mat-button class="btn-action btn-edit" type="button" (click)="onEditProgram()">
+                <mat-icon>edit</mat-icon>
+                <span>Edit</span>
               </button>
-              <button mat-button class="btn-action btn-delete" type="button" (click)="deleteSelectedBanners()" [disabled]="selectedBannerCount === 0 || isDeletingBanners()">
-                @if (isDeletingBanners()) {
-                  <mat-progress-spinner mode="indeterminate" diameter="16" strokeWidth="2"></mat-progress-spinner>
-                } @else {
-                  <mat-icon>delete</mat-icon>
-                }
-                <span>Delete Selected ({{ selectedBannerCount }})</span>
+              <button mat-button class="btn-action btn-delete" type="button" (click)="onDeleteProgram()">
+                <mat-icon>delete_outline</mat-icon>
+                <span>Delete</span>
               </button>
-            } @else {
-              <button mat-button class="btn-action btn-select" type="button" (click)="toggleSelectionMode()">
-                <mat-icon>check_box</mat-icon>
-                <span>Select</span>
-              </button>
-            }
-          }
+            </div>
+          </div>
+
         </div>
-      </mat-expansion-panel-header>
+      </section>
 
-      <div class="banner-grid">
-        @if (bannerCount === 0 && canUploadMoreBanners && canManageEvent && !isSelectionMode()) {
-          <button type="button" class="banner-upload-tile" (click)="onAddSingleProgramBannerClick()">
-            <mat-icon>add_photo_alternate</mat-icon>
-            <span>Add Banner</span>
-          </button>
-        }
+      <!-- BANNER IMAGES PANEL -->
+      <mat-expansion-panel #bannerExpansionPanel class="banner-images-section" [expanded]="true">
+        <mat-expansion-panel-header class="panel-card-header banner-header-bg">
+          <div class="header-title-left">
+            <mat-icon class="icon-accent-banner">photo_library</mat-icon>
+            <span class="title-text">Program Banners</span>
+            <span class="count-pill">{{ bannerCount() }}/{{ MAX_BANNERS }}</span>
+          </div>
 
-        @let banners = programData()?.bannerImages || [];
-        @for (imgUrl of banners; track imgUrl) {
-          <div class="banner-image-card"
-               [class.selected]="isSelectionMode() && isBannerSelected(imgUrl)"
-               (click)="isSelectionMode() ? toggleBannerSelection(imgUrl) : null">
-            <img [src]="imgUrl" [alt]="programData()?.programName || 'Banner Image'" class="banner-img" />
-
-            @if (isSelectionMode()) {
-              <div class="banner-select-overlay">
-                <mat-checkbox [checked]="isBannerSelected(imgUrl)" (click)="$event.stopPropagation()" (change)="toggleBannerSelection(imgUrl)"></mat-checkbox>
-              </div>
-            } @else {
-              @if (canDeleteBanners) {
-                <button mat-icon-button class="banner-delete-btn" title="Delete banner" (click)="onDeleteProgramBanner(imgUrl)">
-                  <mat-icon>delete</mat-icon>
+          <div class="banner-header-actions" (click)="$event.stopPropagation()">
+            @if (bannerExpansionPanel.expanded && canManageEvent() && bannerCount() > 0) {
+              @if (isSelectionMode()) {
+                <button
+                  mat-button
+                  class="btn-action btn-cancel"
+                  type="button"
+                  (click)="toggleSelectionMode()"
+                  [disabled]="isDeletingBanners()"
+                >
+                  <mat-icon>close</mat-icon>
+                  <span>Cancel</span>
+                </button>
+                <button
+                  mat-button
+                  class="btn-action btn-delete"
+                  type="button"
+                  (click)="deleteSelectedBanners()"
+                  [disabled]="selectedBannerCount() === 0 || isDeletingBanners()"
+                >
+                  @if (isDeletingBanners()) {
+                    <mat-progress-spinner mode="indeterminate" diameter="14" strokeWidth="2"></mat-progress-spinner>
+                  } @else {
+                    <mat-icon>delete</mat-icon>
+                  }
+                  <span>Delete Selected ({{ selectedBannerCount() }})</span>
+                </button>
+              } @else {
+                <button mat-button class="btn-action btn-select" type="button" (click)="toggleSelectionMode()">
+                  <mat-icon>check_box</mat-icon>
+                  <span>Select</span>
                 </button>
               }
             }
           </div>
-        }
+        </mat-expansion-panel-header>
 
-        @if (bannerCount > 0 && canUploadMoreBanners && canManageEvent && !isSelectionMode()) {
-          <button type="button" class="banner-upload-tile" (click)="onAddSingleProgramBannerClick()">
-            <mat-icon>add_photo_alternate</mat-icon>
-            <span>Add Banner</span>
+        <div class="banner-grid">
+          @if (bannerCount() === 0 && canUploadMoreBanners() && canManageEvent() && !isSelectionMode()) {
+            <button type="button" class="banner-upload-tile" (click)="onAddSingleProgramBannerClick()">
+              <mat-icon>add_photo_alternate</mat-icon>
+              <span>Add Banner</span>
+            </button>
+          }
+
+          @let banners = programData()?.bannerImages || [];
+          @for (imgUrl of banners; track imgUrl) {
+            <div
+              class="banner-image-card"
+              [class.selected]="isSelectionMode() && isBannerSelected(imgUrl)"
+              (click)="isSelectionMode() ? toggleBannerSelection(imgUrl) : null"
+            >
+              <img [src]="imgUrl" [alt]="programData()?.programName || 'Banner Image'" class="banner-img" />
+
+              @if (isSelectionMode()) {
+                <div class="banner-select-overlay">
+                  <mat-checkbox
+                    [checked]="isBannerSelected(imgUrl)"
+                    (click)="$event.stopPropagation()"
+                    (change)="toggleBannerSelection(imgUrl)"
+                  ></mat-checkbox>
+                </div>
+              } @else if (canDeleteBanners()) {
+                <button
+                  mat-icon-button
+                  class="banner-delete-btn"
+                  title="Delete banner"
+                  (click)="onDeleteProgramBanner(imgUrl)"
+                >
+                  <mat-icon>delete</mat-icon>
+                </button>
+              }
+            </div>
+          }
+
+          @if (bannerCount() > 0 && canUploadMoreBanners() && canManageEvent() && !isSelectionMode()) {
+            <button type="button" class="banner-upload-tile" (click)="onAddSingleProgramBannerClick()">
+              <mat-icon>add_photo_alternate</mat-icon>
+              <span>Add Banner</span>
+            </button>
+          }
+
+          @if (bannerCount() === 0 && !(canUploadMoreBanners() && canManageEvent() && !isSelectionMode())) {
+            <div class="banner-empty-state">
+              <mat-icon>image_not_supported</mat-icon>
+              <p>No banner images uploaded yet</p>
+            </div>
+          }
+        </div>
+      </mat-expansion-panel>
+
+      <input #programBannerFileInput type="file" accept="image/*" multiple hidden />
+      <input
+        #programBannerSingleFileInput
+        type="file"
+        accept="image/*"
+        hidden
+        (change)="onSingleProgramBannerFileSelected($event)"
+      />
+
+      <!-- COMPACT PROGRAM WORKSPACE TABS -->
+      <div
+        class="program-tabs-container"
+        [class.show-create-subprogram]="selectedProgramTabIndex === 2 && programData()?.canCreateSubprogram"
+      >
+        <mat-tab-group
+          class="tasks-tabs samiti-nav-tabs"
+          animationDuration="120ms"
+          [(selectedIndex)]="selectedProgramTabIndex"
+        >
+          <!-- Checklist Tab -->
+          <mat-tab>
+            <ng-template mat-tab-label>
+              <mat-icon class="tab-leading-icon">checklist</mat-icon>
+              <span class="tab-name-text">Checklist</span>
+              <span class="tab-badge">{{ programData()?.todos?.length ?? 0 }}</span>
+            </ng-template>
+
+            <section class="horizontal-full-card tasks-section-style">
+              <app-todo-checklist
+                parentType="PROGRAM"
+                [parentId]="programData()?.programId ?? 0"
+                [items]="programData()?.todos ?? []"
+                [assignees]="programData()?.todoAssignees ?? []"
+                [canManage]="programData()?.canManageTodos ?? false"
+                [canToggle]="programData()?.canToggleTodos ?? false"
+                [tableView]="true"
+                (itemsChange)="onProgramTodosChange($event)"
+              />
+            </section>
+          </mat-tab>
+
+          <!-- Notes Tab -->
+          <mat-tab>
+            <ng-template mat-tab-label>
+              <mat-icon class="tab-leading-icon">notes</mat-icon>
+              <span class="tab-name-text">Notes</span>
+              <span class="tab-badge">0</span>
+            </ng-template>
+            <div class="notes-tab-empty-state">
+              <mat-icon>description</mat-icon>
+              <p>Notes are not available for this program yet.</p>
+            </div>
+          </mat-tab>
+
+          <!-- Sub Programs Tab -->
+          <mat-tab>
+            <ng-template mat-tab-label>
+              <mat-icon class="tab-leading-icon">account_tree</mat-icon>
+              <span class="tab-name-text">Sub Program</span>
+              <span class="tab-badge">{{ programData()?.subprograms?.length ?? 0 }}</span>
+            </ng-template>
+
+            <section class="horizontal-full-card tasks-section-style">
+              <div class="horizontal-list-container">
+                @for (subprogram of programData()?.subprograms ?? []; track subprogram.programId) {
+                  <a class="task-aligned-row" [routerLink]="['/dashboard', 'program', subprogram.programId]">
+                    <div class="task-col-info">
+                      <span class="main-title">{{ subprogram.programName }}</span>
+                      <span class="secondary-sub-lbl">
+                        {{ subprogram.startDate ? (subprogram.startDate | date:'mediumDate') : 'Date not set' }}
+                        @if (subprogram.endDate && subprogram.endDate !== subprogram.startDate) {
+                          – {{ subprogram.endDate | date:'mediumDate' }}
+                        }
+                      </span>
+                    </div>
+
+                    <span class="status-tag" [class.tag-completed]="subprogram.visibility === 'HIDDEN'">
+                      {{ subprogram.visibility | uppercase }}
+                    </span>
+                    <mat-icon class="chevron-icon">chevron_right</mat-icon>
+                  </a>
+                } @empty {
+                  <div class="tasks-empty-state">
+                    <mat-icon>account_tree</mat-icon>
+                    <p>No subprograms yet</p>
+                  </div>
+                }
+              </div>
+            </section>
+          </mat-tab>
+        </mat-tab-group>
+
+        <!-- Inline Floating Action Button for Subprogram creation -->
+        @if (selectedProgramTabIndex === 2 && programData()?.canCreateSubprogram) {
+          <button mat-flat-button class="create-subprogram-tab-action" type="button" (click)="onCreateSubprogram()">
+            <mat-icon>add</mat-icon>
+            <span>Sub Program</span>
           </button>
         }
-
-        @if (bannerCount === 0 && !(canUploadMoreBanners && canManageEvent && !isSelectionMode())) {
-          <div class="banner-empty-state">
-            <mat-icon>image_not_supported</mat-icon>
-            <p>No banner images uploaded yet.</p>
-          </div>
-        }
       </div>
-    </mat-expansion-panel>
 
-    <input
-      #programBannerFileInput
-      type="file"
-      accept="image/*"
-      multiple
-      hidden
-      (change)="onProgramBannerFilesSelected($event)"
-    />
-    <input
-      #programBannerSingleFileInput
-      type="file"
-      accept="image/*"
-      hidden
-      (change)="onSingleProgramBannerFileSelected($event)"
-    />
-
-    <!-- PROGRAM TABS -->
-    <div
-      class="program-tabs-container"
-      [class.show-create-subprogram]="selectedProgramTabIndex === 2 && programData()?.canCreateSubprogram"
-    >
-    <mat-tab-group
-      class="tasks-tabs samiti-nav-tabs"
-      animationDuration="150ms"
-      [(selectedIndex)]="selectedProgramTabIndex"
-    >
-      <mat-tab>
-        <ng-template mat-tab-label>
-          <mat-icon class="tab-leading-icon">checklist</mat-icon>
-          <span class="tab-name-text">Checklist</span>
-          <span class="tab-badge">{{ programData()?.todos?.length ?? 0 }}</span>
-        </ng-template>
-
-        <section class="horizontal-full-card tasks-section-style">
-          <app-todo-checklist
-            parentType="PROGRAM"
-            [parentId]="programData()?.programId ?? 0"
-            [items]="programData()?.todos ?? []"
-            [assignees]="programData()?.todoAssignees ?? []"
-            [canManage]="programData()?.canManageTodos ?? false"
-            [canToggle]="programData()?.canToggleTodos ?? false"
-            [tableView]="true"
-            (itemsChange)="onProgramTodosChange($event)"
-          />
-        </section>
-      </mat-tab>
-
-      <mat-tab>
-        <ng-template mat-tab-label>
-          <mat-icon class="tab-leading-icon">notes</mat-icon>
-          <span class="tab-name-text">Notes</span>
-          <span class="tab-badge">0</span>
-        </ng-template>
-        <div class="notes-tab-empty-state">Notes are not available for this program yet.</div>
-      </mat-tab>
-
-      <mat-tab>
-        <ng-template mat-tab-label>
-          <mat-icon class="tab-leading-icon">account_tree</mat-icon>
-          <span class="tab-name-text">Sub Program</span>
-          <span class="tab-badge">{{ programData()?.subprograms?.length ?? 0 }}</span>
-        </ng-template>
-
-        <section class="horizontal-full-card tasks-section-style">
-          <div class="horizontal-list-container">
-            @for (subprogram of programData()?.subprograms ?? []; track subprogram.programId) {
-              <a class="task-aligned-row" [routerLink]="['/dashboard', 'program', subprogram.programId]">
-                <div class="task-col-info">
-                  <span class="main-title">{{ subprogram.programName }}</span>
-                  <span class="secondary-sub-lbl">
-                    {{ subprogram.startDate ? (subprogram.startDate | date:'mediumDate') : 'Date not set' }}
-                    @if (subprogram.endDate && subprogram.endDate !== subprogram.startDate) {
-                      – {{ subprogram.endDate | date:'mediumDate' }}
-                    }
-                  </span>
-                </div>
-                <span class="status-tag" [class.tag-completed]="subprogram.visibility === 'HIDDEN'">
-                  {{ subprogram.visibility | uppercase }}
-                </span>
-                <mat-icon>chevron_right</mat-icon>
-              </a>
-            } @empty {
-              <div class="tasks-empty-state">
-                <mat-icon>account_tree</mat-icon>
-                <p>No subprograms yet</p>
-              </div>
-            }
-          </div>
-        </section>
-      </mat-tab>
-    </mat-tab-group>
-    @if (selectedProgramTabIndex === 2 && programData()?.canCreateSubprogram) {
-      <button mat-flat-button class="create-subprogram-tab-action" type="button" (click)="onCreateSubprogram()">
-        <mat-icon>add</mat-icon>
-        <span>Sub Program</span>
-      </button>
-    }
     </div>
 
-  </div>
   } @else {
-  <div class="empty-layout-shell">
-    <mat-icon class="icon-off">event_note</mat-icon>
-    <h3>Program Details</h3>
-    <p>Detailed page is not available yet for program.</p>
-  </div>
+    <div class="empty-layout-shell">
+      <mat-icon class="icon-off">event_note</mat-icon>
+      <h3>Program Details</h3>
+      <p>Detailed page is not available yet for program.</p>
+    </div>
   }
 
 </div>

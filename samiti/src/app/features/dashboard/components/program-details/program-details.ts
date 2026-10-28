@@ -1,6 +1,16 @@
-import { Component, ElementRef, inject, OnInit, signal, computed, ViewChild, ChangeDetectorRef } from '@angular/core';
+import {
+  Component,
+  ElementRef,
+  inject,
+  OnInit,
+  signal,
+  computed,
+  ViewChild,
+  DestroyRef
+} from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { ActivatedRoute, RouterLink } from '@angular/router';
+import { ActivatedRoute, Router, RouterLink } from '@angular/router';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { MatDialog } from '@angular/material/dialog';
 import { MatIconModule } from '@angular/material/icon';
 import { MatButtonModule } from '@angular/material/button';
@@ -12,6 +22,7 @@ import { MatExpansionModule } from '@angular/material/expansion';
 import { MatTabsModule } from '@angular/material/tabs';
 import { HttpErrorResponse } from '@angular/common/http';
 import { firstValueFrom, finalize } from 'rxjs';
+
 import { ProgramDetailsPayload } from './program-details.models';
 import { ProgramDetailsService } from './program-details.service';
 import { NotifierService } from '../../../../shared/notifier/notifier.service';
@@ -53,6 +64,7 @@ export class ProgramDetailsComponent implements OnInit {
   @ViewChild('programBannerSingleFileInput') private readonly programBannerSingleFileInput?: ElementRef<HTMLInputElement>;
 
   private readonly route = inject(ActivatedRoute);
+  private readonly router = inject(Router);
   private readonly dialog = inject(MatDialog);
   private readonly notifier = inject(NotifierService);
   private readonly programDetailsService = inject(ProgramDetailsService);
@@ -61,7 +73,9 @@ export class ProgramDetailsComponent implements OnInit {
   private readonly imageAssetService = inject(ImageAssetService);
   private readonly loadingState = inject(LoadingStateService);
   private readonly confirmDialog = inject(ConfirmDialogService);
-  private readonly cdr = inject(ChangeDetectorRef);
+  private readonly destroyRef = inject(DestroyRef);
+
+  public readonly MAX_BANNERS = 5;
 
   public readonly isLoading = signal<boolean>(false);
   public readonly isBannerUploading = signal<boolean>(false);
@@ -69,18 +83,15 @@ export class ProgramDetailsComponent implements OnInit {
   public readonly isSelectionMode = signal<boolean>(false);
   public readonly selectedBannerUrls = signal<Set<string>>(new Set<string>());
   public readonly programData = signal<ProgramDetailsPayload | null>(null);
-  public selectedProgramTabIndex = 0;
   public readonly programOwnerCandidates = signal<ProgramOwnerCandidate[]>([]);
   public readonly isUpdatingOwner = signal<boolean>(false);
-  public readonly MAX_BANNERS = 5;
+  public selectedProgramTabIndex = 0;
 
-  public get bannerCount(): number {
-    return this.programData()?.bannerImages?.length ?? 0;
-  }
-
-  public get selectedBannerCount(): number {
-    return this.selectedBannerUrls().size;
-  }
+  public readonly bannerCount = computed(() => this.programData()?.bannerImages?.length ?? 0);
+  public readonly selectedBannerCount = computed(() => this.selectedBannerUrls().size);
+  public readonly canUploadMoreBanners = computed(() => this.bannerCount() < this.MAX_BANNERS);
+  public readonly canManageEvent = computed(() => Boolean(this.programData()?.canAssignOwner));
+  public readonly canDeleteBanners = computed(() => this.canManageEvent());
 
   public readonly calculatedProgramStatus = computed<'started' | 'upcoming' | 'completed'>(() => {
     const program = this.programData();
@@ -90,6 +101,35 @@ export class ProgramDetailsComponent implements OnInit {
 
   public readonly formattedPriceLabel = computed<string>(() => formatProgramPriceLabel(this.programData()?.price));
 
+  public readonly programOwnerDisplay = computed<string>(() => {
+    const name = this.programData()?.ownerName;
+    if (!name) return 'UNASSIGNED';
+    return String(name).toLowerCase().replace(/\b\w/g, (c) => c.toUpperCase());
+  });
+
+  public readonly formattedProgramTimeRange = computed<string>(() => {
+    const start = this.programData()?.startTime;
+    const end = this.programData()?.endTime;
+    if (!start && !end) return '';
+    if (start && !end) return this.formatTimeWithPeriod(start);
+    if (!start && end) return this.formatTimeWithPeriod(end);
+
+    const startParsed = this.parseTimeParts(start!);
+    const endParsed = this.parseTimeParts(end!);
+    if (!startParsed || !endParsed) return `${this.formatTimeWithPeriod(start)} – ${this.formatTimeWithPeriod(end)}`;
+
+    const startPeriod = startParsed.hours >= 12 ? 'PM' : 'AM';
+    const endPeriod = endParsed.hours >= 12 ? 'PM' : 'AM';
+
+    if (startPeriod === endPeriod) {
+      const startDisplay = `${String(startParsed.hours % 12 || 12).padStart(2, '0')}:${String(startParsed.minutes).padStart(2, '0')}`;
+      const endDisplay = `${String(endParsed.hours % 12 || 12).padStart(2, '0')}:${String(endParsed.minutes).padStart(2, '0')}`;
+      return `${startDisplay} – ${endDisplay} ${startPeriod}`;
+    }
+
+    return `${this.formatTimeWithPeriod(start)} – ${this.formatTimeWithPeriod(end)}`;
+  });
+
   public readonly timePillStatusClass = computed<string>(() => {
     const program = this.programData();
     if (!program) return '';
@@ -98,7 +138,6 @@ export class ProgramDetailsComponent implements OnInit {
     if (status === 'completed') return 'time-pill-status-completed';
     if (status === 'upcoming') return 'time-pill-status-upcoming';
 
-    // status === 'started'
     const today = this.getTodayLocalDate();
     const programStart = this.parseLocalDate(program.startDate);
     const programEnd = this.parseLocalDate(program.endDate);
@@ -124,26 +163,6 @@ export class ProgramDetailsComponent implements OnInit {
     return 'time-pill-status-started';
   });
 
-  private getTodayLocalDate(): Date {
-    const now = new Date();
-    return new Date(now.getFullYear(), now.getMonth(), now.getDate());
-  }
-
-  private getCurrentTimeMinutes(): number {
-    const now = new Date();
-    return now.getHours() * 60 + now.getMinutes();
-  }
-
-  private parseTimeToMinutes(timeStr: string | null | undefined): number | null {
-    if (!timeStr) return null;
-    const match = timeStr.match(/^(\d{1,2}):(\d{2})(?::\d{2})?$/);
-    if (!match) return null;
-    const hours = Number(match[1]);
-    const minutes = Number(match[2]);
-    if (hours > 23 || minutes > 59) return null;
-    return hours * 60 + minutes;
-  }
-
   public readonly formattedDateRange = computed<string | null>(() => {
     const program = this.programData();
     if (!program) return null;
@@ -164,106 +183,71 @@ export class ProgramDetailsComponent implements OnInit {
     const endMonth = this.formatMonth(eDate);
 
     if (sDate.getFullYear() !== eDate.getFullYear()) {
-      return `${this.formatDate(sDate)} To ${this.formatDate(eDate)}`;
+      return `${this.formatDate(sDate)} – ${this.formatDate(eDate)}`;
     }
     if (sDate.getMonth() !== eDate.getMonth()) {
-      return `${startDay} ${startMonth} To ${endDay} ${endMonth} ${eDate.getFullYear()}`;
+      return `${startDay} ${startMonth} – ${endDay} ${endMonth} ${eDate.getFullYear()}`;
     }
     if (sDate.getDate() === eDate.getDate()) {
       return this.formatDate(sDate);
     }
-    return `${startDay} To ${endDay} ${endMonth} ${eDate.getFullYear()}`;
+    return `${startDay} – ${endDay} ${endMonth} ${eDate.getFullYear()}`;
   });
 
-  public get programOwnerDisplay(): string {
-    const name = this.programData()?.ownerName;
-    if (!name) return 'UNASSIGNED';
-    return String(name).toLowerCase().replace(/\b\w/g, (c) => c.toUpperCase());
+  ngOnInit(): void {
+    this.route.params.pipe(takeUntilDestroyed(this.destroyRef)).subscribe((params) => {
+      const programId = params['id'];
+      if (programId) {
+        this.fetchProgramDetails(programId);
+      }
+    });
   }
 
-  public get programStartTime(): string | null {
-    return this.formatTimeOnly(this.programData()?.startTime);
+  private fetchProgramDetails(id: string): void {
+    this.isLoading.set(true);
+    this.loadingState.begin();
+    this.programData.set(null);
+    this.programOwnerCandidates.set([]);
+
+    this.programDetailsService
+      .getProgramDetails(id)
+      .pipe(
+        finalize(() => {
+          this.isLoading.set(false);
+          this.loadingState.end();
+        }),
+        takeUntilDestroyed(this.destroyRef)
+      )
+      .subscribe({
+        next: (data: ProgramDetailsPayload) => {
+          this.programData.set(data ?? null);
+          if (data?.canAssignOwner && data.eventId) {
+            const eventId = data.eventId;
+            this.programOwnerService
+              .getCandidates(data.eventId)
+              .pipe(takeUntilDestroyed(this.destroyRef))
+              .subscribe({
+                next: (candidates) => {
+                  if (this.programData()?.eventId === eventId) {
+                    this.programOwnerCandidates.set(candidates);
+                  }
+                },
+                error: (err: HttpErrorResponse) =>
+                  this.notifier.error(err?.error?.message || 'Failed to load committee members.')
+              });
+          } else {
+            this.programOwnerCandidates.set([]);
+          }
+        },
+        error: (err: HttpErrorResponse) => {
+          this.notifier.error(err?.error?.message || 'Failed to load program details.');
+          this.programData.set(null);
+        }
+      });
   }
 
-  public get programEndTime(): string | null {
-    return this.formatTimeOnly(this.programData()?.endTime);
-  }
-
-  public get formattedProgramStartTime(): string {
-    return this.formatTimeWithPeriod(this.programData()?.startTime);
-  }
-
-  public get formattedProgramEndTime(): string {
-    return this.formatTimeWithPeriod(this.programData()?.endTime);
-  }
-
-  public get formattedProgramTimeRange(): string {
-    const start = this.programData()?.startTime;
-    const end = this.programData()?.endTime;
-    if (!start || !end) return '';
-
-    const startParsed = this.parseTimeParts(start);
-    const endParsed = this.parseTimeParts(end);
-    if (!startParsed || !endParsed) return '';
-
-    const startPeriod = startParsed.hours >= 12 ? 'PM' : 'AM';
-    const endPeriod = endParsed.hours >= 12 ? 'PM' : 'AM';
-
-    if (startPeriod === endPeriod) {
-      const startDisplay = `${String(startParsed.hours % 12 || 12).padStart(2, '0')}:${String(startParsed.minutes).padStart(2, '0')}`;
-      const endDisplay = `${String(endParsed.hours % 12 || 12).padStart(2, '0')}:${String(endParsed.minutes).padStart(2, '0')}`;
-      return `${startDisplay} - ${endDisplay} ${startPeriod}`;
-    }
-
-    return `${this.formatTimeWithPeriod(start)} - ${this.formatTimeWithPeriod(end)}`;
-  }
-
-  private parseTimeParts(timeStr: string): { hours: number; minutes: number } | null {
-    const match = timeStr.match(/^(\d{1,2}):(\d{2})(?::\d{2})?$/);
-    if (!match) return null;
-    const hours = Number(match[1]);
-    const minutes = Number(match[2]);
-    if (hours > 23 || minutes > 59) return null;
-    return { hours, minutes };
-  }
-
-  private formatTimeOnly(timeStr?: string | null): string | null {
-    if (!timeStr) return null;
-    const parts = timeStr.split(':');
-    return parts.length >= 2 ? `${parts[0]}:${parts[1]}` : timeStr;
-  }
-
-  private formatTimeWithPeriod(timeStr?: string | null): string {
-    if (!timeStr) return '--:--';
-    const match = timeStr.match(/^(\d{1,2}):(\d{2})(?::\d{2})?$/);
-    if (!match) return timeStr;
-
-    const hours = Number(match[1]);
-    const minutes = Number(match[2]);
-    if (hours > 23 || minutes > 59) return timeStr;
-
-    const period = hours >= 12 ? 'PM' : 'AM';
-    const displayHours = hours % 12 || 12;
-    return `${displayHours}:${String(minutes).padStart(2, '0')} ${period}`;
-  }
-
-  private parseLocalDate(value: string | null | undefined): Date | null {
-    if (!value || typeof value !== 'string') return null;
-    const cleaned = value.trim().slice(0, 10);
-    const [year, month, day] = cleaned.split('-').map(Number);
-    if (!year || !month || !day) return null;
-    return new Date(year, month - 1, day);
-  }
-
-  private formatDate(date: Date): string {
-    const day = String(date.getDate()).padStart(2, '0');
-    const month = this.formatMonth(date);
-    const year = date.getFullYear();
-    return `${day} ${month} ${year}`;
-  }
-
-  private formatMonth(date: Date): string {
-    return date.toLocaleString('en-US', { month: 'short' });
+  public onProgramTodosChange(todos: TodoItem[]): void {
+    this.programData.update((current) => (current ? { ...current, todos } : current));
   }
 
   public toggleSelectionMode(): void {
@@ -310,10 +294,11 @@ export class ProgramDetailsComponent implements OnInit {
 
     this.isDeletingBanners.set(true);
     try {
-      let lastPayload: any = null;
-      for (const url of selectedUrls) {
-        lastPayload = await firstValueFrom(this.programDetailsService.deleteProgramBannerImage(currentProgram.programId, url));
-      }
+      const deleteCalls = selectedUrls.map((url) =>
+        firstValueFrom(this.programDetailsService.deleteProgramBannerImage(currentProgram.programId, url))
+      );
+      const responses = await Promise.all(deleteCalls);
+      const lastPayload = responses[responses.length - 1];
 
       this.programData.update((prev) =>
         prev
@@ -324,7 +309,7 @@ export class ProgramDetailsComponent implements OnInit {
             }
           : prev
       );
-      this.cdr.detectChanges();
+
       this.selectedBannerUrls.set(new Set<string>());
       this.isSelectionMode.set(false);
       this.notifier.success(`${selectedUrls.length} banner image(s) deleted successfully.`);
@@ -335,71 +320,93 @@ export class ProgramDetailsComponent implements OnInit {
     }
   }
 
-  public get canUploadMoreBanners(): boolean {
-    return this.bannerCount < this.MAX_BANNERS;
+  public onAddSingleProgramBannerClick(): void {
+    if (!this.programBannerSingleFileInput?.nativeElement) {
+      this.notifier.error('File picker is not ready. Please try again.');
+      return;
+    }
+    this.programBannerSingleFileInput.nativeElement.value = '';
+    this.programBannerSingleFileInput.nativeElement.click();
   }
 
-  public get canManageEvent(): boolean {
-    return Boolean(this.programData()?.canAssignOwner);
+  public async onSingleProgramBannerFileSelected(event: Event): Promise<void> {
+    const input = event.target as HTMLInputElement;
+    const file = input.files?.[0];
+    if (!file) return;
+
+    const currentProgram = this.programData();
+    if (!currentProgram?.programId) return;
+
+    if (this.bannerCount() >= this.MAX_BANNERS) {
+      this.notifier.warn(`Maximum ${this.MAX_BANNERS} banner images allowed. Delete existing banners first.`);
+      return;
+    }
+
+    const croppedFile = await this.openProgramBannerCropDialog(file);
+    if (!croppedFile) return;
+
+    try {
+      const uploadedAssets = await firstValueFrom(
+        this.imageAssetService.uploadMultipleImagesForEventBanners([croppedFile])
+      );
+      const urls = uploadedAssets.map((asset) => asset.publicAbsoluteUrl);
+      const result = await firstValueFrom(
+        this.programDetailsService.uploadProgramBannerImages(currentProgram.programId, urls)
+      );
+
+      this.programData.update((prev) =>
+        prev
+          ? {
+              ...prev,
+              bannerImages: result.bannerImages,
+              programBanner: result.bannerImages[0] || prev.programBanner || null
+            }
+          : prev
+      );
+      this.notifier.success('Banner image uploaded successfully.');
+    } catch (err: any) {
+      this.notifier.error(err?.error?.message || err?.message || 'Failed to upload program banner image.');
+    }
   }
 
-  public get canDeleteBanners(): boolean {
-    return this.canManageEvent;
-  }
+  public onDeleteProgramBanner(imageUrl: string): void {
+    const currentProgram = this.programData();
+    if (!currentProgram?.programId || !imageUrl) return;
 
-  ngOnInit(): void {
-    this.route.params.subscribe((params) => {
-      const programId = params['id'];
-      if (programId) {
-        this.fetchProgramDetails(programId);
-      }
-    });
-  }
+    const dialogData: ConfirmDialogData = {
+      title: 'Delete Banner Image',
+      message: 'Are you sure you want to delete this banner image? This action cannot be undone.',
+      confirmText: 'Delete',
+      cancelText: 'Cancel'
+    };
 
-  private fetchProgramDetails(id: string): void {
-    this.isLoading.set(true);
-    this.loadingState.begin();
-    this.programData.set(null);
-    this.programOwnerCandidates.set([]);
+    const dialogRef = this.confirmDialog.open(dialogData);
+    dialogRef.afterClosed().subscribe((result) => {
+      if (!result?.confirmed) return;
 
-    this.programDetailsService.getProgramDetails(id).pipe(
-      finalize(() => {
-        this.isLoading.set(false);
-        this.loadingState.end();
-      })
-    ).subscribe({
-      next: (data: ProgramDetailsPayload) => {
-        this.programData.set(data ?? null);
-        if (data?.canAssignOwner && data.eventId) {
-          const eventId = data.eventId;
-          this.programOwnerService.getCandidates(data.eventId).subscribe({
-            next: (candidates) => {
-              if (this.programData()?.eventId === eventId) {
-                this.programOwnerCandidates.set(candidates);
-              }
-            },
-            error: (err: HttpErrorResponse) => this.notifier.error(err?.error?.message || 'Failed to load committee members.')
-          });
-        } else {
-          this.programOwnerCandidates.set([]);
+      this.programDetailsService.deleteProgramBannerImage(currentProgram.programId, imageUrl).subscribe({
+        next: (payload) => {
+          this.programData.update((prev) =>
+            prev
+              ? {
+                  ...prev,
+                  bannerImages: payload.bannerImages,
+                  programBanner: payload.bannerImages[0] || null
+                }
+              : prev
+          );
+          this.notifier.success('Banner image deleted successfully.');
+        },
+        error: (err: HttpErrorResponse) => {
+          this.notifier.error(err?.error?.message || 'Failed to delete banner image.');
         }
-      },
-      error: (err: HttpErrorResponse) => {
-        this.notifier.error(err?.error?.message || 'Failed to load program details.');
-        this.programData.set(null);
-      }
+      });
     });
-  }
-
-  public onProgramTodosChange(todos: TodoItem[]): void {
-    this.programData.update((current) => current ? { ...current, todos } : current);
   }
 
   public onCreateSubprogram(): void {
     const program = this.programData();
-    if (!program?.eventId || !program.canCreateSubprogram) {
-      return;
-    }
+    if (!program?.eventId || !program.canCreateSubprogram) return;
 
     const dialogRef = this.dialog.open(CreateProgramDialogComponent, {
       position: { right: '0', top: '0' },
@@ -423,53 +430,10 @@ export class ProgramDetailsComponent implements OnInit {
     });
 
     dialogRef.afterClosed().subscribe((createdProgram) => {
-      if (!createdProgram) {
-        return;
-      }
+      if (!createdProgram) return;
       this.fetchProgramDetails(String(program.programId));
       this.notifier.success(`Subprogram "${createdProgram.programName}" created.`);
       this.hierarchyTreeService.triggerHierarchyTreeRefresh();
-    });
-  }
-
-  public updateProgramOwner(ownerUserId: number | null): void {
-    const currentProgram = this.programData();
-    if (!currentProgram?.programId || !currentProgram.canAssignOwner || this.isUpdatingOwner()) {
-      return;
-    }
-
-    this.programData.update((current) =>
-      current ? { ...current, ownerUserId } : current
-    );
-    this.isUpdatingOwner.set(true);
-this.programOwnerService.assignOwner(currentProgram.programId, ownerUserId).subscribe({
-        next: (owner: ProgramOwnerPayload) => {
-          this.programData.update((current) =>
-            current && current.programId === owner.programId
-              ? {
-                  ...current,
-                  ownerUserId: owner.ownerUserId,
-                  ownerName: owner.ownerName,
-                  ownerDesignation: owner.ownerDesignation,
-                  ownerDesignationColor: owner.ownerDesignationColor,
-                  ownerDesignationIcon: owner.ownerDesignationIcon,
-                  ownerAssignedBy: owner.ownerAssignedBy,
-                  ownerAssignedAt: owner.ownerAssignedAt
-                }
-              : current
-          );
-        this.isUpdatingOwner.set(false);
-        this.notifier.success(owner.ownerName ? `Program owner assigned to ${owner.ownerName}.` : 'Program owner cleared.');
-      },
-      error: (err: HttpErrorResponse) => {
-        this.programData.update((current) =>
-          current && current.programId === currentProgram.programId
-            ? { ...current, ownerUserId: currentProgram.ownerUserId ?? null }
-            : current
-        );
-        this.isUpdatingOwner.set(false);
-        this.notifier.error(err?.error?.message || 'Failed to update program owner.');
-      }
     });
   }
 
@@ -505,9 +469,7 @@ this.programOwnerService.assignOwner(currentProgram.programId, ownerUserId).subs
 
     dialogRef.afterClosed().subscribe((result) => {
       document.body.classList.remove('dialog-open');
-      if (!result) {
-        return;
-      }
+      if (!result) return;
 
       this.hierarchyTreeService.triggerHierarchyTreeRefresh();
       this.fetchProgramDetails(String(currentProgram.programId));
@@ -515,176 +477,114 @@ this.programOwnerService.assignOwner(currentProgram.programId, ownerUserId).subs
     });
   }
 
-  public onDeleteProgram(): void {
-    // TODO: implement delete with confirm dialog
-  }
-
-  public onAddTask(): void {
-    // TODO: implement add task dialog
-  }
-
-  public onAddProgramBannerClick(): void {
-    if (!this.programBannerFileInput?.nativeElement) {
-      this.notifier.error('File picker is not ready. Please try again.');
-      return;
-    }
-
-    this.programBannerFileInput.nativeElement.value = '';
-    this.programBannerFileInput.nativeElement.click();
-  }
-
-  public onAddSingleProgramBannerClick(): void {
-    if (!this.programBannerSingleFileInput?.nativeElement) {
-      this.notifier.error('File picker is not ready. Please try again.');
-      return;
-    }
-    this.programBannerSingleFileInput.nativeElement.value = '';
-    this.programBannerSingleFileInput.nativeElement.click();
-  }
-
-  public async onProgramBannerFilesSelected(event: Event): Promise<void> {
-    const input = event.target as HTMLInputElement;
-    const selectedFiles = Array.from(input.files || []);
-    if (!selectedFiles.length) {
-      return;
-    }
-
-    const currentProgram = this.programData();
-    if (!currentProgram?.programId) {
-      return;
-    }
-
-    const slotsAvailable = this.MAX_BANNERS - this.bannerCount;
-    if (slotsAvailable <= 0) {
-      this.notifier.warn(`Maximum ${this.MAX_BANNERS} banner images allowed. Delete existing banners first.`);
-      return;
-    }
-
-    const filesToUpload = selectedFiles.slice(0, slotsAvailable);
-    if (selectedFiles.length > slotsAvailable) {
-      this.notifier.warn(`Only ${slotsAvailable} slot(s) remaining. Uploading first ${slotsAvailable} image(s).`);
-    }
-
-    this.isBannerUploading.set(true);
-    try {
-      const uploadedAssets = await firstValueFrom(
-        this.imageAssetService.uploadMultipleImagesForEventBanners(filesToUpload)
-      );
-      const urls = uploadedAssets.map((asset) => asset.publicAbsoluteUrl);
-
-      const result = await firstValueFrom(
-        this.programDetailsService.uploadProgramBannerImages(currentProgram.programId, urls)
-      );
-
-      this.programData.update((prev) =>
-        prev
-          ? {
-              ...prev,
-              bannerImages: result.bannerImages,
-              programBanner: result.bannerImages[0] || prev.programBanner || null
-            }
-          : prev
-      );
-      this.cdr.detectChanges();
-
-      this.notifier.success(`${urls.length} banner image${urls.length > 1 ? 's' : ''} uploaded successfully.`);
-    } catch (err: any) {
-      this.notifier.error(err?.error?.message || err?.message || 'Failed to upload program banner images.');
-    } finally {
-      this.isBannerUploading.set(false);
-    }
-  }
-
-  public async onSingleProgramBannerFileSelected(event: Event): Promise<void> {
-    const input = event.target as HTMLInputElement;
-    const file = input.files?.[0];
-    if (!file) return;
+  public async onDeleteProgram(): Promise<void> {
     const currentProgram = this.programData();
     if (!currentProgram?.programId) return;
-    if (this.bannerCount >= this.MAX_BANNERS) {
-      this.notifier.warn(`Maximum ${this.MAX_BANNERS} banner images allowed. Delete existing banners first.`);
-      return;
-    }
-
-    const croppedFile = await this.openProgramBannerCropDialog(file);
-    if (!croppedFile) return;
-
-    try {
-      const uploadedAssets = await firstValueFrom(
-        this.imageAssetService.uploadMultipleImagesForEventBanners([croppedFile])
-      );
-      const urls = uploadedAssets.map((asset) => asset.publicAbsoluteUrl);
-      const result = await firstValueFrom(
-        this.programDetailsService.uploadProgramBannerImages(currentProgram.programId, urls)
-      );
-
-      this.programData.update((prev) =>
-        prev
-          ? {
-              ...prev,
-              bannerImages: result.bannerImages,
-              programBanner: result.bannerImages[0] || prev.programBanner || null
-            }
-          : prev
-      );
-      this.cdr.detectChanges();
-      this.notifier.success('Banner image uploaded successfully.');
-    } catch (err: any) {
-      this.notifier.error(err?.error?.message || err?.message || 'Failed to upload program banner image.');
-    }
-  }
-
-  private async openProgramBannerCropDialog(file: File): Promise<File | null> {
-    return firstValueFrom(
-      this.dialog.open(ImageCropperDialogComponent, {
-        width: 'min(92vw, 920px)',
-        data: {
-          file,
-          title: 'Crop Banner Image',
-          maintainAspectRatio: true,
-          aspectRatio: 2
-        }
-      }).afterClosed()
-    );
-  }
-
-  public onDeleteProgramBanner(imageUrl: string): void {
-    const currentProgram = this.programData();
-    if (!currentProgram?.programId || !imageUrl) {
-      return;
-    }
 
     const dialogData: ConfirmDialogData = {
-      title: 'Delete Banner Image',
-      message: 'Are you sure you want to delete this banner image? This action cannot be undone.',
+      title: 'Delete Program',
+      message: `Are you sure you want to delete "${currentProgram.programName}"? This action cannot be undone.`,
       confirmText: 'Delete',
       cancelText: 'Cancel'
     };
 
     const dialogRef = this.confirmDialog.open(dialogData);
-    dialogRef.afterClosed().subscribe((result) => {
-      if (!result?.confirmed) {
-        return;
-      }
+    const result = await firstValueFrom(dialogRef.afterClosed());
+    if (!result?.confirmed) return;
 
-      this.programDetailsService.deleteProgramBannerImage(currentProgram.programId, imageUrl).subscribe({
-        next: (payload) => {
-          this.programData.update((prev) =>
-            prev
-              ? {
-                  ...prev,
-                  bannerImages: payload.bannerImages,
-                  programBanner: payload.bannerImages[0] || null
-                }
-              : prev
-          );
-          this.cdr.detectChanges();
-          this.notifier.success('Banner image deleted successfully.');
-        },
-        error: (err: HttpErrorResponse) => {
-          this.notifier.error(err?.error?.message || 'Failed to delete banner image.');
-        }
-      });
-    });
+    this.isLoading.set(true);
+    try {
+      await firstValueFrom(this.programDetailsService.deleteProgram(currentProgram.programId));
+      this.notifier.success(`Program "${currentProgram.programName}" deleted successfully.`);
+      this.hierarchyTreeService.triggerHierarchyTreeRefresh();
+
+      if (currentProgram.parentProgramId) {
+        this.router.navigate(['/dashboard', 'program', currentProgram.parentProgramId]);
+      } else if (currentProgram.eventId) {
+        this.router.navigate(['/dashboard', 'event', currentProgram.eventId]);
+      }
+    } catch (err: any) {
+      this.notifier.error(err?.error?.message || 'Failed to delete program.');
+    } finally {
+      this.isLoading.set(false);
+    }
+  }
+
+  private async openProgramBannerCropDialog(file: File): Promise<File | null> {
+    return firstValueFrom(
+      this.dialog
+        .open(ImageCropperDialogComponent, {
+          width: 'min(92vw, 920px)',
+          data: {
+            file,
+            title: 'Crop Banner Image',
+            maintainAspectRatio: true,
+            aspectRatio: 2
+          }
+        })
+        .afterClosed()
+    );
+  }
+
+  private getTodayLocalDate(): Date {
+    const now = new Date();
+    return new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  }
+
+  private getCurrentTimeMinutes(): number {
+    const now = new Date();
+    return now.getHours() * 60 + now.getMinutes();
+  }
+
+  private parseTimeToMinutes(timeStr: string | null | undefined): number | null {
+    if (!timeStr) return null;
+    const match = timeStr.match(/^(\d{1,2}):(\d{2})(?::\d{2})?$/);
+    if (!match) return null;
+    const hours = Number(match[1]);
+    const minutes = Number(match[2]);
+    if (hours > 23 || minutes > 59) return null;
+    return hours * 60 + minutes;
+  }
+
+  private parseTimeParts(timeStr: string): { hours: number; minutes: number } | null {
+    const match = timeStr.match(/^(\d{1,2}):(\d{2})(?::\d{2})?$/);
+    if (!match) return null;
+    const hours = Number(match[1]);
+    const minutes = Number(match[2]);
+    if (hours > 23 || minutes > 59) return null;
+    return { hours, minutes };
+  }
+
+  private formatTimeWithPeriod(timeStr?: string | null): string {
+    if (!timeStr) return '--:--';
+    const match = timeStr.match(/^(\d{1,2}):(\d{2})(?::\d{2})?$/);
+    if (!match) return timeStr;
+
+    const hours = Number(match[1]);
+    const minutes = Number(match[2]);
+    if (hours > 23 || minutes > 59) return timeStr;
+
+    const period = hours >= 12 ? 'PM' : 'AM';
+    const displayHours = hours % 12 || 12;
+    return `${displayHours}:${String(minutes).padStart(2, '0')} ${period}`;
+  }
+
+  private parseLocalDate(value: string | null | undefined): Date | null {
+    if (!value || typeof value !== 'string') return null;
+    const cleaned = value.trim().slice(0, 10);
+    const [year, month, day] = cleaned.split('-').map(Number);
+    if (!year || !month || !day) return null;
+    return new Date(year, month - 1, day);
+  }
+
+  private formatDate(date: Date): string {
+    const day = String(date.getDate()).padStart(2, '0');
+    const month = this.formatMonth(date);
+    const year = date.getFullYear();
+    return `${day} ${month} ${year}`;
+  }
+
+  private formatMonth(date: Date): string {
+    return date.toLocaleString('en-US', { month: 'short' });
   }
 }

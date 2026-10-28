@@ -114,4 +114,18 @@ export class ProgramDetailsService {
       map((res) => res.data.deleteProgramBannerImage)
     );
   }
+
+  public deleteProgram(programId: number): Observable<boolean> {
+    const mutation = `mutation DeleteProgram($programId: Int!) {
+      deleteProgram(programId: $programId)
+    }`;
+
+    return this.http.post<{ data: { deleteProgram: boolean } }>(
+      this.graphqlUrl,
+      { query: mutation, variables: { programId } },
+      { withCredentials: true }
+    ).pipe(
+      map((res) => res.data.deleteProgram)
+    );
+  }
 }
