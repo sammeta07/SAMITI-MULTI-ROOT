@@ -35,7 +35,9 @@ export class ProgramDetailsService {
         startTime
         endTime
         createdBy
+        createdByName
         updatedBy
+        updatedByName
         createdAt
         ownerUserId
         ownerName
@@ -126,6 +128,63 @@ export class ProgramDetailsService {
       { withCredentials: true }
     ).pipe(
       map((res) => res.data.deleteProgram)
+    );
+  }
+
+  public updateProgramVisibility(
+    program: ProgramDetailsPayload,
+    visibility: 'VISIBLE' | 'HIDDEN'
+  ): Observable<'VISIBLE' | 'HIDDEN'> {
+    if (
+      !program.eventId ||
+      !program.startDate ||
+      !program.endDate ||
+      !program.startTime ||
+      !program.endTime
+    ) {
+      throw new Error('Program details are incomplete; visibility cannot be updated.');
+    }
+
+    const mutation = `mutation UpdateProgramVisibility($input: UpdateProgramInput!) {
+      updateProgram(input: $input) {
+        visibility
+      }
+    }`;
+
+    return this.http.post<{
+      data?: { updateProgram?: { visibility: 'VISIBLE' | 'HIDDEN' } | null };
+      errors?: Array<{ message: string }>;
+    }>(
+      this.graphqlUrl,
+      {
+        query: mutation,
+        variables: {
+          input: {
+            programId: program.programId,
+            eventId: program.eventId,
+            programName: program.programName,
+            address: program.address || '',
+            visibility,
+            startDate: program.startDate,
+            endDate: program.endDate,
+            startTime: program.startTime,
+            endTime: program.endTime,
+            price: program.price
+          }
+        }
+      },
+      { withCredentials: true }
+    ).pipe(
+      map((response) => {
+        if (response.errors?.length) {
+          throw new Error(response.errors.map((error) => error.message).join('; '));
+        }
+        const updatedVisibility = response.data?.updateProgram?.visibility;
+        if (updatedVisibility !== 'VISIBLE' && updatedVisibility !== 'HIDDEN') {
+          throw new Error('GraphQL response is missing updated program visibility.');
+        }
+        return updatedVisibility;
+      })
     );
   }
 }

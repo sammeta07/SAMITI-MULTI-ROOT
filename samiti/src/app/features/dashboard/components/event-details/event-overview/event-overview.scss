@@ -203,24 +203,28 @@
 
 /* BASE BUTTON CLASS */
 .btn-action {
-  height: 28px !important;
-  padding: 0 8px !important;
-  font-size: 0.72rem !important;
+  box-sizing: border-box;
+  height: 32px !important;
+  min-height: 32px !important;
+  min-width: 32px !important;
+  padding: 0 10px !important;
+  font-size: 0.75rem !important;
   font-weight: 600 !important;
   border-radius: 6px !important;
   display: inline-flex !important;
   align-items: center !important;
-  justify-content: center;
-  gap: 4px !important;
+  justify-content: center !important;
+  gap: 5px !important;
   cursor: pointer;
   transition: all 0.15s ease-in-out !important;
   border: 1px solid transparent !important;
+  line-height: 1 !important;
   box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);
 
-  mat-icon { 
-    font-size: 0.9rem !important; 
-    width: 0.9rem !important; 
-    height: 0.9rem !important; 
+  mat-icon {
+    font-size: 16px !important;
+    width: 16px !important;
+    height: 16px !important;
   }
 
   &:disabled { 

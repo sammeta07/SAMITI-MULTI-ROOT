@@ -85,6 +85,7 @@ export class ProgramDetailsComponent implements OnInit {
   public readonly programData = signal<ProgramDetailsPayload | null>(null);
   public readonly programOwnerCandidates = signal<ProgramOwnerCandidate[]>([]);
   public readonly isUpdatingOwner = signal<boolean>(false);
+  public readonly isUpdatingVisibility = signal<boolean>(false);
   public selectedProgramTabIndex = 0;
 
   public readonly bannerCount = computed(() => this.programData()?.bannerImages?.length ?? 0);
@@ -100,6 +101,34 @@ export class ProgramDetailsComponent implements OnInit {
   });
 
   public readonly formattedPriceLabel = computed<string>(() => formatProgramPriceLabel(this.programData()?.price));
+
+  public formatProgramHeaderDate(value: string): string {
+    const match = value.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+    if (!match) {
+      return this.formatDisplayDate(value);
+    }
+
+    const month = Number(match[2]);
+    const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+    return `${match[3]}-${months[month - 1] || match[2]}-${match[1]}`;
+  }
+
+  public formatProgramTime(value: string): string {
+    const match = value.match(/^(\d{1,2}):(\d{2})(?::\d{2})?$/);
+    if (!match) {
+      return value;
+    }
+
+    const hours = Number(match[1]);
+    const minutes = Number(match[2]);
+    if (hours > 23 || minutes > 59) {
+      return value;
+    }
+
+    const period = hours >= 12 ? 'PM' : 'AM';
+    const displayHours = String(hours % 12 || 12).padStart(2, '0');
+    return `${displayHours}:${String(minutes).padStart(2, '0')} ${period}`;
+  }
 
   public readonly programOwnerDisplay = computed<string>(() => {
     const name = this.programData()?.ownerName;
@@ -477,6 +506,31 @@ export class ProgramDetailsComponent implements OnInit {
     });
   }
 
+  public async onToggleProgramVisibility(): Promise<void> {
+    const currentProgram = this.programData();
+    if (!currentProgram?.canManageTodos || this.isUpdatingVisibility()) return;
+
+    const nextVisibility = currentProgram.visibility === 'VISIBLE' ? 'HIDDEN' : 'VISIBLE';
+    this.isUpdatingVisibility.set(true);
+    try {
+      const visibility = await firstValueFrom(
+        this.programDetailsService.updateProgramVisibility(currentProgram, nextVisibility)
+      );
+      this.programData.update((program) => program?.programId === currentProgram.programId
+        ? { ...program, visibility }
+        : program
+      );
+      this.hierarchyTreeService.triggerHierarchyTreeRefresh();
+      this.notifier.success(`Program is now ${visibility.toLowerCase()}.`);
+    } catch (error) {
+      this.notifier.error(
+        error instanceof Error ? error.message : 'Failed to update program visibility.'
+      );
+    } finally {
+      this.isUpdatingVisibility.set(false);
+    }
+  }
+
   public async onDeleteProgram(): Promise<void> {
     const currentProgram = this.programData();
     if (!currentProgram?.programId) return;
@@ -582,6 +636,17 @@ export class ProgramDetailsComponent implements OnInit {
     const month = this.formatMonth(date);
     const year = date.getFullYear();
     return `${day} ${month} ${year}`;
+  }
+
+  private formatDisplayDate(value: string): string {
+    const match = value.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+    if (!match) {
+      return value;
+    }
+
+    const month = Number(match[2]);
+    const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+    return `${match[3]}-${months[month - 1] || match[2]}-${match[1].slice(-2)}`;
   }
 
   private formatMonth(date: Date): string {

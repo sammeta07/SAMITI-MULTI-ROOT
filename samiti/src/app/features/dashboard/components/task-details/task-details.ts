@@ -1,17 +1,21 @@
 import { CommonModule } from '@angular/common';
 import { Component, DestroyRef, inject, OnInit, signal } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
-import { ActivatedRoute, RouterLink } from '@angular/router';
+import { ActivatedRoute, Router, RouterLink } from '@angular/router';
+import { FormsModule } from '@angular/forms';
 import { MatIconModule } from '@angular/material/icon';
 import { MatButtonModule } from '@angular/material/button';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatTabsModule } from '@angular/material/tabs';
-import { finalize } from 'rxjs';
+import { firstValueFrom, finalize } from 'rxjs';
 import { AuthService } from '../../../../core/services/auth.service';
 import { LoadingStateService } from '../../../../shared/services/loading-state.service';
 import { NotifierService } from '../../../../shared/notifier/notifier.service';
+import { ConfirmDialogService } from '../../../../components/dialog/confirm/confirm-dialog.service';
+import { ConfirmDialogData } from '../../../../components/dialog/confirm/confirm-dialog.models';
 import { TodoItem } from '../../models/todo.models';
 import { TodoChecklistComponent } from '../todo-checklist/todo-checklist.component';
+import { DashboardHierarchyTreeService } from '../dashboard-hierarchy-tree/dashboard-hierarchy-tree.service';
 import { TASK_STATUSES, TaskStatus } from '../event-details/event-tasks/event-tasks.models';
 import { TaskDetailsPayload } from './task-details.models';
 import { TaskDetailsService } from './task-details.service';
@@ -21,6 +25,7 @@ import { TaskDetailsService } from './task-details.service';
   standalone: true,
   imports: [
     CommonModule,
+    FormsModule,
     RouterLink,
     MatIconModule,
     MatButtonModule,
@@ -33,10 +38,13 @@ import { TaskDetailsService } from './task-details.service';
 })
 export class TaskDetailsComponent implements OnInit {
   private readonly route = inject(ActivatedRoute);
+  private readonly router = inject(Router);
   private readonly service = inject(TaskDetailsService);
   private readonly authService = inject(AuthService);
   private readonly notifier = inject(NotifierService);
   private readonly loadingState = inject(LoadingStateService);
+  private readonly confirmDialog = inject(ConfirmDialogService);
+  private readonly hierarchyTreeService = inject(DashboardHierarchyTreeService);
   private readonly destroyRef = inject(DestroyRef);
   private requestId = 0;
 
@@ -45,6 +53,10 @@ export class TaskDetailsComponent implements OnInit {
   public readonly taskStatuses = TASK_STATUSES;
   public readonly isUpdatingStatus = signal(false);
   public readonly isStatusDropdownOpen = signal(false);
+  public readonly isEditingTask = signal(false);
+  public readonly isSavingTaskName = signal(false);
+  public readonly isDeletingTask = signal(false);
+  public editingTaskName = '';
 
   public ngOnInit(): void {
     this.route.paramMap.pipe(takeUntilDestroyed(this.destroyRef)).subscribe((params) => {
@@ -62,6 +74,72 @@ export class TaskDetailsComponent implements OnInit {
 
   public onTodosChange(todos: TodoItem[]): void {
     this.task.update((current) => current ? { ...current, todos } : current);
+  }
+
+  public startTaskEditing(task: TaskDetailsPayload): void {
+    if (!task.canCreateTasks || this.isSavingTaskName() || this.isDeletingTask()) return;
+    this.editingTaskName = task.taskName;
+    this.isEditingTask.set(true);
+  }
+
+  public cancelTaskEditing(): void {
+    this.isEditingTask.set(false);
+    this.editingTaskName = '';
+  }
+
+  public async saveTaskName(task: TaskDetailsPayload): Promise<void> {
+    const taskName = this.editingTaskName.trim();
+    if (!task.canCreateTasks || !taskName || taskName.length > 255 || this.isSavingTaskName()) return;
+
+    this.isSavingTaskName.set(true);
+    try {
+      const updatedTask = await firstValueFrom(this.service.updateTaskName(task.taskId, taskName));
+      this.task.update((current) =>
+        current?.taskId === task.taskId
+          ? { ...current, taskName: updatedTask.taskName, updatedAt: updatedTask.updatedAt }
+          : current
+      );
+      this.hierarchyTreeService.triggerHierarchyTreeRefresh();
+      this.cancelTaskEditing();
+      this.notifier.success('Task updated successfully.');
+    } catch (error) {
+      this.notifier.error(
+        error instanceof Error ? error.message : 'Failed to update task.'
+      );
+    } finally {
+      this.isSavingTaskName.set(false);
+    }
+  }
+
+  public async onDeleteTask(task: TaskDetailsPayload): Promise<void> {
+    if (!task.canCreateTasks || this.isDeletingTask()) return;
+
+    const dialogData: ConfirmDialogData = {
+      title: 'Delete Task',
+      message: `Are you sure you want to delete "${task.taskName}"? Tasks with subtasks must have those subtasks removed first.`,
+      confirmText: 'Delete',
+      cancelText: 'Cancel'
+    };
+    const result = await firstValueFrom(this.confirmDialog.open(dialogData).afterClosed());
+    if (!result?.confirmed) return;
+
+    this.isDeletingTask.set(true);
+    try {
+      await firstValueFrom(this.service.deleteTask(task.taskId));
+      this.notifier.success(`Task "${task.taskName}" deleted successfully.`);
+      this.hierarchyTreeService.triggerHierarchyTreeRefresh();
+      if (task.parentTaskId) {
+        await this.router.navigate(['/dashboard', 'task', task.parentTaskId]);
+      } else {
+        await this.router.navigate(['/dashboard', 'event', task.eventId]);
+      }
+    } catch (error) {
+      this.notifier.error(
+        error instanceof Error ? error.message : 'Failed to delete task.'
+      );
+    } finally {
+      this.isDeletingTask.set(false);
+    }
   }
 
   public statusClass(status: string | null): string {

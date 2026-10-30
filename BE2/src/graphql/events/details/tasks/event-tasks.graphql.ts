@@ -44,6 +44,11 @@ export const eventTasksTypes = `
     taskAssignees: [EventTaskAssignee!]!
   }
 
+  type UpdatedEventTaskName {
+    taskName: String!
+    updatedAt: String!
+  }
+
   input CreateEventTaskInput {
     eventId: Int!
     taskName: String!
@@ -76,7 +81,37 @@ export const createEventTaskMutationFields = `
   createEventTask(input: CreateEventTaskInput!): CreatedEventTask!
   assignEventTask(taskId: Int!, ownerUserId: Int): EventTaskEntry!
   updateEventTaskStatus(taskId: Int!, status: EventTaskStatus!): EventTaskEntry!
+  updateEventTaskName(taskId: Int!, taskName: String!): UpdatedEventTaskName!
+  deleteEventTask(taskId: Int!): Boolean!
 `;
+
+async function getTaskForAdminMutation(taskId: number, userId: number): Promise<any> {
+  const taskRows = await query<any[]>(
+    `SELECT t.id, t.event_id AS eventId, e.committee_id AS committeeId
+     FROM tasks t
+     INNER JOIN events e ON e.id = t.event_id
+     WHERE t.id = ?
+     LIMIT 1`,
+    [taskId]
+  );
+  if (taskRows.length === 0) {
+    throwEventError('NOT_FOUND', 'Task not found');
+  }
+
+  const task = taskRows[0];
+  const adminRows = await query<any[]>(
+    `SELECT committee_role
+     FROM users_committees
+     WHERE committee_id = ? AND user_id = ?
+       AND committee_role IN ('COMMITTEE_ADMIN', 'COMMITTEE_MASTER_ADMIN')
+     LIMIT 1`,
+    [Number(task.committeeId), userId]
+  );
+  if (adminRows.length === 0) {
+    throwEventError('FORBIDDEN', 'Only committee admins can manage tasks');
+  }
+  return task;
+}
 
 export const eventTasksResolvers = {
   Query: {
@@ -221,6 +256,72 @@ export const eventTasksResolvers = {
     }
   },
   Mutation: {
+    async updateEventTaskName(_: any, args: { taskId?: number; taskName?: string }, context: any) {
+      const taskId = Number(args?.taskId);
+      const taskName = String(args?.taskName || '').trim();
+      if (!Number.isInteger(taskId) || taskId <= 0) {
+        throwEventError('BAD_REQUEST', 'taskId must be a positive integer');
+      }
+      if (!taskName) {
+        throwEventError('BAD_REQUEST', 'taskName is required');
+      }
+      if (taskName.length > 255) {
+        throwEventError('BAD_REQUEST', 'taskName cannot exceed 255 characters');
+      }
+
+      const userId = await getLoggedInUserId(context);
+      await getTaskForAdminMutation(taskId, userId);
+      const result = await execute(
+        `UPDATE tasks
+         SET name = ?, updated_by = ?, updated_at = CURRENT_TIMESTAMP
+         WHERE id = ?`,
+        [taskName, userId, taskId]
+      );
+      if (result.affectedRows !== 1) {
+        throwEventError('NOT_FOUND', 'Task not found');
+      }
+      const updatedRows = await query<Array<RowDataPacket & { taskName: string; updatedAt: string }>>(
+        `SELECT
+           name AS taskName,
+           DATE_FORMAT(updated_at, '%Y-%m-%d %H:%i:%s') AS updatedAt
+         FROM tasks
+         WHERE id = ?
+         LIMIT 1`,
+        [taskId]
+      );
+      if (updatedRows.length === 0) {
+        throwEventError('NOT_FOUND', 'Task not found');
+      }
+      return {
+        taskName: String(updatedRows[0].taskName),
+        updatedAt: String(updatedRows[0].updatedAt)
+      };
+    },
+    async deleteEventTask(_: any, args: { taskId?: number }, context: any) {
+      const taskId = Number(args?.taskId);
+      if (!Number.isInteger(taskId) || taskId <= 0) {
+        throwEventError('BAD_REQUEST', 'taskId must be a positive integer');
+      }
+
+      const userId = await getLoggedInUserId(context);
+      await getTaskForAdminMutation(taskId, userId);
+      const childRows = await query<any[]>(
+        `SELECT id
+         FROM tasks
+         WHERE parent_id = ?
+         LIMIT 1`,
+        [taskId]
+      );
+      if (childRows.length > 0) {
+        throwEventError('BAD_REQUEST', 'Remove all subtasks before deleting this task');
+      }
+
+      const result = await execute('DELETE FROM tasks WHERE id = ?', [taskId]);
+      if (result.affectedRows !== 1) {
+        throwEventError('NOT_FOUND', 'Task not found');
+      }
+      return true;
+    },
     async updateEventTaskStatus(_: any, args: { taskId?: number; status?: string }, context: any) {
       const taskId = Number(args?.taskId);
       const status = String(args?.status || '').trim().toUpperCase();

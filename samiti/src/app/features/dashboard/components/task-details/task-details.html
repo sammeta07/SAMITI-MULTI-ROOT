@@ -12,15 +12,76 @@
       <section class="task-header-card">
         <div class="task-header-main">
           <div class="task-header-primary">
-            <h3 class="task-header-title">{{ taskDetails.taskName | titlecase }}</h3>
-            <span
-              class="task-owner-pill"
-              [class.task-owner-unassigned]="!taskDetails.ownerName"
-              [title]="(taskDetails.ownerName || 'Unassigned') | titlecase"
-            >
-              <span class="task-owner-label">OWNER -</span>
-              <span class="task-owner-name">{{ (taskDetails.ownerName || 'Unassigned') | titlecase }}</span>
-            </span>
+            @if (isEditingTask()) {
+              <input
+                class="task-header-title task-title-edit-input"
+                [(ngModel)]="editingTaskName"
+                maxlength="255"
+                [disabled]="isSavingTaskName()"
+                aria-label="Task name"
+                (keydown.enter)="saveTaskName(taskDetails)"
+                (keydown.escape)="cancelTaskEditing()"
+              />
+            } @else {
+              <h3 class="task-header-title">{{ taskDetails.taskName | titlecase }}</h3>
+            }
+            <div class="task-owner-controls">
+              <span
+                class="task-owner-pill"
+                [class.task-owner-unassigned]="!taskDetails.ownerName"
+                [title]="(taskDetails.ownerName || 'Unassigned') | titlecase"
+              >
+                <span class="task-owner-label">OWNER:</span>
+                <span class="task-owner-name">{{ (taskDetails.ownerName || 'Unassigned') | titlecase }}</span>
+              </span>
+              <button
+                mat-icon-button
+                class="task-info-button"
+                type="button"
+                aria-label="Show task details"
+                aria-describedby="task-details-popover"
+              >
+                <mat-icon aria-hidden="true">info</mat-icon>
+              </button>
+              <div id="task-details-popover" class="task-details-popover" role="tooltip">
+                <div class="task-details-popover-item">
+                  <span class="task-details-popover-label">Task ID</span>
+                  <span class="task-details-popover-value">#{{ taskDetails.taskId }}</span>
+                </div>
+                <div class="task-details-popover-item">
+                  <span class="task-details-popover-label">Parent task</span>
+                  @if (taskDetails.parentTaskId) {
+                    <a
+                      class="task-details-popover-value task-details-parent-link"
+                      [routerLink]="['/dashboard', 'task', taskDetails.parentTaskId]"
+                      title="Open parent task"
+                    >
+                      {{ (taskDetails.parentTaskName || 'Parent task') | titlecase }}
+                    </a>
+                  } @else {
+                    <span class="task-details-popover-value">None</span>
+                  }
+                </div>
+                <div class="task-details-popover-item">
+                  <span class="task-details-popover-label">Created by</span>
+                  <span class="task-details-popover-value">{{ (taskDetails.createdByName || 'Unknown') | titlecase }}</span>
+                </div>
+                <div class="task-details-popover-item">
+                  <span class="task-details-popover-label">Created</span>
+                  <span class="task-details-popover-value">{{ taskDetails.createdAt | date: 'medium' }}</span>
+                </div>
+                <div class="task-details-popover-item">
+                  <span class="task-details-popover-label">Assigned at</span>
+                  <span class="task-details-popover-value">
+                    {{ taskDetails.ownerAssignedAt ? (taskDetails.ownerAssignedAt | date: 'medium') : 'Not assigned' }}
+                  </span>
+                </div>
+                <div class="task-details-popover-item">
+                  <span class="task-details-popover-label">Last updated</span>
+                  <span class="task-details-popover-value">{{ taskDetails.updatedAt | date: 'medium' }}</span>
+                </div>
+              </div>
+            </div>
             @if (canUpdateStatus(taskDetails)) {
               <span class="task-status-control">
                 <select
@@ -56,8 +117,8 @@
                 {{ displayStatus(taskDetails.status) }}
               </span>
             }
-          </div>
-
+        </div>
+        <div class="task-header-details-row">
           <div class="task-details-metadata">
             <div class="task-details-metadata-item">
               <span class="task-details-metadata-label">Task ID</span>
@@ -79,32 +140,79 @@
             </div>
             <div class="task-details-metadata-item">
               <span class="task-details-metadata-label">Created by</span>
-              <span class="task-details-metadata-value" [title]="(taskDetails.createdByName || 'Unknown') | titlecase">
-                {{ (taskDetails.createdByName || 'Unknown') | titlecase }}
-              </span>
+              <span class="task-details-metadata-value">{{ (taskDetails.createdByName || 'Unknown') | titlecase }}</span>
             </div>
             <div class="task-details-metadata-item">
               <span class="task-details-metadata-label">Created</span>
-              <span class="task-details-metadata-value" [title]="taskDetails.createdAt | date: 'medium'">
-                {{ taskDetails.createdAt | date: 'medium' }}
-              </span>
+              <span class="task-details-metadata-value">{{ taskDetails.createdAt | date: 'medium' }}</span>
             </div>
             <div class="task-details-metadata-item">
               <span class="task-details-metadata-label">Assigned at</span>
-              <span
-                class="task-details-metadata-value"
-                [title]="taskDetails.ownerAssignedAt ? (taskDetails.ownerAssignedAt | date: 'medium') : 'Not assigned'"
-              >
+              <span class="task-details-metadata-value">
                 {{ taskDetails.ownerAssignedAt ? (taskDetails.ownerAssignedAt | date: 'medium') : 'Not assigned' }}
               </span>
             </div>
             <div class="task-details-metadata-item">
               <span class="task-details-metadata-label">Last updated</span>
-              <span class="task-details-metadata-value" [title]="taskDetails.updatedAt | date: 'medium'">
-                {{ taskDetails.updatedAt | date: 'medium' }}
-              </span>
+              <span class="task-details-metadata-value">{{ taskDetails.updatedAt | date: 'medium' }}</span>
             </div>
           </div>
+          @if (taskDetails.canCreateTasks) {
+            <div class="task-header-actions">
+              @if (isEditingTask()) {
+                <button
+                  mat-button
+                  class="task-header-icon-button task-save-button"
+                  type="button"
+                  aria-label="Save task name"
+                  title="Save task name"
+                  [disabled]="isSavingTaskName() || !editingTaskName.trim()"
+                  (click)="saveTaskName(taskDetails)"
+                >
+                  <mat-icon>{{ isSavingTaskName() ? 'hourglass_top' : 'check' }}</mat-icon>
+                  <span class="task-header-button-label">Save</span>
+                </button>
+                <button
+                  mat-button
+                  class="task-header-icon-button"
+                  type="button"
+                  aria-label="Cancel task edit"
+                  title="Cancel"
+                  [disabled]="isSavingTaskName()"
+                  (click)="cancelTaskEditing()"
+                >
+                  <mat-icon>close</mat-icon>
+                  <span class="task-header-button-label">Cancel</span>
+                </button>
+              } @else {
+                <button
+                  mat-button
+                  class="task-header-icon-button task-edit-button"
+                  type="button"
+                  aria-label="Edit task"
+                  title="Edit task"
+                  [disabled]="isDeletingTask()"
+                  (click)="startTaskEditing(taskDetails)"
+                >
+                  <mat-icon>edit</mat-icon>
+                  <span class="task-header-button-label">Edit</span>
+                </button>
+                <button
+                  mat-button
+                  class="task-header-icon-button task-delete-button"
+                  type="button"
+                  aria-label="Delete task"
+                  title="Delete task"
+                  [disabled]="isDeletingTask()"
+                  (click)="onDeleteTask(taskDetails)"
+                >
+                  <mat-icon>{{ isDeletingTask() ? 'hourglass_top' : 'delete_outline' }}</mat-icon>
+                  <span class="task-header-button-label">Delete</span>
+                </button>
+              }
+            </div>
+          }
+        </div>
         </div>
       </section>
 

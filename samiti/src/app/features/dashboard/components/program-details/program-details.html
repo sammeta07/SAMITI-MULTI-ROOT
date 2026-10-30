@@ -22,22 +22,38 @@
             </div>
 
             <div class="card-location-row" [title]="programData()?.address || 'No address specified'">
-              <mat-icon class="location-icon">place</mat-icon>
               <span class="location-text-trim">{{ (programData()?.address || 'No address specified') | titlecase }}</span>
             </div>
 
             <div class="card-identity-pills-area">
-              <!-- Status Badge -->
-              <span class="meta-pill status-pill status-badge-{{ calculatedProgramStatus() }}">
-                <span class="status-dot"></span>
-                <span>{{ calculatedProgramStatus() | uppercase }}</span>
-              </span>
-
-              <!-- Dates Badge -->
-              @if (formattedDateRange()) {
+              <!-- Program date and time -->
+              @if (programData()?.startDate || programData()?.endDate || programData()?.startTime || programData()?.endTime) {
                 <span class="meta-pill date-pill date-pill-status-{{ calculatedProgramStatus() }}" title="Program Dates">
-                  <mat-icon>event</mat-icon>
-                  <span>{{ formattedDateRange() }}</span>
+                  <span class="program-date-time-row">
+                    <span class="program-date-time-point">
+                      @if (programData()?.startDate; as startDate) {
+                        <mat-icon aria-hidden="true">event</mat-icon>
+                        <span>{{ formatProgramHeaderDate(startDate) }}</span>
+                      }
+                      @if (programData()?.startTime; as startTime) {
+                        <mat-icon aria-hidden="true">schedule</mat-icon>
+                        <span>{{ formatProgramTime(startTime) }}</span>
+                      }
+                    </span>
+                    @if ((programData()?.startDate || programData()?.startTime) && (programData()?.endDate || programData()?.endTime)) {
+                      <mat-icon class="program-date-time-arrow" aria-hidden="true">arrow_forward</mat-icon>
+                    }
+                    <span class="program-date-time-point">
+                      @if (programData()?.endDate; as endDate) {
+                        <mat-icon aria-hidden="true">event</mat-icon>
+                        <span>{{ formatProgramHeaderDate(endDate) }}</span>
+                      }
+                      @if (programData()?.endTime; as endTime) {
+                        <mat-icon aria-hidden="true">schedule</mat-icon>
+                        <span>{{ formatProgramTime(endTime) }}</span>
+                      }
+                    </span>
+                  </span>
                 </span>
               }
 
@@ -53,26 +69,6 @@
                 </a>
               }
 
-              <!-- Time Badge -->
-              @if (formattedProgramTimeRange()) {
-                <span class="meta-pill time-pill {{ timePillStatusClass() }}" title="Program Timing">
-                  <mat-icon>schedule</mat-icon>
-                  <span>{{ formattedProgramTimeRange() }}</span>
-                </span>
-              }
-
-              <!-- Visibility Badge -->
-              @if (programData()?.visibility) {
-                <span
-                  class="meta-pill type-pill"
-                  [class.type-private]="programData()?.visibility !== 'VISIBLE'"
-                  [class.type-visible]="programData()?.visibility === 'VISIBLE'"
-                >
-                  <mat-icon>{{ programData()?.visibility === 'VISIBLE' ? 'public' : 'lock' }}</mat-icon>
-                  <span>{{ programData()?.visibility }}</span>
-                </span>
-              }
-
               <!-- Pricing Badge -->
               @if (programData()?.price !== null && programData()?.price !== undefined) {
                 <span class="meta-pill price-pill" [class.price-free]="programData()!.price === 0" [class.price-paid]="programData()!.price > 0">
@@ -80,32 +76,84 @@
                 </span>
               }
             </div>
+
           </div>
 
           <!-- Right Side: Owner & Action Buttons -->
           <div class="program-header-side">
             <div class="program-owner-row">
-              @if (programData()?.ownerDesignation) {
-                <span
-                  class="owner-designation-pill"
-                  [class.owner-unassigned]="!programData()?.ownerName"
-                  [style.background]="programData()?.ownerDesignationColor ? programData()?.ownerDesignationColor + '18' : null"
-                  [style.color]="programData()?.ownerDesignationColor || null"
-                  [style.border-color]="programData()?.ownerDesignationColor || null"
+              <div class="program-owner-controls">
+                @if (programData()?.ownerDesignation) {
+                  <span
+                    class="owner-designation-pill"
+                    [class.owner-unassigned]="!programData()?.ownerName"
+                    [style.background]="programData()?.ownerDesignationColor ? programData()?.ownerDesignationColor + '18' : null"
+                    [style.color]="programData()?.ownerDesignationColor || null"
+                    [style.border-color]="programData()?.ownerDesignationColor || null"
+                  >
+                    <span class="owner-pill-text">OWNER: {{ programOwnerDisplay() }}</span>
+                    @if (programData()?.ownerDesignationIcon) {
+                      <mat-icon class="owner-designation-icon">{{ programData()?.ownerDesignationIcon }}</mat-icon>
+                    }
+                  </span>
+                } @else {
+                  <span class="owner-pill-text plain" [class.owner-unassigned]="!programData()?.ownerName">
+                    OWNER: {{ programOwnerDisplay() }}
+                  </span>
+                }
+                <button
+                  mat-icon-button
+                  class="program-info-button"
+                  type="button"
+                  aria-label="Show program details"
+                  aria-describedby="program-details-popover"
                 >
-                  <span class="owner-pill-text">OWNER: {{ programOwnerDisplay() }}</span>
-                  @if (programData()?.ownerDesignationIcon) {
-                    <mat-icon class="owner-designation-icon">{{ programData()?.ownerDesignationIcon }}</mat-icon>
-                  }
-                </span>
-              } @else {
-                <span class="owner-pill-text plain" [class.owner-unassigned]="!programData()?.ownerName">
-                  OWNER: {{ programOwnerDisplay() }}
-                </span>
-              }
+                  <mat-icon aria-hidden="true">info</mat-icon>
+                </button>
+                <div id="program-details-popover" class="program-details-popover" role="tooltip">
+                  <div class="program-details-popover-item">
+                    <span class="program-details-popover-label">Program ID</span>
+                    <span class="program-details-popover-value">#{{ programData()?.programId }}</span>
+                  </div>
+                  <div class="program-details-popover-item">
+                    <span class="program-details-popover-label">Created by</span>
+                    <span class="program-details-popover-value">{{ (programData()?.createdByName || 'Unknown') | titlecase }}</span>
+                  </div>
+                  <div class="program-details-popover-item">
+                    <span class="program-details-popover-label">Created</span>
+                    <span class="program-details-popover-value">
+                      {{ programData()?.createdAt ? (programData()?.createdAt | date: 'medium') : 'Unknown' }}
+                    </span>
+                  </div>
+                  <div class="program-details-popover-item">
+                    <span class="program-details-popover-label">Assigned at</span>
+                    <span class="program-details-popover-value">
+                      {{ programData()?.ownerAssignedAt ? (programData()?.ownerAssignedAt | date: 'medium') : 'Not assigned' }}
+                    </span>
+                  </div>
+                  <div class="program-details-popover-item">
+                    <span class="program-details-popover-label">Last updated by</span>
+                    <span class="program-details-popover-value">{{ (programData()?.updatedByName || 'Unknown') | titlecase }}</span>
+                  </div>
+                </div>
+              </div>
             </div>
-
             <div class="action-buttons-area">
+              @if (programData()?.canManageTodos && programData()?.visibility) {
+                <button
+                  mat-button
+                  class="btn-action btn-visibility"
+                  [class.btn-visibility-hidden]="programData()?.visibility !== 'VISIBLE'"
+                  type="button"
+                  [disabled]="isUpdatingVisibility()"
+                  [attr.aria-label]="programData()?.visibility === 'VISIBLE' ? 'Hide program' : 'Make program visible'"
+                  [title]="programData()?.visibility === 'VISIBLE' ? 'Click to hide program' : 'Click to make program visible'"
+                  (click)="onToggleProgramVisibility()"
+                >
+                  <mat-icon>{{ isUpdatingVisibility() ? 'hourglass_top' : (programData()?.visibility === 'VISIBLE' ? 'visibility' : 'visibility_off') }}</mat-icon>
+                  <span>{{ programData()?.visibility }}</span>
+                </button>
+              }
               <button mat-button class="btn-action btn-edit" type="button" (click)="onEditProgram()">
                 <mat-icon>edit</mat-icon>
                 <span>Edit</span>
@@ -236,7 +284,7 @@
       >
         <mat-tab-group
           class="tasks-tabs samiti-nav-tabs"
-          animationDuration="120ms"
+          animationDuration="150ms"
           [(selectedIndex)]="selectedProgramTabIndex"
         >
           <!-- Checklist Tab -->

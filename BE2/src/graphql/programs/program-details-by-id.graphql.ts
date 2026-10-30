@@ -58,7 +58,9 @@ export const programDetailsTypes = `
     startTime: String
     endTime: String
     createdBy: Int!
+    createdByName: String
     updatedBy: Int
+    updatedByName: String
     createdAt: String
     ownerUserId: Int
     ownerName: String
@@ -115,7 +117,9 @@ export const programDetailsResolvers = {
            p.start_time AS startTime,
            p.end_time AS endTime,
            p.created_by AS createdBy,
+           creator.name AS createdByName,
            p.updated_by AS updatedBy,
+           updater.name AS updatedByName,
            p.created_at AS createdAt,
            e.committee_id AS committeeId,
            p.owner_user_id AS ownerUserId,
@@ -134,6 +138,8 @@ export const programDetailsResolvers = {
            DATE_FORMAT(p.owner_assigned_at, '%Y-%m-%d %H:%i:%s') AS ownerAssignedAt
          FROM programs p
          LEFT JOIN events e ON e.id = p.event_id
+         LEFT JOIN users creator ON creator.id = p.created_by
+         LEFT JOIN users updater ON updater.id = p.updated_by
          LEFT JOIN users owner ON owner.id = p.owner_user_id
          LEFT JOIN users_events ownerUE
            ON ownerUE.event_id = p.event_id AND ownerUE.user_id = p.owner_user_id
@@ -273,7 +279,9 @@ export const programDetailsResolvers = {
         startTime: program.startTime,
         endTime: program.endTime,
         createdBy: program.createdBy,
+        createdByName: program.createdByName || null,
         updatedBy: program.updatedBy,
+        updatedByName: program.updatedByName || null,
         createdAt: program.createdAt,
         ownerUserId: program.ownerUserId === null ? null : Number(program.ownerUserId),
         ownerName: program.ownerName || null,

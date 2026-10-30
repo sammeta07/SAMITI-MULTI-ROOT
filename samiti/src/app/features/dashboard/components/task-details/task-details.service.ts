@@ -106,4 +106,58 @@ export class TaskDetailsService {
       })
     );
   }
+
+  public updateTaskName(
+    taskId: number,
+    taskName: string
+  ): Observable<Pick<TaskDetailsPayload, 'taskName' | 'updatedAt'>> {
+    const mutation = `mutation UpdateEventTaskName($taskId: Int!, $taskName: String!) {
+      updateEventTaskName(taskId: $taskId, taskName: $taskName) {
+        taskName
+        updatedAt
+      }
+    }`;
+
+    return this.http.post<GraphqlResponse<{
+      updateEventTaskName: Pick<TaskDetailsPayload, 'taskName' | 'updatedAt'>;
+    }>>(
+      this.graphqlUrl,
+      { query: mutation, variables: { taskId, taskName } },
+      { withCredentials: true }
+    ).pipe(
+      map((response) => {
+        if (response.errors?.length) {
+          throw new Error(response.errors.map((error) => error.message).join('; '));
+        }
+        const updatedTask = response.data?.updateEventTaskName;
+        if (!updatedTask) {
+          throw new Error('GraphQL response is missing updateEventTaskName');
+        }
+        return updatedTask;
+      })
+    );
+  }
+
+  public deleteTask(taskId: number): Observable<boolean> {
+    const mutation = `mutation DeleteEventTask($taskId: Int!) {
+      deleteEventTask(taskId: $taskId)
+    }`;
+
+    return this.http.post<GraphqlResponse<{ deleteEventTask: boolean }>>(
+      this.graphqlUrl,
+      { query: mutation, variables: { taskId } },
+      { withCredentials: true }
+    ).pipe(
+      map((response) => {
+        if (response.errors?.length) {
+          throw new Error(response.errors.map((error) => error.message).join('; '));
+        }
+        const deleted = response.data?.deleteEventTask;
+        if (deleted !== true) {
+          throw new Error('Task deletion was not confirmed by the server');
+        }
+        return deleted;
+      })
+    );
+  }
 }

@@ -24,7 +24,9 @@ export interface ProgramDetailsPayload {
   startTime?: string | null;
   endTime?: string | null;
   createdBy?: number | null;
+  createdByName?: string | null;
   updatedBy?: number | null;
+  updatedByName?: string | null;
   createdAt?: string | null;
   ownerUserId?: number | null;
   ownerName?: string | null;
