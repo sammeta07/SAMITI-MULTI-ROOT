@@ -59,11 +59,11 @@
     padding: 0;
 
     ::ng-deep .mat-mdc-tab-header {
-      min-height: 30px !important;
+      min-height: var(--samiti-tab-height) !important;
 
       .mat-mdc-tab {
-        min-height: 30px !important;
-        height: 30px !important;
+        min-height: var(--samiti-tab-height) !important;
+        height: var(--samiti-tab-height) !important;
       }
     }
 
@@ -87,7 +87,7 @@
   min-width: 16px;
   height: 16px;
   padding: 0 4px;
-  border-radius: 999px;
+  border-radius: 6px;
   background: #cbd5e1;
   color: #1e293b;
   font-size: 0.6rem;
@@ -312,12 +312,14 @@
 
 .status-chip {
   display: inline-flex;
+  box-sizing: border-box;
+  min-height: var(--samiti-pill-height);
   align-items: center;
-  padding: 3px 7px;
-  border-radius: 6px;
-  font-size: 11px;
-  font-weight: 700;
-  letter-spacing: 0.4px;
+  padding: 0 10px;
+  border-radius: var(--samiti-pill-radius);
+  font-size: var(--samiti-pill-font-size);
+  font-weight: 600;
+  letter-spacing: 0.1px;
   text-transform: uppercase;
 }
 

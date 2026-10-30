@@ -1,7 +1,7 @@
 :host {
-  --group-pill-height: 28px;
-  --group-button-height: 32px;
-  --group-tab-height: 36px;
+  --group-pill-height: var(--samiti-pill-height);
+  --group-button-height: var(--samiti-action-height);
+  --group-tab-height: var(--samiti-tab-height);
 
   display: block;
   width: 100%;
@@ -45,7 +45,7 @@
   &.skeleton-line { height: 12px; }
   &.skeleton-line.lg { height: 18px; }
   &.skeleton-line.sm { height: 10px; }
-  &.skeleton-chip { height: 24px; border-radius: 999px; }
+  &.skeleton-chip { height: var(--group-pill-height); border-radius: 6px; }
   &.skeleton-avatar { width: 36px; height: 36px; }
 }
 
@@ -961,7 +961,7 @@
 .section-search-pill {
   display: inline-flex;
   align-items: center;
-  height: 26px;
+  height: var(--group-button-height);
   padding: 0 8px 0 10px;
   border: 1px solid #e2e8f0;
   border-radius: 999px;

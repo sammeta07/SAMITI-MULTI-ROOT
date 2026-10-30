@@ -1,7 +1,7 @@
 :host {
-  --program-pill-height: 28px;
-  --program-button-height: 32px;
-  --program-tab-height: 36px;
+  --program-pill-height: var(--samiti-pill-height);
+  --program-button-height: var(--samiti-action-height);
+  --program-tab-height: var(--samiti-tab-height);
 
   display: block;
   width: 100%;

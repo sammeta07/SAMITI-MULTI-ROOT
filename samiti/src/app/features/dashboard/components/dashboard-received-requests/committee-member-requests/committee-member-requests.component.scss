@@ -26,23 +26,25 @@
 
 .btn-labeled {
   display: inline-flex !important;
+  box-sizing: border-box;
   align-items: center;
-  gap: 4px;
-  font-size: 12px !important;
+  gap: 5px;
+  font-size: var(--samiti-action-font-size) !important;
   font-weight: 600 !important;
   padding: 0 10px !important;
-  height: 30px !important;
-  line-height: 30px !important;
-  border-radius: 6px !important;
+  height: var(--samiti-action-height) !important;
+  min-height: var(--samiti-action-height) !important;
+  line-height: 1 !important;
+  border-radius: var(--samiti-action-radius) !important;
   text-transform: uppercase;
   letter-spacing: 0.4px;
   transition: all 0.2s ease !important;
 }
 
 .btn-labeled mat-icon {
-  font-size: 15px !important;
-  width: 15px !important;
-  height: 15px !important;
+  font-size: 16px !important;
+  width: 16px !important;
+  height: 16px !important;
 }
 
 .btn-approve {

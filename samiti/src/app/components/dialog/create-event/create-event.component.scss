@@ -221,7 +221,10 @@
 .btn-cancel-flat {
   color: #64748b !important;
   font-weight: 600;
-  padding: 8px 16px;
+  height: var(--samiti-action-height) !important;
+  min-height: var(--samiti-action-height) !important;
+  padding: 0 16px !important;
+  border-radius: var(--samiti-action-radius) !important;
 
   &:hover {
     background: rgba(100, 116, 139, 0.08) !important;
@@ -232,7 +235,11 @@
   background: linear-gradient(135deg, #10b981 0%, #059669 100%) !important;
   color: #ffffff !important;
   font-weight: 600;
-  padding: 8px 24px;
+  height: var(--samiti-action-height) !important;
+  min-height: var(--samiti-action-height) !important;
+  padding: 0 16px !important;
+  border-radius: var(--samiti-action-radius) !important;
+  font-size: var(--samiti-action-font-size) !important;
   display: flex;
   align-items: center;
   gap: 8px;

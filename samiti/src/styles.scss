@@ -26,6 +26,54 @@
   --radius-lg:         16px;
   --shadow-sm:         0 1px 4px rgba(0, 0, 0, 0.08);
   --shadow-md:         0 4px 16px rgba(0, 0, 0, 0.10);
+
+  /* Shared control sizing */
+  --samiti-pill-height: 28px;
+  --samiti-action-height: 32px;
+  --samiti-tab-height: 36px;
+  --samiti-pill-radius: 6px;
+  --samiti-action-radius: 6px;
+  --samiti-pill-font-size: 0.72rem;
+  --samiti-action-font-size: 0.75rem;
+}
+
+/* Shared control geometry across feature and dialog components. */
+html body .mat-mdc-button-base:not(.mat-mdc-icon-button) {
+  box-sizing: border-box;
+  min-height: var(--samiti-action-height) !important;
+  height: var(--samiti-action-height) !important;
+  padding: 0 10px !important;
+  border-radius: var(--samiti-action-radius) !important;
+  font-size: var(--samiti-action-font-size) !important;
+  line-height: 1 !important;
+
+  mat-icon {
+    width: 16px !important;
+    height: 16px !important;
+    font-size: 16px !important;
+  }
+}
+
+html body :is(
+  .meta-pill,
+  .status-pill,
+  .status-chip,
+  .status-tag,
+  .price-badge,
+  .user-role-badge,
+  .owner-designation-pill,
+  .event-pill,
+  .program-countdown-pill,
+  .event-banner-category-chip,
+  .event-year-badge,
+  .todo-status-label
+) {
+  box-sizing: border-box;
+  min-height: var(--samiti-pill-height) !important;
+  height: var(--samiti-pill-height) !important;
+  border-radius: var(--samiti-pill-radius) !important;
+  font-size: var(--samiti-pill-font-size) !important;
+  line-height: 1 !important;
 }
 
 /* Shared navigation tabs used across dashboard and home views. */
@@ -34,7 +82,7 @@
   box-sizing: border-box;
 
   > .mat-mdc-tab-header {
-    min-height: 32px !important;
+    min-height: var(--samiti-tab-height) !important;
     background: #e2e8f0 !important;
     border: 1px solid #cbd5e1 !important;
     border-bottom: none !important;
@@ -58,8 +106,8 @@
       width: auto !important;
       min-width: 80px !important;
       max-width: 160px !important;
-      min-height: 32px !important;
-      height: 32px !important;
+      min-height: var(--samiti-tab-height) !important;
+      height: var(--samiti-tab-height) !important;
       padding: 0 8px !important;
       border: 1px solid transparent !important;
       border-radius: 6px 6px 0 0 !important;

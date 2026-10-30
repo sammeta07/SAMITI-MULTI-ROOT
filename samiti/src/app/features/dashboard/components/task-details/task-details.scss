@@ -1,7 +1,7 @@
 :host {
-  --task-pill-height: 28px;
-  --task-button-height: 32px;
-  --task-tab-height: 36px;
+  --task-pill-height: var(--samiti-pill-height);
+  --task-button-height: var(--samiti-action-height);
+  --task-tab-height: var(--samiti-tab-height);
 
   display: block;
   width: 100%;

@@ -2,9 +2,9 @@
    BASE LAYOUT & CONTAINER DEFINITIONS
    ========================================================================== */
 :host {
-  --home-pill-height: 28px;
-  --home-button-height: 32px;
-  --home-tab-height: 36px;
+  --home-pill-height: var(--samiti-pill-height);
+  --home-button-height: var(--samiti-action-height);
+  --home-tab-height: var(--samiti-tab-height);
 
   display: block;
   height: 100%;
@@ -138,10 +138,10 @@
 }
 
 .global-panel-toggle-btn {
-  width: 28px !important;
-  height: 28px !important;
+  width: var(--home-button-height) !important;
+  height: var(--home-button-height) !important;
   padding: 0 !important;
-  line-height: 28px !important;
+  line-height: var(--home-button-height) !important;
   display: inline-flex !important;
   align-items: center !important;
   justify-content: center !important;
@@ -165,7 +165,7 @@
 .section-search-pill {
   display: inline-flex;
   align-items: center;
-  height: 30px;
+  height: var(--home-button-height);
   padding: 0 8px 0 10px;
   border: 1px solid #e2e8f0;
   border-radius: 999px;

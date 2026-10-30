@@ -240,16 +240,17 @@
 }
 
 .voting-phase-btn {
-  height: 30px;
-  padding: 0 12px;
-  border-radius: 20px;
-  font-size: 0.72rem;
+  height: var(--samiti-action-height);
+  min-height: var(--samiti-action-height);
+  padding: 0 10px;
+  border-radius: var(--samiti-action-radius);
+  font-size: var(--samiti-action-font-size);
   font-weight: 700;
   display: inline-flex;
   align-items: center;
-  gap: 4px;
+  gap: 5px;
 
-  mat-icon { font-size: 0.9rem; width: 0.9rem; height: 0.9rem; }
+  mat-icon { font-size: 16px; width: 16px; height: 16px; }
 }
 
 /* Blocked cursor when Start Voting is disabled (Phase 3) */
@@ -276,12 +277,13 @@
 }
 
 .history-btn {
-  height: 30px;
-  padding: 0 12px;
-  border-radius: 20px;
+  height: var(--samiti-action-height);
+  min-height: var(--samiti-action-height);
+  padding: 0 10px;
+  border-radius: var(--samiti-action-radius);
   border: 1px solid #cbd5e1;
-  font-size: 0.72rem;
-  font-weight: 700;
+  font-size: var(--samiti-action-font-size);
+  font-weight: 600;
   color: #334155;
   mat-icon { color: #ea580c; font-size: 0.9rem; width: 0.9rem; height: 0.9rem; }
 }
@@ -1297,11 +1299,12 @@
 }
 
 .cast-vote-btn {
-  height: 24px;
+  height: var(--samiti-action-height);
+  min-height: var(--samiti-action-height);
   padding: 0 10px;
-  font-size: 0.62rem;
+  font-size: var(--samiti-action-font-size);
   font-weight: 700;
-  border-radius: 4px;
+  border-radius: var(--samiti-action-radius);
   background: #6366f1 !important;
   color: #fff !important;
   border: none !important;
@@ -1333,15 +1336,17 @@
 
 .expected-winner-badge {
   display: inline-flex;
+  box-sizing: border-box;
   align-items: center;
-  gap: 3px;
-  padding: 3px 8px;
-  border-radius: 4px;
+  min-height: var(--samiti-pill-height);
+  gap: 5px;
+  padding: 0 10px;
+  border-radius: var(--samiti-pill-radius);
   background: linear-gradient(135deg, #fffbeb, #fef3c7);
   border: 1px solid #f59e0b;
   color: #92400e;
-  font-size: 0.62rem;
-  font-weight: 700;
+  font-size: var(--samiti-pill-font-size);
+  font-weight: 600;
   white-space: nowrap;
 
   mat-icon {
@@ -1659,14 +1664,14 @@
 
 ::ng-deep .vacate-role-btn {
   width: 100%;
-  min-height: 26px;
-  height: 26px;
-  line-height: 1.2;
+  min-height: var(--samiti-action-height);
+  height: var(--samiti-action-height);
+  line-height: 1;
   white-space: normal;
-  padding: 0 5px;
-  border-radius: 7px;
-  font-size: 0.58rem;
-  font-weight: 700;
+  padding: 0 10px;
+  border-radius: var(--samiti-action-radius);
+  font-size: var(--samiti-action-font-size);
+  font-weight: 600;
   color: #dc2626 !important;
   background: #ffffff !important;
   border-color: #dc2626 !important;

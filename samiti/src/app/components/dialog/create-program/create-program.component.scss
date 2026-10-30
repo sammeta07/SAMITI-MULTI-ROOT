@@ -183,9 +183,10 @@
     background: #7c3aed !important;
     color: #ffffff !important;
     font-weight: 700 !important;
-    font-size: 0.85rem !important;
-    border-radius: 6px !important;
-    height: 38px !important;
+    font-size: var(--samiti-action-font-size) !important;
+    border-radius: var(--samiti-action-radius) !important;
+    height: var(--samiti-action-height) !important;
+    min-height: var(--samiti-action-height) !important;
     gap: 6px;
     display: inline-flex;
     align-items: center;

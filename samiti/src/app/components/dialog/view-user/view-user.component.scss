@@ -296,7 +296,8 @@
   box-sizing: border-box;
 
   .btn-cancel-flat {
-    height: 32px;
+    height: var(--samiti-action-height);
+    min-height: var(--samiti-action-height);
     padding: 0 16px !important;
     font-size: 0.75rem !important;
     font-weight: 700 !important;
