@@ -11,6 +11,7 @@ export interface EventTaskEntry {
   status: string | null;
   ownerUserId: number | null;
   ownerName: string | null;
+  assignedByName: string | null;
   createdByName: string | null;
   createdAt: string;
   ownerAssignedAt: string | null;

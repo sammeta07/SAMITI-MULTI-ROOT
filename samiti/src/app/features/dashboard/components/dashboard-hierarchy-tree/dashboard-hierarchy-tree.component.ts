@@ -185,7 +185,9 @@ export class DashboardHierarchyTreeComponent implements OnInit, OnDestroy {
         this.expandAllTreeNodes();
         this.isLoading.set(false);
         this.syncActiveNodeFromRawUrl();
-        this.scrollRelevantEventIntoView();
+        if (!this.selectedNode()) {
+          this.scrollRelevantEventIntoView();
+        }
         this.cdr.markForCheck();
       },
       error: (err: HttpErrorResponse) => {
@@ -223,9 +225,17 @@ export class DashboardHierarchyTreeComponent implements OnInit, OnDestroy {
       return null;
     }
 
-    const mappedChildren = (node.children || [])
+    let mappedChildren = (node.children || [])
       .map((childNode) => this.mapAdminNodeToTreeNode(childNode, roleScope))
       .filter((childNode): childNode is TreeNode => Boolean(childNode));
+
+    if (mappedType === 'event' && node.allTasks?.length) {
+      const taskChildren = this.mapEventTasksToTreeNodes(node.allTasks, roleScope);
+      mappedChildren = [
+        ...mappedChildren.filter((child) => child.type !== 'task'),
+        ...taskChildren
+      ];
+    }
 
     this.sortTreeChildren(mappedChildren);
 
@@ -241,11 +251,63 @@ export class DashboardHierarchyTreeComponent implements OnInit, OnDestroy {
       startTime: node.startTime ?? undefined,
       endTime: node.endTime ?? undefined,
       ownerUserId: mappedType === 'program' ? (node.ownerUserId ?? undefined) : undefined,
+      taskParentId: mappedType === 'task' ? (node.taskParentId ?? undefined) : undefined,
       visibility: mappedType === 'program' ? (node.visibility ?? undefined) : undefined,
       votingPhaseState: node.votingPhaseState ?? undefined,
       price: node.price ?? undefined,
       children: mappedChildren.length > 0 ? mappedChildren : undefined
     };
+  }
+
+  private mapEventTasksToTreeNodes(
+    tasks: AdminHierarchyTreeNode[],
+    roleScope: 'master_admin' | 'admin' | 'member' | null
+  ): TreeNode[] {
+    const taskIds = new Set(
+      tasks.map((task) => this.extractNumericId(task.id)).filter((id): id is number => id !== undefined)
+    );
+    const childrenByParent = new Map<number | null, AdminHierarchyTreeNode[]>();
+
+    for (const task of tasks) {
+      const parentId = task.taskParentId !== null && task.taskParentId !== undefined && taskIds.has(task.taskParentId)
+        ? task.taskParentId
+        : null;
+      const siblings = childrenByParent.get(parentId) ?? [];
+      siblings.push(task);
+      childrenByParent.set(parentId, siblings);
+    }
+
+    const visited = new Set<number>();
+    const mapChildren = (parentId: number | null): TreeNode[] => {
+      const mapped: TreeNode[] = [];
+      for (const task of childrenByParent.get(parentId) ?? []) {
+        const taskId = this.extractNumericId(task.id);
+        if (taskId === undefined || visited.has(taskId)) continue;
+        visited.add(taskId);
+
+        const children = mapChildren(taskId);
+        const mappedTask = this.mapAdminNodeToTreeNode({ ...task, children: [] }, roleScope);
+        if (mappedTask) {
+          mappedTask.children = children.length ? children : undefined;
+          mapped.push(mappedTask);
+        }
+      }
+      return mapped;
+    };
+
+    const roots = mapChildren(null);
+    for (const task of tasks) {
+      const taskId = this.extractNumericId(task.id);
+      if (taskId === undefined || visited.has(taskId)) continue;
+      visited.add(taskId);
+      const children = mapChildren(taskId);
+      const mappedTask = this.mapAdminNodeToTreeNode({ ...task, children: [] }, roleScope);
+      if (mappedTask) {
+        mappedTask.children = children.length ? children : undefined;
+        roots.push(mappedTask);
+      }
+    }
+    return roots;
   }
 
   private resolveRoleScope(roleName: string | undefined): 'master_admin' | 'admin' | 'member' | null {
@@ -470,7 +532,10 @@ export class DashboardHierarchyTreeComponent implements OnInit, OnDestroy {
   }
 
   private scrollSelectedNodeIntoView(): void {
-    this.scrollElementIntoView('.samiti-fluent-tree .node-interactive-strip.is-selected');
+    const selected = this.selectedNode();
+    if (selected?.id) {
+      this.scrollElementIntoView(`[data-auto-scroll-node="${selected.type}-${selected.id}"]`);
+    }
   }
 
   private scrollElementIntoView(selector: string): void {
@@ -646,7 +711,9 @@ export class DashboardHierarchyTreeComponent implements OnInit, OnDestroy {
     const expandNodeRecursive = (nodes: TreeNode[]) => {
       nodes.forEach(node => {
         if (node.children && node.children.length > 0) {
-          expandedKeys.add(this.getNodeKey(node));
+          if (node.type !== 'program' && node.type !== 'task') {
+            expandedKeys.add(this.getNodeKey(node));
+          }
           expandNodeRecursive(node.children);
         }
       });
@@ -681,6 +748,65 @@ export class DashboardHierarchyTreeComponent implements OnInit, OnDestroy {
     return String(name || '').trim().charAt(0).toUpperCase() || '?';
   }
 
+  public truncateNodeTitle(title: string, type: TreeNode['type']): string {
+    if ((type !== 'task' && type !== 'program') || title.length <= 30) {
+      return title;
+    }
+
+    return `${title.slice(0, 30).trimEnd()}…`;
+  }
+
+  public getSubtaskCounts(node: TreeNode): { direct: number; total: number } {
+    if (node.type !== 'task' || node.id == null) return { direct: 0, total: 0 };
+    const tasks = this.getTaskNodesForEvent(node);
+    const childrenByParentId = new Map<number, TreeNode[]>();
+    for (const task of tasks) {
+      if (task.taskParentId == null) continue;
+      const children = childrenByParentId.get(task.taskParentId) ?? [];
+      children.push(task);
+      childrenByParentId.set(task.taskParentId, children);
+    }
+
+    const visited = new Set<number>([node.id]);
+    const countDescendants = (parentId: number): number => {
+      let total = 0;
+      for (const child of childrenByParentId.get(parentId) ?? []) {
+        if (child.id == null || visited.has(child.id)) continue;
+        visited.add(child.id);
+        total += 1 + countDescendants(child.id);
+      }
+      return total;
+    };
+
+    return {
+      direct: childrenByParentId.get(node.id)?.length ?? 0,
+      total: countDescendants(node.id)
+    };
+  }
+
+  private getTaskNodesForEvent(node: TreeNode): TreeNode[] {
+    let eventNode: TreeNode | undefined = node;
+    while (eventNode && eventNode.type !== 'event') {
+      eventNode = this.findParentNode(this.dataSource.data, eventNode);
+    }
+    return eventNode
+      ? this.flattenNodes(eventNode.children ?? []).filter((child) => child.type === 'task')
+      : [];
+  }
+
+  private findParentNode(nodes: TreeNode[], target: TreeNode): TreeNode | undefined {
+    for (const candidate of nodes) {
+      if (candidate.children?.includes(target)) return candidate;
+      const parent = this.findParentNode(candidate.children ?? [], target);
+      if (parent) return parent;
+    }
+    return undefined;
+  }
+
+  private flattenNodes(nodes: TreeNode[]): TreeNode[] {
+    return nodes.flatMap((node) => [node, ...this.flattenNodes(node.children ?? [])]);
+  }
+
   public formatProgramTime(value: string): string {
     const match = value.match(/^(\d{1,2}):(\d{2})(?::\d{2})?$/);
     if (!match) {
@@ -694,7 +820,7 @@ export class DashboardHierarchyTreeComponent implements OnInit, OnDestroy {
     }
 
     const period = hours >= 12 ? 'PM' : 'AM';
-    const displayHours = String(hours % 12 || 12).padStart(2, '0');
+    const displayHours = String(hours % 12 || 12);
     return `${displayHours}:${String(minutes).padStart(2, '0')} ${period}`;
   }
 
@@ -706,7 +832,24 @@ export class DashboardHierarchyTreeComponent implements OnInit, OnDestroy {
 
     const month = Number(match[2]);
     const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
-    return `${match[3]}-${months[month - 1] || match[2]}-${match[1]}`;
+    return `${match[3]}-${months[month - 1] || match[2]}-${match[1].slice(-2)}`;
+  }
+
+  public formatProgramDateTimeTooltip(node: TreeNode): string {
+    const formatDate = (value: string | null | undefined): string => {
+      if (!value) return '';
+      const match = value.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+      if (!match) return value;
+      const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+      return `${match[3]}-${months[Number(match[2]) - 1] || match[2]}-${match[1]}`;
+    };
+    const start = [formatDate(node.startDate), node.startTime ? this.formatProgramTime(node.startTime) : '']
+      .filter(Boolean)
+      .join(' ');
+    const end = [formatDate(node.endDate), node.endTime ? this.formatProgramTime(node.endTime) : '']
+      .filter(Boolean)
+      .join(' ');
+    return [start, end].filter(Boolean).join(' → ');
   }
 
   public formatProgramTimeRange(startTime: string | undefined, endTime: string | undefined): string {

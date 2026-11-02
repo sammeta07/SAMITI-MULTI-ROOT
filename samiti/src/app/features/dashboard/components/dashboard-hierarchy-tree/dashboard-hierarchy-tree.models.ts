@@ -15,9 +15,11 @@ export interface AdminHierarchyTreeNode {
   startTime?: string | null;
   endTime?: string | null;
   ownerUserId?: number | null;
+  taskParentId?: number | null;
   visibility?: string | null;
   votingPhaseState?: number | null;
   price?: number | null;
+  allTasks?: AdminHierarchyTreeNode[] | null;
   children: AdminHierarchyTreeNode[];
 }
 
@@ -62,6 +64,7 @@ export interface TreeNode {
   startTime?: string | null;
   endTime?: string | null;
   ownerUserId?: number | null;
+  taskParentId?: number | null;
   visibility?: string | null;
   votingPhaseState?: number | null;
   price?: number | null;

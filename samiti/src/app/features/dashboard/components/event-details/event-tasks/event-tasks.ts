@@ -102,6 +102,42 @@ export class EventTasksComponent implements OnInit, OnDestroy {
     return flattened;
   }
 
+  public get rootTasks(): Array<{ task: EventTaskEntry; depth: number }> {
+    return this.flattenedTasks
+      .filter((entry) => entry.depth === 0);
+  }
+
+  public getChildTasks(parentTaskId: number): EventTaskEntry[] {
+    return this.tasks.filter((task) => task.parentTaskId === parentTaskId);
+  }
+
+  public getDescendantTaskCount(parentTaskId: number): number {
+    const visited = new Set<number>([parentTaskId]);
+    const countDescendants = (taskId: number): number => {
+      let count = 0;
+      for (const child of this.getChildTasks(taskId)) {
+        if (visited.has(child.taskId)) continue;
+        visited.add(child.taskId);
+        count += 1 + countDescendants(child.taskId);
+      }
+      return count;
+    };
+
+    return countDescendants(parentTaskId);
+  }
+
+  public taskNumber(taskId: number): number {
+    const flattened = this.flattenedTasks;
+    const target = flattened.find((entry) => entry.task.taskId === taskId);
+    if (!target) return 0;
+
+    const siblings = flattened.filter((entry) =>
+      entry.depth === target.depth &&
+      (target.depth === 0 || entry.task.parentTaskId === target.task.parentTaskId)
+    );
+    return siblings.findIndex((entry) => entry.task.taskId === taskId) + 1;
+  }
+
   public ngOnInit(): void {
     const parentParams$ = this.route.parent?.params;
     if (!parentParams$) return;
@@ -336,9 +372,7 @@ export class EventTasksComponent implements OnInit, OnDestroy {
         if (this.currentEventId === eventId) {
           this.eventData = [...this.tasks, task];
           this.isCreatingTask = false;
-          this.eventDetailsState.headerData.update((header) =>
-            header ? { ...header, tasksCount: (header.tasksCount ?? 0) + 1 } : header
-          );
+          this.eventDetailsState.incrementTaskCounts(true);
         }
         this.isSavingTask = false;
         this.hierarchyTreeService.triggerHierarchyTreeRefresh();

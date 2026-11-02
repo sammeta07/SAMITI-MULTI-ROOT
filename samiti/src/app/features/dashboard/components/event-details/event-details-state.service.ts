@@ -13,6 +13,18 @@ export class EventDetailsStateService {
   public readonly eventOverview = signal<EventOverviewPayload | null>(null);
   public readonly headerData = signal<EventDetailsHeaderPayload | null>(null);
 
+  public incrementTaskCounts(isParentTask: boolean): void {
+    this.headerData.update((header) =>
+      header
+        ? {
+            ...header,
+            tasksCount: (header.tasksCount ?? 0) + 1,
+            parentTasksCount: (header.parentTasksCount ?? 0) + (isParentTask ? 1 : 0)
+          }
+        : header
+    );
+  }
+
   public reset(): void {
     this.eventData.set(null);
     this.eventResults.set(null);

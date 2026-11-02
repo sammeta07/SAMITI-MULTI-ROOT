@@ -204,7 +204,13 @@
           <ng-template mat-tab-label>
             <mat-icon class="tab-leading-icon">task_alt</mat-icon>
             <span>Tasks</span>
-            <span class="tab-badge">{{ headerData?.tasksCount ?? 0 }}</span>
+            <span
+              class="tab-badge"
+              [matTooltip]="(headerData?.parentTasksCount ?? 0) + ' direct / ' + (headerData?.tasksCount ?? 0) + ' total subtasks'"
+              matTooltipPosition="above"
+            >
+              {{ headerData?.parentTasksCount ?? 0 }}/{{ headerData?.tasksCount ?? 0 }}
+            </span>
           </ng-template>
         </mat-tab>
       </mat-tab-group>

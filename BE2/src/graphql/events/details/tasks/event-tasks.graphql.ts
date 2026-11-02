@@ -21,6 +21,7 @@ export const eventTasksTypes = `
     status: String
     ownerUserId: Int
     ownerName: String
+    assignedByName: String
     createdByName: String
     createdAt: String!
     ownerAssignedAt: String
@@ -66,6 +67,7 @@ export const eventTasksTypes = `
     status: EventTaskStatus!
     ownerUserId: Int
     ownerName: String
+    assignedByName: String
     createdByName: String
     createdAt: String!
     ownerAssignedAt: String
@@ -167,6 +169,7 @@ export const eventTasksResolvers = {
         status: string | null;
         ownerUserId: number | null;
         ownerName: string | null;
+        assignedByName: string | null;
         createdByName: string | null;
         createdAt: string;
         ownerAssignedAt: string | null;
@@ -181,6 +184,7 @@ export const eventTasksResolvers = {
            t.status,
            t.owner_user_id AS ownerUserId,
            owner.name AS ownerName,
+           assignedBy.name AS assignedByName,
            creator.name AS createdByName,
            DATE_FORMAT(t.created_at, '%Y-%m-%d %H:%i:%s') AS createdAt,
            DATE_FORMAT(t.owner_assigned_at, '%Y-%m-%d %H:%i:%s') AS ownerAssignedAt,
@@ -188,6 +192,7 @@ export const eventTasksResolvers = {
          FROM tasks t
          LEFT JOIN tasks parent ON parent.id = t.parent_id
          LEFT JOIN users owner ON owner.id = t.owner_user_id
+         LEFT JOIN users assignedBy ON assignedBy.id = t.owner_assigned_by
          LEFT JOIN users creator ON creator.id = t.created_by
          WHERE t.event_id = ?
          ORDER BY t.created_at ASC, t.id ASC`,
@@ -205,6 +210,7 @@ export const eventTasksResolvers = {
           status: taskRow.status ? String(taskRow.status) : null,
           ownerUserId: taskRow.ownerUserId === null ? null : Number(taskRow.ownerUserId),
           ownerName: taskRow.ownerName || null,
+          assignedByName: taskRow.assignedByName || null,
           createdByName: taskRow.createdByName || null,
           createdAt: String(taskRow.createdAt),
           ownerAssignedAt: taskRow.ownerAssignedAt || null,
@@ -367,6 +373,7 @@ export const eventTasksResolvers = {
            t.status,
            t.owner_user_id AS ownerUserId,
            owner.name AS ownerName,
+           assignedBy.name AS assignedByName,
            creator.name AS createdByName,
            DATE_FORMAT(t.created_at, '%Y-%m-%d %H:%i:%s') AS createdAt,
            DATE_FORMAT(t.owner_assigned_at, '%Y-%m-%d %H:%i:%s') AS ownerAssignedAt,
@@ -374,6 +381,7 @@ export const eventTasksResolvers = {
          FROM tasks t
          LEFT JOIN tasks parent ON parent.id = t.parent_id
          LEFT JOIN users owner ON owner.id = t.owner_user_id
+         LEFT JOIN users assignedBy ON assignedBy.id = t.owner_assigned_by
          LEFT JOIN users creator ON creator.id = t.created_by
          WHERE t.id = ?
          LIMIT 1`,
@@ -390,6 +398,7 @@ export const eventTasksResolvers = {
         status: updatedTask.status ? String(updatedTask.status) : null,
         ownerUserId: updatedTask.ownerUserId === null ? null : Number(updatedTask.ownerUserId),
         ownerName: updatedTask.ownerName || null,
+        assignedByName: updatedTask.assignedByName || null,
         createdByName: updatedTask.createdByName || null,
         createdAt: String(updatedTask.createdAt),
         ownerAssignedAt: updatedTask.ownerAssignedAt || null,
@@ -467,6 +476,7 @@ export const eventTasksResolvers = {
            t.status,
            t.owner_user_id AS ownerUserId,
            owner.name AS ownerName,
+           assignedBy.name AS assignedByName,
            creator.name AS createdByName,
            DATE_FORMAT(t.created_at, '%Y-%m-%d %H:%i:%s') AS createdAt,
            DATE_FORMAT(t.owner_assigned_at, '%Y-%m-%d %H:%i:%s') AS ownerAssignedAt,
@@ -474,6 +484,7 @@ export const eventTasksResolvers = {
          FROM tasks t
          LEFT JOIN tasks parent ON parent.id = t.parent_id
          LEFT JOIN users owner ON owner.id = t.owner_user_id
+         LEFT JOIN users assignedBy ON assignedBy.id = t.owner_assigned_by
          LEFT JOIN users creator ON creator.id = t.created_by
          WHERE t.id = ?
          LIMIT 1`,
@@ -490,6 +501,7 @@ export const eventTasksResolvers = {
         status: updated.status ? String(updated.status) : null,
         ownerUserId: updated.ownerUserId === null ? null : Number(updated.ownerUserId),
         ownerName: updated.ownerName || null,
+        assignedByName: updated.assignedByName || null,
         createdByName: updated.createdByName || null,
         createdAt: String(updated.createdAt),
         ownerAssignedAt: updated.ownerAssignedAt || null,
@@ -582,6 +594,7 @@ export const eventTasksResolvers = {
            t.status,
            t.owner_user_id AS ownerUserId,
            owner.name AS ownerName,
+           assignedBy.name AS assignedByName,
            creator.name AS createdByName,
            DATE_FORMAT(t.created_at, '%Y-%m-%d %H:%i:%s') AS createdAt,
            DATE_FORMAT(t.owner_assigned_at, '%Y-%m-%d %H:%i:%s') AS ownerAssignedAt,
@@ -589,6 +602,7 @@ export const eventTasksResolvers = {
          FROM tasks t
          LEFT JOIN tasks parent ON parent.id = t.parent_id
          LEFT JOIN users owner ON owner.id = t.owner_user_id
+         LEFT JOIN users assignedBy ON assignedBy.id = t.owner_assigned_by
          LEFT JOIN users creator ON creator.id = t.created_by
          WHERE t.id = ?
          LIMIT 1`,
@@ -605,6 +619,7 @@ export const eventTasksResolvers = {
         status: String(task.status),
         ownerUserId: task.ownerUserId === null ? null : Number(task.ownerUserId),
         ownerName: task.ownerName || null,
+        assignedByName: task.assignedByName || null,
         createdByName: task.createdByName || null,
         createdAt: String(task.createdAt),
         ownerAssignedAt: task.ownerAssignedAt || null,

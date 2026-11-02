@@ -35,8 +35,37 @@ export class TaskDetailsService {
         updatedAt
         children {
           taskId
+          parentTaskId
           taskName
           status
+          ownerUserId
+          ownerName
+          assignedByName
+          createdByName
+          createdAt
+          ownerAssignedAt
+        }
+        descendants {
+          taskId
+          parentTaskId
+          taskName
+          status
+          ownerUserId
+          ownerName
+          assignedByName
+          createdByName
+          createdAt
+          ownerAssignedAt
+        }
+        taskAssignees {
+          userId
+          name
+          email
+          photo
+          committeeRole
+          isWinner
+          roleIcon
+          roleColor
         }
         todos {
           id

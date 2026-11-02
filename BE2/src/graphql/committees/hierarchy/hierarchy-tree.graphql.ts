@@ -23,6 +23,8 @@ type HierarchyTreeNode {
   visibility: String
   votingPhaseState: Int
   price: Float
+  taskParentId: Int
+  allTasks: [HierarchyTreeNode!]
   children: [HierarchyTreeNode!]!
 }
 
@@ -50,6 +52,8 @@ type InternalTreeNode = {
   visibility?: string | null;
   votingPhaseState?: number | null;
   price?: number | null;
+  taskParentId?: number | null;
+  allTasks?: InternalTreeNode[];
   children: InternalTreeNode[];
   childIds: Set<string>;
 };
@@ -80,6 +84,8 @@ export type SerializedHierarchyTreeNode = {
   visibility: string | null;
   votingPhaseState: number | null;
   price: number | null;
+  taskParentId: number | null;
+  allTasks?: SerializedHierarchyTreeNode[];
   children: SerializedHierarchyTreeNode[];
 };
 
@@ -277,6 +283,7 @@ const committeeIds = Array.from(committeeNodeById.keys());
             startDate: eventRow.start_date ? String(eventRow.start_date) : null,
             endDate: eventRow.end_date ? String(eventRow.end_date) : null,
             votingPhaseState: supportsVotingPhaseState ? Number(eventRow.votingPhaseState || 0) : null,
+            allTasks: [],
             children: [],
             childIds: new Set<string>()
           };
@@ -371,6 +378,9 @@ const committeeIds = Array.from(committeeNodeById.keys());
             type: 'TASK',
             logo: null,
             roles: taskRoles,
+            taskParentId: taskRow.parent_id === null || taskRow.parent_id === undefined
+              ? null
+              : Number(taskRow.parent_id),
             votingPhaseState: null,
             children: [],
             childIds: new Set<string>()
@@ -378,6 +388,8 @@ const committeeIds = Array.from(committeeNodeById.keys());
 
           taskNodeById.set(taskId, taskNode);
           taskEventIdById.set(taskId, eventId);
+          const eventNode = eventNodeById.get(eventId);
+          eventNode?.allTasks?.push({ ...taskNode, children: [], childIds: new Set<string>() });
         }
 
         for (const taskRow of taskRows) {
@@ -451,6 +463,8 @@ const committeeIds = Array.from(committeeNodeById.keys());
         visibility: node.visibility ?? null,
         votingPhaseState: node.votingPhaseState ?? null,
         price: node.price ?? null,
+        taskParentId: node.taskParentId ?? null,
+        allTasks: node.allTasks?.map((taskNode) => serializeNode(taskNode)),
         children: node.children.map((childNode) => serializeNode(childNode))
       });
 

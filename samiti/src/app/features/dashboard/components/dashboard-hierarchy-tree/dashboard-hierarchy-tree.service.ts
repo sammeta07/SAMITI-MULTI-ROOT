@@ -28,9 +28,22 @@ const nodeFields = `
   visibility
   votingPhaseState
   price
+  taskParentId
+  allTasks {
+    id
+    name
+    type
+    taskParentId
+    roles {
+      name
+      color
+      icon
+    }
+    ownerUserId
+  }
 `;
 
-// Recursively build a `children { ... }` block up to `depth` levels deep.
+// Recursively build a `children { ... }` block for the non-task hierarchy.
 const buildChildrenBlock = (depth: number): string => {
   if (depth <= 0) return '';
   return `
@@ -41,9 +54,9 @@ const buildChildrenBlock = (depth: number): string => {
   `;
 };
 
-// The admin hierarchy tree nests COMMITTEE → EVENT → PROGRAM → TASK,
-// so 3 levels of children below the committee node are sufficient.
-const HIERARCHY_DEPTH = 3;
+// Tasks are fetched as a flat list per event and rebuilt from parent IDs,
+// so this depth only covers committee → event → program/task roots.
+const HIERARCHY_DEPTH = 2;
 
 @Injectable({
   providedIn: 'root'

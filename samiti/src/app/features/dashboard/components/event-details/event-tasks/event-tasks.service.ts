@@ -30,6 +30,7 @@ export class EventTasksService {
           status
           ownerUserId
           ownerName
+          assignedByName
           createdByName
           createdAt
           ownerAssignedAt
@@ -70,6 +71,7 @@ export class EventTasksService {
         status
         ownerUserId
         ownerName
+        assignedByName
         createdByName
         createdAt
         ownerAssignedAt
@@ -77,12 +79,21 @@ export class EventTasksService {
       }
     }`;
 
-    return this.http.post<{ data: { createEventTask: EventTaskEntry } }>(
+    return this.http.post<GraphqlResponse<{ createEventTask: EventTaskEntry }>>(
       this.graphqlUrl,
       { query: mutation, variables: { input } },
       { withCredentials: true }
     ).pipe(
-      map(res => res.data.createEventTask)
+      map((response) => {
+        if (response.errors?.length) {
+          throw new Error(response.errors.map((error) => error.message).join('; '));
+        }
+        const createdTask = response.data?.createEventTask;
+        if (!createdTask) {
+          throw new Error('GraphQL response is missing createEventTask');
+        }
+        return createdTask;
+      })
     );
   }
 
@@ -98,6 +109,7 @@ export class EventTasksService {
         status
         ownerUserId
         ownerName
+        assignedByName
         createdByName
         createdAt
         ownerAssignedAt
@@ -126,6 +138,7 @@ export class EventTasksService {
         status
         ownerUserId
         ownerName
+        assignedByName
         createdByName
         createdAt
         ownerAssignedAt

@@ -16,6 +16,7 @@ export const eventDetailsHeaderTypes = `
     eventYear: Int
     programsCount: Int!
     tasksCount: Int!
+    parentTasksCount: Int!
     type: String
     startDate: String
     endDate: String
@@ -53,6 +54,7 @@ export const eventDetailsHeaderResolvers = {
           e.event_year AS eventYear,
           (SELECT COUNT(*) FROM programs p WHERE p.event_id = e.id) AS programsCount,
           (SELECT COUNT(*) FROM tasks t WHERE t.event_id = e.id) AS tasksCount,
+          (SELECT COUNT(*) FROM tasks t WHERE t.event_id = e.id AND t.parent_id IS NULL) AS parentTasksCount,
           e.type,
           DATE_FORMAT(e.start_date, '%Y-%m-%d') AS startDate,
           DATE_FORMAT(e.end_date, '%Y-%m-%d') AS endDate,
@@ -146,6 +148,7 @@ export const eventDetailsHeaderResolvers = {
         eventYear: event.eventYear ? Number(event.eventYear) : null,
         programsCount: Number(event.programsCount || 0),
         tasksCount: Number(event.tasksCount || 0),
+        parentTasksCount: Number(event.parentTasksCount || 0),
         type: event.type || null,
         startDate: event.startDate || null,
         endDate: event.endDate || null,

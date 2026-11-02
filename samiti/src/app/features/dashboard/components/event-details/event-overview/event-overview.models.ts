@@ -31,6 +31,7 @@ export interface EventDetailsHeaderPayload {
   eventYear?: number | null;
   programsCount?: number;
   tasksCount?: number;
+  parentTasksCount?: number;
   type?: 'PUBLIC' | 'PRIVATE' | string;
   startDate?: string | null;
   endDate?: string | null;

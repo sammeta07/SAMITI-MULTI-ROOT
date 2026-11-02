@@ -12,8 +12,6 @@
   } @else {
     @if (tasks.length > 0 || isCreatingTask) {
       <div class="horizontal-list-container">
-        
-        <!-- Inline Create Task Form -->
         @if (isCreatingTask) {
           <article class="event-task-row task-inline-create-row">
             <div class="task-create-title">
@@ -24,6 +22,7 @@
                   placeholder="Enter task title"
                   [value]="newTaskName"
                   (input)="newTaskName = $any($event.target).value"
+                  (keydown.enter)="onSaveTask()"
                   [disabled]="isSavingTask"
                   aria-label="Task title"
                 />
@@ -66,314 +65,300 @@
           </article>
         }
 
-        <!-- Accordion Task List -->
-        <mat-accordion class="task-expansion-list" [multi]="true">
-          @for (taskEntry of flattenedTasks; track taskEntry.task.taskId; let taskIndex = $index) {
-            @let ownerDesignation = getTaskOwnerDesignation(taskEntry.task);
-            @let isUpdatingOwner = assigningTaskIds.has(taskEntry.task.taskId);
-            @let isEditingOwner = isEditingTaskAssignee(taskEntry.task.taskId);
+        <ng-template #taskPanelTemplate let-taskEntry>
+          @let task = taskEntry.task;
+          @let ownerDesignation = getTaskOwnerDesignation(task);
+          @let isUpdatingOwner = assigningTaskIds.has(task.taskId);
+          @let isEditingOwner = isEditingTaskAssignee(task.taskId);
 
-            <mat-expansion-panel
-              class="event-task-panel"
-              [expanded]="false"
-              [style.margin-left.px]="taskEntry.depth * 18"
-            >
-              <mat-expansion-panel-header>
-                <div class="task-panel-summary">
-                  
-                  <!-- Left: Task Index, Sub-indicator & Title -->
-                  <div class="task-panel-title">
-                    <span class="task-panel-count">{{ taskIndex + 1 }}</span>
-                    @if (taskEntry.depth > 0) {
-                      <mat-icon class="child-task-indicator">subdirectory_arrow_right</mat-icon>
-                    }
-                    <span class="task-title-text">{{ taskEntry.task.taskName }}</span>
-                  </div>
+          <mat-expansion-panel
+            class="event-task-panel"
+            [expanded]="false"
+          >
+            <mat-expansion-panel-header>
+              <div class="task-panel-summary">
+                <div class="task-panel-title">
+                  <span class="task-panel-count">{{ taskNumber(task.taskId) }}</span>
+                  @if (taskEntry.depth > 0) {
+                    <mat-icon class="child-task-indicator">subdirectory_arrow_right</mat-icon>
+                  }
+                  <span class="task-title-text" [title]="task.taskName">{{ task.taskName }}</span>
+                  <span
+                    class="task-child-count-pill"
+                    [matTooltip]="getChildTasks(task.taskId).length + ' direct / ' + getDescendantTaskCount(task.taskId) + ' total subtasks'"
+                  >
+                    {{ getChildTasks(task.taskId).length }} / {{ getDescendantTaskCount(task.taskId) }}
+                  </span>
+                </div>
 
-                  <!-- Middle: Status Selector -->
-                  <div class="task-panel-status-wrapper" (click)="$event.stopPropagation()" (keydown)="$event.stopPropagation()">
-                    @if (canUpdateTaskStatus(taskEntry.task)) {
-                      <select
-                        class="task-panel-status status-tag status-dropdown {{ statusTagClass(taskEntry.task.status) }}"
-                        [value]="taskEntry.task.status || 'NEW'"
-                        [disabled]="updatingTaskStatusIds.has(taskEntry.task.taskId)"
-                        [attr.aria-label]="'Update status for ' + taskEntry.task.taskName"
-                        matTooltip="Change task status"
-                        (change)="onTaskStatusChange(taskEntry.task, $event)"
-                      >
-                        @if (taskEntry.task.status === 'ASSIGNED') {
-                          <option value="ASSIGNED" disabled>ASSIGNED (LEGACY)</option>
-                        }
-                        @for (status of taskStatuses; track status) {
-                          <option [value]="status">{{ statusLabel(status) }}</option>
-                        }
-                      </select>
-                    } @else {
-                      <span class="task-panel-status status-tag {{ statusTagClass(taskEntry.task.status) }}">
-                        {{ statusLabel(taskEntry.task.status) }}
-                      </span>
-                    }
-                  </div>
-
-                  <!-- Right: Assignee Row -->
-                  <div class="task-assignee-summary" (click)="$event.stopPropagation()" (keydown)="$event.stopPropagation()">
-                    @if (canCreateTasks) {
-                      @if (isEditingOwner) {
-                        <div class="task-assignee-edit-layout">
-                          <span class="task-assignee-autocomplete-box">
-                            <mat-form-field
-                              class="task-panel-assignee-field"
-                              [class.task-assignee-unassigned]="!taskEntry.task.ownerUserId"
-                              appearance="fill"
-                              subscriptSizing="dynamic"
-                            >
-                              <span matPrefix class="da-input-icon"><mat-icon>search</mat-icon></span>
-
-                              @if (!isTaskAssigneeSearchCleared(taskEntry.task.taskId) && ownerDesignation) {
-                                <span matPrefix class="task-assignee-selected-owner-avatar">
-                                  @if (ownerDesignation.photo) {
-                                    <img [src]="ownerDesignation.photo" [alt]="taskEntry.task.ownerName || 'Task owner'" />
-                                  } @else {
-                                    <span>{{ getInitials(taskEntry.task.ownerName) }}</span>
-                                  }
-                                </span>
-                              }
-
-                              <input
-                                #taskAssigneeInput
-                                type="text"
-                                matInput
-                                autocomplete="off"
-                                placeholder="Search member..."
-                                [value]="getTaskAssigneeDisplay(taskEntry.task)"
-                                [disabled]="isUpdatingOwner"
-                                (input)="onTaskAssigneeSearch(taskEntry.task.taskId, $any($event.target).value)"
-                                (focus)="onTaskAssigneeFocus(taskEntry.task.taskId, taskAssigneeTrigger)"
-                                [matAutocomplete]="taskAssigneeAutocomplete"
-                                #taskAssigneeTrigger="matAutocompleteTrigger"
-                                [attr.aria-label]="'Assign ' + taskEntry.task.taskName"
-                              />
-
-                              @if (isUpdatingOwner) {
-                                <span matSuffix class="task-assignee-saving">
-                                  <mat-progress-spinner mode="indeterminate" diameter="13" strokeWidth="2"></mat-progress-spinner>
-                                  <span>Saving...</span>
-                                </span>
-                              } @else {
-                                <span matSuffix class="task-assignee-input-suffix">
-                                  @if (hasTaskAssigneeSearch(taskEntry.task.taskId)) {
-                                    <button
-                                      class="task-assignee-clear-btn"
-                                      type="button"
-                                      aria-label="Clear member search"
-                                      title="Clear search"
-                                      (mousedown)="clearTaskAssigneeSearch(taskEntry.task.taskId, taskAssigneeTrigger, $event)"
-                                    >
-                                      <mat-icon>close</mat-icon>
-                                    </button>
-                                  }
-                                </span>
-                              }
-
-                              <mat-autocomplete
-                                #taskAssigneeAutocomplete="matAutocomplete"
-                                class="da-task-assignee-autocomplete"
-                                hideSingleSelectionIndicator
-                                (optionSelected)="onTaskAssigneeChange(taskEntry.task, $event)"
-                              >
-                                @for (member of getFilteredTaskAssignees(taskEntry.task.taskId); track member.userId) {
-                                  <mat-option
-                                    [value]="member.userId"
-                                    [disabled]="member.userId === taskEntry.task.ownerUserId"
-                                    class="da-opt-row"
-                                    [ngClass]="getRoleColorClass(member.committeeRole)"
-                                  >
-                                    <div class="mat-auto-options">
-                                      <span class="da-opt-avatar" [ngClass]="getRoleColorClass(member.committeeRole)">
-                                        @if (member.photo) {
-                                          <img [src]="member.photo" [alt]="member.name" class="da-opt-img" />
-                                        } @else {
-                                          <span class="da-opt-initials">{{ getInitials(member.name) }}</span>
-                                        }
-                                      </span>
-                                      <div class="mat-auto-options-details">
-                                        <span class="da-opt-name">{{ member.name | titlecase }}</span>
-                                        <span class="da-opt-email">{{ member.email }}</span>
-                                      </div>
-                                      @if (member.roleIcon) {
-                                        <span class="mat-auto-options-cup" [style.color]="member.roleColor || '#16a34a'">
-                                          {{ member.roleIcon }}
-                                        </span>
-                                      }
-                                    </div>
-                                  </mat-option>
-                                } @empty {
-                                  <mat-option disabled class="da-opt-empty">No members found</mat-option>
-                                }
-                              </mat-autocomplete>
-                            </mat-form-field>
-                          </span>
-
-                          @if (!isUpdatingOwner) {
-                            <span class="task-assignee-cancel-box" matTooltip="Cancel edit">
-                              <button
-                                mat-icon-button
-                                class="task-assignee-cancel-btn"
-                                type="button"
-                                aria-label="Cancel assignee edit"
-                                (click)="cancelEditTaskAssignee(taskEntry.task)"
-                              >
-                                <mat-icon>close</mat-icon>
-                              </button>
-                            </span>
-                          }
-                        </div>
-                      } @else {
-                        <div class="task-assignee-value-layout">
-                          <span
-                            class="task-assignee-owner"
-                            [class.task-assignee-owner-unassigned]="!taskEntry.task.ownerUserId"
-                          >
-                            @if (ownerDesignation) {
-                              <span class="task-assignee-owner-avatar">
-                                @if (ownerDesignation.photo) {
-                                  <img [src]="ownerDesignation.photo" [alt]="taskEntry.task.ownerName || 'Task owner'" />
-                                } @else {
-                                  <span>{{ getInitials(taskEntry.task.ownerName) }}</span>
-                                }
-                              </span>
-                            }
-                            <span class="task-assignee-owner-name">{{ (taskEntry.task.ownerName || 'Unassigned') | titlecase }}</span>
-                            @if (ownerDesignation?.roleIcon) {
-                              <span
-                                class="task-assignee-owner-designation"
-                                [style.color]="ownerDesignation?.roleColor || '#16a34a'"
-                                [attr.aria-label]="ownerDesignation?.committeeRole"
-                                [title]="ownerDesignation?.committeeRole"
-                              >
-                                {{ ownerDesignation?.roleIcon }}
-                              </span>
-                            }
-                          </span>
-
-                          <span
-                            class="task-assignee-action-box"
-                            [class.task-assignee-edit-disabled]="isUpdatingOwner || taskEntry.task.status?.toUpperCase() === 'COMPLETED'"
-                            [matTooltip]="taskEntry.task.status?.toUpperCase() === 'COMPLETED' ? 'Completed tasks cannot be reassigned' : 'Assign task'"
-                          >
-                            <button
-                              mat-icon-button
-                              class="task-assignee-edit-btn"
-                              type="button"
-                              aria-label="Edit task assignee"
-                              [disabled]="isUpdatingOwner || taskEntry.task.status?.toUpperCase() === 'COMPLETED'"
-                              (click)="editTaskAssignee(taskEntry.task)"
-                            >
-                              <mat-icon>edit</mat-icon>
-                            </button>
-                          </span>
-                        </div>
+                <div 
+                  class="task-panel-status-wrapper" 
+                  (click)="$event.stopPropagation()" 
+                  (keydown)="$event.stopPropagation()"
+                >
+                  @if (canUpdateTaskStatus(task)) {
+                    <select
+                      class="task-panel-status status-tag status-dropdown {{ statusTagClass(task.status) }}"
+                      [value]="task.status || 'NEW'"
+                      [disabled]="updatingTaskStatusIds.has(task.taskId)"
+                      [attr.aria-label]="'Update status for ' + task.taskName"
+                      matTooltip="Change task status"
+                      (change)="onTaskStatusChange(task, $event)"
+                    >
+                      @if (task.status === 'ASSIGNED') {
+                        <option value="ASSIGNED" disabled>ASSIGNED (LEGACY)</option>
                       }
-                    } @else {
-                      <div class="task-assignee-value-layout">
-                        <span
-                          class="task-assignee-owner"
-                          [class.task-assignee-owner-unassigned]="!taskEntry.task.ownerUserId"
+                      @for (status of taskStatuses; track status) {
+                        <option [value]="status">{{ statusLabel(status) }}</option>
+                      }
+                    </select>
+                  } @else {
+                    <span class="task-panel-status status-tag {{ statusTagClass(task.status) }}">
+                      {{ statusLabel(task.status) }}
+                    </span>
+                  }
+                </div>
+
+                <div 
+                  class="task-assignee-summary" 
+                  (click)="$event.stopPropagation()" 
+                  (keydown)="$event.stopPropagation()"
+                >
+                  @if (canCreateTasks && isEditingOwner) {
+                    <div class="task-assignee-edit-layout">
+                      <span class="task-assignee-autocomplete-box">
+                        <mat-form-field
+                          class="task-panel-assignee-field"
+                          [class.task-assignee-unassigned]="!task.ownerUserId"
+                          appearance="fill"
+                          subscriptSizing="dynamic"
                         >
-                          @if (ownerDesignation) {
-                            <span class="task-assignee-owner-avatar">
+                          <span matPrefix class="da-input-icon"><mat-icon>search</mat-icon></span>
+                          @if (!isTaskAssigneeSearchCleared(task.taskId) && ownerDesignation) {
+                            <span matPrefix class="task-assignee-selected-owner-avatar">
                               @if (ownerDesignation.photo) {
-                                <img [src]="ownerDesignation.photo" [alt]="taskEntry.task.ownerName || 'Task owner'" />
+                                <img [src]="ownerDesignation.photo" [alt]="task.ownerName || 'Task owner'" />
                               } @else {
-                                <span>{{ getInitials(taskEntry.task.ownerName) }}</span>
+                                <span>{{ getInitials(task.ownerName) }}</span>
                               }
                             </span>
                           }
-                          <span class="task-assignee-owner-name">{{ (taskEntry.task.ownerName || 'Unassigned') | titlecase }}</span>
-                          @if (ownerDesignation?.roleIcon) {
-                            <span
-                              class="task-assignee-owner-designation"
-                              [style.color]="ownerDesignation?.roleColor || '#16a34a'"
-                              [attr.aria-label]="ownerDesignation?.committeeRole"
-                              [title]="ownerDesignation?.committeeRole"
-                            >
-                              {{ ownerDesignation?.roleIcon }}
+                          <input
+                            type="text"
+                            matInput
+                            autocomplete="off"
+                            placeholder="Search member..."
+                            [value]="getTaskAssigneeDisplay(task)"
+                            [disabled]="isUpdatingOwner"
+                            (input)="onTaskAssigneeSearch(task.taskId, $any($event.target).value)"
+                            (focus)="onTaskAssigneeFocus(task.taskId, taskAssigneeTrigger)"
+                            [matAutocomplete]="taskAssigneeAutocomplete"
+                            #taskAssigneeTrigger="matAutocompleteTrigger"
+                            [attr.aria-label]="'Assign ' + task.taskName"
+                          />
+                          @if (isUpdatingOwner) {
+                            <span matSuffix class="task-assignee-saving">
+                              <mat-progress-spinner mode="indeterminate" diameter="13" strokeWidth="2"></mat-progress-spinner>
+                              <span>Saving...</span>
+                            </span>
+                          } @else {
+                            <span matSuffix class="task-assignee-input-suffix">
+                              @if (hasTaskAssigneeSearch(task.taskId)) {
+                                <button
+                                  class="task-assignee-clear-btn"
+                                  type="button"
+                                  aria-label="Clear member search"
+                                  title="Clear search"
+                                  (mousedown)="clearTaskAssigneeSearch(task.taskId, taskAssigneeTrigger, $event)"
+                                >
+                                  <mat-icon>close</mat-icon>
+                                </button>
+                              }
                             </span>
                           }
+                          <mat-autocomplete
+                            #taskAssigneeAutocomplete="matAutocomplete"
+                            class="da-task-assignee-autocomplete"
+                            hideSingleSelectionIndicator
+                            (optionSelected)="onTaskAssigneeChange(task, $event)"
+                          >
+                            @for (member of getFilteredTaskAssignees(task.taskId); track member.userId) {
+                              <mat-option
+                                [value]="member.userId"
+                                [disabled]="member.userId === task.ownerUserId"
+                                class="da-opt-row"
+                                [ngClass]="getRoleColorClass(member.committeeRole)"
+                              >
+                                <div class="mat-auto-options">
+                                  <span class="da-opt-avatar" [ngClass]="getRoleColorClass(member.committeeRole)">
+                                    @if (member.photo) {
+                                      <img [src]="member.photo" [alt]="member.name" class="da-opt-img" />
+                                    } @else {
+                                      <span class="da-opt-initials">{{ getInitials(member.name) }}</span>
+                                    }
+                                  </span>
+                                  <div class="mat-auto-options-details">
+                                    <span class="da-opt-name">{{ member.name | titlecase }}</span>
+                                    <span class="da-opt-email">{{ member.email }}</span>
+                                  </div>
+                                  @if (member.roleIcon) {
+                                    <span class="mat-auto-options-cup" [style.color]="member.roleColor || '#16a34a'">
+                                      {{ member.roleIcon }}
+                                    </span>
+                                  }
+                                </div>
+                              </mat-option>
+                            } @empty {
+                              <mat-option disabled class="da-opt-empty">No members found</mat-option>
+                            }
+                          </mat-autocomplete>
+                        </mat-form-field>
+                      </span>
+                      @if (!isUpdatingOwner) {
+                        <span class="task-assignee-cancel-box" matTooltip="Cancel edit">
+                          <button
+                            mat-icon-button
+                            class="task-assignee-cancel-btn"
+                            type="button"
+                            aria-label="Cancel assignee edit"
+                            (click)="cancelEditTaskAssignee(task)"
+                          >
+                            <mat-icon>close</mat-icon>
+                          </button>
                         </span>
-                      </div>
-                    }
-                  </div>
-
-                </div>
-              </mat-expansion-panel-header>
-
-              <!-- Expanded Details Grid -->
-              <div class="task-details-grid">
-                <div class="task-detail-card">
-                  <span class="task-detail-icon"><mat-icon>tag</mat-icon></span>
-                  <div class="task-detail-body">
-                    <span class="task-detail-label">Task ID</span>
-                    <span class="task-detail-value id-badge">#{{ taskEntry.task.taskId }}</span>
-                  </div>
-                </div>
-
-                <div class="task-detail-card">
-                  <span class="task-detail-icon"><mat-icon>account_tree</mat-icon></span>
-                  <div class="task-detail-body">
-                    <span class="task-detail-label">Parent Task</span>
-                    <span class="task-detail-value" [title]="taskEntry.task.parentTaskName || 'None'">
-                      @if (taskEntry.task.parentTaskId) {
-                        {{ taskEntry.task.parentTaskName || 'Task' }} <span class="muted-id">(#{{ taskEntry.task.parentTaskId }})</span>
-                      } @else {
-                        <span class="muted-text">None</span>
                       }
-                    </span>
-                  </div>
-                </div>
-
-                <div class="task-detail-card">
-                  <span class="task-detail-icon"><mat-icon>person</mat-icon></span>
-                  <div class="task-detail-body">
-                    <span class="task-detail-label">Created By</span>
-                    <span class="task-detail-value">{{ (taskEntry.task.createdByName || 'Unknown') | titlecase }}</span>
-                  </div>
-                </div>
-
-                <div class="task-detail-card">
-                  <span class="task-detail-icon"><mat-icon>calendar_today</mat-icon></span>
-                  <div class="task-detail-body">
-                    <span class="task-detail-label">Created On</span>
-                    <span class="task-detail-value">{{ taskEntry.task.createdAt | date: 'dd-MMM-yyyy, hh:mm a' }}</span>
-                  </div>
-                </div>
-
-                <div class="task-detail-card">
-                  <span class="task-detail-icon"><mat-icon>assignment_ind</mat-icon></span>
-                  <div class="task-detail-body">
-                    <span class="task-detail-label">Assigned At</span>
-                    <span class="task-detail-value">
-                      @if (taskEntry.task.ownerAssignedAt) {
-                        {{ taskEntry.task.ownerAssignedAt | date: 'dd-MMM-yyyy, hh:mm a' }}
-                      } @else {
-                        <span class="muted-text">Not assigned</span>
+                    </div>
+                  } @else {
+                    <div class="task-assignee-value-layout">
+                      <span
+                        class="task-assignee-owner"
+                        [class.task-assignee-owner-unassigned]="!task.ownerUserId"
+                      >
+                        @if (ownerDesignation) {
+                          <span class="task-assignee-owner-avatar">
+                            @if (ownerDesignation.photo) {
+                              <img [src]="ownerDesignation.photo" [alt]="task.ownerName || 'Task owner'" />
+                            } @else {
+                              <span>{{ getInitials(task.ownerName) }}</span>
+                            }
+                          </span>
+                        }
+                        <span class="task-assignee-owner-name">{{ (task.ownerName || 'Unassigned') | titlecase }}</span>
+                        @if (ownerDesignation?.roleIcon) {
+                          <span
+                            class="task-assignee-owner-designation"
+                            [style.color]="ownerDesignation?.roleColor || '#16a34a'"
+                            [attr.aria-label]="ownerDesignation?.committeeRole"
+                            [title]="ownerDesignation?.committeeRole"
+                          >
+                            {{ ownerDesignation?.roleIcon }}
+                          </span>
+                        }
+                      </span>
+                      @if (canCreateTasks) {
+                        <span
+                          class="task-assignee-action-box"
+                          [class.task-assignee-edit-disabled]="isUpdatingOwner || task.status?.toUpperCase() === 'COMPLETED'"
+                          [matTooltip]="task.status?.toUpperCase() === 'COMPLETED' ? 'Completed tasks cannot be reassigned' : 'Assign task'"
+                        >
+                          <button
+                            mat-icon-button
+                            class="task-assignee-edit-btn"
+                            type="button"
+                            aria-label="Edit task assignee"
+                            [disabled]="isUpdatingOwner || task.status?.toUpperCase() === 'COMPLETED'"
+                            (click)="editTaskAssignee(task)"
+                          >
+                            <mat-icon>edit</mat-icon>
+                          </button>
+                        </span>
                       }
-                    </span>
-                  </div>
-                </div>
-
-                <div class="task-detail-card">
-                  <span class="task-detail-icon"><mat-icon>update</mat-icon></span>
-                  <div class="task-detail-body">
-                    <span class="task-detail-label">Last Updated</span>
-                    <span class="task-detail-value">{{ taskEntry.task.updatedAt | date: 'dd-MMM-yyyy, hh:mm a' }}</span>
-                  </div>
+                    </div>
+                  }
                 </div>
               </div>
-            </mat-expansion-panel>
+            </mat-expansion-panel-header>
+
+            <div class="task-details-grid">
+              <!-- 1. Task ID -->
+              <div class="task-outline-field">
+                <span class="outline-label">Task ID</span>
+                <div class="outline-content">
+                  <mat-icon class="outline-icon">tag</mat-icon>
+                  <span class="outline-value id-badge">#{{ task.taskId }}</span>
+                </div>
+              </div>
+
+              <!-- 2. Created By -->
+              <div class="task-outline-field">
+                <span class="outline-label">Created By</span>
+                <div class="outline-content">
+                  <mat-icon class="outline-icon">person</mat-icon>
+                  <span class="outline-value" [title]="task.createdByName">{{ (task.createdByName || 'Unknown') | titlecase }}</span>
+                </div>
+              </div>
+
+              <!-- 3. Created At -->
+              <div class="task-outline-field">
+                <span class="outline-label">Created At</span>
+                <div class="outline-content">
+                  <mat-icon class="outline-icon">calendar_today</mat-icon>
+                  <span class="outline-value" [title]="task.createdAt | date: 'dd-MMM-yyyy, hh:mm a'">
+                    {{ task.createdAt | date: 'dd-MMM-yy, hh:mm a' }}
+                  </span>
+                </div>
+              </div>
+
+              <!-- 4. Assigned By -->
+              <div class="task-outline-field">
+                <span class="outline-label">Assigned By</span>
+                <div class="outline-content">
+                  <mat-icon class="outline-icon">person_add</mat-icon>
+                  <span class="outline-value" [title]="task.assignedByName">{{ (task.assignedByName || 'Not assigned') | titlecase }}</span>
+                </div>
+              </div>
+
+              <!-- 5. Assigned At -->
+              <div class="task-outline-field">
+                <span class="outline-label">Assigned At</span>
+                <div class="outline-content">
+                  <mat-icon class="outline-icon">assignment_ind</mat-icon>
+                  <span class="outline-value">
+                    @if (task.ownerAssignedAt) {
+                      <span [title]="task.ownerAssignedAt | date: 'dd-MMM-yyyy, hh:mm a'">
+                        {{ task.ownerAssignedAt | date: 'dd-MMM-yy, hh:mm a' }}
+                      </span>
+                    } @else {
+                      <span class="muted-text">Not assigned</span>
+                    }
+                  </span>
+                </div>
+              </div>
+            </div>
+
+            @if (getChildTasks(task.taskId).length) {
+              <div class="task-children-container">
+                <mat-accordion class="task-expansion-list" [multi]="true">
+                  @for (childTask of getChildTasks(task.taskId); track childTask.taskId) {
+                    <ng-container
+                      [ngTemplateOutlet]="taskPanelTemplate"
+                      [ngTemplateOutletContext]="{ $implicit: { task: childTask, depth: taskEntry.depth + 1 } }"
+                    ></ng-container>
+                  }
+                </mat-accordion>
+              </div>
+            }
+          </mat-expansion-panel>
+        </ng-template>
+
+        <mat-accordion class="task-expansion-list" [multi]="true">
+          @for (taskEntry of rootTasks; track taskEntry.task.taskId) {
+            <ng-container
+              [ngTemplateOutlet]="taskPanelTemplate"
+              [ngTemplateOutletContext]="{ $implicit: taskEntry }"
+            ></ng-container>
           }
         </mat-accordion>
-
       </div>
     } @else {
       <div class="dashed-empty-state">

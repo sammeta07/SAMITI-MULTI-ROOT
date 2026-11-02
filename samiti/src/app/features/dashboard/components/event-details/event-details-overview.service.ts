@@ -66,6 +66,7 @@ export class EventDetailsOverviewService {
         eventYear
         programsCount
         tasksCount
+        parentTasksCount
         type
         startDate
         endDate
