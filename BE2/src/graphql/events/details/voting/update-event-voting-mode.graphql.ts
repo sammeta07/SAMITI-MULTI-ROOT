@@ -1,5 +1,6 @@
 import { execute, query } from '../../../../config/db';
 import { hasEventsVotingModeColumn } from './event-voting-mode-support';
+import { hasPermission, PERMISSIONS } from '../../../../authorization/authorization';
 
 const ALLOWED_VOTING_MODES = new Set(['VOTING', 'DIRECT']);
 
@@ -88,22 +89,7 @@ export const updateEventVotingModeResolvers = {
       const event = eventRows[0];
       const previousMode = String(event.votingMode || 'VOTING').trim().toUpperCase();
 
-      const membershipRows = await query<any[]>(
-        `SELECT committee_role
-         FROM users_committees
-         WHERE committee_id = ? AND user_id = ?
-         LIMIT 1`,
-        [Number(event.committeeId), loggedInUserId]
-      );
-
-      const isCommitteeAdmin = Boolean(
-        membershipRows[0] && (
-          String(membershipRows[0].committee_role || '') === 'COMMITTEE_ADMIN' ||
-          String(membershipRows[0].committee_role || '') === 'COMMITTEE_MASTER_ADMIN'
-        )
-      );
-
-      if (!isCommitteeAdmin) {
+      if (!await hasPermission(loggedInUserId, PERMISSIONS.EVENT_VOTING_CONFIGURE, { type: 'EVENT', id: eventId })) {
         throwEventError('FORBIDDEN', 'Only committee admin can update voting mode');
       }
 

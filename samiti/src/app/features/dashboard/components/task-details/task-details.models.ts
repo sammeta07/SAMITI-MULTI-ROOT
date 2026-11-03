@@ -12,6 +12,9 @@ export interface TaskChild {
   createdByName: string | null;
   createdAt: string | null;
   ownerAssignedAt: string | null;
+  canManage: boolean;
+  canAssignOwner: boolean;
+  canDelete: boolean;
 }
 
 export interface TaskDetailsPayload {
@@ -33,6 +36,10 @@ export interface TaskDetailsPayload {
   taskAssignees: TaskAssignee[];
   todos: TodoItem[];
   todoAssignees: TodoAssignee[];
+  canManage: boolean;
+  canEditTask: boolean;
+  canAssignOwner: boolean;
+  canDeleteTask: boolean;
   canCreateTasks: boolean;
   canManageTodos: boolean;
   canToggleTodos: boolean;

@@ -46,6 +46,8 @@ export class ProgramDetailsService {
         ownerDesignationIcon
         ownerAssignedBy
         ownerAssignedAt
+        canEditProgram
+        canDeleteProgram
         canAssignOwner
         todos {
           id
@@ -69,6 +71,7 @@ export class ProgramDetailsService {
           startDate
           endDate
           visibility
+          canManage
         }
         price
       }

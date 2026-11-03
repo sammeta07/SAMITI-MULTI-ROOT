@@ -1,6 +1,7 @@
 import { execute, query } from '../../../../config/db';
 import { RowDataPacket } from 'mysql2/promise';
 import { throwEventError, getLoggedInUserId } from '../voting/event-voting-core.graphql';
+import { hasPermission, PERMISSIONS } from '../../../../authorization/authorization';
 
 export const eventTasksTypes = `
   enum EventTaskStatus {
@@ -26,6 +27,9 @@ export const eventTasksTypes = `
     createdAt: String!
     ownerAssignedAt: String
     updatedAt: String!
+    canManage: Boolean!
+    canAssignOwner: Boolean!
+    canDelete: Boolean!
   }
 
   type EventTaskAssignee {
@@ -72,6 +76,9 @@ export const eventTasksTypes = `
     createdAt: String!
     ownerAssignedAt: String
     updatedAt: String!
+    canManage: Boolean!
+    canAssignOwner: Boolean!
+    canDelete: Boolean!
   }
 `;
 
@@ -89,9 +96,12 @@ export const createEventTaskMutationFields = `
 
 async function getTaskForAdminMutation(taskId: number, userId: number): Promise<any> {
   const taskRows = await query<any[]>(
-    `SELECT t.id, t.event_id AS eventId, e.committee_id AS committeeId
+    `SELECT t.id, t.event_id AS eventId,
+            t.owner_user_id AS ownerUserId, t.created_by AS createdBy,
+            t.parent_id AS parentTaskId, parent.owner_user_id AS parentOwnerUserId
      FROM tasks t
      INNER JOIN events e ON e.id = t.event_id
+     LEFT JOIN tasks parent ON parent.id = t.parent_id
      WHERE t.id = ?
      LIMIT 1`,
     [taskId]
@@ -101,18 +111,157 @@ async function getTaskForAdminMutation(taskId: number, userId: number): Promise<
   }
 
   const task = taskRows[0];
-  const adminRows = await query<any[]>(
-    `SELECT committee_role
-     FROM users_committees
-     WHERE committee_id = ? AND user_id = ?
-       AND committee_role IN ('COMMITTEE_ADMIN', 'COMMITTEE_MASTER_ADMIN')
-     LIMIT 1`,
-    [Number(task.committeeId), userId]
+  const isMasterAdmin = await hasPermission(
+    userId,
+    PERMISSIONS.EVENT_TASK_MANAGE_ANY,
+    { type: 'EVENT', id: Number(task.eventId) }
   );
-  if (adminRows.length === 0) {
-    throwEventError('FORBIDDEN', 'Only committee admins can manage tasks');
+  if (!isMasterAdmin && Number(task.ownerUserId) !== userId &&
+    !(task.parentTaskId !== null && Number(task.createdBy) === userId) &&
+    Number(task.parentOwnerUserId) !== userId) {
+    throwEventError('FORBIDDEN', 'Only the task owner, subtask creator, or a master admin can add subtasks');
   }
   return task;
+}
+
+async function canCreateEventTask(eventId: number, userId: number): Promise<boolean> {
+  return hasPermission(userId, PERMISSIONS.EVENT_TASK_CREATE, { type: 'EVENT', id: eventId });
+}
+
+async function assertCanAssignTask(taskId: number, userId: number): Promise<void> {
+  const rows = await query<any[]>(
+    `SELECT t.event_id AS eventId, t.owner_user_id AS ownerUserId, t.parent_id AS parentTaskId,
+            t.created_by AS createdBy, parent.owner_user_id AS parentOwnerUserId
+     FROM tasks t
+     INNER JOIN events e ON e.id = t.event_id
+     LEFT JOIN tasks parent ON parent.id = t.parent_id
+     WHERE t.id = ?
+     LIMIT 1`,
+    [taskId]
+  );
+  if (rows.length === 0) throwEventError('NOT_FOUND', 'Task not found');
+  const task = rows[0];
+  const canManageAssignment = task.parentTaskId === null
+    ? await hasPermission(userId, PERMISSIONS.EVENT_TASK_ASSIGN_OWNER, { type: 'EVENT', id: Number(task.eventId) })
+    : await hasPermission(userId, PERMISSIONS.EVENT_TASK_MANAGE_ANY, { type: 'EVENT', id: Number(task.eventId) }) ||
+      Number(task.ownerUserId) === userId ||
+      Number(task.createdBy) === userId ||
+      Number(task.parentOwnerUserId) === userId;
+  if (!canManageAssignment) {
+    throwEventError(
+      'FORBIDDEN',
+      task.parentTaskId === null
+        ? 'Only Adhyaksha, Upadhyaksha, or a master admin can assign root tasks'
+        : 'Only the task owner, subtask creator, or a master admin can assign subtasks'
+    );
+  }
+}
+
+async function getTaskAssignmentPermission(taskId: number, userId: number): Promise<boolean> {
+  const rows = await query<any[]>(
+    `SELECT t.event_id AS eventId,
+            t.owner_user_id AS ownerUserId, t.parent_id AS parentTaskId,
+            t.created_by AS createdBy, parent.owner_user_id AS parentOwnerUserId
+     FROM tasks t
+     INNER JOIN events e ON e.id = t.event_id
+     LEFT JOIN tasks parent ON parent.id = t.parent_id
+     WHERE t.id = ?
+     LIMIT 1`,
+    [taskId]
+  );
+  if (rows.length === 0) throwEventError('NOT_FOUND', 'Task not found');
+  const task = rows[0];
+  if (task.parentTaskId === null) {
+    return hasPermission(userId, PERMISSIONS.EVENT_TASK_ASSIGN_OWNER, { type: 'EVENT', id: Number(task.eventId) });
+  }
+  const canManageAny = await hasPermission(
+    userId,
+    PERMISSIONS.EVENT_TASK_MANAGE_ANY,
+    { type: 'EVENT', id: Number(task.eventId) }
+  );
+  return canManageAny ||
+    Number(task.ownerUserId) === userId ||
+    Number(task.createdBy) === userId ||
+    Number(task.parentOwnerUserId) === userId;
+}
+
+async function assertCanEditOrDeleteTask(taskId: number, userId: number): Promise<void> {
+  const rows = await query<any[]>(
+    `SELECT t.parent_id AS parentTaskId, t.owner_user_id AS ownerUserId,
+            t.created_by AS createdBy, parent.owner_user_id AS parentOwnerUserId,
+            t.event_id AS eventId
+     FROM tasks t
+     INNER JOIN events e ON e.id = t.event_id
+     LEFT JOIN tasks parent ON parent.id = t.parent_id
+     WHERE t.id = ?
+     LIMIT 1`,
+    [taskId]
+  );
+  if (rows.length === 0) throwEventError('NOT_FOUND', 'Task not found');
+  const task = rows[0];
+  if (task.parentTaskId !== null) {
+    if (Number(task.ownerUserId) === userId ||
+      Number(task.createdBy) === userId ||
+      Number(task.parentOwnerUserId) === userId ||
+      await hasPermission(userId, PERMISSIONS.EVENT_TASK_MANAGE_ANY, { type: 'EVENT', id: Number(task.eventId) })) return;
+    throwEventError('FORBIDDEN', 'Only the task owner, subtask creator, or a master admin can manage this subtask');
+  }
+  if (Number(task.ownerUserId) !== userId &&
+    !await hasPermission(userId, PERMISSIONS.EVENT_TASK_UPDATE, { type: 'EVENT', id: Number(task.eventId) })) {
+    throwEventError('FORBIDDEN', 'Only a task owner, leader, or master admin can manage this task');
+  }
+}
+
+async function getTaskDeletionPermission(taskId: number, userId: number): Promise<boolean> {
+  const rows = await query<any[]>(
+    `SELECT t.parent_id AS parentTaskId, t.created_by AS createdBy,
+            t.event_id AS eventId
+     FROM tasks t
+     INNER JOIN events e ON e.id = t.event_id
+     WHERE t.id = ?
+     LIMIT 1`,
+    [taskId]
+  );
+  if (rows.length === 0) throwEventError('NOT_FOUND', 'Task not found');
+  const task = rows[0];
+  if (task.parentTaskId !== null) {
+    return Number(task.createdBy) === userId ||
+      await hasPermission(userId, PERMISSIONS.EVENT_TASK_MANAGE_ANY, { type: 'EVENT', id: Number(task.eventId) });
+  }
+  return hasPermission(userId, PERMISSIONS.EVENT_TASK_DELETE, { type: 'EVENT', id: Number(task.eventId) });
+}
+
+async function assertCanDeleteTask(taskId: number, userId: number): Promise<void> {
+  if (!await getTaskDeletionPermission(taskId, userId)) {
+    const rows = await query<any[]>(
+      `SELECT parent_id AS parentTaskId FROM tasks WHERE id = ? LIMIT 1`,
+      [taskId]
+    );
+    if (rows.length === 0) throwEventError('NOT_FOUND', 'Task not found');
+    const isSubtask = rows[0].parentTaskId !== null;
+    throwEventError(
+      'FORBIDDEN',
+      isSubtask
+        ? 'Only the subtask creator or a master admin can delete this subtask'
+        : 'Only Adhyaksha, Upadhyaksha, or a master admin can delete a root task'
+    );
+  }
+}
+
+async function getTaskManagementPermission(taskId: number, userId: number): Promise<boolean> {
+  const taskRows = await query<any[]>(
+    `SELECT t.owner_user_id AS ownerUserId, t.event_id AS eventId
+     FROM tasks t
+     INNER JOIN events e ON e.id = t.event_id
+     WHERE t.id = ?
+     LIMIT 1`,
+    [taskId]
+  );
+  if (taskRows.length === 0) {
+    throwEventError('NOT_FOUND', 'Task not found');
+  }
+  return Number(taskRows[0].ownerUserId) === userId ||
+    hasPermission(userId, PERMISSIONS.EVENT_TASK_MANAGE_ANY, { type: 'EVENT', id: Number(taskRows[0].eventId) });
 }
 
 export const eventTasksResolvers = {
@@ -138,6 +287,22 @@ export const eventTasksResolvers = {
       }
 
       const event = eventResult[0];
+      const canAssignRootTasks = await canCreateEventTask(eventId, loggedInUserId);
+      const canAssignRootTaskOwners = await hasPermission(
+        loggedInUserId,
+        PERMISSIONS.EVENT_TASK_ASSIGN_OWNER,
+        { type: 'EVENT', id: eventId }
+      );
+      const canDeleteRootTasks = await hasPermission(
+        loggedInUserId,
+        PERMISSIONS.EVENT_TASK_DELETE,
+        { type: 'EVENT', id: eventId }
+      );
+      const canManageAnyTasks = await hasPermission(
+        loggedInUserId,
+        PERMISSIONS.EVENT_TASK_MANAGE_ANY,
+        { type: 'EVENT', id: eventId }
+      );
       const committeeMembership = await query<any[]>(
         `SELECT committee_role
          FROM users_committees
@@ -156,7 +321,14 @@ export const eventTasksResolvers = {
         )
       );
 
-      if (!hasCommitteeAccess) {
+      const ownedTaskRows = hasCommitteeAccess ? [] : await query<any[]>(
+        `SELECT id
+         FROM tasks
+         WHERE event_id = ? AND owner_user_id = ?
+         LIMIT 1`,
+        [eventId, loggedInUserId]
+      );
+      if (!hasCommitteeAccess && ownedTaskRows.length === 0) {
         throwEventError('FORBIDDEN', 'You are not allowed to access this event');
       }
 
@@ -167,6 +339,8 @@ export const eventTasksResolvers = {
         parentTaskName: string | null;
         taskName: string;
         status: string | null;
+        createdBy: number | null;
+        parentOwnerUserId: number | null;
         ownerUserId: number | null;
         ownerName: string | null;
         assignedByName: string | null;
@@ -179,6 +353,8 @@ export const eventTasksResolvers = {
            t.id AS taskId,
            t.event_id AS eventId,
            t.parent_id AS parentTaskId,
+           t.created_by AS createdBy,
+           parent.owner_user_id AS parentOwnerUserId,
            parent.name AS parentTaskName,
            COALESCE(NULLIF(TRIM(t.name), ''), 'Untitled Task') AS taskName,
            t.status,
@@ -200,7 +376,9 @@ export const eventTasksResolvers = {
       );
 
       return {
-        entries: taskRows.map((taskRow) => ({
+        entries: taskRows.map((taskRow) => {
+          const isRootTask = taskRow.parentTaskId === null;
+          return {
           id: Number(taskRow.taskId),
           taskId: Number(taskRow.taskId),
           eventId: Number(taskRow.eventId),
@@ -214,9 +392,18 @@ export const eventTasksResolvers = {
           createdByName: taskRow.createdByName || null,
           createdAt: String(taskRow.createdAt),
           ownerAssignedAt: taskRow.ownerAssignedAt || null,
-          updatedAt: String(taskRow.updatedAt)
-        })),
-        canCreateTasks: ['COMMITTEE_ADMIN', 'COMMITTEE_MASTER_ADMIN'].includes(String(membership?.committee_role || '')),
+          updatedAt: String(taskRow.updatedAt),
+          canManage: Number(taskRow.ownerUserId) === loggedInUserId || canManageAnyTasks,
+          canAssignOwner: isRootTask
+            ? canAssignRootTaskOwners
+            : canManageAnyTasks || Number(taskRow.createdBy) === loggedInUserId ||
+              Number(taskRow.parentOwnerUserId) === loggedInUserId,
+          canDelete: isRootTask
+            ? canDeleteRootTasks
+            : canManageAnyTasks || Number(taskRow.createdBy) === loggedInUserId
+          };
+        }),
+        canCreateTasks: canAssignRootTasks,
         taskAssignees: await query<Array<RowDataPacket & {
           userId: number;
           name: string;
@@ -276,7 +463,7 @@ export const eventTasksResolvers = {
       }
 
       const userId = await getLoggedInUserId(context);
-      await getTaskForAdminMutation(taskId, userId);
+      await assertCanEditOrDeleteTask(taskId, userId);
       const result = await execute(
         `UPDATE tasks
          SET name = ?, updated_by = ?, updated_at = CURRENT_TIMESTAMP
@@ -310,7 +497,7 @@ export const eventTasksResolvers = {
       }
 
       const userId = await getLoggedInUserId(context);
-      await getTaskForAdminMutation(taskId, userId);
+      await assertCanDeleteTask(taskId, userId);
       const childRows = await query<any[]>(
         `SELECT id
          FROM tasks
@@ -349,18 +536,29 @@ export const eventTasksResolvers = {
       if (taskRows.length === 0) {
         throwEventError('NOT_FOUND', 'Task not found');
       }
-      if (taskRows[0].ownerUserId === null || Number(taskRows[0].ownerUserId) !== loggedInUserId) {
-        throwEventError('FORBIDDEN', 'Only the task owner can update its status');
+      const taskCommitteeRows = await query<any[]>(
+        `SELECT e.committee_id AS committeeId
+         FROM events e
+         WHERE e.id = ? LIMIT 1`,
+        [Number(taskRows[0].eventId)]
+      );
+      const isMasterAdmin = taskCommitteeRows.length > 0 && await hasPermission(
+        loggedInUserId,
+        PERMISSIONS.EVENT_TASK_MANAGE_ANY,
+        { type: 'EVENT', id: Number(taskRows[0].eventId) }
+      );
+      if (!isMasterAdmin && (taskRows[0].ownerUserId === null || Number(taskRows[0].ownerUserId) !== loggedInUserId)) {
+        throwEventError('FORBIDDEN', 'Only the task owner or a master admin can update its status');
       }
 
       const updateResult = await execute(
         `UPDATE tasks
          SET status = ?, updated_by = ?, updated_at = CURRENT_TIMESTAMP
-         WHERE id = ? AND owner_user_id = ?`,
-        [status, loggedInUserId, taskId, loggedInUserId]
+         WHERE id = ? AND (owner_user_id = ? OR ? = 1)`,
+        [status, loggedInUserId, taskId, loggedInUserId, isMasterAdmin ? 1 : 0]
       );
       if (updateResult.affectedRows !== 1) {
-        throwEventError('FORBIDDEN', 'Only the task owner can update its status');
+        throwEventError('FORBIDDEN', 'Only the task owner or a master admin can update its status');
       }
 
       const updatedRows = await query<any[]>(
@@ -402,7 +600,10 @@ export const eventTasksResolvers = {
         createdByName: updatedTask.createdByName || null,
         createdAt: String(updatedTask.createdAt),
         ownerAssignedAt: updatedTask.ownerAssignedAt || null,
-        updatedAt: String(updatedTask.updatedAt)
+        updatedAt: String(updatedTask.updatedAt),
+        canManage: await getTaskManagementPermission(taskId, loggedInUserId),
+        canAssignOwner: await getTaskAssignmentPermission(taskId, loggedInUserId),
+        canDelete: await getTaskDeletionPermission(taskId, loggedInUserId)
       };
     },
     async assignEventTask(_: any, args: { taskId?: number; ownerUserId?: number | null }, context: any) {
@@ -417,7 +618,8 @@ export const eventTasksResolvers = {
 
       const loggedInUserId = await getLoggedInUserId(context);
       const taskRows = await query<any[]>(
-        `SELECT t.event_id AS eventId, e.committee_id AS committeeId
+        `SELECT t.event_id AS eventId, e.committee_id AS committeeId,
+                t.owner_user_id AS ownerUserId
          FROM tasks t
          INNER JOIN events e ON e.id = t.event_id
          WHERE t.id = ?
@@ -429,17 +631,7 @@ export const eventTasksResolvers = {
       }
 
       const task = taskRows[0];
-      const adminRows = await query<any[]>(
-        `SELECT committee_role
-         FROM users_committees
-         WHERE committee_id = ? AND user_id = ?
-           AND committee_role IN ('COMMITTEE_ADMIN', 'COMMITTEE_MASTER_ADMIN')
-         LIMIT 1`,
-        [Number(task.committeeId), loggedInUserId]
-      );
-      if (adminRows.length === 0) {
-        throwEventError('FORBIDDEN', 'Only committee admins can assign tasks');
-      }
+      await assertCanAssignTask(taskId, loggedInUserId);
 
       if (ownerUserId !== null) {
         const ownerRows = await query<any[]>(
@@ -505,7 +697,10 @@ export const eventTasksResolvers = {
         createdByName: updated.createdByName || null,
         createdAt: String(updated.createdAt),
         ownerAssignedAt: updated.ownerAssignedAt || null,
-        updatedAt: String(updated.updatedAt)
+        updatedAt: String(updated.updatedAt),
+        canManage: await getTaskManagementPermission(taskId, loggedInUserId),
+        canAssignOwner: await getTaskAssignmentPermission(taskId, loggedInUserId),
+        canDelete: await getTaskDeletionPermission(taskId, loggedInUserId)
       };
     },
     async createEventTask(_: any, args: { input?: { eventId?: number; taskName?: string; parentTaskId?: number | null; status?: string | null } }, context: any) {
@@ -543,21 +738,10 @@ export const eventTasksResolvers = {
       }
 
       const event = eventRows[0];
-      const adminRows = await query<any[]>(
-        `SELECT committee_role
-         FROM users_committees
-         WHERE committee_id = ? AND user_id = ?
-           AND committee_role IN ('COMMITTEE_ADMIN', 'COMMITTEE_MASTER_ADMIN')
-         LIMIT 1`,
-        [Number(event.committee_id), loggedInUserId]
-      );
-      if (adminRows.length === 0) {
-        throwEventError('FORBIDDEN', 'Only committee admins can create tasks');
-      }
 
       if (parentTaskId !== null) {
         const parentRows = await query<any[]>(
-          `SELECT id
+          `SELECT id, owner_user_id AS ownerUserId
            FROM tasks
            WHERE id = ? AND event_id = ?
            LIMIT 1`,
@@ -565,6 +749,12 @@ export const eventTasksResolvers = {
         );
         if (parentRows.length === 0) {
           throwEventError('BAD_REQUEST', 'parentTaskId must belong to the selected event');
+        }
+        await getTaskForAdminMutation(parentTaskId, loggedInUserId);
+      } else {
+        const canCreateTopLevel = await canCreateEventTask(eventId, loggedInUserId);
+        if (!canCreateTopLevel) {
+          throwEventError('FORBIDDEN', 'Only a master admin, Adhyaksha, or Upadhyaksha can create event-level tasks');
         }
       }
 
@@ -623,7 +813,10 @@ export const eventTasksResolvers = {
         createdByName: task.createdByName || null,
         createdAt: String(task.createdAt),
         ownerAssignedAt: task.ownerAssignedAt || null,
-        updatedAt: String(task.updatedAt)
+        updatedAt: String(task.updatedAt),
+        canManage: await getTaskManagementPermission(Number(task.taskId), loggedInUserId),
+        canAssignOwner: await getTaskAssignmentPermission(Number(task.taskId), loggedInUserId),
+        canDelete: await getTaskDeletionPermission(Number(task.taskId), loggedInUserId)
       };
     }
   }

@@ -250,14 +250,14 @@ export class ProgramDetailsComponent implements OnInit {
       .subscribe({
         next: (data: ProgramDetailsPayload) => {
           this.programData.set(data ?? null);
-          if (data?.canAssignOwner && data.eventId) {
-            const eventId = data.eventId;
+          if (data?.canAssignOwner && data.programId) {
+            const programId = data.programId;
             this.programOwnerService
-              .getCandidates(data.eventId)
+              .getCandidates(data.programId)
               .pipe(takeUntilDestroyed(this.destroyRef))
               .subscribe({
                 next: (candidates) => {
-                  if (this.programData()?.eventId === eventId) {
+                  if (this.programData()?.programId === programId) {
                     this.programOwnerCandidates.set(candidates);
                   }
                 },
@@ -302,6 +302,7 @@ export class ProgramDetailsComponent implements OnInit {
   }
 
   public async deleteSelectedBanners(): Promise<void> {
+    if (!this.canManageEvent()) return;
     const currentProgram = this.programData();
     const selectedUrls = [...this.selectedBannerUrls()];
     if (!currentProgram?.programId || selectedUrls.length === 0 || this.isDeletingBanners()) {
@@ -350,6 +351,7 @@ export class ProgramDetailsComponent implements OnInit {
   }
 
   public onAddSingleProgramBannerClick(): void {
+    if (!this.canManageEvent()) return;
     if (!this.programBannerSingleFileInput?.nativeElement) {
       this.notifier.error('File picker is not ready. Please try again.');
       return;
@@ -364,7 +366,7 @@ export class ProgramDetailsComponent implements OnInit {
     if (!file) return;
 
     const currentProgram = this.programData();
-    if (!currentProgram?.programId) return;
+    if (!currentProgram?.programId || !this.canManageEvent()) return;
 
     if (this.bannerCount() >= this.MAX_BANNERS) {
       this.notifier.warn(`Maximum ${this.MAX_BANNERS} banner images allowed. Delete existing banners first.`);
@@ -400,7 +402,7 @@ export class ProgramDetailsComponent implements OnInit {
 
   public onDeleteProgramBanner(imageUrl: string): void {
     const currentProgram = this.programData();
-    if (!currentProgram?.programId || !imageUrl) return;
+    if (!currentProgram?.programId || !imageUrl || !this.canManageEvent()) return;
 
     const dialogData: ConfirmDialogData = {
       title: 'Delete Banner Image',
@@ -468,6 +470,7 @@ export class ProgramDetailsComponent implements OnInit {
 
   public onEditProgram(): void {
     const currentProgram = this.programData();
+    if (!this.canManageEvent()) return;
     if (!currentProgram?.programId || !currentProgram?.eventId) {
       this.notifier.error('No program available for editing');
       return;
@@ -508,7 +511,7 @@ export class ProgramDetailsComponent implements OnInit {
 
   public async onToggleProgramVisibility(): Promise<void> {
     const currentProgram = this.programData();
-    if (!currentProgram?.canManageTodos || this.isUpdatingVisibility()) return;
+    if (!currentProgram?.canAssignOwner || this.isUpdatingVisibility()) return;
 
     const nextVisibility = currentProgram.visibility === 'VISIBLE' ? 'HIDDEN' : 'VISIBLE';
     this.isUpdatingVisibility.set(true);
@@ -533,7 +536,7 @@ export class ProgramDetailsComponent implements OnInit {
 
   public async onDeleteProgram(): Promise<void> {
     const currentProgram = this.programData();
-    if (!currentProgram?.programId) return;
+    if (!currentProgram?.programId || !currentProgram.canDeleteProgram) return;
 
     const dialogData: ConfirmDialogData = {
       title: 'Delete Program',

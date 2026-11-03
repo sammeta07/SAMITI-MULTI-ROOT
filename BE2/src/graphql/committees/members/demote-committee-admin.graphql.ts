@@ -1,4 +1,5 @@
 import { execute, query } from '../../../config/db';
+import { hasPermission, PERMISSIONS } from '../../../authorization/authorization';
 
 // ─── Master admin demotes an existing COMMITTEE_ADMIN to COMMITTEE_MEMBER ──────
 
@@ -61,15 +62,11 @@ export const demoteCommitteeAdminResolvers = {
       }
 
       // Verify actor is the committee master admin
-      const masterAdminRows = await query<any[]>(
-        `SELECT user_id FROM users_committees
-         WHERE committee_id = ?
-           AND user_id = ?
-           AND committee_role = 'COMMITTEE_MASTER_ADMIN'
-         LIMIT 1`,
-        [committeeId, loggedInUserId]
-      );
-      if (masterAdminRows.length === 0) {
+      if (!await hasPermission(
+        loggedInUserId,
+        PERMISSIONS.COMMITTEE_ADMINS_MANAGE,
+        { type: 'COMMITTEE', id: committeeId }
+      )) {
         throw new Error('Forbidden: Only the committee master admin can demote admins');
       }
 
@@ -115,4 +112,3 @@ export const demoteCommitteeAdminResolvers = {
     }
   }
 };
-

@@ -1,4 +1,5 @@
 import { execute, query } from '../../../config/db';
+import { getAuthorizedCommitteeIds, hasPermission, PERMISSIONS } from '../../../authorization/authorization';
 
 // ─── All queries/mutations now use committee_role_requests for workflow ───────
 
@@ -164,7 +165,6 @@ export const committeeMembershipRequestsResolvers = {
           INNER JOIN users_committees admin_uc
              ON admin_uc.committee_id = crr.committee_id
              AND admin_uc.user_id = ?
-             AND admin_uc.committee_role IN ('COMMITTEE_ADMIN', 'COMMITTEE_MASTER_ADMIN')
           LEFT JOIN users_committees requester_uc
              ON requester_uc.committee_id = crr.committee_id
              AND requester_uc.user_id = crr.requester_user_id
@@ -172,9 +172,15 @@ export const committeeMembershipRequestsResolvers = {
          ORDER BY crr.requested_at DESC`,
         [loggedInUserId, loggedInUserId]
       );
+      const authorizedCommitteeIds = await getAuthorizedCommitteeIds(
+        loggedInUserId,
+        PERMISSIONS.COMMITTEE_REQUESTS_REVIEW,
+        rows.map((row) => Number(row.committee_id))
+      );
+      const authorizedRows = rows.filter((row) => authorizedCommitteeIds.has(Number(row.committee_id)));
 
       return {
-        data: rows.map((row) => ({
+        data: authorizedRows.map((row) => ({
           committeeId: Number(row.committee_id),
           committeeName: row.committee_name,
           committeeLogo: row.committee_logo || null,
@@ -281,16 +287,11 @@ export const committeeMembershipRequestsResolvers = {
       const loggedInUserId = await resolveLoggedInUserIdFromGraphQLContext(context);
       const actionAtTime = new Date().toISOString();
 
-      // Verify actor is an accepted admin
-      const adminValidationRows = await query<any[]>(
-        `SELECT user_id FROM users_committees
-         WHERE committee_id = ?
-           AND user_id = ?
-           AND committee_role IN ('COMMITTEE_ADMIN', 'COMMITTEE_MASTER_ADMIN')
-         LIMIT 1`,
-        [committeeId, loggedInUserId]
-      );
-      if (adminValidationRows.length === 0) {
+      if (!await hasPermission(
+        loggedInUserId,
+        PERMISSIONS.COMMITTEE_REQUESTS_REVIEW,
+        { type: 'COMMITTEE', id: Number(committeeId) }
+      )) {
         throw new Error('Forbidden: Only accepted committee admins can take membership actions');
       }
 
@@ -307,6 +308,17 @@ export const committeeMembershipRequestsResolvers = {
       }
 
       const { id: requestId, request_role: requestRole } = pendingRows[0];
+      if (
+        decisionAction === 'ACCEPTED' &&
+        String(requestRole).toUpperCase() === 'COMMITTEE_ADMIN' &&
+        !await hasPermission(
+          loggedInUserId,
+          PERMISSIONS.COMMITTEE_ADMINS_MANAGE,
+          { type: 'COMMITTEE', id: Number(committeeId) }
+        )
+      ) {
+        throw new Error('Forbidden: Only authorized committee admins can grant admin access');
+      }
 
       const currentRoleRows = await query<any[]>(
         `SELECT committee_role FROM users_committees WHERE committee_id = ? AND user_id = ? LIMIT 1`,

@@ -90,12 +90,38 @@
                   <div class="node-logo-avatar-wrapper branch-leaf-avatar"
                        [ngClass]="['color-' + node.type, getCommitteeLogoRoleClass(node)]"
                        [ngStyle]="node.type === 'event' && node.id ? {'--node-border-color': getEventDesignationColor(node), 'border-radius': '50%'} : {}">
+                    @if ((node.type === 'group' || node.type === 'event') && node.canUpdateLogo) {
+                      <input
+                        type="file"
+                        hidden
+                        accept="image/*"
+                        (click)="$event.stopPropagation()"
+                        (change)="onNodeLogoSelected(node, $event)"
+                      />
+                    }
                     @if ((node.type === 'group' || node.type === 'event') && node.logo) {
                       <img [src]="node.logo" [alt]="node.name" class="brand-image-node" (error)="node.logo = null" />
                     } @else if (node.type === 'group' || node.type === 'event') {
                       <span class="logo-fallback-initial">{{ getNodeInitial(node.name) }}</span>
                     } @else {
                       <mat-icon class="type-indicator-icon">assignment_turned_in</mat-icon>
+                    }
+                    @if ((node.type === 'group' || node.type === 'event') && node.canUpdateLogo) {
+                      <button
+                        type="button"
+                        class="node-logo-edit-trigger"
+                        [class.is-uploading]="uploadingLogoNodeKeys.has(getLogoUploadKey(node))"
+                        [disabled]="uploadingLogoNodeKeys.has(getLogoUploadKey(node))"
+                        [attr.aria-label]="'Change ' + (node.type === 'group' ? 'committee' : 'event') + ' logo'"
+                        [attr.title]="'Change ' + (node.type === 'group' ? 'committee' : 'event') + ' logo'"
+                        (click)="openNodeLogoPicker(node, $event)"
+                      >
+                        @if (uploadingLogoNodeKeys.has(getLogoUploadKey(node))) {
+                          <mat-progress-spinner mode="indeterminate" diameter="16"></mat-progress-spinner>
+                        } @else {
+                          <mat-icon>edit</mat-icon>
+                        }
+                      </button>
                     }
                   </div>
                 }
@@ -200,6 +226,15 @@
                     <div class="node-logo-avatar-wrapper"
                          [ngClass]="['type-' + node.type, getCommitteeLogoRoleClass(node)]"
                          [ngStyle]="node.type === 'event' && node.id ? {'--node-border-color': getEventDesignationColor(node), 'border-radius': '50%'} : {}">
+                      @if ((node.type === 'group' || node.type === 'event') && node.canUpdateLogo) {
+                        <input
+                          type="file"
+                          hidden
+                          accept="image/*"
+                          (click)="$event.stopPropagation()"
+                          (change)="onNodeLogoSelected(node, $event)"
+                        />
+                      }
                       @if ((node.type === 'group' || node.type === 'event') && node.logo) {
                         <img [src]="node.logo" [alt]="node.name" class="brand-image-node" (error)="node.logo = null" />
                       } @else if (node.type === 'group' || node.type === 'event') {
@@ -212,6 +247,23 @@
                             @default { folder }
                           }
                         </mat-icon>
+                      }
+                      @if ((node.type === 'group' || node.type === 'event') && node.canUpdateLogo) {
+                        <button
+                          type="button"
+                          class="node-logo-edit-trigger"
+                          [class.is-uploading]="uploadingLogoNodeKeys.has(getLogoUploadKey(node))"
+                          [disabled]="uploadingLogoNodeKeys.has(getLogoUploadKey(node))"
+                          [attr.aria-label]="'Change ' + (node.type === 'group' ? 'committee' : 'event') + ' logo'"
+                          [attr.title]="'Change ' + (node.type === 'group' ? 'committee' : 'event') + ' logo'"
+                          (click)="openNodeLogoPicker(node, $event)"
+                        >
+                          @if (uploadingLogoNodeKeys.has(getLogoUploadKey(node))) {
+                            <mat-progress-spinner mode="indeterminate" diameter="16"></mat-progress-spinner>
+                          } @else {
+                            <mat-icon>edit</mat-icon>
+                          }
+                        </button>
                       }
                     </div>
                   }

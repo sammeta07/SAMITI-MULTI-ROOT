@@ -2,6 +2,7 @@ import { query, getConnection } from '../../../../config/db';
 import { RowDataPacket } from 'mysql2/promise';
 import { hasEventsVotingPhaseStateColumn } from './event-voting-phase-support';
 import { hasEventsVotingModeColumn } from './event-voting-mode-support';
+import { hasPermission, PERMISSIONS } from '../../../../authorization/authorization';
 
 export function throwEventError(code: string, message: string): never {
   throw new Error(`${code}: ${message}`);
@@ -537,22 +538,7 @@ export const eventVotingResolvers = {
       }
 
       const event = eventRows[0];
-
-      const membershipRows = await query<any[]>(
-        `SELECT committee_role
-         FROM users_committees
-         WHERE committee_id = ? AND user_id = ?
-         LIMIT 1`,
-        [Number(event.committeeId), loggedInUserId]
-      );
-
-      const isCommitteeAdmin = Boolean(
-        membershipRows[0] && (
-          String(membershipRows[0].committee_role || '') === 'COMMITTEE_ADMIN' ||
-          String(membershipRows[0].committee_role || '') === 'COMMITTEE_MASTER_ADMIN'
-        )
-      );
-      if (!isCommitteeAdmin) {
+      if (!await hasPermission(loggedInUserId, PERMISSIONS.EVENT_VOTING_CONFIGURE, { type: 'EVENT', id: eventId })) {
         throwEventError('FORBIDDEN', 'Only committee admin can configure event voting roles');
       }
 
@@ -629,16 +615,7 @@ export const eventVotingResolvers = {
 
       const event = eventRows[0];
 
-      const membershipRows = await query<Array<RowDataPacket & { isCommitteeAdmin: number }>>(
-        `SELECT CASE WHEN committee_role IN ('COMMITTEE_ADMIN', 'COMMITTEE_MASTER_ADMIN') THEN 1 ELSE 0 END AS isCommitteeAdmin
-         FROM users_committees
-         WHERE committee_id = ? AND user_id = ?
-         LIMIT 1`,
-        [Number(event.committeeId), loggedInUserId]
-      );
-
-      const isCommitteeAdmin = Boolean(membershipRows[0] && Number(membershipRows[0].isCommitteeAdmin) === 1);
-      if (!isCommitteeAdmin) {
+      if (!await hasPermission(loggedInUserId, PERMISSIONS.EVENT_VOTING_CONFIGURE, { type: 'EVENT', id: eventId })) {
         throwEventError('FORBIDDEN', 'Only committee admin can lock voting role selection');
       }
 
@@ -692,16 +669,7 @@ export const eventVotingResolvers = {
 
       const event = eventRows[0];
 
-      const membershipRows = await query<Array<RowDataPacket & { isCommitteeAdmin: number }>>(
-        `SELECT CASE WHEN committee_role IN ('COMMITTEE_ADMIN', 'COMMITTEE_MASTER_ADMIN') THEN 1 ELSE 0 END AS isCommitteeAdmin
-         FROM users_committees
-         WHERE committee_id = ? AND user_id = ?
-         LIMIT 1`,
-        [Number(event.committeeId), loggedInUserId]
-      );
-
-      const isCommitteeAdmin = Boolean(membershipRows[0] && Number(membershipRows[0].isCommitteeAdmin) === 1);
-      if (!isCommitteeAdmin) {
+      if (!await hasPermission(loggedInUserId, PERMISSIONS.EVENT_VOTING_CONFIGURE, { type: 'EVENT', id: eventId })) {
         throwEventError('FORBIDDEN', 'Only committee admin can start nominations');
       }
 
@@ -757,16 +725,7 @@ export const eventVotingResolvers = {
 
       const event = eventRows[0];
 
-      const membershipRows = await query<Array<RowDataPacket & { isCommitteeAdmin: number }>>(
-        `SELECT CASE WHEN committee_role IN ('COMMITTEE_ADMIN', 'COMMITTEE_MASTER_ADMIN') THEN 1 ELSE 0 END AS isCommitteeAdmin
-         FROM users_committees
-         WHERE committee_id = ? AND user_id = ?
-         LIMIT 1`,
-        [Number(event.committeeId), loggedInUserId]
-      );
-
-      const isCommitteeAdmin = Boolean(membershipRows[0] && Number(membershipRows[0].isCommitteeAdmin) === 1);
-      if (!isCommitteeAdmin) {
+      if (!await hasPermission(loggedInUserId, PERMISSIONS.EVENT_VOTING_CONFIGURE, { type: 'EVENT', id: eventId })) {
         throwEventError('FORBIDDEN', 'Only committee admin can stop nominations');
       }
 
@@ -822,16 +781,7 @@ export const eventVotingResolvers = {
 
       const event = eventRows[0];
 
-      const membershipRows = await query<Array<RowDataPacket & { isCommitteeAdmin: number }>>(
-        `SELECT CASE WHEN committee_role IN ('COMMITTEE_ADMIN', 'COMMITTEE_MASTER_ADMIN') THEN 1 ELSE 0 END AS isCommitteeAdmin
-         FROM users_committees
-         WHERE committee_id = ? AND user_id = ?
-         LIMIT 1`,
-        [Number(event.committeeId), loggedInUserId]
-      );
-
-      const isCommitteeAdmin = Boolean(membershipRows[0] && Number(membershipRows[0].isCommitteeAdmin) === 1);
-      if (!isCommitteeAdmin) {
+      if (!await hasPermission(loggedInUserId, PERMISSIONS.EVENT_VOTING_CONFIGURE, { type: 'EVENT', id: eventId })) {
         throwEventError('FORBIDDEN', 'Only committee admin can unlock voting role selection');
       }
 
@@ -887,16 +837,7 @@ export const eventVotingResolvers = {
 
       const event = eventRows[0];
 
-      const membershipRows = await query<Array<RowDataPacket & { isCommitteeAdmin: number }>>(
-        `SELECT CASE WHEN committee_role IN ('COMMITTEE_ADMIN', 'COMMITTEE_MASTER_ADMIN') THEN 1 ELSE 0 END AS isCommitteeAdmin
-         FROM users_committees
-         WHERE committee_id = ? AND user_id = ?
-         LIMIT 1`,
-        [Number(event.committeeId), loggedInUserId]
-      );
-
-      const isCommitteeAdmin = Boolean(membershipRows[0] && Number(membershipRows[0].isCommitteeAdmin) === 1);
-      if (!isCommitteeAdmin) {
+      if (!await hasPermission(loggedInUserId, PERMISSIONS.EVENT_VOTING_CONFIGURE, { type: 'EVENT', id: eventId })) {
         throwEventError('FORBIDDEN', 'Only committee admin can allow voting');
       }
 
@@ -952,16 +893,7 @@ export const eventVotingResolvers = {
 
       const event = eventRows[0];
 
-      const membershipRows = await query<Array<RowDataPacket & { isCommitteeAdmin: number }>>(
-        `SELECT CASE WHEN committee_role IN ('COMMITTEE_ADMIN', 'COMMITTEE_MASTER_ADMIN') THEN 1 ELSE 0 END AS isCommitteeAdmin
-         FROM users_committees
-         WHERE committee_id = ? AND user_id = ?
-         LIMIT 1`,
-        [Number(event.committeeId), loggedInUserId]
-      );
-
-      const isCommitteeAdmin = Boolean(membershipRows[0] && Number(membershipRows[0].isCommitteeAdmin) === 1);
-      if (!isCommitteeAdmin) {
+      if (!await hasPermission(loggedInUserId, PERMISSIONS.EVENT_VOTING_CONFIGURE, { type: 'EVENT', id: eventId })) {
         throwEventError('FORBIDDEN', 'Only committee admin can stop voting');
       }
 
@@ -1022,16 +954,7 @@ export const eventVotingResolvers = {
       const event = eventRows[0];
       const votingMode = String(event.votingMode || 'VOTING').toUpperCase();
 
-      const membershipRows = await query<Array<RowDataPacket & { isCommitteeAdmin: number }>>(
-        `SELECT CASE WHEN committee_role IN ('COMMITTEE_ADMIN', 'COMMITTEE_MASTER_ADMIN') THEN 1 ELSE 0 END AS isCommitteeAdmin
-           FROM users_committees
-           WHERE committee_id = ? AND user_id = ?
-           LIMIT 1`,
-        [Number(event.committeeId), loggedInUserId]
-      );
-
-      const isCommitteeAdmin = Boolean(membershipRows[0] && Number(membershipRows[0].isCommitteeAdmin) === 1);
-      if (!isCommitteeAdmin) {
+      if (!await hasPermission(loggedInUserId, PERMISSIONS.EVENT_VOTING_CONFIGURE, { type: 'EVENT', id: eventId })) {
         throwEventError('FORBIDDEN', 'Only committee admin can declare results');
       }
 
@@ -1367,16 +1290,11 @@ export const eventVotingResolvers = {
 
       const event = eventRows[0];
 
-      const membershipRows = await query<any[]>(
-        `SELECT committee_role
-         FROM users_committees
-         WHERE committee_id = ? AND user_id = ?
-         LIMIT 1`,
-        [Number(event.committeeId), loggedInUserId]
+      const isMasterAdmin = await hasPermission(
+        loggedInUserId,
+        PERMISSIONS.EVENT_VOTING_MANAGE,
+        { type: 'EVENT', id: eventId }
       );
-
-      const committeeRole = String(membershipRows[0]?.committee_role || '').toUpperCase();
-      const isMasterAdmin = committeeRole === 'COMMITTEE_MASTER_ADMIN';
       if (!isMasterAdmin) {
         throwEventError('FORBIDDEN', 'Only master admin can resolve tie breaker');
       }
@@ -1471,6 +1389,7 @@ export const eventVotingResolvers = {
 
       const supportsVotingPhaseState = await hasEventsVotingPhaseStateColumn();
       const supportsVotingMode = await hasEventsVotingModeColumn();
+      const loggedInUserId = await getLoggedInUserId(context);
 
       const eventRows = await query<any[]>(
         `SELECT
@@ -1491,21 +1410,7 @@ export const eventVotingResolvers = {
       const event = eventRows[0];
       const votingMode = String(event.votingMode || 'VOTING').toUpperCase();
 
-      const membershipRows = await query<any[]>(
-        `SELECT committee_role
-          FROM users_committees
-          WHERE committee_id = ? AND user_id = ?
-          LIMIT 1`,
-        [Number(event.committeeId), await getLoggedInUserId(context)]
-      );
-
-      const isCommitteeAdmin = Boolean(
-        membershipRows[0] && (
-          String(membershipRows[0].committee_role || '') === 'COMMITTEE_ADMIN' ||
-          String(membershipRows[0].committee_role || '') === 'COMMITTEE_MASTER_ADMIN'
-        )
-      );
-      if (!isCommitteeAdmin) {
+      if (!await hasPermission(loggedInUserId, PERMISSIONS.EVENT_VOTING_CONFIGURE, { type: 'EVENT', id: eventId })) {
         throwEventError('FORBIDDEN', 'Only committee admin can vacate a voting role');
       }
 
@@ -1590,23 +1495,9 @@ export const eventVotingResolvers = {
       }
 
       const event = eventRows[0];
-  const votingMode = String(event.votingMode || 'VOTING').toUpperCase();
+      const votingMode = String(event.votingMode || 'VOTING').toUpperCase();
 
-      const membershipRows = await query<any[]>(
-        `SELECT committee_role
-         FROM users_committees
-         WHERE committee_id = ? AND user_id = ?
-         LIMIT 1`,
-        [Number(event.committeeId), await getLoggedInUserId(context)]
-      );
-
-      const isCommitteeAdmin = Boolean(
-        membershipRows[0] && (
-          String(membershipRows[0].committee_role || '') === 'COMMITTEE_ADMIN' ||
-          String(membershipRows[0].committee_role || '') === 'COMMITTEE_MASTER_ADMIN'
-        )
-      );
-      if (!isCommitteeAdmin) {
+      if (!await hasPermission(loggedInUserId, PERMISSIONS.EVENT_VOTING_CONFIGURE, { type: 'EVENT', id: eventId })) {
         throwEventError('FORBIDDEN', 'Only committee admin can assign winning role');
       }
 
@@ -1701,21 +1592,7 @@ export const eventVotingResolvers = {
 
       const event = eventRows[0];
 
-      const membershipRows = await query<any[]>(
-        `SELECT committee_role
-         FROM users_committees
-         WHERE committee_id = ? AND user_id = ?
-         LIMIT 1`,
-        [Number(event.committeeId), loggedInUserId]
-      );
-
-      const isCommitteeAdmin = Boolean(
-        membershipRows[0] && (
-          String(membershipRows[0].committee_role || '') === 'COMMITTEE_ADMIN' ||
-          String(membershipRows[0].committee_role || '') === 'COMMITTEE_MASTER_ADMIN'
-        )
-      );
-      if (!isCommitteeAdmin) {
+      if (!await hasPermission(loggedInUserId, PERMISSIONS.EVENT_VOTING_CONFIGURE, { type: 'EVENT', id: eventId })) {
         throwEventError('FORBIDDEN', 'Only committee admin can directly assign winner');
       }
 

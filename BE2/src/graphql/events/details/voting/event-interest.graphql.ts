@@ -1,6 +1,7 @@
 import { query } from '../../../../config/db';
 import { RowDataPacket, ResultSetHeader } from 'mysql2/promise';
 import { throwEventError, getLoggedInUserId } from './event-voting-core.graphql';
+import { hasPermission, PERMISSIONS } from '../../../../authorization/authorization';
 
 export interface EventInterestPerson {
   userId: number;
@@ -285,7 +286,11 @@ export const eventInterestResolvers = {
       if (!access.eventExists) {
         throwEventError('NOT_FOUND', 'Event not found');
       }
-      if (!access.isMasterAdmin) {
+      if (!await hasPermission(
+        loggedInUserId,
+        PERMISSIONS.EVENT_INTEREST_REVIEW,
+        { type: 'EVENT', id: eventId }
+      )) {
         throwEventError('FORBIDDEN', 'Only the master admin can review interest expressions');
       }
       // Approve/Reject is only allowed during the review phase (votingPhaseState === 3).

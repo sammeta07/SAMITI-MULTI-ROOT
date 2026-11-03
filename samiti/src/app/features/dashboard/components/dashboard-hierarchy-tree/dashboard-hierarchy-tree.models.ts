@@ -6,9 +6,11 @@ export interface EventRoleInfo {
 
 export interface AdminHierarchyTreeNode {
   id: string;
+  committeeId?: number | null;
   name: string;
   type: string;
   logo?: string | null;
+  canUpdateLogo?: boolean;
   roles: EventRoleInfo[];
   startDate?: string | null;
   endDate?: string | null;
@@ -55,8 +57,10 @@ export interface TreeNode {
   name: string;
   type: 'role' | 'group' | 'event' | 'program' | 'task';
   id?: number;
+  committeeId?: number | null;
   children?: TreeNode[];
   logo?: string | null;
+  canUpdateLogo?: boolean;
   roleScope?: 'master_admin' | 'admin' | 'member';
   roles?: EventRoleInfo[];
   startDate?: string | null;

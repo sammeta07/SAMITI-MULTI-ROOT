@@ -8,6 +8,7 @@ export interface ProgramOwnerCandidate {
 
 export interface ProgramOwnerPayload {
   programId: number;
+  canAssignOwner: boolean;
   ownerUserId: number | null;
   ownerName: string | null;
   ownerDesignation: string | null;

@@ -1,5 +1,6 @@
 import { query, execute } from '../../config/db';
 import { deleteLocalMediaFileIfExists } from '../../media/image-cleanup';
+import { hasPermission, PERMISSIONS } from '../../authorization/authorization';
 
 const MAX_BANNER_IMAGES = 5;
 
@@ -64,9 +65,9 @@ export const uploadProgramBannerImagesResolvers = {
       const loggedInUserId = await getLoggedInUserId(context);
 
       const programRows = await query<any[]>(
-        `SELECT p.id, p.event_id AS eventId, e.committee_id AS committeeId
+        `SELECT p.id, e.id AS eventId
          FROM programs p
-         LEFT JOIN events e ON e.id = p.event_id
+         INNER JOIN events e ON e.id = p.event_id
          WHERE p.id = ?
          LIMIT 1`,
         [programId]
@@ -76,15 +77,13 @@ export const uploadProgramBannerImagesResolvers = {
         throwError('NOT_FOUND', 'Program not found');
       }
 
-      const committeeId = Number(programRows[0].committeeId);
-      const adminRows = await query<any[]>(
-        `SELECT user_id FROM users_committees
-         WHERE committee_id = ? AND user_id = ? AND committee_role IN ('COMMITTEE_ADMIN', 'COMMITTEE_MASTER_ADMIN') LIMIT 1`,
-        [committeeId, loggedInUserId]
+      const canManageProgram = await hasPermission(
+        loggedInUserId,
+        PERMISSIONS.PROGRAM_MANAGE_BANNERS,
+        { type: 'EVENT', id: Number(programRows[0].eventId) }
       );
-
-      if (adminRows.length === 0) {
-        throwError('FORBIDDEN', 'Only committee admins can upload program banners');
+      if (!canManageProgram) {
+        throwError('FORBIDDEN', 'Only Adhyaksha, Upadhyaksha, or a master admin can manage program banners');
       }
 
       const existingRows = await query<any[]>(
@@ -134,9 +133,9 @@ export const uploadProgramBannerImagesResolvers = {
       const loggedInUserId = await getLoggedInUserId(context);
 
       const programRows = await query<any[]>(
-        `SELECT p.id, e.committee_id AS committeeId
+        `SELECT p.id, e.id AS eventId
          FROM programs p
-         LEFT JOIN events e ON e.id = p.event_id
+         INNER JOIN events e ON e.id = p.event_id
          WHERE p.id = ?
          LIMIT 1`,
         [programId]
@@ -146,15 +145,13 @@ export const uploadProgramBannerImagesResolvers = {
         throwError('NOT_FOUND', 'Program not found');
       }
 
-      const committeeId = Number(programRows[0].committeeId);
-      const adminRows = await query<any[]>(
-        `SELECT user_id FROM users_committees
-         WHERE committee_id = ? AND user_id = ? AND committee_role IN ('COMMITTEE_ADMIN', 'COMMITTEE_MASTER_ADMIN') LIMIT 1`,
-        [committeeId, loggedInUserId]
+      const canManageProgram = await hasPermission(
+        loggedInUserId,
+        PERMISSIONS.PROGRAM_MANAGE_BANNERS,
+        { type: 'EVENT', id: Number(programRows[0].eventId) }
       );
-
-      if (adminRows.length === 0) {
-        throwError('FORBIDDEN', 'Only committee admins can delete program banners');
+      if (!canManageProgram) {
+        throwError('FORBIDDEN', 'Only Adhyaksha, Upadhyaksha, or a master admin can manage program banners');
       }
 
       const deletedRows = await query<any[]>(

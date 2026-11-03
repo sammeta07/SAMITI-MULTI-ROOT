@@ -109,3 +109,16 @@
 - `is_verified` defaults to `0` until the user is verified.
 - `email_verified_at` stores the verification timestamp.
 - `deleted_at` supports soft deletes.
+
+## Role and permission authorization
+
+Migration `074-add-role-permission-authorization.sql` adds the normalized role and permission tables:
+
+- `authorization_roles` stores committee- and event-scoped role codes.
+- `authorization_permissions` stores named actions such as `program.update` and `event.task.delete`.
+- `authorization_role_permissions` maps roles to allowed actions per committee, so one committee cannot alter another committee's policy.
+- `authorization_user_roles` assigns additional scoped roles to committee members.
+
+Existing `users_committees.committee_role` and `users_events` role/designation values continue to work; the authorization helper combines those assignments with the new role mappings. Existing permissions for task/program management are seeded by migration 074. New committee/event roles can be created through `setRolePermissions` and assigned to committee members without changing the fixed `users_committees.committee_role` enum. Scoped grants and assignments are managed through the `authorizationRoles`, `authorizationPermissions`, `authorizationRoleAssignments`, `setRolePermissions`, `assignAuthorizationRole`, and `revokeAuthorizationRole` GraphQL fields. Only a committee master admin can manage that committee's grants and assignments. The built-in master-admin grant is reserved for migrations.
+
+Permission checks must be enforced by backend resolvers via `hasPermission`; frontend permission flags only control which actions are shown. Roll out migration 074 before deploying code that uses the new authorization tables. The migration is additive; do not run it against a production database until the deployment owner has approved the database change.

@@ -6,6 +6,7 @@ export interface ProgramChild {
   startDate: string | null;
   endDate: string | null;
   visibility: string;
+  canManage: boolean;
 }
 
 export interface ProgramDetailsPayload {
@@ -35,6 +36,8 @@ export interface ProgramDetailsPayload {
   ownerDesignationIcon?: string | null;
   ownerAssignedBy?: number | null;
   ownerAssignedAt?: string | null;
+  canEditProgram: boolean;
+  canDeleteProgram: boolean;
   canAssignOwner: boolean;
   todos: TodoItem[];
   todoAssignees: TodoAssignee[];

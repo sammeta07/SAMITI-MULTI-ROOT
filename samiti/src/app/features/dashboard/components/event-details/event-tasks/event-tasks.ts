@@ -9,14 +9,15 @@ import { MatAutocompleteModule, MatAutocompleteSelectedEvent, MatAutocompleteTri
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
 import { MatTooltipModule } from '@angular/material/tooltip';
-import { Subscription } from 'rxjs';
+import { firstValueFrom, Subscription } from 'rxjs';
 
 import { EventTasksService } from './event-tasks.service';
 import { EventTaskEntry, EventTasksPayload, TaskAssignee, TASK_STATUSES } from './event-tasks.models';
 import { NotifierService } from '../../../../../shared/notifier/notifier.service';
+import { ConfirmDialogService } from '../../../../../components/dialog/confirm/confirm-dialog.service';
+import { ConfirmDialogData } from '../../../../../components/dialog/confirm/confirm-dialog.models';
 import { DashboardHierarchyTreeService } from '../../dashboard-hierarchy-tree/dashboard-hierarchy-tree.service';
 import { EventDetailsStateService } from '../event-details-state.service';
-import { AuthService } from '../../../../../core/services/auth.service';
 
 @Component({
   selector: 'app-event-tasks',
@@ -39,9 +40,9 @@ export class EventTasksComponent implements OnInit, OnDestroy {
   private readonly route = inject(ActivatedRoute);
   private readonly tasksService = inject(EventTasksService);
   private readonly notifier = inject(NotifierService);
+  private readonly confirmDialog = inject(ConfirmDialogService);
   private readonly hierarchyTreeService = inject(DashboardHierarchyTreeService);
   private readonly eventDetailsState = inject(EventDetailsStateService);
-  private readonly authService = inject(AuthService);
 
   private parentParamsSub?: Subscription;
   private currentEventId: number | null = null;
@@ -55,6 +56,7 @@ export class EventTasksComponent implements OnInit, OnDestroy {
   public readonly assigningTaskIds = new Set<number>();
   public readonly editingTaskAssigneeIds = new Set<number>();
   public readonly updatingTaskStatusIds = new Set<number>();
+  public readonly deletingTaskIds = new Set<number>();
   public readonly clearedTaskAssigneeSearchIds = signal<Set<number>>(new Set<number>());
 
   public readonly taskStatuses = TASK_STATUSES;
@@ -200,7 +202,7 @@ export class EventTasksComponent implements OnInit, OnDestroy {
   }
 
   public editTaskAssignee(task: EventTaskEntry): void {
-    if (!this.canCreateTasks || this.assigningTaskIds.has(task.taskId)) {
+    if (!task.canAssignOwner || this.assigningTaskIds.has(task.taskId)) {
       return;
     }
     this.taskAssigneeSearchText[task.taskId] = task.ownerName || '';
@@ -245,7 +247,7 @@ export class EventTasksComponent implements OnInit, OnDestroy {
   }
 
   public onTaskAssigneeChange(task: EventTaskEntry, event: MatAutocompleteSelectedEvent): void {
-    if (!this.canCreateTasks || this.assigningTaskIds.has(task.taskId)) {
+    if (!task.canAssignOwner || this.assigningTaskIds.has(task.taskId)) {
       return;
     }
 
@@ -298,7 +300,7 @@ export class EventTasksComponent implements OnInit, OnDestroy {
 
   // --- Task Status Methods ---
   public canUpdateTaskStatus(task: EventTaskEntry): boolean {
-    return task.ownerUserId !== null && task.ownerUserId === this.authService.getStoredUserData()?.id;
+    return task.canManage;
   }
 
   public onTaskStatusChange(task: EventTaskEntry, event: Event): void {
@@ -306,7 +308,7 @@ export class EventTasksComponent implements OnInit, OnDestroy {
     if (!(select instanceof HTMLSelectElement)) return;
 
     const status = this.taskStatuses.find((candidate) => candidate === select.value);
-    if (!status || !this.canUpdateTaskStatus(task) || this.updatingTaskStatusIds.has(task.taskId)) {
+    if (!status || !task.canManage || this.updatingTaskStatusIds.has(task.taskId)) {
       select.value = task.status || 'NEW';
       return;
     }
@@ -333,6 +335,37 @@ export class EventTasksComponent implements OnInit, OnDestroy {
         );
       }
     });
+  }
+
+  public async onDeleteTask(task: EventTaskEntry, event: Event): Promise<void> {
+    event.stopPropagation();
+    if (!task.canDelete || this.deletingTaskIds.has(task.taskId)) return;
+
+    const dialogData: ConfirmDialogData = {
+      title: 'Delete Task',
+      message: `Are you sure you want to delete "${task.taskName}"? Tasks with subtasks must have those subtasks removed first.`,
+      confirmText: 'Delete',
+      cancelText: 'Cancel'
+    };
+    const result = await firstValueFrom(this.confirmDialog.open(dialogData).afterClosed());
+    if (!result?.confirmed || !task.canDelete || this.deletingTaskIds.has(task.taskId)) return;
+
+    this.deletingTaskIds.add(task.taskId);
+    try {
+      await firstValueFrom(this.tasksService.deleteEventTask(task.taskId));
+      if (this.currentEventId !== task.eventId) return;
+
+      this.eventData = this.tasks.filter((entry) => entry.taskId !== task.taskId);
+      this.eventDetailsState.decrementTaskCounts(task.parentTaskId === null);
+      this.hierarchyTreeService.triggerHierarchyTreeRefresh();
+      this.notifier.success(`Task "${task.taskName}" deleted successfully.`);
+    } catch (error) {
+      this.notifier.error(
+        error instanceof Error ? error.message : 'Failed to delete task.'
+      );
+    } finally {
+      this.deletingTaskIds.delete(task.taskId);
+    }
   }
 
   public statusTagClass(status: string | null | undefined): string {

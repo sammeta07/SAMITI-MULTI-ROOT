@@ -16,6 +16,9 @@ export interface EventTaskEntry {
   createdAt: string;
   ownerAssignedAt: string | null;
   updatedAt: string;
+  canManage: boolean;
+  canAssignOwner: boolean;
+  canDelete: boolean;
 }
 
 export interface EventTasksPayload {

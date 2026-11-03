@@ -15,6 +15,8 @@ export interface EventProgramEntry {
   ownerName?: string | null;
   ownerAssignedBy?: number | null;
   ownerAssignedAt?: string | null;
+  canManage: boolean;
+  canAssignOwner: boolean;
 }
 
 export interface EventProgramsPayload {

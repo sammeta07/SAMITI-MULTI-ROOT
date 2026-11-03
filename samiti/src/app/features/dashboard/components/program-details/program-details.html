@@ -139,7 +139,7 @@
               </div>
             </div>
             <div class="action-buttons-area">
-              @if (programData()?.canManageTodos && programData()?.visibility) {
+              @if (programData()?.canAssignOwner && programData()?.visibility) {
                 <button
                   mat-button
                   class="btn-action btn-visibility"
@@ -154,14 +154,18 @@
                   <span>{{ programData()?.visibility }}</span>
                 </button>
               }
-              <button mat-button class="btn-action btn-edit" type="button" (click)="onEditProgram()">
-                <mat-icon>edit</mat-icon>
-                <span>Edit</span>
-              </button>
-              <button mat-button class="btn-action btn-delete" type="button" (click)="onDeleteProgram()">
-                <mat-icon>delete_outline</mat-icon>
-                <span>Delete</span>
-              </button>
+              @if (programData()?.canEditProgram) {
+                <button mat-button class="btn-action btn-edit" type="button" (click)="onEditProgram()">
+                  <mat-icon>edit</mat-icon>
+                  <span>Edit</span>
+                </button>
+              }
+              @if (programData()?.canDeleteProgram) {
+                <button mat-button class="btn-action btn-delete" type="button" (click)="onDeleteProgram()">
+                  <mat-icon>delete_outline</mat-icon>
+                  <span>Delete</span>
+                </button>
+              }
             </div>
           </div>
 

@@ -1,5 +1,6 @@
 import { execute, query } from '../../config/db';
 import { getProgramLifecycleStatus } from './program-status';
+import { hasPermission, PERMISSIONS } from '../../authorization/authorization';
 
 const ALLOWED_PROGRAM_VISIBILITIES = new Set(['VISIBLE', 'HIDDEN']);
 
@@ -127,10 +128,60 @@ export const updateProgramTypes = `
 
 export const updateProgramMutationFields = `
   updateProgram(input: UpdateProgramInput!): UpdatedProgram
+  deleteProgram(programId: Int!): Boolean!
 `;
 
 export const updateProgramResolvers = {
   Mutation: {
+    async deleteProgram(_: any, args: { programId?: number }, context: any) {
+      const programId = Number(args?.programId);
+      if (!Number.isInteger(programId) || programId <= 0) {
+        throwProgramError('BAD_REQUEST', 'programId must be a positive integer');
+      }
+
+      const loggedInUserId = await getLoggedInUserId(context);
+      const programRows = await query<any[]>(
+        `SELECT p.parent_program_id AS parentProgramId,
+                p.created_by AS createdBy,
+                p.event_id AS eventId
+         FROM programs p
+         WHERE p.id = ?
+         LIMIT 1`,
+        [programId]
+      );
+      if (programRows.length === 0) {
+        throwProgramError('NOT_FOUND', 'Program not found');
+      }
+
+      const program = programRows[0];
+      const isMasterAdmin = await hasPermission(
+        loggedInUserId,
+        PERMISSIONS.PROGRAM_MANAGE_ANY,
+        { type: 'EVENT', id: Number(program.eventId) }
+      );
+      const canDelete = program.parentProgramId == null
+        ? await hasPermission(
+          loggedInUserId,
+          PERMISSIONS.PROGRAM_DELETE,
+          { type: 'EVENT', id: Number(program.eventId) }
+        )
+        : isMasterAdmin || Number(program.createdBy) === loggedInUserId;
+      if (!canDelete) {
+        throwProgramError(
+          'FORBIDDEN',
+          program.parentProgramId == null
+            ? 'Only Adhyaksha, Upadhyaksha, or a master admin can delete a root program'
+            : 'Only the subprogram creator or a master admin can delete this subprogram'
+        );
+      }
+
+      const result = await execute('DELETE FROM programs WHERE id = ?', [programId]);
+      if (result.affectedRows !== 1) {
+        throwProgramError('NOT_FOUND', 'Program not found');
+      }
+      return true;
+    },
+
     async updateProgram(_: any, args: any, context: any) {
       const loggedInUserId = await getLoggedInUserId(context);
       const input = args?.input || {};
@@ -176,9 +227,9 @@ export const updateProgramResolvers = {
       }
 
       const programRows = await query<any[]>(
-        `SELECT id, event_id AS eventId
-         FROM programs
-         WHERE id = ?
+        `SELECT p.id, p.event_id AS eventId
+         FROM programs p
+         WHERE p.id = ?
          LIMIT 1`,
         [programId]
       );
@@ -192,29 +243,12 @@ export const updateProgramResolvers = {
         throwProgramError('BAD_REQUEST', 'eventId does not match selected program');
       }
 
-      const eventRows = await query<any[]>(
-        `SELECT id, committee_id
-         FROM events
-         WHERE id = ?
-         LIMIT 1`,
-        [eventId]
-      );
-
-      if (eventRows.length === 0) {
-        throwProgramError('NOT_FOUND', 'Event not found');
-      }
-
-      const eventRow = eventRows[0];
-      const adminRows = await query<any[]>(
-        `SELECT user_id
-         FROM users_committees
-         WHERE committee_id = ? AND user_id = ? AND committee_role IN ('COMMITTEE_ADMIN', 'COMMITTEE_MASTER_ADMIN')
-         LIMIT 1`,
-        [Number(eventRow.committee_id), loggedInUserId]
-      );
-
-      if (adminRows.length === 0) {
-        throwProgramError('FORBIDDEN', 'Only committee admins can update programs');
+      if (!await hasPermission(
+        loggedInUserId,
+        PERMISSIONS.PROGRAM_UPDATE,
+        { type: 'EVENT', id: eventId }
+      )) {
+        throwProgramError('FORBIDDEN', 'Only Adhyaksha, Upadhyaksha, or a master admin can update programs');
       }
 
       const updateAssignments = [

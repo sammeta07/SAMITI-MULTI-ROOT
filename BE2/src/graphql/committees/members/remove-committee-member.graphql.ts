@@ -1,4 +1,5 @@
 import { execute, query } from '../../../config/db';
+import { hasPermission, PERMISSIONS } from '../../../authorization/authorization';
 
 // ─── Master admin removes a COMMITTEE_MEMBER or COMMITTEE_ADMIN from committee ─
 
@@ -52,19 +53,14 @@ export const removeCommitteeMemberResolvers = {
       const removedAtTime = new Date().toISOString();
 
       // Verify actor is the committee master admin or admin
-      const actorRows = await query<any[]>(
-        `SELECT committee_role FROM users_committees
-         WHERE committee_id = ?
-           AND user_id = ?
-           AND committee_role IN ('COMMITTEE_MASTER_ADMIN', 'COMMITTEE_ADMIN')
-         LIMIT 1`,
-        [committeeId, loggedInUserId]
+      const canManageMembers = await hasPermission(
+        loggedInUserId,
+        PERMISSIONS.COMMITTEE_MEMBERS_MANAGE,
+        { type: 'COMMITTEE', id: committeeId }
       );
-      if (actorRows.length === 0) {
+      if (!canManageMembers) {
         throw new Error('Forbidden: Only committee admins can remove members');
       }
-
-      const actorRole = String(actorRows[0].committee_role || '');
 
       // Verify target exists in this committee
       const targetRows = await query<any[]>(
@@ -78,7 +74,12 @@ export const removeCommitteeMemberResolvers = {
       }
 
       const targetRole = String(targetRows[0].committee_role || '');
-      if (actorRole === 'COMMITTEE_ADMIN') {
+      const canManageAdmins = await hasPermission(
+        loggedInUserId,
+        PERMISSIONS.COMMITTEE_ADMINS_MANAGE,
+        { type: 'COMMITTEE', id: committeeId }
+      );
+      if (!canManageAdmins) {
         // Admins can only remove COMMITTEE_MEMBER
         if (targetRole !== 'COMMITTEE_MEMBER') {
           throw new Error('Admins can only remove committee members');
@@ -124,4 +125,3 @@ export const removeCommitteeMemberResolvers = {
     }
   }
 };
-

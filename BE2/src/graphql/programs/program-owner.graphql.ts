@@ -1,5 +1,6 @@
 import { execute, query } from '../../config/db';
 import { getLoggedInUserId, throwEventError } from '../events/details/voting/event-voting-core.graphql';
+import { hasPermission, PERMISSIONS } from '../../authorization/authorization';
 
 export const programOwnerTypes = `
   type ProgramOwnerCandidate {
@@ -9,6 +10,7 @@ export const programOwnerTypes = `
 
   type ProgramOwnerPayload {
     programId: Int!
+    canAssignOwner: Boolean!
     ownerUserId: Int
     ownerName: String
     ownerDesignation: String
@@ -20,67 +22,55 @@ export const programOwnerTypes = `
 `;
 
 export const programOwnerQueryFields = `
-  programOwnerCandidates(eventId: Int!): [ProgramOwnerCandidate!]!
+  programOwnerCandidates(programId: Int!): [ProgramOwnerCandidate!]!
 `;
 
 export const programOwnerMutationFields = `
   assignProgramOwner(programId: Int!, ownerUserId: Int): ProgramOwnerPayload!
 `;
 
-async function getEventAssignmentContext(eventId: number, userId: number): Promise<any> {
+async function getProgramAssignmentContext(programId: number): Promise<any> {
   const rows = await query<any[]>(
     `SELECT
+       p.id AS programId,
+       p.owner_user_id AS ownerUserId,
        e.id AS eventId,
-       e.committee_id AS committeeId,
-       uc.committee_role AS committeeRole,
-       EXISTS (
-         SELECT 1
-         FROM users_events ue
-         LEFT JOIN events_roles_master erm ON erm.role_id = ue.role_id
-         WHERE ue.event_id = e.id
-           AND ue.user_id = ?
-           AND (
-             LOWER(TRIM(COALESCE(ue.designation, ''))) IN ('adhyaksha', 'upadhyaksha')
-             OR LOWER(TRIM(COALESCE(erm.english_name, ''))) IN ('adhyaksha', 'upadhyaksha')
-             OR LOWER(TRIM(COALESCE(erm.role_name, ''))) IN ('adhyaksha', 'upadhyaksha')
-           )
-       ) AS hasLeadershipDesignation
-     FROM events e
-     LEFT JOIN users_committees uc
-       ON uc.committee_id = e.committee_id AND uc.user_id = ?
-     WHERE e.id = ?
+       e.committee_id AS committeeId
+     FROM programs p
+     INNER JOIN events e ON e.id = p.event_id
+     WHERE p.id = ?
      LIMIT 1`,
-    [userId, userId, eventId]
+    [programId]
   );
 
   if (rows.length === 0) {
-    throwEventError('NOT_FOUND', 'Event not found');
+    throwEventError('NOT_FOUND', 'Program not found');
   }
   return rows[0];
 }
 
-function assertCanAssignOwner(assignmentContext: any): void {
-  const role = String(assignmentContext.committeeRole || '').toUpperCase();
-  const canAssign = role === 'COMMITTEE_ADMIN' ||
-    role === 'COMMITTEE_MASTER_ADMIN' ||
-    Boolean(Number(assignmentContext.hasLeadershipDesignation));
-
+async function assertCanAssignOwner(assignmentContext: any, userId: number): Promise<void> {
+  const canAssign = await hasPermission(
+    userId,
+    PERMISSIONS.PROGRAM_ASSIGN_OWNER,
+    { type: 'EVENT', id: Number(assignmentContext.eventId) }
+  );
   if (!canAssign) {
-    throwEventError('FORBIDDEN', 'You are not allowed to assign a program owner');
+    throwEventError('FORBIDDEN', 'Only Adhyaksha, Upadhyaksha, or a master admin can assign program owners');
   }
 }
 
 export const programOwnerResolvers = {
   Query: {
-    async programOwnerCandidates(_: any, args: { eventId: number }, context: any) {
-      const eventId = Number(args?.eventId);
-      if (!Number.isInteger(eventId) || eventId <= 0) {
-        throwEventError('BAD_REQUEST', 'eventId must be a positive integer');
+    async programOwnerCandidates(_: any, args: { programId: number }, context: any) {
+      const programId = Number(args?.programId);
+      if (!Number.isInteger(programId) || programId <= 0) {
+        throwEventError('BAD_REQUEST', 'programId must be a positive integer');
       }
 
       const loggedInUserId = await getLoggedInUserId(context);
-      const assignmentContext = await getEventAssignmentContext(eventId, loggedInUserId);
-      assertCanAssignOwner(assignmentContext);
+      const assignmentContext = await getProgramAssignmentContext(programId);
+      await assertCanAssignOwner(assignmentContext, loggedInUserId);
 
       const rows = await query<any[]>(
         `SELECT u.id AS userId, u.name
@@ -113,21 +103,9 @@ export const programOwnerResolvers = {
       }
 
       const loggedInUserId = await getLoggedInUserId(context);
-      const programRows = await query<any[]>(
-        `SELECT id AS programId, event_id AS eventId
-         FROM programs
-         WHERE id = ?
-         LIMIT 1`,
-        [programId]
-      );
-
-      if (programRows.length === 0) {
-        throwEventError('NOT_FOUND', 'Program not found');
-      }
-
-      const eventId = Number(programRows[0].eventId);
-      const assignmentContext = await getEventAssignmentContext(eventId, loggedInUserId);
-      assertCanAssignOwner(assignmentContext);
+      const assignmentContext = await getProgramAssignmentContext(programId);
+      await assertCanAssignOwner(assignmentContext, loggedInUserId);
+      const eventId = Number(assignmentContext.eventId);
 
       if (requestedOwnerId !== null) {
         const memberRows = await query<any[]>(
@@ -192,6 +170,11 @@ export const programOwnerResolvers = {
       }
       return {
         programId: Number(updated.programId),
+        canAssignOwner: await hasPermission(
+          loggedInUserId,
+          PERMISSIONS.PROGRAM_ASSIGN_OWNER,
+          { type: 'EVENT', id: eventId }
+        ),
         ownerUserId: updated.ownerUserId === null ? null : Number(updated.ownerUserId),
         ownerName: updated.ownerName || null,
         ownerDesignation: updated.ownerDesignation || null,

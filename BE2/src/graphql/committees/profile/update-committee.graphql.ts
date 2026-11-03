@@ -1,5 +1,6 @@
 import { RowDataPacket } from 'mysql2/promise';
 import { execute, query } from '../../../config/db';
+import { hasPermission, PERMISSIONS } from '../../../authorization/authorization';
 
 type CommitteeRow = RowDataPacket & {
   id: number;
@@ -108,17 +109,11 @@ export const updateCommitteeResolvers = {
         throw new Error('Committee not found');
       }
 
-      const adminCheckRows = await query<RowDataPacket[]>(
-        `SELECT committee_id
-         FROM users_committees
-         WHERE committee_id = ?
-           AND user_id = ?
-           AND committee_role IN ('COMMITTEE_ADMIN', 'COMMITTEE_MASTER_ADMIN')
-         LIMIT 1`,
-        [committeeId, loggedInUserId]
-      );
-
-      if (adminCheckRows.length === 0) {
+      if (!await hasPermission(
+        loggedInUserId,
+        PERMISSIONS.COMMITTEE_PROFILE_UPDATE,
+        { type: 'COMMITTEE', id: Number(committeeId) }
+      )) {
         throw new Error('Only committee admins can edit committee profile');
       }
 
@@ -190,4 +185,3 @@ export const updateCommitteeResolvers = {
     }
   }
 };
-

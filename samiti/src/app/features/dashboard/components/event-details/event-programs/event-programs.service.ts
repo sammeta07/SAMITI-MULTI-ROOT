@@ -32,6 +32,8 @@ export class EventProgramsService {
           ownerName
           ownerAssignedBy
           ownerAssignedAt
+          canManage
+          canAssignOwner
         }
       }
     }`;

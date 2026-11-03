@@ -1,6 +1,7 @@
 import { query } from '../../../config/db';
 import { hasEventsDisplayNameColumn } from '../../events/details/event-display-name-support';
 import { hasEventsVotingPhaseStateColumn } from '../../events/details/voting/event-voting-phase-support';
+import { getAuthorizedCommitteeIds, hasPermission, PERMISSIONS } from '../../../authorization/authorization';
 
 export const hierarchyTreeTypes = `
   type HierarchyEventRole {
@@ -11,9 +12,11 @@ export const hierarchyTreeTypes = `
 
 type HierarchyTreeNode {
   id: String!
+  committeeId: Int
   name: String!
   type: String!
   logo: String
+  canUpdateLogo: Boolean!
   roles: [HierarchyEventRole!]!
   startDate: String
   endDate: String
@@ -40,9 +43,11 @@ export const hierarchyTreeQueryFields = `
 
 type InternalTreeNode = {
   id: string;
+  committeeId?: number | null;
   name: string;
   type: string;
   logo: string | null;
+  canUpdateLogo: boolean;
   roles: Set<string>;
   startDate?: string | null;
   endDate?: string | null;
@@ -72,9 +77,11 @@ const committeeRolePriority: Record<string, number> = {
 
 export type SerializedHierarchyTreeNode = {
   id: string;
+  committeeId?: number | null;
   name: string;
   type: string;
   logo: string | null;
+  canUpdateLogo: boolean;
   roles: EventRoleInfo[];
   startDate: string | null;
   endDate: string | null;
@@ -157,6 +164,7 @@ export const hierarchyTreeResolvers = {
           name: String(row.committee_name),
           type: 'COMMITTEE',
           logo: row.logo ? String(row.logo) : null,
+          canUpdateLogo: false,
           roles: new Set<string>(),
           children: [],
           childIds: new Set<string>()
@@ -173,7 +181,6 @@ export const hierarchyTreeResolvers = {
         }
 
         const effectiveRole = Array.from(committeeNode.roles)[0] || '';
-
         if (effectiveRole === 'COMMITTEE_MASTER_ADMIN') {
           masterAdminCommitteeIds.add(committeeId);
           adminCommitteeIds.delete(committeeId);
@@ -189,6 +196,15 @@ export const hierarchyTreeResolvers = {
         }
 
         committeeNodeById.set(committeeId, committeeNode);
+      }
+
+      const committeesAllowedToUpdateLogo = await getAuthorizedCommitteeIds(
+        loggedInUserId,
+        PERMISSIONS.COMMITTEE_LOGO_UPDATE,
+        Array.from(committeeNodeById.keys())
+      );
+      for (const [committeeId, committeeNode] of committeeNodeById) {
+        committeeNode.canUpdateLogo = committeesAllowedToUpdateLogo.has(committeeId);
       }
 
 const committeeIds = Array.from(committeeNodeById.keys());
@@ -213,6 +229,16 @@ const committeeIds = Array.from(committeeNodeById.keys());
         );
 
       const eventIds = eventRows.map((eventRow) => Number(eventRow.event_id));
+      const eventLogoPermissionEntries = await Promise.all(eventRows.map(async (eventRow) => {
+        const eventId = Number(eventRow.event_id);
+        const allowed = await hasPermission(
+          loggedInUserId,
+          PERMISSIONS.EVENT_UPDATE,
+          { type: 'EVENT', id: eventId }
+        );
+        return [eventId, allowed] as const;
+      }));
+      const eventLogoPermissions = new Map<number, boolean>(eventLogoPermissionEntries);
 
       if (eventIds.length > 0) {
         const eventPlaceholders = eventIds.map(() => '?').join(',');
@@ -276,9 +302,11 @@ const committeeIds = Array.from(committeeNodeById.keys());
           eventRoles.add('MEMBER');
           const eventNode: InternalTreeNode = {
             id: `event_${eventId}`,
+            committeeId: Number(eventRow.committee_id),
             name: String(eventRow.event_name),
             type: 'EVENT',
             logo: eventRow.event_logo ? String(eventRow.event_logo) : null,
+            canUpdateLogo: eventLogoPermissions.get(eventId) ?? false,
             roles: eventRoles,
             startDate: eventRow.start_date ? String(eventRow.start_date) : null,
             endDate: eventRow.end_date ? String(eventRow.end_date) : null,
@@ -327,6 +355,7 @@ const committeeIds = Array.from(committeeNodeById.keys());
             name: String(programRow.program_name),
             type: 'PROGRAM',
             logo: null,
+            canUpdateLogo: false,
             roles: new Set<string>(),
             startDate: programRow.start_date ? String(programRow.start_date) : null,
             endDate: programRow.end_date ? String(programRow.end_date) : null,
@@ -377,6 +406,7 @@ const committeeIds = Array.from(committeeNodeById.keys());
             name: String(taskRow.task_name),
             type: 'TASK',
             logo: null,
+            canUpdateLogo: false,
             roles: taskRoles,
             taskParentId: taskRow.parent_id === null || taskRow.parent_id === undefined
               ? null
@@ -444,9 +474,11 @@ const committeeIds = Array.from(committeeNodeById.keys());
 
       const serializeNode = (node: InternalTreeNode): SerializedHierarchyTreeNode => ({
         id: node.id,
+        committeeId: node.committeeId ?? null,
         name: node.name,
         type: node.type,
         logo: node.logo,
+        canUpdateLogo: node.canUpdateLogo,
         roles: Array.from(node.roles).map((roleName): EventRoleInfo => {
           const info = roleInfoByName.get(roleName);
           return {

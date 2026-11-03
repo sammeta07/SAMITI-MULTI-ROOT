@@ -6,6 +6,7 @@ import { throwEventError, getLoggedInUserId, getEventVotingPhaseState, getMapped
 import { getEventInterestApprovedPeople, getMyEventInterestRoleIds, getMyEventInterestStatuses, getEventAccessContext } from './event-interest.graphql';
 import { getEventAccess } from './event-vote.graphql';
 import { getEventMasterRoles } from '../event-details-by-id.graphql';
+import { hasPermission, PERMISSIONS } from '../../../../authorization/authorization';
 
 export const eventVotingDetailsTypes = `
   type EventVotingDetailsPayload {
@@ -108,14 +109,17 @@ export const eventVotingDetailsResolvers = {
         throwEventError('FORBIDDEN', 'You are not allowed to access this event');
       }
 
-      const canManageVotingRoles = Boolean(
-        membership && (
-          String(membership.committee_role || '') === 'COMMITTEE_ADMIN' ||
-          String(membership.committee_role || '') === 'COMMITTEE_MASTER_ADMIN'
-        )
+      const canManageVotingRoles = await hasPermission(
+        loggedInUserId,
+        PERMISSIONS.EVENT_VOTING_CONFIGURE,
+        { type: 'EVENT', id: eventId }
       );
       const canSelfNominate = Boolean(membership && String(membership.committee_role || '') === 'COMMITTEE_MEMBER');
-      const isCurrentUserMasterAdmin = Boolean(membership && String(membership.committee_role || '') === 'COMMITTEE_MASTER_ADMIN');
+      const isCurrentUserMasterAdmin = await hasPermission(
+        loggedInUserId,
+        PERMISSIONS.EVENT_INTEREST_REVIEW,
+        { type: 'EVENT', id: eventId }
+      );
       const committeeRole = isCurrentUserMasterAdmin
         ? 'COMMITTEE_MASTER_ADMIN'
         : canManageVotingRoles

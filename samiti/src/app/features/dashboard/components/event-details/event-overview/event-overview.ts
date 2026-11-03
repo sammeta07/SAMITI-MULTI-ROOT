@@ -110,11 +110,11 @@ export class EventOverviewComponent implements OnInit {
   }
 
   public get canManageEvent(): boolean {
-    return this.hasEventRole || this.isEventMasterAdmin;
+    return this.isEventMasterAdmin || this.isEventAdmin;
   }
 
   public get canCreateProgram(): boolean {
-    if (this.isEventMasterAdmin || this.isEventAdmin) return true;
+    if (this.isEventMasterAdmin) return true;
     const designation = (this.eventData?.myDesignation?.name || '').trim().toLowerCase();
     return designation === 'adhyaksha' || designation === 'upadhyaksha';
   }
@@ -141,6 +141,7 @@ export class EventOverviewComponent implements OnInit {
   }
 
   public onCreateProgram(): void {
+    if (!this.canCreateProgram) return;
     const currentEvent = this.eventData;
     if (!currentEvent?.eventId) {
       this.notifier.error('No event available for program creation');
@@ -197,12 +198,14 @@ export class EventOverviewComponent implements OnInit {
   }
 
   public onAddBannerClick(): void {
+    if (!this.canManageEvent) return;
     if (!this.bannerFileInput?.nativeElement) { this.notifier.error('File picker is not ready. Please try again.'); return; }
     this.bannerFileInput.nativeElement.value = '';
     this.bannerFileInput.nativeElement.click();
   }
 
   public onAddSingleBannerClick(): void {
+    if (!this.canManageEvent) return;
     if (!this.bannerSingleFileInput?.nativeElement) { this.notifier.error('File picker is not ready. Please try again.'); return; }
     this.bannerSingleFileInput.nativeElement.value = '';
     this.bannerSingleFileInput.nativeElement.click();
@@ -211,7 +214,7 @@ export class EventOverviewComponent implements OnInit {
   public async onBannerFilesSelected(e: Event): Promise<void> {
     const input = e.target as HTMLInputElement;
     const selectedFiles = Array.from(input.files || []);
-    if (!selectedFiles.length) return;
+    if (!selectedFiles.length || !this.canManageEvent) return;
     const currentEvent = this.eventData;
     if (!currentEvent?.eventId) return;
     const slotsAvailable = this.MAX_BANNERS - this.bannerCount;
@@ -233,7 +236,7 @@ export class EventOverviewComponent implements OnInit {
   public async onSingleBannerFileSelected(e: Event): Promise<void> {
     const input = e.target as HTMLInputElement;
     const file = input.files?.[0];
-    if (!file) return;
+    if (!file || !this.canManageEvent) return;
     const currentEvent = this.eventData;
     if (!currentEvent?.eventId) return;
     if (this.bannerCount >= this.MAX_BANNERS) {
@@ -293,6 +296,7 @@ export class EventOverviewComponent implements OnInit {
   }
 
   public async deleteSelectedBanners(): Promise<void> {
+    if (!this.canManageEvent) return;
     const currentEvent = this.eventData;
     const selectedUrls = [...this.selectedBannerUrls()];
     if (!currentEvent?.eventId || selectedUrls.length === 0 || this.isDeletingBanners()) {
@@ -335,6 +339,7 @@ export class EventOverviewComponent implements OnInit {
   }
 
   public onDeleteBanner(imageUrl: string): void {
+    if (!this.canManageEvent) return;
     const currentEvent = this.eventData;
     if (!currentEvent?.eventId || !imageUrl) return;
     const dialogData: ConfirmDialogData = { title: 'Delete Banner Image', message: 'Are you sure you want to delete this banner image? This action cannot be undone.', confirmText: 'Delete', cancelText: 'Cancel' };

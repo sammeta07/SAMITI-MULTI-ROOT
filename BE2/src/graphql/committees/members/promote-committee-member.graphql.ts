@@ -1,4 +1,5 @@
 import { execute, query } from '../../../config/db';
+import { hasPermission, PERMISSIONS } from '../../../authorization/authorization';
 
 // ─── Master admin promotes an existing COMMITTEE_MEMBER to COMMITTEE_ADMIN ─────
 
@@ -61,19 +62,13 @@ export const promoteCommitteeMemberResolvers = {
       }
 
       // Verify actor is the committee master admin or admin
-      const actorRows = await query<any[]>(
-        `SELECT committee_role FROM users_committees
-         WHERE committee_id = ?
-           AND user_id = ?
-           AND committee_role IN ('COMMITTEE_MASTER_ADMIN', 'COMMITTEE_ADMIN')
-         LIMIT 1`,
-        [committeeId, loggedInUserId]
-      );
-      if (actorRows.length === 0) {
+      if (!await hasPermission(
+        loggedInUserId,
+        PERMISSIONS.COMMITTEE_ADMINS_MANAGE,
+        { type: 'COMMITTEE', id: committeeId }
+      )) {
         throw new Error('Forbidden: Only committee admins can promote members');
       }
-
-      const actorRole = String(actorRows[0].committee_role || '');
 
       // Verify target is currently an accepted COMMITTEE_MEMBER
       const targetRows = await query<any[]>(
@@ -117,4 +112,3 @@ export const promoteCommitteeMemberResolvers = {
     }
   }
 };
-

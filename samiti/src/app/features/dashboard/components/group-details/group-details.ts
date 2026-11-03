@@ -85,6 +85,19 @@ export class GroupDetailsComponent implements OnInit {
       this.fetchCommitteeDetailsPayload(committeeId, year);
     }
   });
+  private readonly syncLogoFromHierarchy = effect(() => {
+    const update = this.hierarchyTreeService.logoUpdated();
+    const committee = this.groupData();
+    if (!update || !committee) return;
+
+    if (update.type === 'group' && committee.committeeId === update.id) {
+      this.groupData.update((current) => current ? { ...current, logo: update.logo } : current);
+    } else if (update.type === 'event' && committee.committeeId === update.committeeId) {
+      this.committeeEvents.update((events) =>
+        events.map((item) => item.eventId === update.id ? { ...item, eventLogo: update.logo } : item)
+      );
+    }
+  });
 
   @ViewChild('eventsScrollContainer') eventsScrollContainer!: ElementRef<HTMLDivElement>;
 

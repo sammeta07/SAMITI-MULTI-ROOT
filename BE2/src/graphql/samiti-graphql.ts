@@ -47,6 +47,7 @@ import { cancelCommitteeMembershipRequestTypes, cancelCommitteeMembershipRequest
 import { submitCommitteeMembershipRequestTypes, submitCommitteeMembershipRequestMutationFields, submitCommitteeMembershipRequestResolvers } from './committees/user-requests/submit-committee-membership-request.graphql';
 import { todoTypes, todoMutationFields, todoResolvers } from './todos/todos.graphql';
 import { taskDetailsTypes, taskDetailsQueryFields, taskDetailsResolvers } from './tasks/task-details.graphql';
+import { rolePermissionsTypes, rolePermissionsQueryFields, rolePermissionsMutationFields, rolePermissionsResolvers } from './authorization/role-permissions.graphql';
 
 // Single schema — one Query block, one Mutation block
 export const typeDefs = `
@@ -86,6 +87,7 @@ export const typeDefs = `
   ${programsByDistanceTypes}
   ${todoTypes}
   ${taskDetailsTypes}
+  ${rolePermissionsTypes}
    ${eventVotingTypes}
    ${eventVoteTypes}
    ${eventInterestTypes}
@@ -128,6 +130,7 @@ export const typeDefs = `
     ${eventVotingQueryFields}
     ${eventInterestQueryFields}
     ${eventVoteQueryFields}
+    ${rolePermissionsQueryFields}
   }
 
   type Mutation {
@@ -159,6 +162,7 @@ export const typeDefs = `
     ${promoteCommitteeMemberMutationFields}
     ${demoteCommitteeAdminMutationFields}
     ${removeCommitteeMemberMutationFields}
+    ${rolePermissionsMutationFields}
   }
 `;
 
@@ -191,6 +195,7 @@ export const resolvers = {
     ...eventInterestResolvers.Query,
     ...eventVoteResolvers.Query,
     ...eventVotingResolvers.Query,
+    ...rolePermissionsResolvers.Query,
   },
   Mutation: {
     ...loginResolvers.Mutation,
@@ -209,6 +214,7 @@ export const resolvers = {
     ...uploadEventBannerImagesResolvers.Mutation,
     ...deleteEventResolvers.Mutation,
     ...toggleCommitteeFavouriteResolvers.Mutation,
+    ...rolePermissionsResolvers.Mutation,
     ...cancelCommitteeMembershipRequestResolvers.Mutation,
     ...submitCommitteeMembershipRequestResolvers.Mutation,
     ...committeeMembershipRequestsResolvers.Mutation,

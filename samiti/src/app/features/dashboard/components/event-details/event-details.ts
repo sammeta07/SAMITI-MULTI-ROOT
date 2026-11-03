@@ -1,4 +1,4 @@
-import { Component, inject, OnInit, OnDestroy, signal, ViewChild } from '@angular/core';
+import { Component, effect, inject, OnInit, OnDestroy, signal, ViewChild } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ActivatedRoute, Router, RouterModule, RouterOutlet } from '@angular/router';
 import { MatIconModule } from '@angular/material/icon';
@@ -69,6 +69,14 @@ export class EventDetailsComponent implements OnInit, OnDestroy {
   private readonly hierarchyTreeService = inject(DashboardHierarchyTreeService);
   private readonly imageAssetService = inject(ImageAssetService);
   private readonly loadingState = inject(LoadingStateService);
+  private readonly syncLogoFromHierarchy = effect(() => {
+    const update = this.hierarchyTreeService.logoUpdated();
+    if (update?.type !== 'event' || update.id !== this.currentEventId) return;
+
+    this.stateService.headerData.update((header) =>
+      header?.eventId === update.id ? { ...header, eventLogo: update.logo } : header
+    );
+  });
 
   public readonly isLoadingOverview = signal<boolean>(false);
   public readonly isUploadingEventLogo = signal<boolean>(false);
@@ -188,7 +196,7 @@ export class EventDetailsComponent implements OnInit, OnDestroy {
 
   public get canCreateProgram(): boolean {
     const role = String(this.headerData?.committeeRole || 'NONE').toUpperCase();
-    if (role === 'COMMITTEE_MASTER_ADMIN' || role === 'COMMITTEE_ADMIN') {
+    if (role === 'COMMITTEE_MASTER_ADMIN') {
       return true;
     }
     const designation = this.userEventRoleLabel;
@@ -207,6 +215,7 @@ export class EventDetailsComponent implements OnInit, OnDestroy {
   }
 
   public onCreateProgram(): void {
+    if (!this.canCreateProgram) return;
     const activeComponent = this.routerOutlet?.component;
     if (activeComponent instanceof EventProgramsComponent) {
       activeComponent.onCreateProgram();

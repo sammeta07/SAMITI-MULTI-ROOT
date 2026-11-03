@@ -12,9 +12,9 @@ export class ProgramOwnerService {
   private readonly http = inject(HttpClient);
   private readonly graphqlUrl = environment.graphqlUrl;
 
-  public getCandidates(eventId: number): Observable<ProgramOwnerCandidate[]> {
-    const query = `query ProgramOwnerCandidates($eventId: Int!) {
-      programOwnerCandidates(eventId: $eventId) {
+  public getCandidates(programId: number): Observable<ProgramOwnerCandidate[]> {
+    const query = `query ProgramOwnerCandidates($programId: Int!) {
+      programOwnerCandidates(programId: $programId) {
         userId
         name
       }
@@ -22,7 +22,7 @@ export class ProgramOwnerService {
 
     return this.http.post<{ data: { programOwnerCandidates: ProgramOwnerCandidate[] } }>(
       this.graphqlUrl,
-      { query, variables: { eventId } },
+      { query, variables: { programId } },
       { withCredentials: true }
     ).pipe(map((response) => response.data.programOwnerCandidates));
   }
@@ -31,6 +31,7 @@ export class ProgramOwnerService {
     const mutation = `mutation AssignProgramOwner($programId: Int!, $ownerUserId: Int) {
       assignProgramOwner(programId: $programId, ownerUserId: $ownerUserId) {
         programId
+        canAssignOwner
         ownerUserId
         ownerName
         ownerDesignation

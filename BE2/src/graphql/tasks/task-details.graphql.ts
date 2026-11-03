@@ -1,6 +1,7 @@
 import { query } from '../../config/db';
 import { getLoggedInUserId, throwEventError } from '../events/details/voting/event-voting-core.graphql';
 import { getTodoAssignees } from '../todos/todos.graphql';
+import { hasPermission, PERMISSIONS } from '../../authorization/authorization';
 
 export const taskDetailsTypes = `
   type TaskChild {
@@ -14,6 +15,9 @@ export const taskDetailsTypes = `
     createdByName: String
     createdAt: String
     ownerAssignedAt: String
+    canManage: Boolean!
+    canAssignOwner: Boolean!
+    canDelete: Boolean!
   }
 
   type TaskDetailsAssignee {
@@ -46,6 +50,10 @@ export const taskDetailsTypes = `
     taskAssignees: [TaskDetailsAssignee!]!
     todos: [TodoItem!]!
     todoAssignees: [TodoAssignee!]!
+    canManage: Boolean!
+    canEditTask: Boolean!
+    canAssignOwner: Boolean!
+    canDeleteTask: Boolean!
     canCreateTasks: Boolean!
     canManageTodos: Boolean!
     canToggleTodos: Boolean!
@@ -74,7 +82,9 @@ export const taskDetailsResolvers = {
            e.name AS eventName,
            t.parent_id AS parentTaskId,
            parent.name AS parentTaskName,
+           parent.owner_user_id AS parentOwnerUserId,
            t.owner_user_id AS ownerUserId,
+           t.created_by AS createdBy,
            owner.name AS ownerName,
            creator.name AS createdByName,
            DATE_FORMAT(t.created_at, '%Y-%m-%d %H:%i:%s') AS createdAt,
@@ -99,29 +109,62 @@ export const taskDetailsResolvers = {
       }
 
       const task = rows[0];
-      const role = String(task.committeeRole || '');
+      const role = String(task.committeeRole || '').toUpperCase();
       const hasCommitteeAccess = [
         'COMMITTEE_MEMBER',
         'COMMITTEE_ADMIN',
         'COMMITTEE_MASTER_ADMIN'
       ].includes(role);
-      if (!hasCommitteeAccess) {
+      const isTaskOwner = Number(task.ownerUserId) === userId;
+      const isTaskCreator = Number(task.createdBy) === userId;
+      const isParentTaskOwner = Number(task.parentOwnerUserId) === userId;
+      if (!hasCommitteeAccess && !isTaskOwner && !isTaskCreator && !isParentTaskOwner) {
         throwEventError('FORBIDDEN', 'You are not allowed to access this task');
       }
+      const isMasterAdmin = await hasPermission(
+        userId,
+        PERMISSIONS.EVENT_TASK_MANAGE_ANY,
+        { type: 'EVENT', id: Number(task.eventId) }
+      );
+      const canAssignOwner = task.parentTaskId === null
+        ? await hasPermission(
+          userId,
+          PERMISSIONS.EVENT_TASK_ASSIGN_OWNER,
+          { type: 'EVENT', id: Number(task.eventId) }
+        )
+        : isMasterAdmin || isTaskOwner || isParentTaskOwner || isTaskCreator;
+      const canDeleteRootTask = await hasPermission(
+        userId,
+        PERMISSIONS.EVENT_TASK_DELETE,
+        { type: 'EVENT', id: Number(task.eventId) }
+      );
+      const canUpdateRootTask = await hasPermission(
+        userId,
+        PERMISSIONS.EVENT_TASK_UPDATE,
+        { type: 'EVENT', id: Number(task.eventId) }
+      );
+      const canAssignRootTaskOwners = await hasPermission(
+        userId,
+        PERMISSIONS.EVENT_TASK_ASSIGN_OWNER,
+        { type: 'EVENT', id: Number(task.eventId) }
+      );
 
       const descendantRows = await query<any[]>(
         `SELECT
            t.id AS taskId,
            t.parent_id AS parentTaskId,
+           parent.owner_user_id AS parentOwnerUserId,
            t.name AS taskName,
            t.status,
            t.owner_user_id AS ownerUserId,
+           t.created_by AS createdBy,
            owner.name AS ownerName,
            assignedBy.name AS assignedByName,
            creator.name AS createdByName,
            DATE_FORMAT(t.created_at, '%Y-%m-%d %H:%i:%s') AS createdAt,
            DATE_FORMAT(t.owner_assigned_at, '%Y-%m-%d %H:%i:%s') AS ownerAssignedAt
          FROM tasks t
+         LEFT JOIN tasks parent ON parent.id = t.parent_id
          LEFT JOIN users owner ON owner.id = t.owner_user_id
          LEFT JOIN users assignedBy ON assignedBy.id = t.owner_assigned_by
          LEFT JOIN users creator ON creator.id = t.created_by
@@ -129,6 +172,21 @@ export const taskDetailsResolvers = {
          ORDER BY t.created_at ASC, t.id ASC`,
         [Number(task.eventId)]
       );
+      const mapChildPermissions = (child: any) => {
+        const isRootTask = child.parentTaskId === null;
+        const isChildOwner = Number(child.ownerUserId) === userId;
+        const isChildCreator = Number(child.createdBy) === userId;
+        const isChildParentOwner = Number(child.parentOwnerUserId) === userId;
+        return {
+          canManage: isChildOwner || isMasterAdmin,
+          canAssignOwner: isRootTask
+            ? canAssignRootTaskOwners
+            : isMasterAdmin || isChildOwner || isChildCreator || isChildParentOwner,
+          canDelete: isRootTask
+            ? canDeleteRootTask
+            : isMasterAdmin || isChildCreator
+        };
+      };
       const childrenByParentId = new Map<number, any[]>();
       for (const descendant of descendantRows) {
         const parentId = descendant.parentTaskId === null ? null : Number(descendant.parentTaskId);
@@ -192,7 +250,12 @@ export const taskDetailsResolvers = {
         [Number(task.eventId), Number(task.eventId), Number(task.committeeId)]
       );
 
-      const canManageTodos = role === 'COMMITTEE_ADMIN' || role === 'COMMITTEE_MASTER_ADMIN';
+      const canManageTodos = await hasPermission(
+        userId,
+        PERMISSIONS.TODO_MANAGE,
+        { type: 'EVENT', id: Number(task.eventId) }
+      ) || isTaskOwner ||
+        isParentTaskOwner || (task.parentTaskId !== null && isTaskCreator);
       return {
         taskId: Number(task.taskId),
         taskName: String(task.taskName || 'Untitled Task'),
@@ -207,6 +270,13 @@ export const taskDetailsResolvers = {
         createdAt: String(task.createdAt),
         ownerAssignedAt: task.ownerAssignedAt || null,
         updatedAt: String(task.updatedAt),
+        canEditTask: task.parentTaskId !== null
+          ? canAssignOwner
+          : isTaskOwner || canUpdateRootTask,
+        canAssignOwner,
+        canDeleteTask: task.parentTaskId !== null
+          ? isMasterAdmin || isTaskCreator
+          : canDeleteRootTask,
         children: children.map((child) => ({
           taskId: Number(child.taskId),
           parentTaskId: Number(taskId),
@@ -217,7 +287,8 @@ export const taskDetailsResolvers = {
           assignedByName: child.assignedByName || null,
           createdByName: child.createdByName || null,
           createdAt: child.createdAt ? String(child.createdAt) : null,
-          ownerAssignedAt: child.ownerAssignedAt || null
+          ownerAssignedAt: child.ownerAssignedAt || null,
+          ...mapChildPermissions(child)
         })),
         descendants: descendants.map((descendant) => ({
           taskId: Number(descendant.taskId),
@@ -229,7 +300,8 @@ export const taskDetailsResolvers = {
           assignedByName: descendant.assignedByName || null,
           createdByName: descendant.createdByName || null,
           createdAt: descendant.createdAt ? String(descendant.createdAt) : null,
-          ownerAssignedAt: descendant.ownerAssignedAt || null
+          ownerAssignedAt: descendant.ownerAssignedAt || null,
+          ...mapChildPermissions(descendant)
         })),
         taskAssignees: taskAssignees.map((assignee) => ({
           userId: Number(assignee.userId),
@@ -251,9 +323,10 @@ export const taskDetailsResolvers = {
           createdAt: String(todo.createdAt)
         })),
         todoAssignees: await getTodoAssignees(Number(task.committeeId)),
+        canManage: isMasterAdmin || isTaskOwner,
         canCreateTasks: canManageTodos,
         canManageTodos,
-        canToggleTodos: hasCommitteeAccess
+        canToggleTodos: canManageTodos
       };
     }
   }

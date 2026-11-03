@@ -50,7 +50,7 @@
 
                 <!-- Middle: Program Owner Row -->
                 <div class="program-owner-row" (click)="$event.stopPropagation()" (keydown)="$event.stopPropagation()">
-                  @if (canAssignProgramOwner() && isEditingProgramOwner(program.programId)) {
+                  @if (program.canAssignOwner && isEditingProgramOwner(program.programId)) {
                     <div class="program-owner-edit-layout">
                       <span class="program-owner-autocomplete-box">
                         <mat-form-field
@@ -180,7 +180,7 @@
                           </span>
                         }
                       </span>
-                      @if (canAssignProgramOwner()) {
+                      @if (program.canAssignOwner) {
                         <span
                           class="program-owner-action-box"
                           [class.program-owner-edit-disabled]="isUpdatingOwner || progStatus === 'completed'"
@@ -203,7 +203,7 @@
                 </div>
 
                 <!-- Right: Public Visibility Toggle -->
-                @if (canManageProgramVisibility()) {
+                @if (program.canAssignOwner) {
                   <button
                     mat-icon-button
                     class="program-header-visibility-toggle"

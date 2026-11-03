@@ -1,4 +1,5 @@
 import { getConnection, query } from '../../../config/db';
+import { hasPermission, PERMISSIONS } from '../../../authorization/authorization';
 
 function throwEventError(code: string, message: string): never {
   throw new Error(`${code}: ${message}`);
@@ -102,15 +103,7 @@ export const deleteEventResolvers = {
         throwEventError('NOT_FOUND', 'Event not found');
       }
 
-      const adminCheck = await query<any[]>(
-        `SELECT user_id
-         FROM users_committees
-         WHERE committee_id = ? AND user_id = ? AND committee_role IN ('COMMITTEE_ADMIN', 'COMMITTEE_MASTER_ADMIN')
-         LIMIT 1`,
-        [Number(event.committeeId), loggedInUserId]
-      );
-
-      if (adminCheck.length === 0) {
+      if (!await hasPermission(loggedInUserId, PERMISSIONS.EVENT_DELETE, { type: 'EVENT', id: eventId })) {
         throwEventError('FORBIDDEN', 'Only committee admins can delete events');
       }
 
@@ -190,4 +183,3 @@ export const deleteEventResolvers = {
     }
   }
 };
-

@@ -32,6 +32,10 @@ export class TaskDetailsService {
         createdByName
         createdAt
         ownerAssignedAt
+        canManage
+        canEditTask
+        canAssignOwner
+        canDeleteTask
         updatedAt
         children {
           taskId
@@ -44,6 +48,9 @@ export class TaskDetailsService {
           createdByName
           createdAt
           ownerAssignedAt
+          canManage
+          canAssignOwner
+          canDelete
         }
         descendants {
           taskId
@@ -56,6 +63,9 @@ export class TaskDetailsService {
           createdByName
           createdAt
           ownerAssignedAt
+          canManage
+          canAssignOwner
+          canDelete
         }
         taskAssignees {
           userId

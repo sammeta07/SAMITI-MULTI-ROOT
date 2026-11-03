@@ -1,5 +1,6 @@
 import { RowDataPacket } from 'mysql2/promise';
 import { execute, query } from '../../../config/db';
+import { initializeCommitteePermissions } from '../../../authorization/authorization';
 
 type CommitteeRow = RowDataPacket & {
   id: number;
@@ -161,6 +162,7 @@ export const createCommitteeResolvers = {
          ON DUPLICATE KEY UPDATE committee_role = 'COMMITTEE_MASTER_ADMIN'`,
         [newCommitteeId, loggedInUserId]
       );
+      await initializeCommitteePermissions(newCommitteeId);
 
       const rows = await query<CommitteeRow[]>(
         `SELECT
@@ -206,4 +208,3 @@ export const createCommitteeResolvers = {
     }
   }
 };
-

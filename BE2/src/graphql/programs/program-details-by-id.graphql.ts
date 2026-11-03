@@ -1,6 +1,7 @@
 import { RowDataPacket } from 'mysql2/promise';
 import { query } from '../../config/db';
 import { getTodoAssignees } from '../todos/todos.graphql';
+import { hasPermission, PERMISSIONS } from '../../authorization/authorization';
 
 function throwProgramError(code: string, message: string): never {
   throw new Error(`${code}: ${message}`);
@@ -69,6 +70,8 @@ export const programDetailsTypes = `
     ownerDesignationIcon: String
     ownerAssignedBy: Int
     ownerAssignedAt: String
+    canEditProgram: Boolean!
+    canDeleteProgram: Boolean!
     canAssignOwner: Boolean!
     todos: [TodoItem!]!
     todoAssignees: [TodoAssignee!]!
@@ -85,6 +88,7 @@ export const programDetailsTypes = `
     startDate: String
     endDate: String
     visibility: String!
+    canManage: Boolean!
   }
 `;
 
@@ -159,26 +163,13 @@ export const programDetailsResolvers = {
       }
       const visibility = String(program.visibility || '').toUpperCase();
       const ownerPermissionRows = await query<any[]>(
-        `SELECT
-           uc.committee_role AS committeeRole,
-           EXISTS (
-             SELECT 1
-             FROM users_events ue
-             LEFT JOIN events_roles_master erm ON erm.role_id = ue.role_id
-             WHERE ue.event_id = ?
-               AND ue.user_id = ?
-               AND (
-                 LOWER(TRIM(COALESCE(ue.designation, ''))) IN ('adhyaksha', 'upadhyaksha')
-                 OR LOWER(TRIM(COALESCE(erm.english_name, ''))) IN ('adhyaksha', 'upadhyaksha')
-                 OR LOWER(TRIM(COALESCE(erm.role_name, ''))) IN ('adhyaksha', 'upadhyaksha')
-               )
-           ) AS hasLeadershipDesignation
+        `SELECT uc.committee_role AS committeeRole
          FROM events e
          LEFT JOIN users_committees uc
            ON uc.committee_id = e.committee_id AND uc.user_id = ?
          WHERE e.id = ?
          LIMIT 1`,
-        [Number(program.eventId), loggedInUserId, loggedInUserId, Number(program.eventId)]
+        [loggedInUserId, Number(program.eventId)]
       );
       const ownerPermission = ownerPermissionRows[0];
       const committeeRole = String(ownerPermission?.committeeRole || '').toUpperCase();
@@ -187,8 +178,28 @@ export const programDetailsResolvers = {
         'COMMITTEE_ADMIN',
         'COMMITTEE_MASTER_ADMIN'
       ].includes(committeeRole);
-      const canManageTodos = committeeRole === 'COMMITTEE_ADMIN' ||
-        committeeRole === 'COMMITTEE_MASTER_ADMIN';
+      const canManageTodos = await hasPermission(
+        loggedInUserId,
+        PERMISSIONS.TODO_MANAGE,
+        { type: 'EVENT', id: Number(program.eventId) }
+      ) ||
+        Number(program.ownerUserId) === loggedInUserId;
+      const canEditProgram = await hasPermission(
+        loggedInUserId,
+        PERMISSIONS.PROGRAM_UPDATE,
+        { type: 'EVENT', id: Number(program.eventId) }
+      );
+      const canDeleteProgram = program.parentProgramId == null
+        ? await hasPermission(
+          loggedInUserId,
+          PERMISSIONS.PROGRAM_DELETE,
+          { type: 'EVENT', id: Number(program.eventId) }
+        )
+        : await hasPermission(
+          loggedInUserId,
+          PERMISSIONS.PROGRAM_MANAGE_ANY,
+          { type: 'EVENT', id: Number(program.eventId) }
+        ) || Number(program.createdBy) === loggedInUserId;
       const parentRows = program.parentProgramId == null
         ? []
         : await query<any[]>(
@@ -199,9 +210,11 @@ export const programDetailsResolvers = {
            LIMIT 1`,
           [Number(program.parentProgramId), Number(program.eventId), isCommitteeMember ? 1 : 0]
         );
-      const canAssignOwner = committeeRole === 'COMMITTEE_ADMIN' ||
-        committeeRole === 'COMMITTEE_MASTER_ADMIN' ||
-        Boolean(Number(ownerPermission?.hasLeadershipDesignation));
+      const canAssignOwner = await hasPermission(
+        loggedInUserId,
+        PERMISSIONS.PROGRAM_ASSIGN_OWNER,
+        { type: 'EVENT', id: Number(program.eventId) }
+      );
 
       if (visibility === 'HIDDEN') {
         const committeeMembership = await query<any[]>(
@@ -222,7 +235,7 @@ export const programDetailsResolvers = {
           )
         );
 
-        if (!hasCommitteeAccess) {
+        if (!hasCommitteeAccess && !canManageTodos) {
           throwProgramError('FORBIDDEN', 'You are not allowed to access this program');
         }
       }
@@ -253,6 +266,7 @@ export const programDetailsResolvers = {
         `SELECT
            id AS programId,
            name AS programName,
+           owner_user_id AS ownerUserId,
            DATE_FORMAT(start_date, '%Y-%m-%d') AS startDate,
            DATE_FORMAT(end_date, '%Y-%m-%d') AS endDate,
            visibility
@@ -290,6 +304,8 @@ export const programDetailsResolvers = {
         ownerDesignationIcon: program.ownerDesignationIcon || null,
         ownerAssignedBy: program.ownerAssignedBy === null ? null : Number(program.ownerAssignedBy),
         ownerAssignedAt: program.ownerAssignedAt || null,
+        canEditProgram,
+        canDeleteProgram,
         canAssignOwner,
         todos: todoRows.map((todo) => ({
           id: Number(todo.id),
@@ -304,14 +320,15 @@ export const programDetailsResolvers = {
           ? await getTodoAssignees(Number(program.committeeId))
           : [],
         canManageTodos,
-        canToggleTodos: isCommitteeMember,
-        canCreateSubprogram: canManageTodos,
+        canToggleTodos: canManageTodos,
+        canCreateSubprogram: canEditProgram,
         subprograms: subprogramRows.map((subprogram) => ({
           programId: Number(subprogram.programId),
           programName: String(subprogram.programName || 'Untitled Program'),
           startDate: subprogram.startDate || null,
           endDate: subprogram.endDate || null,
-          visibility: String(subprogram.visibility || 'VISIBLE')
+          visibility: String(subprogram.visibility || 'VISIBLE'),
+          canManage: canEditProgram
         })),
         price: Number(program.price)
       };

@@ -11,6 +11,7 @@ import {
 } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { Router, NavigationEnd } from '@angular/router';
+import { MatDialog } from '@angular/material/dialog';
 import { MatTreeModule, MatTreeNestedDataSource } from '@angular/material/tree';
 import { MatIconModule } from '@angular/material/icon';
 import { MatButtonModule } from '@angular/material/button';
@@ -19,6 +20,7 @@ import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatSelectModule } from '@angular/material/select';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { HttpErrorResponse } from '@angular/common/http';
+import { firstValueFrom } from 'rxjs';
 import { filter } from 'rxjs/operators';
 import { DashboardHierarchyTreeService } from './dashboard-hierarchy-tree.service';
 import { AuthService } from '../../../../core/services/auth.service';
@@ -29,6 +31,8 @@ import { sanitizeCloudinaryLogoUrl } from '../../../../shared/services/cloudinar
 import { SelectedYearService } from '../../../../shared/services/selected-year.service';
 import { parseLocalDate, getEventComputedStatus, isProgramEndDateInFuture } from '../../../../shared/services/event-status.util';
 import { compareByScheduleAndStatus } from '../../../../shared/services/program-schedule-sort.util';
+import { ImageAssetService } from '../../../../core/services/image-asset.service';
+import { ImageCropperDialogComponent } from '../../../../shared/components/image-cropper-dialog/image-cropper-dialog.component';
 
 @Component({
   selector: 'app-dashboard-hierarchy-tree',
@@ -54,6 +58,8 @@ export class DashboardHierarchyTreeComponent implements OnInit, OnDestroy {
   private readonly selectedYearService = inject(SelectedYearService);
   private readonly loadingState = inject(LoadingStateService);
   private readonly cdr = inject(ChangeDetectorRef);
+  private readonly dialog = inject(MatDialog);
+  private readonly imageAssetService = inject(ImageAssetService);
   private readonly routeRefreshAttempts = new Set<string>();
 
   public readonly isLoading = signal<boolean>(false);
@@ -100,6 +106,7 @@ export class DashboardHierarchyTreeComponent implements OnInit, OnDestroy {
   @Output() treeNodeSelected = new EventEmitter<TreeNode>();
 
   public readonly expandedNodeKeys = signal<Set<string>>(new Set());
+  public readonly uploadingLogoNodeKeys = new Set<string>();
   public readonly childrenAccessor = (node: TreeNode) => node.children ?? [];
   public readonly dataSource = new MatTreeNestedDataSource<TreeNode>();
 
@@ -243,7 +250,9 @@ export class DashboardHierarchyTreeComponent implements OnInit, OnDestroy {
       name: node.name,
       type: mappedType,
       id: this.extractNumericId(node.id),
+      committeeId: mappedType === 'event' ? (node.committeeId ?? undefined) : undefined,
       logo: (mappedType === 'group' || mappedType === 'event') ? sanitizeCloudinaryLogoUrl(node.logo || null) : null,
+      canUpdateLogo: (mappedType === 'group' || mappedType === 'event') && Boolean(node.canUpdateLogo),
       roleScope: roleScope ?? undefined,
       roles: node.roles || undefined,
       startDate: node.startDate ?? undefined,
@@ -257,6 +266,73 @@ export class DashboardHierarchyTreeComponent implements OnInit, OnDestroy {
       price: node.price ?? undefined,
       children: mappedChildren.length > 0 ? mappedChildren : undefined
     };
+  }
+
+  public getLogoUploadKey(node: TreeNode): string {
+    return `${node.type}:${node.id ?? ''}`;
+  }
+
+  public openNodeLogoPicker(node: TreeNode, event: Event): void {
+    event.stopPropagation();
+    if (!node.canUpdateLogo || this.uploadingLogoNodeKeys.has(this.getLogoUploadKey(node))) return;
+    const button = event.currentTarget;
+    if (!(button instanceof HTMLElement)) return;
+    const input = button.closest('.node-logo-avatar-wrapper')?.querySelector<HTMLInputElement>('input[type="file"]');
+    if (!input) return;
+    input.click();
+  }
+
+  public async onNodeLogoSelected(node: TreeNode, event: Event): Promise<void> {
+    event.stopPropagation();
+    const input = event.target as HTMLInputElement;
+    const selectedFile = input.files?.[0] ?? null;
+    input.value = '';
+
+    if (!selectedFile || !node.canUpdateLogo || !node.id) return;
+    const committeeId = node.type === 'group' ? node.id : node.committeeId;
+    if ((node.type !== 'group' && node.type !== 'event') || !committeeId) return;
+
+    const uploadKey = this.getLogoUploadKey(node);
+    if (this.uploadingLogoNodeKeys.has(uploadKey)) return;
+
+    try {
+      const croppedFile = await firstValueFrom(
+        this.dialog.open(ImageCropperDialogComponent, {
+          width: 'min(92vw, 920px)',
+          data: {
+            file: selectedFile,
+            title: `Crop ${node.type === 'group' ? 'Committee' : 'Event'} Logo`,
+            maintainAspectRatio: true,
+            aspectRatio: 1
+          }
+        }).afterClosed()
+      );
+      if (!croppedFile) return;
+
+      this.uploadingLogoNodeKeys.add(uploadKey);
+      this.cdr.markForCheck();
+      const asset = await firstValueFrom(
+        this.imageAssetService.uploadSingleImageForCommitteeLogo(
+          croppedFile,
+          `${node.type === 'group' ? 'committee' : 'event'}-logo-${node.id}`
+        )
+      );
+      const logo = node.type === 'group'
+        ? await firstValueFrom(this.treeService.updateCommitteeLogo(node.id, asset.publicAbsoluteUrl))
+        : await firstValueFrom(this.treeService.updateEventLogo(node.id, committeeId, asset.publicAbsoluteUrl));
+
+      node.logo = logo;
+      this.treeService.notifyLogoUpdated(node.type === 'group'
+        ? { type: 'group', id: node.id, logo }
+        : { type: 'event', id: node.id, committeeId, logo });
+      this.notifier.success(`${node.type === 'group' ? 'Committee' : 'Event'} logo updated successfully.`);
+      this.treeService.triggerHierarchyTreeRefresh();
+    } catch (error) {
+      this.notifier.error(error instanceof Error ? error.message : 'Failed to update logo.');
+    } finally {
+      this.uploadingLogoNodeKeys.delete(uploadKey);
+      this.cdr.markForCheck();
+    }
   }
 
   private mapEventTasksToTreeNodes(

@@ -86,17 +86,11 @@ export class EventProgramsComponent implements OnInit, OnDestroy {
     this.userEventRole() === 'COMMITTEE_MASTER_ADMIN'
   );
 
-  public readonly isEventAdmin = computed<boolean>(() =>
-    this.userEventRole() === 'COMMITTEE_ADMIN'
-  );
-
-  public readonly canManageProgramVisibility = computed<boolean>(() =>
-    this.isEventMasterAdmin() || this.isEventAdmin()
-  );
-
-  public readonly canAssignProgramOwner = computed<boolean>(() =>
-    Boolean(this.eventData()?.canAssignProgramOwner)
-  );
+  public readonly canCreateTopLevelProgram = computed<boolean>(() => {
+    if (this.isEventMasterAdmin()) return true;
+    const designation = String(this.eventData()?.myDesignation?.name || '').trim().toLowerCase();
+    return designation === 'adhyaksha' || designation === 'upadhyaksha';
+  });
 
   public readonly sortedAssignableCandidates = computed<EventDirectAssignMember[]>(() => {
     return this.allCommitteeMembers()
@@ -193,7 +187,7 @@ export class EventProgramsComponent implements OnInit, OnDestroy {
   }
 
   public editProgramOwner(program: EventProgramEntry): void {
-    if (!this.canAssignProgramOwner() || this.programsUpdatingOwner().has(program.programId)) {
+    if (!program.canAssignOwner || this.programsUpdatingOwner().has(program.programId)) {
       return;
     }
 
@@ -247,7 +241,7 @@ export class EventProgramsComponent implements OnInit, OnDestroy {
 
   // --- API Mutators ---
   public updateProgramOwner(program: EventProgramEntry, ownerUserId: number | null): void {
-    if (!this.canAssignProgramOwner() || this.programsUpdatingOwner().has(program.programId)) {
+    if (!program.canAssignOwner || this.programsUpdatingOwner().has(program.programId)) {
       return;
     }
 
@@ -264,6 +258,7 @@ export class EventProgramsComponent implements OnInit, OnDestroy {
           entry.programId === owner.programId
             ? {
                 ...entry,
+                canAssignOwner: owner.canAssignOwner,
                 ownerUserId: owner.ownerUserId,
                 ownerName: owner.ownerName,
                 ownerAssignedBy: owner.ownerAssignedBy,
@@ -305,7 +300,7 @@ export class EventProgramsComponent implements OnInit, OnDestroy {
   }
 
   public updateProgramVisibility(program: EventProgramEntry, visible: boolean): void {
-    if (!this.canManageProgramVisibility() || this.programsUpdatingVisibility().has(program.programId)) {
+    if (!program.canAssignOwner || this.programsUpdatingVisibility().has(program.programId)) {
       return;
     }
 
@@ -347,6 +342,7 @@ export class EventProgramsComponent implements OnInit, OnDestroy {
   }
 
   public onCreateProgram(): void {
+    if (!this.canCreateTopLevelProgram()) return;
     const currentEvent = this.eventData();
     if (!currentEvent?.eventId) {
       this.notifier.error('No event available for program creation');

@@ -12,7 +12,7 @@
   } @else {
     @if (tasks.length > 0 || isCreatingTask) {
       <div class="horizontal-list-container">
-        @if (isCreatingTask) {
+        @if (canCreateTasks && isCreatingTask) {
           <article class="event-task-row task-inline-create-row">
             <div class="task-create-title">
               <span class="task-create-input-wrapper">
@@ -124,7 +124,7 @@
                   (click)="$event.stopPropagation()" 
                   (keydown)="$event.stopPropagation()"
                 >
-                  @if (canCreateTasks && isEditingOwner) {
+                  @if (task.canAssignOwner && isEditingOwner) {
                     <div class="task-assignee-edit-layout">
                       <span class="task-assignee-autocomplete-box">
                         <mat-form-field
@@ -255,7 +255,7 @@
                           </span>
                         }
                       </span>
-                      @if (canCreateTasks) {
+                      @if (task.canAssignOwner) {
                         <span
                           class="task-assignee-action-box"
                           [class.task-assignee-edit-disabled]="isUpdatingOwner || task.status?.toUpperCase() === 'COMPLETED'"
@@ -276,6 +276,20 @@
                     </div>
                   }
                 </div>
+                @if (task.canDelete) {
+                  <button
+                    mat-icon-button
+                    type="button"
+                    class="task-panel-delete-icon"
+                    aria-label="Delete task"
+                    [matTooltip]="deletingTaskIds.has(task.taskId) ? 'Deleting task...' : 'Delete task'"
+                    [disabled]="deletingTaskIds.has(task.taskId)"
+                    (click)="onDeleteTask(task, $event)"
+                    (keydown)="$event.stopPropagation()"
+                  >
+                    <mat-icon>{{ deletingTaskIds.has(task.taskId) ? 'hourglass_top' : 'delete_outline' }}</mat-icon>
+                  </button>
+                }
               </div>
             </mat-expansion-panel-header>
 

@@ -13,7 +13,6 @@ import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { firstValueFrom, finalize } from 'rxjs';
-import { AuthService } from '../../../../core/services/auth.service';
 import { LoadingStateService } from '../../../../shared/services/loading-state.service';
 import { NotifierService } from '../../../../shared/notifier/notifier.service';
 import { ConfirmDialogService } from '../../../../components/dialog/confirm/confirm-dialog.service';
@@ -52,7 +51,6 @@ export class TaskDetailsComponent implements OnInit {
   private readonly route = inject(ActivatedRoute);
   private readonly router = inject(Router);
   private readonly service = inject(TaskDetailsService);
-  private readonly authService = inject(AuthService);
   private readonly notifier = inject(NotifierService);
   private readonly loadingState = inject(LoadingStateService);
   private readonly confirmDialog = inject(ConfirmDialogService);
@@ -136,7 +134,10 @@ export class TaskDetailsComponent implements OnInit {
                 assignedByName: child.assignedByName,
                 createdByName: child.createdByName,
                 createdAt: child.createdAt,
-                ownerAssignedAt: child.ownerAssignedAt
+                ownerAssignedAt: child.ownerAssignedAt,
+                canManage: child.canManage,
+                canAssignOwner: child.canAssignOwner,
+                canDelete: child.canDelete
               }],
               descendants: [...(current.descendants ?? []), {
                 taskId: child.taskId,
@@ -148,7 +149,10 @@ export class TaskDetailsComponent implements OnInit {
                 assignedByName: child.assignedByName,
                 createdByName: child.createdByName,
                 createdAt: child.createdAt,
-                ownerAssignedAt: child.ownerAssignedAt
+                ownerAssignedAt: child.ownerAssignedAt,
+                canManage: child.canManage,
+                canAssignOwner: child.canAssignOwner,
+                canDelete: child.canDelete
               }]
           }
           : current
@@ -168,7 +172,7 @@ export class TaskDetailsComponent implements OnInit {
   }
 
   public startTaskEditing(task: TaskDetailsPayload): void {
-    if (!task.canCreateTasks || this.isSavingTaskName() || this.isDeletingTask()) return;
+    if (!task.canEditTask || this.isSavingTaskName() || this.isDeletingTask()) return;
     this.editingTaskName = task.taskName;
     this.isEditingTask.set(true);
   }
@@ -180,7 +184,7 @@ export class TaskDetailsComponent implements OnInit {
 
   public async saveTaskName(task: TaskDetailsPayload): Promise<void> {
     const taskName = this.editingTaskName.trim();
-    if (!task.canCreateTasks || !taskName || taskName.length > 255 || this.isSavingTaskName()) return;
+    if (!task.canEditTask || !taskName || taskName.length > 255 || this.isSavingTaskName()) return;
 
     this.isSavingTaskName.set(true);
     try {
@@ -203,7 +207,7 @@ export class TaskDetailsComponent implements OnInit {
   }
 
   public async onDeleteTask(task: TaskDetailsPayload): Promise<void> {
-    if (!task.canCreateTasks || this.isDeletingTask()) return;
+    if (!task.canDeleteTask || this.isDeletingTask()) return;
 
     const dialogData: ConfirmDialogData = {
       title: 'Delete Task',
@@ -327,7 +331,8 @@ export class TaskDetailsComponent implements OnInit {
   }
 
   public editSubtaskAssignee(taskId: number, ownerName: string | null): void {
-    if (!this.task()?.canCreateTasks || this.assigningSubtaskIds.has(taskId)) return;
+    const child = this.task()?.descendants.find((entry) => entry.taskId === taskId);
+    if (!child?.canAssignOwner || this.assigningSubtaskIds.has(taskId)) return;
     this.subtaskAssigneeSearchText[taskId] = ownerName || '';
     this.clearedSubtaskAssigneeSearchIds.update((ids) => {
       const next = new Set(ids);
@@ -374,7 +379,8 @@ export class TaskDetailsComponent implements OnInit {
     ownerName: string | null,
     event: MatAutocompleteSelectedEvent
   ): void {
-    if (!this.task()?.canCreateTasks || this.assigningSubtaskIds.has(taskId)) return;
+    const child = this.task()?.descendants.find((entry) => entry.taskId === taskId);
+    if (!child?.canAssignOwner || this.assigningSubtaskIds.has(taskId)) return;
     const ownerUserId = event.option.value === '' ? null : Number(event.option.value);
     const assignee = this.task()?.taskAssignees.find((member) => member.userId === ownerUserId);
     if (ownerUserId !== null && !assignee) {
@@ -417,7 +423,7 @@ export class TaskDetailsComponent implements OnInit {
 
   public canUpdateSubtaskStatus(taskId: number): boolean {
     const child = this.task()?.descendants.find((entry) => entry.taskId === taskId);
-    return child?.ownerUserId != null && child.ownerUserId === this.authService.getStoredUserData()?.id;
+    return Boolean(child?.canManage);
   }
 
   public onSubtaskStatusChange(taskId: number, event: Event): void {
@@ -462,6 +468,9 @@ export class TaskDetailsComponent implements OnInit {
     createdByName: string | null;
     createdAt: string;
     ownerAssignedAt: string | null;
+    canManage: boolean;
+    canAssignOwner: boolean;
+    canDelete: boolean;
   }): void {
     this.task.update((current) => {
       if (!current) return current;
@@ -475,7 +484,10 @@ export class TaskDetailsComponent implements OnInit {
               assignedByName: updated.assignedByName,
               createdByName: updated.createdByName,
               createdAt: updated.createdAt,
-              ownerAssignedAt: updated.ownerAssignedAt
+              ownerAssignedAt: updated.ownerAssignedAt,
+              canManage: updated.canManage,
+              canAssignOwner: updated.canAssignOwner,
+              canDelete: updated.canDelete
             }
           : child;
       return {
@@ -491,7 +503,7 @@ export class TaskDetailsComponent implements OnInit {
   }
 
   public canUpdateStatus(task: TaskDetailsPayload): boolean {
-    return task.ownerUserId !== null && task.ownerUserId === this.authService.getStoredUserData()?.id;
+    return task.canManage;
   }
 
   public onStatusChange(event: Event, task: TaskDetailsPayload): void {

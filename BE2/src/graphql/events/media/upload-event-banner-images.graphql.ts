@@ -1,5 +1,6 @@
 import { query, execute } from '../../../config/db';
 import { deleteLocalMediaFileIfExists } from '../../../media/image-cleanup';
+import { hasPermission, PERMISSIONS } from '../../../authorization/authorization';
 
 const MAX_BANNER_IMAGES = 5;
 
@@ -69,13 +70,9 @@ export const uploadEventBannerImagesResolvers = {
       );
       if (eventRows.length === 0) throwError('NOT_FOUND', 'Event not found');
 
-      const committeeId = Number(eventRows[0].committee_id);
-      const adminRows = await query<any[]>(
-        `SELECT user_id FROM users_committees
-         WHERE committee_id = ? AND user_id = ? AND committee_role IN ('COMMITTEE_ADMIN', 'COMMITTEE_MASTER_ADMIN') LIMIT 1`,
-        [committeeId, loggedInUserId]
-      );
-      if (adminRows.length === 0) throwError('FORBIDDEN', 'Only committee admins can upload event banners');
+      if (!await hasPermission(loggedInUserId, PERMISSIONS.EVENT_MANAGE_BANNERS, { type: 'EVENT', id: eventId })) {
+        throwError('FORBIDDEN', 'Only committee admins can upload event banners');
+      }
 
       // Count existing banners
       const existingRows = await query<any[]>(
@@ -130,13 +127,9 @@ export const uploadEventBannerImagesResolvers = {
       );
       if (eventRows.length === 0) throwError('NOT_FOUND', 'Event not found');
 
-      const committeeId = Number(eventRows[0].committee_id);
-      const adminRows = await query<any[]>(
-        `SELECT user_id FROM users_committees
-         WHERE committee_id = ? AND user_id = ? AND committee_role IN ('COMMITTEE_ADMIN', 'COMMITTEE_MASTER_ADMIN') LIMIT 1`,
-        [committeeId, loggedInUserId]
-      );
-      if (adminRows.length === 0) throwError('FORBIDDEN', 'Only committee admins can delete event banners');
+      if (!await hasPermission(loggedInUserId, PERMISSIONS.EVENT_MANAGE_BANNERS, { type: 'EVENT', id: eventId })) {
+        throwError('FORBIDDEN', 'Only committee admins can delete event banners');
+      }
 
       const deletedRows = await query<any[]>(
         `SELECT media_url AS mediaUrl FROM event_media_assets WHERE event_id = ? AND media_url = ? LIMIT 1`,
@@ -165,4 +158,3 @@ export const uploadEventBannerImagesResolvers = {
     }
   }
 };
-

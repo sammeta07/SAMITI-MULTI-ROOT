@@ -227,6 +227,7 @@
 .samiti-tree-invisible { display: none; }
 
 .node-logo-avatar-wrapper {
+  position: relative;
   display: flex;
   justify-content: center;
   align-items: center;
@@ -242,6 +243,44 @@
   border: 2px solid var(--node-border-color) !important;
   z-index: 2;
   transition: transform 0.15s ease;
+
+  .node-logo-edit-trigger {
+    position: absolute;
+    inset: 0;
+    z-index: 3;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 100%;
+    height: 100%;
+    padding: 0;
+    border: 0;
+    border-radius: inherit;
+    background: rgba(15, 23, 42, 0.58);
+    color: #ffffff;
+    cursor: pointer;
+    opacity: 0;
+    visibility: hidden;
+    transition: opacity 0.16s ease, visibility 0.16s ease;
+
+    mat-icon {
+      width: 16px;
+      height: 16px;
+      font-size: 16px;
+    }
+
+    &:focus-visible,
+    &.is-uploading {
+      opacity: 1;
+      visibility: visible;
+    }
+  }
+
+  &:hover .node-logo-edit-trigger,
+  &:focus-within .node-logo-edit-trigger {
+    opacity: 1;
+    visibility: visible;
+  }
 
   .brand-image-node {
     width: 100%;

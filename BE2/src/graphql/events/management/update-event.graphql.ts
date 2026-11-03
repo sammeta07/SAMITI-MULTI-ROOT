@@ -2,6 +2,7 @@ import { execute, query } from '../../../config/db';
 import { hasEventsDisplayNameColumn } from '../details/event-display-name-support';
 import { deleteLocalMediaFileIfExists } from '../../../media/image-cleanup';
 import { isCloudinaryStorageEnabled } from '../../../media/cloudinary-storage';
+import { hasPermission, PERMISSIONS } from '../../../authorization/authorization';
 
 const ALLOWED_EVENT_TYPES = new Set(['PUBLIC', 'PRIVATE']);
 
@@ -230,15 +231,7 @@ export const updateEventResolvers = {
         throwEventError('BAD_REQUEST', 'committeeId does not match the selected event');
       }
 
-      const adminCheck = await query<any[]>(
-        `SELECT user_id
-         FROM users_committees
-         WHERE committee_id = ? AND user_id = ? AND committee_role IN ('COMMITTEE_ADMIN', 'COMMITTEE_MASTER_ADMIN')
-         LIMIT 1`,
-        [committeeId, loggedInUserId]
-      );
-
-      if (adminCheck.length === 0) {
+      if (!await hasPermission(loggedInUserId, PERMISSIONS.EVENT_UPDATE, { type: 'EVENT', id: eventId })) {
         throwEventError('FORBIDDEN', 'Only committee admins can update events');
       }
 
@@ -400,15 +393,7 @@ export const updateEventResolvers = {
         throwEventError('BAD_REQUEST', 'committeeId does not match the selected event');
       }
 
-      const adminCheck = await query<any[]>(
-        `SELECT user_id
-         FROM users_committees
-         WHERE committee_id = ? AND user_id = ? AND committee_role IN ('COMMITTEE_ADMIN', 'COMMITTEE_MASTER_ADMIN')
-         LIMIT 1`,
-        [committeeId, loggedInUserId]
-      );
-
-      if (adminCheck.length === 0) {
+      if (!await hasPermission(loggedInUserId, PERMISSIONS.EVENT_UPDATE, { type: 'EVENT', id: eventId })) {
         throwEventError('FORBIDDEN', 'Only committee admins can update event logo');
       }
 
@@ -438,5 +423,3 @@ export const updateEventResolvers = {
     }
   }
 };
-
-

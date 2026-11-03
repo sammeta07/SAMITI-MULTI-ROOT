@@ -1,5 +1,6 @@
 import { query, execute } from '../../../config/db';
 import { hasEventsDisplayNameColumn } from '../details/event-display-name-support';
+import { hasPermission, PERMISSIONS } from '../../../authorization/authorization';
 
 const ALLOWED_EVENT_TYPES = new Set(['PUBLIC', 'PRIVATE']);
 
@@ -191,13 +192,7 @@ export const createEventResolvers = {
       try {
         const supportsEventDisplayName = await hasEventsDisplayNameColumn();
 
-        const adminCheck = await query<any[]>(
-          `SELECT user_id FROM users_committees 
-           WHERE committee_id = ? AND user_id = ? AND committee_role IN ('COMMITTEE_ADMIN', 'COMMITTEE_MASTER_ADMIN') LIMIT 1`,
-          [committeeId, loggedInUserId]
-        );
-
-        if (adminCheck.length === 0) {
+        if (!await hasPermission(loggedInUserId, PERMISSIONS.EVENT_CREATE, { type: 'COMMITTEE', id: committeeId })) {
           throwEventError('FORBIDDEN', 'Only committee admins can create events');
         }
 
@@ -330,5 +325,4 @@ export const createEventResolvers = {
     }
   }
 };
-
 

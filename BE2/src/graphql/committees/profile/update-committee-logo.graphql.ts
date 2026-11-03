@@ -2,6 +2,7 @@ import { RowDataPacket } from 'mysql2/promise';
 import { execute, query } from '../../../config/db';
 import { deleteLocalMediaFileIfExists } from '../../../media/image-cleanup';
 import { isCloudinaryStorageEnabled } from '../../../media/cloudinary-storage';
+import { hasPermission, PERMISSIONS } from '../../../authorization/authorization';
 
 type CommitteeLogoRow = RowDataPacket & {
   id: number;
@@ -81,17 +82,11 @@ export const updateCommitteeLogoResolvers = {
 
       const oldLogo: string | null = committeeExists[0].logo || null;
 
-      const adminCheckRows = await query<RowDataPacket[]>(
-        `SELECT committee_id
-         FROM users_committees
-         WHERE committee_id = ?
-           AND user_id = ?
-           AND committee_role IN ('COMMITTEE_ADMIN', 'COMMITTEE_MASTER_ADMIN')
-         LIMIT 1`,
-        [committeeId, loggedInUserId]
-      );
-
-      if (adminCheckRows.length === 0) {
+      if (!await hasPermission(
+        loggedInUserId,
+        PERMISSIONS.COMMITTEE_LOGO_UPDATE,
+        { type: 'COMMITTEE', id: Number(committeeId) }
+      )) {
         throw new Error('Only committee admins can update the committee logo');
       }
 
@@ -135,4 +130,3 @@ export const updateCommitteeLogoResolvers = {
     }
   }
 };
-

@@ -633,9 +633,43 @@
   width: 100%;
   min-width: 0;
   min-height: 28px;
-  grid-template-columns: minmax(0, 1fr) 115px minmax(160px, 240px);
+  grid-template-columns: minmax(0, 1fr) 115px minmax(0, 240px) 30px;
   align-items: center;
   gap: 10px;
+}
+
+.task-panel-delete-icon {
+  --mat-icon-button-container-shape: 6px;
+  --mdc-icon-button-state-layer-shape: 6px;
+  display: inline-flex !important;
+  width: 28px !important;
+  height: 28px !important;
+  min-width: 28px !important;
+  justify-self: end;
+  align-items: center !important;
+  justify-content: center !important;
+  padding: 0 !important;
+  border: 1px solid #fecaca !important;
+  border-radius: 6px !important;
+  background: #fff !important;
+  color: #dc2626 !important;
+
+  mat-icon {
+    width: 16px !important;
+    height: 16px !important;
+    font-size: 16px !important;
+    line-height: 16px !important;
+  }
+
+  &:hover {
+    background: #fef2f2 !important;
+    border-color: #fca5a5 !important;
+  }
+
+  &:focus-visible {
+    outline: 2px solid #ef4444;
+    outline-offset: 2px;
+  }
 }
 
 .task-panel-title {
@@ -1300,7 +1334,7 @@
   }
 
   .task-panel-summary {
-    grid-template-columns: minmax(0, 1fr) 92px minmax(110px, 140px);
+    grid-template-columns: minmax(0, 1fr) 92px minmax(0, 140px) 30px;
     gap: 6px;
   }
 

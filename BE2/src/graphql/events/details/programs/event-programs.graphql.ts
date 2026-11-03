@@ -1,5 +1,6 @@
 import { query } from '../../../../config/db';
 import { RowDataPacket } from 'mysql2/promise';
+import { hasPermission, PERMISSIONS } from '../../../../authorization/authorization';
 
 function throwProgramError(code: string, message: string): never {
   throw new Error(`${code}: ${message}`);
@@ -58,6 +59,8 @@ export const eventProgramsTypes = `
     ownerName: String
     ownerAssignedBy: Int
     ownerAssignedAt: String
+    canManage: Boolean!
+    canAssignOwner: Boolean!
   }
 
   type EventProgramsPayload {
@@ -102,6 +105,16 @@ export const eventProgramsResolvers = {
       );
 
       const membership = committeeMembership[0];
+      const canManageProgramActions = await hasPermission(
+        loggedInUserId,
+        PERMISSIONS.PROGRAM_ASSIGN_OWNER,
+        { type: 'EVENT', id: eventId }
+      );
+      const canManageAnyProgram = await hasPermission(
+        loggedInUserId,
+        PERMISSIONS.PROGRAM_MANAGE_ANY,
+        { type: 'EVENT', id: eventId }
+      );
       const hasCommitteeAccess = Boolean(
         membership &&
         (
@@ -111,7 +124,15 @@ export const eventProgramsResolvers = {
         )
       );
 
-      if (String(eventRow.type || '').toUpperCase() !== 'PUBLIC' && !hasCommitteeAccess) {
+      const ownedProgramRows = hasCommitteeAccess ? [] : await query<any[]>(
+        `SELECT id
+         FROM programs
+         WHERE event_id = ? AND owner_user_id = ?
+         LIMIT 1`,
+        [eventId, loggedInUserId]
+      );
+      if (String(eventRow.type || '').toUpperCase() !== 'PUBLIC' &&
+        !hasCommitteeAccess && ownedProgramRows.length === 0) {
         throwProgramError('FORBIDDEN', 'You are not allowed to access this event');
       }
 
@@ -143,7 +164,8 @@ p.visibility,
       const entries: any[] = [];
 
       for (const program of programRows) {
-        if (program.visibility === 'HIDDEN' && !hasCommitteeAccess) {
+        if (program.visibility === 'HIDDEN' && !hasCommitteeAccess &&
+          Number(program.ownerUserId) !== loggedInUserId) {
           continue;
         }
 
@@ -177,7 +199,9 @@ p.visibility,
             ownerUserId: program.ownerUserId === null ? null : Number(program.ownerUserId),
             ownerName: program.ownerName || null,
             ownerAssignedBy: program.ownerAssignedBy === null ? null : Number(program.ownerAssignedBy),
-            ownerAssignedAt: program.ownerAssignedAt || null
+            ownerAssignedAt: program.ownerAssignedAt || null,
+            canManage: canManageAnyProgram || Number(program.ownerUserId) === loggedInUserId,
+            canAssignOwner: canManageProgramActions
         });
       }
 

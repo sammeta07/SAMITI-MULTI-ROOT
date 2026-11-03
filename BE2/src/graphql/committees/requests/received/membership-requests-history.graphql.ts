@@ -1,4 +1,5 @@
 import { query } from '../../../../config/db';
+import { getAuthorizedCommitteeIds, PERMISSIONS } from '../../../../authorization/authorization';
 
 export const receivedRequestsHistoryTypes = `
   type CommitteeMembershipRequestHistoryItem {
@@ -86,7 +87,6 @@ export const receivedRequestsHistoryResolvers = {
          INNER JOIN users_committees admin_uc
             ON admin_uc.committee_id = crr.committee_id
             AND admin_uc.user_id = ?
-            AND admin_uc.committee_role IN ('COMMITTEE_ADMIN', 'COMMITTEE_MASTER_ADMIN')
          LEFT JOIN users_committees requester_uc
             ON requester_uc.committee_id = crr.committee_id
             AND requester_uc.user_id = crr.requester_user_id
@@ -94,9 +94,15 @@ export const receivedRequestsHistoryResolvers = {
          ORDER BY crr.requested_at DESC`,
          [loggedInUserId, loggedInUserId, loggedInUserId]
       );
+      const authorizedCommitteeIds = await getAuthorizedCommitteeIds(
+        loggedInUserId,
+        PERMISSIONS.COMMITTEE_REQUESTS_REVIEW,
+        rows.map((row) => Number(row.committee_id))
+      );
+      const authorizedRows = rows.filter((row) => authorizedCommitteeIds.has(Number(row.committee_id)));
 
       return {
-        data: rows.map((row: any) => ({
+        data: authorizedRows.map((row: any) => ({
           committeeId: Number(row.committee_id),
           committeeName: row.committee_name,
           committeeLogo: row.committee_logo || null,
@@ -174,7 +180,6 @@ export const receivedRequestsHistoryResolvers = {
          INNER JOIN users_committees admin_uc
             ON admin_uc.committee_id = crr.committee_id
             AND admin_uc.user_id = ?
-            AND admin_uc.committee_role IN ('COMMITTEE_ADMIN', 'COMMITTEE_MASTER_ADMIN')
          LEFT JOIN users_committees requester_uc
             ON requester_uc.committee_id = crr.committee_id
             AND requester_uc.user_id = crr.requester_user_id
@@ -183,9 +188,15 @@ export const receivedRequestsHistoryResolvers = {
          ORDER BY crr.requested_at DESC`,
          [loggedInUserId, targetUserId, targetCommitteeId]
       );
+      const authorizedCommitteeIds = await getAuthorizedCommitteeIds(
+        loggedInUserId,
+        PERMISSIONS.COMMITTEE_REQUESTS_REVIEW,
+        rows.map((row) => Number(row.committee_id))
+      );
+      const authorizedRows = rows.filter((row) => authorizedCommitteeIds.has(Number(row.committee_id)));
 
       return {
-        data: rows.map((row: any) => ({
+        data: authorizedRows.map((row: any) => ({
           committeeId: Number(row.committee_id),
           committeeName: row.committee_name,
           committeeLogo: row.committee_logo || null,

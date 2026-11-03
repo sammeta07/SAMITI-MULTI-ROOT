@@ -1,5 +1,6 @@
 import { execute, query } from '../../config/db';
 import { getLoggedInUserId, throwEventError } from '../events/details/voting/event-voting-core.graphql';
+import { hasPermission, PERMISSIONS } from '../../authorization/authorization';
 
 export const todoTypes = `
   enum TodoStatus {
@@ -59,58 +60,54 @@ export async function getTodoAssignees(committeeId: number): Promise<Array<{ use
   return rows.map((row) => ({ userId: Number(row.userId), name: String(row.name || '') }));
 }
 
-async function getParentEventId(parentType: ParentType, parentId: number): Promise<number> {
+async function getParentPermission(parentType: ParentType, parentId: number, userId: number) {
   const table = parentType === 'TASK' ? 'tasks' : 'programs';
   const rows = await query<any[]>(
-    `SELECT event_id AS eventId
-     FROM ${table}
-     WHERE id = ?
+    `SELECT entity.event_id AS eventId,
+            event.committee_id AS committeeId,
+            entity.owner_user_id AS ownerUserId,
+            entity.created_by AS createdBy,
+            uc.committee_role AS committeeRole
+     FROM ${table} entity
+     INNER JOIN events event ON event.id = entity.event_id
+     LEFT JOIN users_committees uc
+       ON uc.committee_id = event.committee_id AND uc.user_id = ?
+     WHERE entity.id = ?
      LIMIT 1`,
-    [parentId]
+    [userId, parentId]
   );
 
   if (rows.length === 0) {
     throwEventError('NOT_FOUND', `${parentType.toLowerCase()} not found`);
   }
 
-  return Number(rows[0].eventId);
-}
-
-async function getCommitteePermission(eventId: number, userId: number) {
-  const rows = await query<any[]>(
-    `SELECT e.committee_id AS committeeId, uc.committee_role AS committeeRole
-     FROM events e
-     LEFT JOIN users_committees uc
-       ON uc.committee_id = e.committee_id AND uc.user_id = ?
-     WHERE e.id = ?
-     LIMIT 1`,
-    [userId, eventId]
-  );
-
-  if (rows.length === 0) {
-    throwEventError('NOT_FOUND', 'Event not found');
-  }
-
-  const role = String(rows[0].committeeRole || '');
+  const row = rows[0];
+  const role = String(row.committeeRole || '').toUpperCase();
   const hasCommitteeAccess = [
     'COMMITTEE_MEMBER',
     'COMMITTEE_ADMIN',
     'COMMITTEE_MASTER_ADMIN'
   ].includes(role);
 
+  const eventId = Number(row.eventId);
   return {
+    eventId,
+    committeeId: Number(row.committeeId),
     hasCommitteeAccess,
-    canManage: role === 'COMMITTEE_ADMIN' || role === 'COMMITTEE_MASTER_ADMIN'
+    canManage: await hasPermission(
+      userId,
+      PERMISSIONS.TODO_MANAGE,
+      { type: 'EVENT', id: eventId }
+    ) ||
+      Number(row.ownerUserId) === userId ||
+      (parentType === 'TASK' && Number(row.createdBy) === userId)
   };
 }
 
-async function getTodoEventId(todoId: number): Promise<{ eventId: number; committeeId: number }> {
+async function getTodoParent(todoId: number): Promise<{ parentType: ParentType; parentId: number }> {
   const rows = await query<any[]>(
-    `SELECT COALESCE(t.event_id, p.event_id) AS eventId, e.committee_id AS committeeId
+    `SELECT todo.task_id AS taskId, todo.program_id AS programId
      FROM todos todo
-     LEFT JOIN tasks t ON t.id = todo.task_id
-     LEFT JOIN programs p ON p.id = todo.program_id
-     INNER JOIN events e ON e.id = COALESCE(t.event_id, p.event_id)
      WHERE todo.id = ?
      LIMIT 1`,
     [todoId]
@@ -120,9 +117,10 @@ async function getTodoEventId(todoId: number): Promise<{ eventId: number; commit
     throwEventError('NOT_FOUND', 'Todo not found');
   }
 
+  const parentType: ParentType = rows[0].taskId !== null ? 'TASK' : 'PROGRAM';
   return {
-    eventId: Number(rows[0].eventId),
-    committeeId: Number(rows[0].committeeId)
+    parentType,
+    parentId: Number(parentType === 'TASK' ? rows[0].taskId : rows[0].programId)
   };
 }
 
@@ -173,10 +171,9 @@ export const todoResolvers = {
       }
 
       const userId = await getLoggedInUserId(context);
-      const eventId = await getParentEventId(parentType, parentId);
-      const permission = await getCommitteePermission(eventId, userId);
+      const permission = await getParentPermission(parentType, parentId, userId);
       if (!permission.canManage) {
-        throwEventError('FORBIDDEN', 'Only committee admins can add checklist items');
+        throwEventError('FORBIDDEN', 'Only the task or program owner or a master admin can manage checklist items');
       }
 
       const parentColumn = parentType === 'TASK' ? 'task_id' : 'program_id';
@@ -196,15 +193,10 @@ export const todoResolvers = {
       }
 
       const userId = await getLoggedInUserId(context);
-      const { eventId } = await getTodoEventId(todoId);
-      const permission = await getCommitteePermission(eventId, userId);
-      const currentItem = await getTodoItem(todoId);
-      const titleChanged = title !== currentItem.title;
-      if (titleChanged && !permission.canManage) {
-        throwEventError('FORBIDDEN', 'Only committee admins can edit checklist items');
-      }
-      if (!titleChanged && !permission.hasCommitteeAccess) {
-        throwEventError('FORBIDDEN', 'You are not allowed to update this checklist');
+      const parent = await getTodoParent(todoId);
+      const permission = await getParentPermission(parent.parentType, parent.parentId, userId);
+      if (!permission.canManage) {
+        throwEventError('FORBIDDEN', 'Only the task or program owner or a master admin can manage checklist items');
       }
 
       await execute(
@@ -228,10 +220,10 @@ export const todoResolvers = {
       }
 
       const userId = await getLoggedInUserId(context);
-      const { eventId } = await getTodoEventId(todoId);
-      const permission = await getCommitteePermission(eventId, userId);
-      if (!permission.hasCommitteeAccess) {
-        throwEventError('FORBIDDEN', 'You are not allowed to update this checklist');
+      const parent = await getTodoParent(todoId);
+      const permission = await getParentPermission(parent.parentType, parent.parentId, userId);
+      if (!permission.canManage) {
+        throwEventError('FORBIDDEN', 'Only the task or program owner or a master admin can manage checklist items');
       }
 
       await execute(
@@ -252,10 +244,10 @@ export const todoResolvers = {
       }
 
       const userId = await getLoggedInUserId(context);
-      const { eventId, committeeId } = await getTodoEventId(todoId);
-      const permission = await getCommitteePermission(eventId, userId);
+      const parent = await getTodoParent(todoId);
+      const permission = await getParentPermission(parent.parentType, parent.parentId, userId);
       if (!permission.canManage) {
-        throwEventError('FORBIDDEN', 'Only committee admins can assign checklist items');
+        throwEventError('FORBIDDEN', 'Only the task or program owner or a master admin can manage checklist items');
       }
 
       if (ownerUserId !== null) {
@@ -265,7 +257,7 @@ export const todoResolvers = {
            WHERE committee_id = ? AND user_id = ?
              AND committee_role IN ('COMMITTEE_MEMBER', 'COMMITTEE_ADMIN', 'COMMITTEE_MASTER_ADMIN')
            LIMIT 1`,
-          [committeeId, ownerUserId]
+          [permission.committeeId, ownerUserId]
         );
         if (memberRows.length === 0) {
           throwEventError('BAD_REQUEST', 'The assignee must be a member of this committee');
@@ -289,10 +281,10 @@ export const todoResolvers = {
       }
 
       const userId = await getLoggedInUserId(context);
-      const { eventId } = await getTodoEventId(todoId);
-      const permission = await getCommitteePermission(eventId, userId);
+      const parent = await getTodoParent(todoId);
+      const permission = await getParentPermission(parent.parentType, parent.parentId, userId);
       if (!permission.canManage) {
-        throwEventError('FORBIDDEN', 'Only committee admins can remove checklist items');
+        throwEventError('FORBIDDEN', 'Only the task or program owner or a master admin can manage checklist items');
       }
 
       await execute('DELETE FROM todos WHERE id = ?', [todoId]);

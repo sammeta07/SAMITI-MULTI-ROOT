@@ -35,6 +35,9 @@ export class EventTasksService {
           createdAt
           ownerAssignedAt
           updatedAt
+          canManage
+          canAssignOwner
+          canDelete
         }
         canCreateTasks
         taskAssignees {
@@ -76,6 +79,9 @@ export class EventTasksService {
         createdAt
         ownerAssignedAt
         updatedAt
+        canManage
+        canAssignOwner
+        canDelete
       }
     }`;
 
@@ -114,6 +120,9 @@ export class EventTasksService {
         createdAt
         ownerAssignedAt
         updatedAt
+        canManage
+        canAssignOwner
+        canDelete
       }
     }`;
 
@@ -143,6 +152,9 @@ export class EventTasksService {
         createdAt
         ownerAssignedAt
         updatedAt
+        canManage
+        canAssignOwner
+        canDelete
       }
     }`;
 
@@ -160,6 +172,29 @@ export class EventTasksService {
           throw new Error('GraphQL response is missing updateEventTaskStatus');
         }
         return updatedTask;
+      })
+    );
+  }
+
+  public deleteEventTask(taskId: number): Observable<boolean> {
+    const mutation = `mutation DeleteEventTask($taskId: Int!) {
+      deleteEventTask(taskId: $taskId)
+    }`;
+
+    return this.http.post<GraphqlResponse<{ deleteEventTask: boolean }>>(
+      this.graphqlUrl,
+      { query: mutation, variables: { taskId } },
+      { withCredentials: true }
+    ).pipe(
+      map((response) => {
+        if (response.errors?.length) {
+          throw new Error(response.errors.map((error) => error.message).join('; '));
+        }
+        const deleted = response.data?.deleteEventTask;
+        if (deleted !== true) {
+          throw new Error('Task deletion was not confirmed by the server');
+        }
+        return deleted;
       })
     );
   }
