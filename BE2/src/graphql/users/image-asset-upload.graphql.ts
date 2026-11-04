@@ -1,4 +1,5 @@
 import { processAndStoreImageAsset, ImageAssetUsageContext, ImageResizeMode } from '../../media/image-processing';
+import { hasPermission, PERMISSIONS } from '../../authorization/authorization';
 
 const GRAPHQL_IMAGE_USAGE_CONTEXT_TO_STORAGE_CONTEXT: Record<string, ImageAssetUsageContext> = {
   USER_PROFILE_PHOTO: 'USER_PROFILE_PHOTO',
@@ -104,6 +105,47 @@ export const imageAssetUploadResolvers = {
       const resolvedUsageContext = GRAPHQL_IMAGE_USAGE_CONTEXT_TO_STORAGE_CONTEXT[usageContext];
       if (!resolvedUsageContext) {
         throw new Error('Invalid image usage context.');
+      }
+
+      const requestedPublicIds = files.map((fileItem) => fileItem.publicId || publicId);
+      for (const requestedPublicId of requestedPublicIds) {
+        const committeeLogoMatch = usageContext === 'COMMITTEE_LOGO'
+          ? requestedPublicId?.match(/^committee-logo-(\d+)$/)
+          : null;
+        if (!committeeLogoMatch) {
+          continue;
+        }
+
+        const authHeader = context.headers?.authorization;
+        const tokenFromCookie = context.cookies?.token;
+        const accessToken = typeof authHeader === 'string' && authHeader.startsWith('Bearer ')
+          ? authHeader.slice(7)
+          : typeof tokenFromCookie === 'string'
+            ? tokenFromCookie.trim()
+            : '';
+        if (!accessToken) {
+          throw new Error('Unauthorized: Missing access token');
+        }
+
+        let loggedInUserId: number;
+        try {
+          const decoded: any = await context.jwt.verify(accessToken);
+          loggedInUserId = Number(decoded?.id || decoded?.user_id || decoded?.uid);
+        } catch {
+          throw new Error('Unauthorized: Invalid or expired token');
+        }
+        if (!Number.isInteger(loggedInUserId) || loggedInUserId <= 0) {
+          throw new Error('Unauthorized: Invalid token');
+        }
+
+        const committeeId = Number(committeeLogoMatch[1]);
+        if (!await hasPermission(
+          loggedInUserId,
+          PERMISSIONS.COMMITTEE_LOGO_UPDATE,
+          { type: 'COMMITTEE', id: committeeId }
+        )) {
+          throw new Error('Only committee admins can update the committee logo');
+        }
       }
 
       const uploadedMetadata = await Promise.all(

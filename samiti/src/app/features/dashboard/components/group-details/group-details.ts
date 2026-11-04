@@ -252,7 +252,7 @@ export class GroupDetailsComponent implements OnInit {
     const selectedFile = inputElement.files?.[0] || null;
     inputElement.value = '';
 
-    if (!selectedFile || !this.isCurrentUserMasterAdmin()) return;
+    if (!selectedFile || (!this.isCurrentUserMasterAdmin() && !this.isCurrentUserAdmin())) return;
 
     const committee = this.groupData();
     if (!committee?.committeeId) {

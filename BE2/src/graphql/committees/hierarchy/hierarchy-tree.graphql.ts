@@ -1,7 +1,11 @@
 import { query } from '../../../config/db';
 import { hasEventsDisplayNameColumn } from '../../events/details/event-display-name-support';
 import { hasEventsVotingPhaseStateColumn } from '../../events/details/voting/event-voting-phase-support';
-import { getAuthorizedCommitteeIds, hasPermission, PERMISSIONS } from '../../../authorization/authorization';
+import {
+  getAuthorizedCommitteeIds,
+  hasPermission,
+  PERMISSIONS
+} from '../../../authorization/authorization';
 
 export const hierarchyTreeTypes = `
   type HierarchyEventRole {

@@ -145,7 +145,7 @@
               }
             </ng-template>
 
-            @if (isCurrentUserMasterAdmin()) {
+            @if (isCurrentUserMasterAdmin() || isCurrentUserAdmin()) {
               <input #committeeLogoInput type="file" hidden accept="image/*" (change)="onCommitteeLogoSelected($event)">
               <button type="button" class="committee-logo-edit-trigger"
                 [class.is-uploading]="isUploadingCommitteeLogo()"
