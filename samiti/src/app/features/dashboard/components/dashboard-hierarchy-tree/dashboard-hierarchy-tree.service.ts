@@ -6,11 +6,6 @@ import { environment } from '../../../../../environments/environment';
 import { CommitteeDetailsPayload, RoleNode } from './dashboard-hierarchy-tree.models';
 import { sanitizeCloudinaryLogoUrl } from '../../../../shared/services/cloudinary-logo.util';
 
-/**
- * Fields selected for every hierarchy tree node at any nesting depth.
- * Kept in a single helper so the GraphQL query stays DRY across the
- * (potentially many) recursive `children` blocks.
- */
 const nodeFields = `
   id
   committeeId
@@ -46,7 +41,6 @@ const nodeFields = `
   }
 `;
 
-// Recursively build a `children { ... }` block for the non-task hierarchy.
 const buildChildrenBlock = (depth: number): string => {
   if (depth <= 0) return '';
   return `
@@ -57,8 +51,6 @@ const buildChildrenBlock = (depth: number): string => {
   `;
 };
 
-// Tasks are fetched as a flat list per event and rebuilt from parent IDs,
-// so this depth only covers committee → event → program/task roots.
 const HIERARCHY_DEPTH = 2;
 
 @Injectable({
@@ -136,6 +128,7 @@ export class DashboardHierarchyTreeService {
     const query = `mutation UpdateCommitteeLogo($input: UpdateCommitteeLogoInput!) {
       updateCommitteeLogo(input: $input) {
         data {
+          committeeId
           logo
         }
       }
@@ -143,7 +136,15 @@ export class DashboardHierarchyTreeService {
 
     return this.http.post<{
       errors?: Array<{ message: string }>;
-      data?: { updateCommitteeLogo?: { data?: { logo?: string | null } } };
+      data?: {
+        updateCommitteeLogo?: {
+          data?: {
+            committeeId?: number;
+            logo?: string | null;
+          };
+          logo?: string | null;
+        };
+      };
     }>(
       this.graphqlUrl,
       { query, variables: { input: { committeeId, logo } } },
@@ -153,10 +154,11 @@ export class DashboardHierarchyTreeService {
         if (response.errors?.length) {
           throw new Error(response.errors.map((error) => error.message).join('; '));
         }
-        const updatedLogo = response.data?.updateCommitteeLogo?.data?.logo;
-        if (!updatedLogo) {
-          throw new Error('GraphQL response is missing updated committee logo');
-        }
+        const updatedLogo =
+          response.data?.updateCommitteeLogo?.data?.logo ??
+          response.data?.updateCommitteeLogo?.logo ??
+          logo;
+
         return sanitizeCloudinaryLogoUrl(updatedLogo) || updatedLogo;
       })
     );

@@ -7,7 +7,8 @@ import {
   OnDestroy,
   OnInit,
   Output,
-  signal
+  signal,
+  untracked
 } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { Router, NavigationEnd } from '@angular/router';
@@ -20,7 +21,7 @@ import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatSelectModule } from '@angular/material/select';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { HttpErrorResponse } from '@angular/common/http';
-import { firstValueFrom } from 'rxjs';
+import { firstValueFrom, Subscription } from 'rxjs';
 import { filter } from 'rxjs/operators';
 import { DashboardHierarchyTreeService } from './dashboard-hierarchy-tree.service';
 import { AuthService } from '../../../../core/services/auth.service';
@@ -29,7 +30,7 @@ import { LoadingStateService } from '../../../../shared/services/loading-state.s
 import { AdminHierarchyTreeNode, RoleNode, TreeNode } from './dashboard-hierarchy-tree.models';
 import { sanitizeCloudinaryLogoUrl } from '../../../../shared/services/cloudinary-logo.util';
 import { SelectedYearService } from '../../../../shared/services/selected-year.service';
-import { parseLocalDate, getEventComputedStatus, isProgramEndDateInFuture } from '../../../../shared/services/event-status.util';
+import { parseLocalDate, getEventComputedStatus } from '../../../../shared/services/event-status.util';
 import { compareByScheduleAndStatus } from '../../../../shared/services/program-schedule-sort.util';
 import { ImageAssetService } from '../../../../core/services/image-asset.service';
 import { ImageCropperDialogComponent } from '../../../../shared/components/image-cropper-dialog/image-cropper-dialog.component';
@@ -61,6 +62,7 @@ export class DashboardHierarchyTreeComponent implements OnInit, OnDestroy {
   private readonly dialog = inject(MatDialog);
   private readonly imageAssetService = inject(ImageAssetService);
   private readonly routeRefreshAttempts = new Set<string>();
+  private routerEventsSub?: Subscription;
 
   public readonly isLoading = signal<boolean>(false);
   public readonly isNavigating = signal<boolean>(false);
@@ -85,7 +87,6 @@ export class DashboardHierarchyTreeComponent implements OnInit, OnDestroy {
         }
       }
     }
-    return loading;
   });
 
   private readonly selectedNode = signal<TreeNode | null>(null);
@@ -112,16 +113,18 @@ export class DashboardHierarchyTreeComponent implements OnInit, OnDestroy {
 
   private readonly treeRefreshEffect = effect(() => {
     const refreshCounter = this.treeService.refreshHierarchyTree();
-    if (refreshCounter > 0) {
-      this.fetchAdminNavigationTree();
-    }
+    untracked(() => {
+      if (refreshCounter > 0) {
+        this.fetchAdminNavigationTree();
+      }
+    });
   });
 
   ngOnInit(): void {
     this.fetchAdminNavigationTree();
     this.scheduleDateRefresh();
 
-    this.router.events.pipe(
+    this.routerEventsSub = this.router.events.pipe(
       filter(event => event instanceof NavigationEnd)
     ).subscribe(() => {
       this.syncActiveNodeFromRawUrl();
@@ -185,13 +188,11 @@ export class DashboardHierarchyTreeComponent implements OnInit, OnDestroy {
       next: (treeData) => {
         const transformedTree = this.transformBackendToTreeNode(treeData || []);
         
-        // Data refresh sequence for MatTreeNestedDataSource
-        this.dataSource.data = [];
         this.dataSource.data = [...transformedTree];
         this.hasCommitteesHierarchy.set(transformedTree.length > 0);
         this.expandAllTreeNodes();
         this.isLoading.set(false);
-        this.syncActiveNodeFromRawUrl();
+        this.syncActiveNodeFromRawUrl(false);
         if (!this.selectedNode()) {
           this.scrollRelevantEventIntoView();
         }
@@ -282,6 +283,13 @@ export class DashboardHierarchyTreeComponent implements OnInit, OnDestroy {
     input.click();
   }
 
+  public onImageLoadError(node: TreeNode): void {
+    if (node.logo !== null) {
+      node.logo = null;
+      this.cdr.markForCheck();
+    }
+  }
+
   public async onNodeLogoSelected(node: TreeNode, event: Event): Promise<void> {
     event.stopPropagation();
     const input = event.target as HTMLInputElement;
@@ -311,28 +319,50 @@ export class DashboardHierarchyTreeComponent implements OnInit, OnDestroy {
 
       this.uploadingLogoNodeKeys.add(uploadKey);
       this.cdr.markForCheck();
+
+      // 1. Cloudinary upload
       const asset = await firstValueFrom(
         this.imageAssetService.uploadSingleImageForCommitteeLogo(
           croppedFile,
           `${node.type === 'group' ? 'committee' : 'event'}-logo-${node.id}`
         )
       );
+
+      // 2. Persist Logo in Database
       const logo = node.type === 'group'
         ? await firstValueFrom(this.treeService.updateCommitteeLogo(node.id, asset.publicAbsoluteUrl))
         : await firstValueFrom(this.treeService.updateEventLogo(node.id, committeeId, asset.publicAbsoluteUrl));
 
+      // 3. Local In-Memory update
       node.logo = logo;
+      this.updateNodeLogoInTree(this.dataSource.data, node.type, node.id, logo);
+      this.dataSource.data = [...this.dataSource.data];
+
+      // 4. Notify Group Details Component directly
       this.treeService.notifyLogoUpdated(node.type === 'group'
         ? { type: 'group', id: node.id, logo }
         : { type: 'event', id: node.id, committeeId, logo });
+
       this.notifier.success(`${node.type === 'group' ? 'Committee' : 'Event'} logo updated successfully.`);
-      this.treeService.triggerHierarchyTreeRefresh();
     } catch (error) {
       this.notifier.error(error instanceof Error ? error.message : 'Failed to update logo.');
     } finally {
       this.uploadingLogoNodeKeys.delete(uploadKey);
       this.cdr.markForCheck();
     }
+  }
+
+  private updateNodeLogoInTree(nodes: TreeNode[], type: string, id: number, newLogo: string): boolean {
+    for (const item of nodes) {
+      if (item.type === type && item.id === id) {
+        item.logo = newLogo;
+        return true;
+      }
+      if (item.children && this.updateNodeLogoInTree(item.children, type, id, newLogo)) {
+        return true;
+      }
+    }
+    return false;
   }
 
   private mapEventTasksToTreeNodes(
@@ -460,7 +490,7 @@ export class DashboardHierarchyTreeComponent implements OnInit, OnDestroy {
     });
   }
 
-  private syncActiveNodeFromRawUrl(): void {
+  private syncActiveNodeFromRawUrl(allowFetchRetry = true): void {
     const currentUrl = this.router.url;
     const parsedUrl = this.router.parseUrl(currentUrl);
     const shouldAutoOpenFirstNode = parsedUrl.queryParams?.['autoOpenFirstNode'] === '1';
@@ -523,7 +553,7 @@ export class DashboardHierarchyTreeComponent implements OnInit, OnDestroy {
         return;
       }
 
-      if (!this.routeRefreshAttempts.has(routeSelectionKey)) {
+      if (allowFetchRetry && !this.routeRefreshAttempts.has(routeSelectionKey)) {
         this.routeRefreshAttempts.add(routeSelectionKey);
         this.fetchAdminNavigationTree();
         return;
@@ -746,9 +776,6 @@ export class DashboardHierarchyTreeComponent implements OnInit, OnDestroy {
         this.navigateTimeout = null;
       }, DashboardHierarchyTreeComponent.NAVIGATING_GUARD_TIMEOUT_MS);
 
-      // Conditional routing: when an EVENT node's voting phase has reached
-      // the results stage (votingPhaseState === 6), land the user on the
-      // Overview tab instead of the Voting tab.
       const targetPath = (node.type === 'event' && Number(node.votingPhaseState || 0) === 6)
         ? ['/dashboard', 'event', node.id, 'overview']
         : ['/dashboard', node.type, node.id];
@@ -1033,6 +1060,8 @@ export class DashboardHierarchyTreeComponent implements OnInit, OnDestroy {
 
   ngOnDestroy(): void {
     if (this.dateRefreshTimer !== null) clearTimeout(this.dateRefreshTimer);
+    if (this.navigateTimeout !== null) clearTimeout(this.navigateTimeout);
+    this.routerEventsSub?.unsubscribe();
   }
 
   public isProgramOwner(node: TreeNode): boolean {

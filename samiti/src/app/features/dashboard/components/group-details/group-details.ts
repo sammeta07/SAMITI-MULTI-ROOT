@@ -1,4 +1,4 @@
-import { Component, inject, OnInit, signal, computed, ViewChild, ElementRef, ChangeDetectorRef, effect } from '@angular/core';
+import { Component, inject, OnInit, signal, computed, ViewChild, ElementRef, ChangeDetectorRef, effect, untracked } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
@@ -78,6 +78,7 @@ export class GroupDetailsComponent implements OnInit {
 
   private readonly committeeIdForDetails = signal<string | null>(null);
   private detailsRequestSequence = 0;
+  
   private readonly reloadDetailsForSelectedYear = effect(() => {
     const year = this.selectedYearService.selectedYear();
     const committeeId = this.committeeIdForDetails();
@@ -85,18 +86,26 @@ export class GroupDetailsComponent implements OnInit {
       this.fetchCommitteeDetailsPayload(committeeId, year);
     }
   });
+
+  // FIX: untracked() ensure karta hai ki groupData update hone par yeh effect infinite loop na chalaye
   private readonly syncLogoFromHierarchy = effect(() => {
     const update = this.hierarchyTreeService.logoUpdated();
-    const committee = this.groupData();
-    if (!update || !committee) return;
+    if (!update) return;
 
-    if (update.type === 'group' && committee.committeeId === update.id) {
-      this.groupData.update((current) => current ? { ...current, logo: update.logo } : current);
-    } else if (update.type === 'event' && committee.committeeId === update.committeeId) {
-      this.committeeEvents.update((events) =>
-        events.map((item) => item.eventId === update.id ? { ...item, eventLogo: update.logo } : item)
-      );
-    }
+    untracked(() => {
+      const committee = this.groupData();
+      if (!committee) return;
+
+      if (update.type === 'group' && Number(committee.committeeId) === Number(update.id)) {
+        this.groupData.update((current) => current ? { ...current, logo: update.logo } : current);
+        this.cdr.markForCheck();
+      } else if (update.type === 'event' && Number(committee.committeeId) === Number(update.committeeId)) {
+        this.committeeEvents.update((events) =>
+          events.map((item) => item.eventId === update.id ? { ...item, eventLogo: update.logo } : item)
+        );
+        this.cdr.markForCheck();
+      }
+    });
   });
 
   @ViewChild('eventsScrollContainer') eventsScrollContainer!: ElementRef<HTMLDivElement>;
@@ -267,7 +276,13 @@ export class GroupDetailsComponent implements OnInit {
       const resolved = updated?.logo || upload.publicAbsoluteUrl;
       this.groupData.update((curr) => (curr ? { ...curr, logo: resolved } : curr));
       this.notifier.success(`Logo updated successfully.`);
-      this.hierarchyTreeService.triggerHierarchyTreeRefresh();
+      
+      // Hierarchy tree ko notify karein bina pura tree re-fetch kiye
+      this.hierarchyTreeService.notifyLogoUpdated({
+        type: 'group',
+        id: Number(committee.committeeId),
+        logo: resolved
+      });
     } catch (err: any) {
       this.notifier.error(err?.message || 'Failed to update logo.');
     } finally {
@@ -310,6 +325,13 @@ export class GroupDetailsComponent implements OnInit {
         evts.map((e) => (e.eventId === eventItem.eventId ? { ...e, eventLogo: resolved } : e))
       );
       this.notifier.success(`Event logo updated.`);
+
+      this.hierarchyTreeService.notifyLogoUpdated({
+        type: 'event',
+        id: eventItem.eventId,
+        committeeId: Number(committeeId),
+        logo: resolved
+      });
     } catch (err: any) {
       this.notifier.error(err?.message || 'Failed to update event logo.');
     } finally {
@@ -580,10 +602,10 @@ export class GroupDetailsComponent implements OnInit {
     const getScore = (event: CommitteeEventListItem): number => {
       const start = event.startDate ? new Date(event.startDate) : null;
       const end = event.endDate ? new Date(event.endDate) : null;
-      if (end && today > end) return 1; // Completed
+      if (end && today > end) return 1;
       if (!start) return 3;
-      if (today < start) return 3; // Upcoming
-      return 2; // Started / Ongoing
+      if (today < start) return 3;
+      return 2;
     };
 
     return [...events].sort((a, b) => {
