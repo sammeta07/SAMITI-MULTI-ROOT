@@ -200,6 +200,23 @@ export class EventTasksComponent implements OnInit, OnDestroy {
     return this.editingTaskNameIds.has(taskId);
   }
 
+  public isEditingTaskRow(task: EventTaskEntry): boolean {
+    return this.editingTaskNameIds.has(task.taskId) || this.editingTaskAssigneeIds.has(task.taskId);
+  }
+
+  public editTaskRow(task: EventTaskEntry): void {
+    if (this.isEditingTaskRow(task)) return;
+    if (task.canEditTask) this.editTaskName(task);
+    if (task.canAssignOwner && task.status?.toUpperCase() !== 'COMPLETED') {
+      this.editTaskAssignee(task);
+    }
+  }
+
+  public cancelEditTaskRow(task: EventTaskEntry): void {
+    this.cancelEditTaskName(task);
+    this.cancelEditTaskAssignee(task);
+  }
+
   public editTaskName(task: EventTaskEntry): void {
     if (!task.canEditTask || this.savingTaskNameIds.has(task.taskId)) return;
     this.taskNameEditText[task.taskId] = task.taskName;

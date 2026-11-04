@@ -298,7 +298,25 @@
                           @if (entry.depth > 0) {
                             <mat-icon class="child-task-indicator">subdirectory_arrow_right</mat-icon>
                           }
-                          <span class="task-title-text">{{ child.taskName }}</span>
+                          @if (isEditingSubtaskName(child.taskId)) {
+                            <input
+                              type="text"
+                              class="task-title-edit-input"
+                              [id]="'subtask-name-' + child.taskId"
+                              maxlength="255"
+                              [value]="subtaskNameEditText[child.taskId]"
+                              [disabled]="savingSubtaskNameIds.has(child.taskId)"
+                              [attr.aria-label]="'Edit title for ' + child.taskName"
+                              (input)="subtaskNameEditText[child.taskId] = $any($event.target).value"
+                              (blur)="saveSubtaskNameOnBlur(child)"
+                              (keydown)="$event.stopPropagation()"
+                              (keydown.enter)="$any($event.target).blur(); $event.stopPropagation()"
+                              (keydown.escape)="cancelEditSubtaskRow(child); $event.stopPropagation()"
+                              (click)="$event.stopPropagation()"
+                            />
+                          } @else {
+                            <span class="task-title-text" [title]="child.taskName">{{ child.taskName }}</span>
+                          }
                           <span
                             class="task-child-count-pill"
                             [matTooltip]="getSubtaskChildren(child.taskId).length + ' direct / ' + getSubtaskDescendantCount(child.taskId) + ' total subtasks'"
@@ -466,35 +484,50 @@
                                   </span>
                                 }
                               </span>
-                              @if (child.canDelete) {
-                                <button
-                                  mat-icon-button
-                                  class="task-assignee-edit-btn"
-                                  type="button"
-                                  aria-label="Edit task assignee"
-                                  [disabled]="isUpdatingOwner || child.status?.toUpperCase() === 'COMPLETED'"
-                                  [matTooltip]="child.status?.toUpperCase() === 'COMPLETED' ? 'Completed tasks cannot be reassigned' : 'Assign task'"
-                                  (click)="editSubtaskAssignee(child.taskId, child.ownerName)"
-                                >
-                                  <mat-icon>edit</mat-icon>
-                                </button>
-                              }
                             </div>
                           }
                         </div>
-                        @if (child.canAssignOwner) {
-                          <button
-                            mat-icon-button
-                            type="button"
-                            class="task-panel-delete-icon"
-                            aria-label="Delete subtask"
-                            title="Delete subtask"
-                            (click)="$event.stopPropagation()"
-                            (keydown)="$event.stopPropagation()"
-                          >
-                            <mat-icon>delete_outline</mat-icon>
-                          </button>
-                        }
+                        <div class="task-row-actions" (click)="$event.stopPropagation()" (keydown)="$event.stopPropagation()">
+                          @if (isEditingSubtaskRow(child.taskId)) {
+                            <button
+                              mat-icon-button
+                              class="task-assignee-cancel-btn"
+                              type="button"
+                              aria-label="Cancel task edit"
+                              matTooltip="Cancel edit"
+                              [disabled]="isUpdatingOwner || savingSubtaskNameIds.has(child.taskId)"
+                              (mousedown)="$event.preventDefault(); $event.stopPropagation()"
+                              (click)="cancelEditSubtaskRow(child)"
+                            >
+                              <mat-icon>close</mat-icon>
+                            </button>
+                          } @else if (child.canEditTask || child.canAssignOwner) {
+                            <button
+                              mat-icon-button
+                              class="task-assignee-edit-btn task-title-edit-button"
+                              type="button"
+                              aria-label="Edit task"
+                              [matTooltip]="child.canEditTask && child.canAssignOwner ? 'Edit task title and assignee' : child.canEditTask ? 'Edit task title' : child.status?.toUpperCase() === 'COMPLETED' ? 'Completed tasks cannot be reassigned' : 'Assign task owner'"
+                              [disabled]="isUpdatingOwner || savingSubtaskNameIds.has(child.taskId) || (!child.canEditTask && child.status?.toUpperCase() === 'COMPLETED')"
+                              (click)="editSubtaskRow(child)"
+                            >
+                              <mat-icon>edit</mat-icon>
+                            </button>
+                          }
+                          @if (child.canAssignOwner) {
+                            <button
+                              mat-icon-button
+                              type="button"
+                              class="task-panel-delete-icon"
+                              aria-label="Delete subtask"
+                              title="Delete subtask"
+                              (click)="$event.stopPropagation()"
+                              (keydown)="$event.stopPropagation()"
+                            >
+                              <mat-icon>delete_outline</mat-icon>
+                            </button>
+                          }
+                        </div>
                       </div>
                     </mat-expansion-panel-header>
 

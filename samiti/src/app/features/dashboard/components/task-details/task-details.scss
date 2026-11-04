@@ -633,9 +633,17 @@
   width: 100%;
   min-width: 0;
   min-height: 28px;
-  grid-template-columns: minmax(0, 1fr) 115px minmax(0, 240px) 30px;
+  grid-template-columns: minmax(0, 1fr) 115px minmax(0, 240px) 62px;
   align-items: center;
-  gap: 10px;
+  gap: 6px;
+}
+
+.task-row-actions {
+  display: flex;
+  min-width: 62px;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 6px;
 }
 
 .task-panel-delete-icon {
@@ -887,6 +895,10 @@
   color: #64748b;
 }
 
+.task-title-edit-button {
+  border-color: #cbd5e1 !important;
+}
+
 .task-assignee-autocomplete-box {
   display: block;
   min-width: 0;
@@ -963,7 +975,7 @@
    ========================================================================== */
 .task-details-grid {
   display: grid;
-  grid-template-columns: repeat(5, minmax(0, 1fr));
+  grid-template-columns: minmax(70px, 0.6fr) minmax(115px, 1.1fr) minmax(170px, 1.4fr) minmax(115px, 1.1fr) minmax(170px, 1.4fr);
   gap: 6px;
   margin-top: 4px;
   margin-bottom: 2px;
@@ -1334,17 +1346,12 @@
   }
 
   .task-panel-summary {
-    grid-template-columns: minmax(0, 1fr) 92px minmax(0, 140px) 30px;
+    grid-template-columns: minmax(0, 1fr) 92px minmax(0, 140px) 62px;
     gap: 6px;
   }
 
   .task-subtask-panel .mat-expansion-panel-header {
     padding: 0 6px;
-  }
-
-  .task-details-grid {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: 8px 6px;
   }
 
   .task-children-container {
@@ -1353,5 +1360,18 @@
 
   .task-assignee-owner-name {
     max-width: 76px;
+  }
+}
+
+@media (max-width: 820px) {
+  .task-details-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    row-gap: 8px;
+  }
+}
+
+@media (max-width: 580px) {
+  .task-details-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 }

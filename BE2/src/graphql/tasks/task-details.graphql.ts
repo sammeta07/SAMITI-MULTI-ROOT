@@ -16,6 +16,7 @@ export const taskDetailsTypes = `
     createdAt: String
     ownerAssignedAt: String
     canManage: Boolean!
+    canEditTask: Boolean!
     canAssignOwner: Boolean!
     canDelete: Boolean!
   }
@@ -171,6 +172,7 @@ export const taskDetailsResolvers = {
         const isRootTask = child.parentTaskId === null;
         const isChildParentOwner = Number(child.parentOwnerUserId) === userId;
         return {
+          canEditTask: Number(child.createdBy) === userId || isMasterAdmin,
           canManage: isRootTask
             ? Number(child.ownerUserId) === userId || isMasterAdmin
             : isChildParentOwner || isMasterAdmin,

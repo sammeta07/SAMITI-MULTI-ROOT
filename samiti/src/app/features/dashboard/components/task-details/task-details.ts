@@ -75,9 +75,12 @@ export class TaskDetailsComponent implements OnInit {
   public editingTaskName = '';
   public readonly assigningSubtaskIds = new Set<number>();
   public readonly editingSubtaskAssigneeIds = new Set<number>();
+  public readonly editingSubtaskNameIds = new Set<number>();
+  public readonly savingSubtaskNameIds = new Set<number>();
   public readonly updatingSubtaskStatusIds = new Set<number>();
   public readonly clearedSubtaskAssigneeSearchIds = signal<Set<number>>(new Set<number>());
   public subtaskAssigneeSearchText: Record<number, string> = {};
+  public subtaskNameEditText: Record<number, string> = {};
 
   public ngOnInit(): void {
     this.route.paramMap.pipe(takeUntilDestroyed(this.destroyRef)).subscribe((params) => {
@@ -135,6 +138,7 @@ export class TaskDetailsComponent implements OnInit {
                 createdByName: child.createdByName,
                 createdAt: child.createdAt,
                 ownerAssignedAt: child.ownerAssignedAt,
+                canEditTask: child.canEditTask,
                 canManage: child.canManage,
                 canAssignOwner: child.canAssignOwner,
                 canDelete: child.canDelete
@@ -150,6 +154,7 @@ export class TaskDetailsComponent implements OnInit {
                 createdByName: child.createdByName,
                 createdAt: child.createdAt,
                 ownerAssignedAt: child.ownerAssignedAt,
+                canEditTask: child.canEditTask,
                 canManage: child.canManage,
                 canAssignOwner: child.canAssignOwner,
                 canDelete: child.canDelete
@@ -306,6 +311,14 @@ export class TaskDetailsComponent implements OnInit {
     return this.editingSubtaskAssigneeIds.has(taskId);
   }
 
+  public isEditingSubtaskName(taskId: number): boolean {
+    return this.editingSubtaskNameIds.has(taskId);
+  }
+
+  public isEditingSubtaskRow(taskId: number): boolean {
+    return this.isEditingSubtaskName(taskId) || this.isEditingSubtaskAssignee(taskId);
+  }
+
   public isSubtaskAssigneeSearchCleared(taskId: number): boolean {
     return this.clearedSubtaskAssigneeSearchIds().has(taskId);
   }
@@ -321,6 +334,69 @@ export class TaskDetailsComponent implements OnInit {
       : (parts[0] || '').slice(0, 2).toUpperCase();
   }
 
+  public editSubtaskRow(child: TaskDetailsPayload['descendants'][number]): void {
+    if (this.isEditingSubtaskRow(child.taskId)) return;
+    if (child.canEditTask) this.editSubtaskName(child);
+    if (child.canAssignOwner && child.status?.toUpperCase() !== 'COMPLETED') {
+      this.editSubtaskAssignee(child.taskId, child.ownerName);
+    }
+  }
+
+  public cancelEditSubtaskRow(child: TaskDetailsPayload['descendants'][number]): void {
+    this.cancelEditSubtaskName(child);
+    this.cancelEditSubtaskAssignee(child.taskId, child.ownerName);
+  }
+
+  public editSubtaskName(child: TaskDetailsPayload['descendants'][number]): void {
+    if (!child.canEditTask || this.savingSubtaskNameIds.has(child.taskId)) return;
+    this.subtaskNameEditText[child.taskId] = child.taskName;
+    this.editingSubtaskNameIds.add(child.taskId);
+    setTimeout(() => document.getElementById(`subtask-name-${child.taskId}`)?.focus());
+  }
+
+  public cancelEditSubtaskName(child: TaskDetailsPayload['descendants'][number]): void {
+    this.editingSubtaskNameIds.delete(child.taskId);
+    this.subtaskNameEditText[child.taskId] = child.taskName;
+  }
+
+  public saveSubtaskNameOnBlur(child: TaskDetailsPayload['descendants'][number]): void {
+    if (!this.editingSubtaskNameIds.has(child.taskId) || this.savingSubtaskNameIds.has(child.taskId)) return;
+    const taskName = String(this.subtaskNameEditText[child.taskId] ?? '').trim();
+    if (!taskName) {
+      this.subtaskNameEditText[child.taskId] = child.taskName;
+      this.editingSubtaskNameIds.delete(child.taskId);
+      this.notifier.error('Task title cannot be empty.');
+      return;
+    }
+    if (taskName === child.taskName) {
+      this.editingSubtaskNameIds.delete(child.taskId);
+      return;
+    }
+
+    this.savingSubtaskNameIds.add(child.taskId);
+    this.eventTasksService.updateEventTaskName(child.taskId, taskName).subscribe({
+      next: (updated) => {
+        this.savingSubtaskNameIds.delete(child.taskId);
+        this.editingSubtaskNameIds.delete(child.taskId);
+        this.subtaskNameEditText[child.taskId] = updated.taskName;
+        this.updateSubtaskName(child.taskId, updated.taskName);
+        this.hierarchyTreeService.notifyTaskNameUpdated(child.taskId, updated.taskName);
+        this.notifier.success('Task title updated.');
+      },
+      error: (error) => {
+        this.savingSubtaskNameIds.delete(child.taskId);
+        this.editingSubtaskNameIds.delete(child.taskId);
+        this.subtaskNameEditText[child.taskId] = child.taskName;
+        this.notifier.error(
+          error?.error?.errors?.[0]?.message ||
+          error?.error?.message ||
+          error?.message ||
+          'Failed to update task title.'
+        );
+      }
+    });
+  }
+
   public getRoleColorClass(role?: string | null): string {
     switch ((role || '').toUpperCase()) {
       case 'COMMITTEE_MASTER_ADMIN': return 'role-master';
@@ -332,7 +408,7 @@ export class TaskDetailsComponent implements OnInit {
 
   public editSubtaskAssignee(taskId: number, ownerName: string | null): void {
     const child = this.task()?.descendants.find((entry) => entry.taskId === taskId);
-    if (!child?.canAssignOwner || this.assigningSubtaskIds.has(taskId)) return;
+    if (!child?.canAssignOwner || child.status?.toUpperCase() === 'COMPLETED' || this.assigningSubtaskIds.has(taskId)) return;
     this.subtaskAssigneeSearchText[taskId] = ownerName || '';
     this.clearedSubtaskAssigneeSearchIds.update((ids) => {
       const next = new Set(ids);
@@ -469,6 +545,7 @@ export class TaskDetailsComponent implements OnInit {
     createdAt: string;
     ownerAssignedAt: string | null;
     canManage: boolean;
+    canEditTask: boolean;
     canAssignOwner: boolean;
     canDelete: boolean;
   }): void {
@@ -486,10 +563,24 @@ export class TaskDetailsComponent implements OnInit {
               createdAt: updated.createdAt,
               ownerAssignedAt: updated.ownerAssignedAt,
               canManage: updated.canManage,
+              canEditTask: updated.canEditTask,
               canAssignOwner: updated.canAssignOwner,
               canDelete: updated.canDelete
             }
           : child;
+      return {
+        ...current,
+        children: current.children.map(updateEntry),
+        descendants: current.descendants.map(updateEntry)
+      };
+    });
+  }
+
+  private updateSubtaskName(taskId: number, taskName: string): void {
+    this.task.update((current) => {
+      if (!current) return current;
+      const updateEntry = (child: TaskDetailsPayload['descendants'][number]) =>
+        child.taskId === taskId ? { ...child, taskName } : child;
       return {
         ...current,
         children: current.children.map(updateEntry),

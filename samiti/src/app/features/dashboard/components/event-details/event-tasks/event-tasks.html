@@ -232,19 +232,6 @@
                           </mat-autocomplete>
                         </mat-form-field>
                       </span>
-                      @if (!isUpdatingOwner) {
-                        <span class="task-assignee-cancel-box" matTooltip="Cancel edit">
-                          <button
-                            mat-icon-button
-                            class="task-assignee-cancel-btn"
-                            type="button"
-                            aria-label="Cancel assignee edit"
-                            (click)="cancelEditTaskAssignee(task)"
-                          >
-                            <mat-icon>close</mat-icon>
-                          </button>
-                        </span>
-                      }
                     </div>
                   } @else {
                     <div class="task-assignee-value-layout">
@@ -273,56 +260,50 @@
                           </span>
                         }
                       </span>
-                      @if (task.canEditTask) {
-                        <button
-                          mat-icon-button
-                          class="task-assignee-edit-btn task-title-edit-button"
-                          type="button"
-                          aria-label="Edit task title"
-                          [matTooltip]="savingTaskNameIds.has(task.taskId) ? 'Saving task title...' : 'Edit task title'"
-                          [disabled]="savingTaskNameIds.has(task.taskId) || isEditingTaskName(task.taskId)"
-                          (click)="editTaskName(task); $event.stopPropagation()"
-                          (keydown)="$event.stopPropagation()"
-                        >
-                          <mat-icon>{{ savingTaskNameIds.has(task.taskId) ? 'hourglass_top' : 'edit' }}</mat-icon>
-                        </button>
-                      }
-                      @if (task.canAssignOwner) {
-                        <span
-                          class="task-assignee-action-box"
-                          [class.task-assignee-edit-disabled]="isUpdatingOwner || task.status?.toUpperCase() === 'COMPLETED'"
-                          [matTooltip]="task.status?.toUpperCase() === 'COMPLETED' ? 'Completed tasks cannot be reassigned' : 'Assign task'"
-                        >
-                          <button
-                            mat-icon-button
-                            class="task-assignee-edit-btn"
-                            type="button"
-                            aria-label="Assign task owner"
-                            matTooltip="Assign task owner"
-                            [disabled]="isUpdatingOwner || task.status?.toUpperCase() === 'COMPLETED'"
-                            (click)="editTaskAssignee(task)"
-                          >
-                            <mat-icon>person_add</mat-icon>
-                          </button>
-                        </span>
-                      }
                     </div>
                   }
                 </div>
-                @if (task.canDelete) {
-                  <button
-                    mat-icon-button
-                    type="button"
-                    class="task-panel-delete-icon"
-                    aria-label="Delete task"
-                    [matTooltip]="deletingTaskIds.has(task.taskId) ? 'Deleting task...' : 'Delete task'"
-                    [disabled]="deletingTaskIds.has(task.taskId)"
-                    (click)="onDeleteTask(task, $event)"
-                    (keydown)="$event.stopPropagation()"
-                  >
-                    <mat-icon>{{ deletingTaskIds.has(task.taskId) ? 'hourglass_top' : 'delete_outline' }}</mat-icon>
-                  </button>
-                }
+                <div class="task-row-actions" (click)="$event.stopPropagation()" (keydown)="$event.stopPropagation()">
+                  @if (isEditingTaskRow(task)) {
+                    <span class="task-assignee-cancel-box" matTooltip="Cancel edit">
+                      <button
+                        mat-icon-button
+                        class="task-assignee-cancel-btn"
+                        type="button"
+                        aria-label="Cancel task edit"
+                        (mousedown)="$event.preventDefault(); $event.stopPropagation()"
+                        (click)="cancelEditTaskRow(task)"
+                      >
+                        <mat-icon>close</mat-icon>
+                      </button>
+                    </span>
+                  } @else if (task.canEditTask || task.canAssignOwner) {
+                    <button
+                      mat-icon-button
+                      class="task-assignee-edit-btn task-title-edit-button"
+                      type="button"
+                      aria-label="Edit task"
+                      [matTooltip]="task.canEditTask && task.canAssignOwner ? 'Edit task title and assignee' : task.canEditTask ? 'Edit task title' : 'Assign task owner'"
+                      [disabled]="isUpdatingOwner || savingTaskNameIds.has(task.taskId) || task.status?.toUpperCase() === 'COMPLETED' && !task.canEditTask"
+                      (click)="editTaskRow(task)"
+                    >
+                      <mat-icon>edit</mat-icon>
+                    </button>
+                  }
+                  @if (task.canDelete) {
+                    <button
+                      mat-icon-button
+                      type="button"
+                      class="task-panel-delete-icon"
+                      aria-label="Delete task"
+                      [matTooltip]="deletingTaskIds.has(task.taskId) ? 'Deleting task...' : 'Delete task'"
+                      [disabled]="deletingTaskIds.has(task.taskId)"
+                      (click)="onDeleteTask(task, $event)"
+                    >
+                      <mat-icon>{{ deletingTaskIds.has(task.taskId) ? 'hourglass_top' : 'delete_outline' }}</mat-icon>
+                    </button>
+                  }
+                </div>
               </div>
             </mat-expansion-panel-header>
 

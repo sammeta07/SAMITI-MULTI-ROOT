@@ -49,6 +49,7 @@ export class TaskDetailsService {
           createdAt
           ownerAssignedAt
           canManage
+          canEditTask
           canAssignOwner
           canDelete
         }
@@ -64,6 +65,7 @@ export class TaskDetailsService {
           createdAt
           ownerAssignedAt
           canManage
+          canEditTask
           canAssignOwner
           canDelete
         }

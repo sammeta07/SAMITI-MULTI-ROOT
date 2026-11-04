@@ -13,6 +13,7 @@ export interface TaskChild {
   createdAt: string | null;
   ownerAssignedAt: string | null;
   canManage: boolean;
+  canEditTask: boolean;
   canAssignOwner: boolean;
   canDelete: boolean;
 }
