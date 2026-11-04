@@ -483,7 +483,15 @@ export class EventDetailsComponent implements OnInit, OnDestroy {
     dialogRef.afterClosed().subscribe((result) => {
       document.body.classList.remove('dialog-open');
       if (!result) return;
-      this.hierarchyTreeService.triggerHierarchyTreeRefresh();
+      const eventName = String(result.eventDisplayName || result.eventName || '').trim();
+      const sameSchedule =
+        String(result.startDate ?? '').slice(0, 10) === String(currentEvent.startDate ?? '').slice(0, 10) &&
+        String(result.endDate ?? '').slice(0, 10) === String(currentEvent.endDate ?? '').slice(0, 10);
+      if (eventName && sameSchedule) {
+        this.hierarchyTreeService.notifyEventNameUpdated(currentEvent.eventId, eventName);
+      } else {
+        this.hierarchyTreeService.triggerHierarchyTreeRefresh();
+      }
       this.refreshHeader();
     });
   }
@@ -555,7 +563,12 @@ export class EventDetailsComponent implements OnInit, OnDestroy {
         ...currentEvent,
         eventLogo: updated.eventLogo || uploadedMetadata.publicAbsoluteUrl
       });
-      this.hierarchyTreeService.triggerHierarchyTreeRefresh();
+      this.hierarchyTreeService.notifyLogoUpdated({
+        type: 'event',
+        id: currentEvent.eventId,
+        committeeId: currentEvent.committeeId,
+        logo: updated.eventLogo || uploadedMetadata.publicAbsoluteUrl
+      });
       this.notifier.success('Event logo updated successfully.');
     } catch (error: any) {
       this.notifier.error(error?.message || 'Failed to update event logo.');

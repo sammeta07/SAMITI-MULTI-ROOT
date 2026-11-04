@@ -51,10 +51,13 @@ export class EventTasksComponent implements OnInit, OnDestroy {
   public eventData: EventTaskEntry[] | null = null;
   public taskAssignees: TaskAssignee[] = [];
   public taskAssigneeSearchText: Record<number, string> = {};
+  public taskNameEditText: Record<number, string> = {};
   public canCreateTasks = false;
 
   public readonly assigningTaskIds = new Set<number>();
   public readonly editingTaskAssigneeIds = new Set<number>();
+  public readonly editingTaskNameIds = new Set<number>();
+  public readonly savingTaskNameIds = new Set<number>();
   public readonly updatingTaskStatusIds = new Set<number>();
   public readonly deletingTaskIds = new Set<number>();
   public readonly clearedTaskAssigneeSearchIds = signal<Set<number>>(new Set<number>());
@@ -191,6 +194,60 @@ export class EventTasksComponent implements OnInit, OnDestroy {
 
   public isEditingTaskAssignee(taskId: number): boolean {
     return this.editingTaskAssigneeIds.has(taskId);
+  }
+
+  public isEditingTaskName(taskId: number): boolean {
+    return this.editingTaskNameIds.has(taskId);
+  }
+
+  public editTaskName(task: EventTaskEntry): void {
+    if (!task.canEditTask || this.savingTaskNameIds.has(task.taskId)) return;
+    this.taskNameEditText[task.taskId] = task.taskName;
+    this.editingTaskNameIds.add(task.taskId);
+    setTimeout(() => {
+      document.getElementById(`task-name-${task.taskId}`)?.focus();
+    });
+  }
+
+  public cancelEditTaskName(task: EventTaskEntry): void {
+    this.editingTaskNameIds.delete(task.taskId);
+    this.taskNameEditText[task.taskId] = task.taskName;
+  }
+
+  public saveTaskNameOnBlur(task: EventTaskEntry): void {
+    if (!this.editingTaskNameIds.has(task.taskId) || this.savingTaskNameIds.has(task.taskId)) return;
+    const taskName = String(this.taskNameEditText[task.taskId] ?? '').trim();
+    if (!taskName) {
+      this.taskNameEditText[task.taskId] = task.taskName;
+      this.editingTaskNameIds.delete(task.taskId);
+      this.notifier.error('Task title cannot be empty.');
+      return;
+    }
+    if (taskName === task.taskName) {
+      this.editingTaskNameIds.delete(task.taskId);
+      return;
+    }
+
+    this.savingTaskNameIds.add(task.taskId);
+    this.tasksService.updateEventTaskName(task.taskId, taskName).subscribe({
+      next: (updatedTask) => {
+        this.savingTaskNameIds.delete(task.taskId);
+        this.editingTaskNameIds.delete(task.taskId);
+        if (this.currentEventId !== task.eventId) return;
+        this.eventData = this.tasks.map((entry) => entry.taskId === task.taskId
+          ? { ...entry, taskName: updatedTask.taskName, updatedAt: updatedTask.updatedAt }
+          : entry);
+        this.taskNameEditText[task.taskId] = updatedTask.taskName;
+        this.hierarchyTreeService.notifyTaskNameUpdated(task.taskId, updatedTask.taskName);
+        this.notifier.success('Task title updated.');
+      },
+      error: (error) => {
+        this.savingTaskNameIds.delete(task.taskId);
+        this.editingTaskNameIds.delete(task.taskId);
+        this.taskNameEditText[task.taskId] = task.taskName;
+        this.notifier.error(error?.message || 'Failed to update task title.');
+      }
+    });
   }
 
   public isTaskAssigneeSearchCleared(taskId: number): boolean {

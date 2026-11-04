@@ -174,6 +174,7 @@ export const updateEventResolvers = {
       const normalizedEndDate = normalizeDateInput(input.endDate, 'endDate');
       const latitude = Number(input.latitude);
       const longitude = Number(input.longitude);
+      const eventLogoProvided = Object.prototype.hasOwnProperty.call(input, 'eventLogo');
       const eventLogo = normalizeOptionalText(input.eventLogo);
 
       if (!Number.isInteger(eventId) || eventId <= 0) {
@@ -269,7 +270,7 @@ export const updateEventResolvers = {
                 end_date = ?,
                 latitude = ?,
                 longitude = ?,
-                event_logo = ?,
+                event_logo = IF(?, ?, event_logo),
                 updated_by = ?
             WHERE id = ?`,
            [
@@ -283,6 +284,7 @@ export const updateEventResolvers = {
             normalizedEndDate,
             latitude,
             longitude,
+            eventLogoProvided,
             eventLogo,
             loggedInUserId,
             eventId
@@ -300,7 +302,7 @@ export const updateEventResolvers = {
                 end_date = ?,
                 latitude = ?,
                 longitude = ?,
-                event_logo = ?,
+                event_logo = IF(?, ?, event_logo),
                 updated_by = ?
             WHERE id = ?`,
            [
@@ -313,6 +315,7 @@ export const updateEventResolvers = {
             normalizedEndDate,
             latitude,
             longitude,
+            eventLogoProvided,
             eventLogo,
             loggedInUserId,
             eventId
@@ -327,14 +330,18 @@ export const updateEventResolvers = {
                     committee_id as committeeId,
                     address, event_year as eventYear, category, \`type\`, latitude, longitude,
                     event_logo as eventLogo,
-                    start_date as startDate, end_date as endDate, created_by as createdBy, updated_by as updatedBy, created_at as createdAt
+                    DATE_FORMAT(start_date, '%Y-%m-%d') as startDate,
+                    DATE_FORMAT(end_date, '%Y-%m-%d') as endDate,
+                    created_by as createdBy, updated_by as updatedBy, created_at as createdAt
               FROM events WHERE id = ?`
           : `SELECT id, id as eventId, name as eventName,
                     LEFT(name, 20) as eventDisplayName,
                     committee_id as committeeId,
                     address, event_year as eventYear, category, \`type\`, latitude, longitude,
                     event_logo as eventLogo,
-                    start_date as startDate, end_date as endDate, created_by as createdBy, updated_by as updatedBy, created_at as createdAt
+                    DATE_FORMAT(start_date, '%Y-%m-%d') as startDate,
+                    DATE_FORMAT(end_date, '%Y-%m-%d') as endDate,
+                    created_by as createdBy, updated_by as updatedBy, created_at as createdAt
               FROM events WHERE id = ?`,
         [eventId]
       );

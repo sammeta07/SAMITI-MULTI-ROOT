@@ -205,8 +205,8 @@ export class CreateEventDialogComponent implements OnInit {
       return;
     }
 
-    const startDateStr = this.startDate ? this.startDate.toISOString().split('T')[0] : null;
-    const endDateStr = this.endDate ? this.endDate.toISOString().split('T')[0] : null;
+    const startDateStr = this.formatDateInput(this.startDate);
+    const endDateStr = this.formatDateInput(this.endDate);
 
     const payload = {
       committeeId: Number(committeeId),
@@ -306,5 +306,12 @@ export class CreateEventDialogComponent implements OnInit {
     const parsedDate = new Date(`${value.trim()}T00:00:00`);
     return Number.isNaN(parsedDate.getTime()) ? null : parsedDate;
   }
-}
 
+  private formatDateInput(value: Date | null): string | null {
+    if (!value) return null;
+    const year = value.getFullYear();
+    const month = String(value.getMonth() + 1).padStart(2, '0');
+    const day = String(value.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+  }
+}

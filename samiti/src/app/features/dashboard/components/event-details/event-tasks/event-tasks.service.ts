@@ -36,6 +36,7 @@ export class EventTasksService {
           ownerAssignedAt
           updatedAt
           canManage
+          canEditTask
           canAssignOwner
           canDelete
         }
@@ -80,6 +81,7 @@ export class EventTasksService {
         ownerAssignedAt
         updatedAt
         canManage
+        canEditTask
         canAssignOwner
         canDelete
       }
@@ -121,6 +123,7 @@ export class EventTasksService {
         ownerAssignedAt
         updatedAt
         canManage
+        canEditTask
         canAssignOwner
         canDelete
       }
@@ -153,6 +156,7 @@ export class EventTasksService {
         ownerAssignedAt
         updatedAt
         canManage
+        canEditTask
         canAssignOwner
         canDelete
       }
@@ -170,6 +174,32 @@ export class EventTasksService {
         const updatedTask = response.data?.updateEventTaskStatus;
         if (!updatedTask) {
           throw new Error('GraphQL response is missing updateEventTaskStatus');
+        }
+        return updatedTask;
+      })
+    );
+  }
+
+  public updateEventTaskName(taskId: number, taskName: string): Observable<{ taskName: string; updatedAt: string }> {
+    const mutation = `mutation UpdateEventTaskName($taskId: Int!, $taskName: String!) {
+      updateEventTaskName(taskId: $taskId, taskName: $taskName) {
+        taskName
+        updatedAt
+      }
+    }`;
+
+    return this.http.post<GraphqlResponse<{ updateEventTaskName: { taskName: string; updatedAt: string } }>>(
+      this.graphqlUrl,
+      { query: mutation, variables: { taskId, taskName } },
+      { withCredentials: true }
+    ).pipe(
+      map((response) => {
+        if (response.errors?.length) {
+          throw new Error(response.errors.map((error) => error.message).join('; '));
+        }
+        const updatedTask = response.data?.updateEventTaskName;
+        if (!updatedTask) {
+          throw new Error('GraphQL response is missing updateEventTaskName');
         }
         return updatedTask;
       })

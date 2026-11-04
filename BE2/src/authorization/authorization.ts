@@ -122,9 +122,6 @@ export async function initializeCommitteePermissions(committeeId: number): Promi
      INNER JOIN authorization_permissions ap
        ON ap.permission_code IN (
          'event.task.create',
-         'event.task.assign_owner',
-         'event.task.update',
-         'event.task.delete',
          'program.create',
          'program.update',
          'program.delete',
@@ -132,6 +129,15 @@ export async function initializeCommitteePermissions(committeeId: number): Promi
          'program.manage_banners'
        )
      WHERE ar.scope = 'EVENT' AND ar.role_code IN ('ADHYAKSHA', 'UPADHYAKSHA')`,
+    [committeeId]
+  );
+  await execute(
+    `INSERT IGNORE INTO authorization_role_permissions (committee_id, role_id, permission_id)
+     SELECT ?, ar.id, ap.id
+     FROM authorization_roles ar
+     INNER JOIN authorization_permissions ap
+       ON ap.permission_code = 'event.task.create'
+     WHERE ar.scope = 'COMMITTEE' AND ar.role_code = 'COMMITTEE_ADMIN'`,
     [committeeId]
   );
   await execute(

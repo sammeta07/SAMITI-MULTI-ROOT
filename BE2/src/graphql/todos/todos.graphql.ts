@@ -99,8 +99,7 @@ async function getParentPermission(parentType: ParentType, parentId: number, use
       PERMISSIONS.TODO_MANAGE,
       { type: 'EVENT', id: eventId }
     ) ||
-      Number(row.ownerUserId) === userId ||
-      (parentType === 'TASK' && Number(row.createdBy) === userId)
+      Number(row.ownerUserId) === userId
   };
 }
 

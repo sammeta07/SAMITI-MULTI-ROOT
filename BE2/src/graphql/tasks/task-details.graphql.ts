@@ -127,20 +127,15 @@ export const taskDetailsResolvers = {
         { type: 'EVENT', id: Number(task.eventId) }
       );
       const canAssignOwner = task.parentTaskId === null
-        ? await hasPermission(
-          userId,
-          PERMISSIONS.EVENT_TASK_ASSIGN_OWNER,
-          { type: 'EVENT', id: Number(task.eventId) }
-        )
-        : isMasterAdmin || isTaskOwner || isParentTaskOwner || isTaskCreator;
+        ? Number(task.createdBy) === userId || await hasPermission(
+            userId,
+            PERMISSIONS.EVENT_TASK_ASSIGN_OWNER,
+            { type: 'EVENT', id: Number(task.eventId) }
+          )
+        : isMasterAdmin || isParentTaskOwner;
       const canDeleteRootTask = await hasPermission(
         userId,
         PERMISSIONS.EVENT_TASK_DELETE,
-        { type: 'EVENT', id: Number(task.eventId) }
-      );
-      const canUpdateRootTask = await hasPermission(
-        userId,
-        PERMISSIONS.EVENT_TASK_UPDATE,
         { type: 'EVENT', id: Number(task.eventId) }
       );
       const canAssignRootTaskOwners = await hasPermission(
@@ -174,17 +169,17 @@ export const taskDetailsResolvers = {
       );
       const mapChildPermissions = (child: any) => {
         const isRootTask = child.parentTaskId === null;
-        const isChildOwner = Number(child.ownerUserId) === userId;
-        const isChildCreator = Number(child.createdBy) === userId;
         const isChildParentOwner = Number(child.parentOwnerUserId) === userId;
         return {
-          canManage: isChildOwner || isMasterAdmin,
+          canManage: isRootTask
+            ? Number(child.ownerUserId) === userId || isMasterAdmin
+            : isChildParentOwner || isMasterAdmin,
           canAssignOwner: isRootTask
-            ? canAssignRootTaskOwners
-            : isMasterAdmin || isChildOwner || isChildCreator || isChildParentOwner,
+            ? canAssignRootTaskOwners || Number(child.createdBy) === userId
+            : isMasterAdmin || isChildParentOwner,
           canDelete: isRootTask
-            ? canDeleteRootTask
-            : isMasterAdmin || isChildCreator
+            ? canDeleteRootTask || Number(child.createdBy) === userId
+            : isMasterAdmin || isChildParentOwner
         };
       };
       const childrenByParentId = new Map<number, any[]>();
@@ -254,8 +249,8 @@ export const taskDetailsResolvers = {
         userId,
         PERMISSIONS.TODO_MANAGE,
         { type: 'EVENT', id: Number(task.eventId) }
-      ) || isTaskOwner ||
-        isParentTaskOwner || (task.parentTaskId !== null && isTaskCreator);
+      ) || isTaskOwner;
+      const canCreateSubtasks = isMasterAdmin || isTaskOwner;
       return {
         taskId: Number(task.taskId),
         taskName: String(task.taskName || 'Untitled Task'),
@@ -270,13 +265,11 @@ export const taskDetailsResolvers = {
         createdAt: String(task.createdAt),
         ownerAssignedAt: task.ownerAssignedAt || null,
         updatedAt: String(task.updatedAt),
-        canEditTask: task.parentTaskId !== null
-          ? canAssignOwner
-          : isTaskOwner || canUpdateRootTask,
+        canEditTask: isTaskCreator || isMasterAdmin,
         canAssignOwner,
         canDeleteTask: task.parentTaskId !== null
-          ? isMasterAdmin || isTaskCreator
-          : canDeleteRootTask,
+          ? isMasterAdmin || isParentTaskOwner
+          : canDeleteRootTask || isTaskCreator,
         children: children.map((child) => ({
           taskId: Number(child.taskId),
           parentTaskId: Number(taskId),
@@ -323,8 +316,10 @@ export const taskDetailsResolvers = {
           createdAt: String(todo.createdAt)
         })),
         todoAssignees: await getTodoAssignees(Number(task.committeeId)),
-        canManage: isMasterAdmin || isTaskOwner,
-        canCreateTasks: canManageTodos,
+        canManage: task.parentTaskId !== null
+          ? isMasterAdmin || isParentTaskOwner
+          : isMasterAdmin || isTaskOwner,
+        canCreateTasks: canCreateSubtasks,
         canManageTodos,
         canToggleTodos: canManageTodos
       };

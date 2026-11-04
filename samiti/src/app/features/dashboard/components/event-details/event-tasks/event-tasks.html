@@ -82,7 +82,25 @@
                   @if (taskEntry.depth > 0) {
                     <mat-icon class="child-task-indicator">subdirectory_arrow_right</mat-icon>
                   }
-                  <span class="task-title-text" [title]="task.taskName">{{ task.taskName }}</span>
+                  @if (isEditingTaskName(task.taskId)) {
+                    <input
+                      type="text"
+                      class="task-title-edit-input"
+                      [id]="'task-name-' + task.taskId"
+                      maxlength="255"
+                      [value]="taskNameEditText[task.taskId]"
+                      [disabled]="savingTaskNameIds.has(task.taskId)"
+                      [attr.aria-label]="'Edit title for ' + task.taskName"
+                      (input)="taskNameEditText[task.taskId] = $any($event.target).value"
+                      (blur)="saveTaskNameOnBlur(task)"
+                      (keydown)="$event.stopPropagation()"
+                      (keydown.enter)="$any($event.target).blur(); $event.stopPropagation()"
+                      (keydown.escape)="cancelEditTaskName(task); $event.stopPropagation()"
+                      (click)="$event.stopPropagation()"
+                    />
+                  } @else {
+                    <span class="task-title-text" [title]="task.taskName">{{ task.taskName }}</span>
+                  }
                   <span
                     class="task-child-count-pill"
                     [matTooltip]="getChildTasks(task.taskId).length + ' direct / ' + getDescendantTaskCount(task.taskId) + ' total subtasks'"
@@ -255,6 +273,20 @@
                           </span>
                         }
                       </span>
+                      @if (task.canEditTask) {
+                        <button
+                          mat-icon-button
+                          class="task-assignee-edit-btn task-title-edit-button"
+                          type="button"
+                          aria-label="Edit task title"
+                          [matTooltip]="savingTaskNameIds.has(task.taskId) ? 'Saving task title...' : 'Edit task title'"
+                          [disabled]="savingTaskNameIds.has(task.taskId) || isEditingTaskName(task.taskId)"
+                          (click)="editTaskName(task); $event.stopPropagation()"
+                          (keydown)="$event.stopPropagation()"
+                        >
+                          <mat-icon>{{ savingTaskNameIds.has(task.taskId) ? 'hourglass_top' : 'edit' }}</mat-icon>
+                        </button>
+                      }
                       @if (task.canAssignOwner) {
                         <span
                           class="task-assignee-action-box"
@@ -265,11 +297,12 @@
                             mat-icon-button
                             class="task-assignee-edit-btn"
                             type="button"
-                            aria-label="Edit task assignee"
+                            aria-label="Assign task owner"
+                            matTooltip="Assign task owner"
                             [disabled]="isUpdatingOwner || task.status?.toUpperCase() === 'COMPLETED'"
                             (click)="editTaskAssignee(task)"
                           >
-                            <mat-icon>edit</mat-icon>
+                            <mat-icon>person_add</mat-icon>
                           </button>
                         </span>
                       }

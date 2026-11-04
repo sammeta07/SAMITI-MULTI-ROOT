@@ -119,6 +119,40 @@ export class DashboardHierarchyTreeComponent implements OnInit, OnDestroy {
       }
     });
   });
+  private readonly eventNameUpdateEffect = effect(() => {
+    const update = this.treeService.eventNameUpdated();
+    if (!update) return;
+
+    untracked(() => {
+      if (this.updateEventNameInTree(this.dataSource.data, update.eventId, update.name)) {
+        this.dataSource.data = [...this.dataSource.data];
+        this.cdr.markForCheck();
+      }
+    });
+  });
+  private readonly logoUpdateEffect = effect(() => {
+    const update = this.treeService.logoUpdated();
+    if (!update) return;
+
+    untracked(() => {
+      const nodeType = update.type === 'group' ? 'group' : 'event';
+      if (this.updateNodeLogoInTree(this.dataSource.data, nodeType, update.id, update.logo)) {
+        this.dataSource.data = [...this.dataSource.data];
+        this.cdr.markForCheck();
+      }
+    });
+  });
+  private readonly taskNameUpdateEffect = effect(() => {
+    const update = this.treeService.taskNameUpdated();
+    if (!update) return;
+
+    untracked(() => {
+      if (this.updateTaskNameInTree(this.dataSource.data, update.taskId, update.name)) {
+        this.dataSource.data = [...this.dataSource.data];
+        this.cdr.markForCheck();
+      }
+    });
+  });
 
   ngOnInit(): void {
     this.fetchAdminNavigationTree();
@@ -359,6 +393,32 @@ export class DashboardHierarchyTreeComponent implements OnInit, OnDestroy {
         return true;
       }
       if (item.children && this.updateNodeLogoInTree(item.children, type, id, newLogo)) {
+        return true;
+      }
+    }
+    return false;
+  }
+
+  private updateEventNameInTree(nodes: TreeNode[], eventId: number, name: string): boolean {
+    for (const item of nodes) {
+      if (item.type === 'event' && item.id === eventId) {
+        item.name = name;
+        return true;
+      }
+      if (item.children && this.updateEventNameInTree(item.children, eventId, name)) {
+        return true;
+      }
+    }
+    return false;
+  }
+
+  private updateTaskNameInTree(nodes: TreeNode[], taskId: number, name: string): boolean {
+    for (const item of nodes) {
+      if (item.type === 'task' && item.id === taskId) {
+        item.name = name;
+        return true;
+      }
+      if (item.children && this.updateTaskNameInTree(item.children, taskId, name)) {
         return true;
       }
     }

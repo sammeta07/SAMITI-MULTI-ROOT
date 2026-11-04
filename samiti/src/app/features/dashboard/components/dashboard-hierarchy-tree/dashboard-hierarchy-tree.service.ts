@@ -65,6 +65,8 @@ export class DashboardHierarchyTreeService {
     | { type: 'event'; id: number; committeeId: number; logo: string }
     | null
   >(null);
+  public readonly eventNameUpdated = signal<{ eventId: number; name: string } | null>(null);
+  public readonly taskNameUpdated = signal<{ taskId: number; name: string } | null>(null);
 
   public triggerHierarchyTreeRefresh(): void {
     this.refreshHierarchyTree.update((value) => value + 1);
@@ -76,6 +78,14 @@ export class DashboardHierarchyTreeService {
       | { type: 'event'; id: number; committeeId: number; logo: string }
   ): void {
     this.logoUpdated.set(update);
+  }
+
+  public notifyEventNameUpdated(eventId: number, name: string): void {
+    this.eventNameUpdated.set({ eventId, name });
+  }
+
+  public notifyTaskNameUpdated(taskId: number, name: string): void {
+    this.taskNameUpdated.set({ taskId, name });
   }
 
   public getAdminHierarchyTree(year?: number): Observable<RoleNode[]> {
