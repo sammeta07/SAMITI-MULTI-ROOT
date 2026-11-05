@@ -74,6 +74,7 @@
           <mat-expansion-panel
             class="event-task-panel"
             [expanded]="false"
+            [style.--task-level-background]="getTaskLevelBackground(taskEntry.depth)"
           >
             <mat-expansion-panel-header>
               <div class="task-panel-summary">
@@ -379,16 +380,14 @@
             </div>
 
             @if (getChildTasks(task.taskId).length) {
-              <div class="task-children-container">
-                <mat-accordion class="task-expansion-list" [multi]="true">
-                  @for (childTask of getChildTasks(task.taskId); track childTask.taskId) {
-                    <ng-container
-                      [ngTemplateOutlet]="taskPanelTemplate"
-                      [ngTemplateOutletContext]="{ $implicit: { task: childTask, depth: taskEntry.depth + 1 } }"
-                    ></ng-container>
-                  }
-                </mat-accordion>
-              </div>
+              <mat-accordion class="task-expansion-list" [multi]="true">
+                @for (childTask of getChildTasks(task.taskId); track childTask.taskId) {
+                  <ng-container
+                    [ngTemplateOutlet]="taskPanelTemplate"
+                    [ngTemplateOutletContext]="{ $implicit: { task: childTask, depth: taskEntry.depth + 1 } }"
+                  ></ng-container>
+                }
+              </mat-accordion>
             }
           </mat-expansion-panel>
         </ng-template>

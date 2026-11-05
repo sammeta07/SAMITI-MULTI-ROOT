@@ -1,5 +1,5 @@
 import { CommonModule } from '@angular/common';
-import { Component, DestroyRef, inject, OnInit, signal } from '@angular/core';
+import { Component, DestroyRef, inject, OnInit, QueryList, signal, ViewChildren } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { FormsModule } from '@angular/forms';
@@ -7,7 +7,7 @@ import { MatIconModule } from '@angular/material/icon';
 import { MatButtonModule } from '@angular/material/button';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatTabsModule } from '@angular/material/tabs';
-import { MatExpansionModule } from '@angular/material/expansion';
+import { MatExpansionModule, MatExpansionPanel } from '@angular/material/expansion';
 import { MatAutocompleteModule, MatAutocompleteSelectedEvent, MatAutocompleteTrigger } from '@angular/material/autocomplete';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
@@ -20,7 +20,7 @@ import { ConfirmDialogData } from '../../../../components/dialog/confirm/confirm
 import { TodoItem } from '../../models/todo.models';
 import { TodoChecklistComponent } from '../todo-checklist/todo-checklist.component';
 import { DashboardHierarchyTreeService } from '../dashboard-hierarchy-tree/dashboard-hierarchy-tree.service';
-import { TASK_STATUSES, TaskAssignee, TaskStatus } from '../event-details/event-tasks/event-tasks.models';
+import { TASK_STATUSES, TaskAssignee, TaskStatus, taskHierarchyLevelBackground } from '../event-details/event-tasks/event-tasks.models';
 import { EventTasksService } from '../event-details/event-tasks/event-tasks.service';
 import { EventDetailsStateService } from '../event-details/event-details-state.service';
 import { TaskDetailsPayload } from './task-details.models';
@@ -48,6 +48,8 @@ import { TaskDetailsService } from './task-details.service';
   styleUrl: './task-details.scss'
 })
 export class TaskDetailsComponent implements OnInit {
+  @ViewChildren(MatExpansionPanel) private subtaskPanels!: QueryList<MatExpansionPanel>;
+
   private readonly route = inject(ActivatedRoute);
   private readonly router = inject(Router);
   private readonly service = inject(TaskDetailsService);
@@ -59,7 +61,6 @@ export class TaskDetailsComponent implements OnInit {
   private readonly eventDetailsState = inject(EventDetailsStateService);
   private readonly destroyRef = inject(DestroyRef);
   private requestId = 0;
-
   public readonly isLoading = signal(true);
   public readonly task = signal<TaskDetailsPayload | null>(null);
   public readonly taskStatuses = TASK_STATUSES;
@@ -80,6 +81,7 @@ export class TaskDetailsComponent implements OnInit {
   public readonly updatingSubtaskStatusIds = new Set<number>();
   public readonly clearedSubtaskAssigneeSearchIds = signal<Set<number>>(new Set<number>());
   public subtaskAssigneeSearchText: Record<number, string> = {};
+  public pendingSubtaskOwnerIds: Record<number, number | null> = {};
   public subtaskNameEditText: Record<number, string> = {};
 
   public ngOnInit(): void {
@@ -98,6 +100,18 @@ export class TaskDetailsComponent implements OnInit {
 
   public onTodosChange(todos: TodoItem[]): void {
     this.task.update((current) => current ? { ...current, todos } : current);
+  }
+
+  public getSubtaskLevelBackground(depth: number): string {
+    return taskHierarchyLevelBackground(depth);
+  }
+
+  public expandAllSubtasks(): void {
+    this.subtaskPanels.forEach((panel) => panel.open());
+  }
+
+  public collapseAllSubtasks(): void {
+    this.subtaskPanels.forEach((panel) => panel.close());
   }
 
   public onCreateSubtask(task: TaskDetailsPayload): void {
@@ -187,9 +201,14 @@ export class TaskDetailsComponent implements OnInit {
     this.editingTaskName = '';
   }
 
+  public canSaveTaskName(task: TaskDetailsPayload): boolean {
+    const taskName = this.editingTaskName.trim();
+    return !this.isSavingTaskName() && Boolean(taskName) && taskName !== task.taskName;
+  }
+
   public async saveTaskName(task: TaskDetailsPayload): Promise<void> {
     const taskName = this.editingTaskName.trim();
-    if (!task.canEditTask || !taskName || taskName.length > 255 || this.isSavingTaskName()) return;
+    if (!task.canEditTask || !this.canSaveTaskName(task) || taskName.length > 255) return;
 
     this.isSavingTaskName.set(true);
     try {
@@ -282,7 +301,7 @@ export class TaskDetailsComponent implements OnInit {
     return countChildren(parentTaskId);
   }
 
-  public getFilteredSubtaskAssignees(taskId: number): TaskAssignee[] {
+  public getFilteredSubtaskAssignees(taskId: number, ownerUserId: number | null): TaskAssignee[] {
     const search = (this.subtaskAssigneeSearchText[taskId] || '').trim().toLowerCase();
     return (this.task()?.taskAssignees ?? [])
       .filter((assignee) =>
@@ -291,15 +310,44 @@ export class TaskDetailsComponent implements OnInit {
         assignee.email.toLowerCase().includes(search)
       )
       .sort((left, right) =>
-        Number(right.isWinner) - Number(left.isWinner) || left.name.localeCompare(right.name)
+        Number(ownerUserId !== null && Number(right.userId) === Number(ownerUserId)) -
+          Number(ownerUserId !== null && Number(left.userId) === Number(ownerUserId)) ||
+        Number(right.isWinner) - Number(left.isWinner) ||
+        left.name.localeCompare(right.name)
       );
   }
 
   public getSubtaskOwnerDesignation(taskId: number): TaskAssignee | null {
     const child = this.task()?.descendants.find((entry) => entry.taskId === taskId);
-    if (!child?.ownerUserId) return null;
-    return this.task()?.taskAssignees.find((assignee) => assignee.userId === child.ownerUserId) ?? null;
+    if (!child) return null;
+    const ownerUserId = this.editingSubtaskAssigneeIds.has(taskId) &&
+      Object.prototype.hasOwnProperty.call(this.pendingSubtaskOwnerIds, taskId)
+      ? this.pendingSubtaskOwnerIds[taskId]
+      : child.ownerUserId;
+    if (ownerUserId === null || ownerUserId === undefined) return null;
+    return this.task()?.taskAssignees.find((assignee) => Number(assignee.userId) === Number(ownerUserId)) ?? null;
   }
+
+  public isCurrentSubtaskAssignee(taskId: number, userId: number): boolean {
+    const child = this.task()?.descendants.find((entry) => entry.taskId === taskId);
+    return child?.ownerUserId !== null &&
+      child?.ownerUserId !== undefined &&
+      Number(child.ownerUserId) === Number(userId);
+  }
+
+  public isSubtaskAssigneeUnassigned(taskId: number, ownerUserId: number | null): boolean {
+    return this.editingSubtaskAssigneeIds.has(taskId) &&
+      Object.prototype.hasOwnProperty.call(this.pendingSubtaskOwnerIds, taskId)
+      ? this.pendingSubtaskOwnerIds[taskId] === null
+      : ownerUserId === null;
+  }
+
+  public readonly displaySubtaskAssigneeName = (value: string | number | null): string => {
+    if (value === null || value === undefined) return '';
+    if (typeof value === 'string') return value;
+    const assignee = this.task()?.taskAssignees.find((member) => Number(member.userId) === Number(value));
+    return assignee?.name || String(value);
+  };
 
   public getSubtaskAssigneeDisplay(taskId: number, ownerName: string | null): string {
     return Object.prototype.hasOwnProperty.call(this.subtaskAssigneeSearchText, taskId)
@@ -359,42 +407,61 @@ export class TaskDetailsComponent implements OnInit {
     this.subtaskNameEditText[child.taskId] = child.taskName;
   }
 
-  public saveSubtaskNameOnBlur(child: TaskDetailsPayload['descendants'][number]): void {
-    if (!this.editingSubtaskNameIds.has(child.taskId) || this.savingSubtaskNameIds.has(child.taskId)) return;
+  public canSaveSubtaskEdits(child: TaskDetailsPayload['descendants'][number]): boolean {
     const taskName = String(this.subtaskNameEditText[child.taskId] ?? '').trim();
-    if (!taskName) {
-      this.subtaskNameEditText[child.taskId] = child.taskName;
-      this.editingSubtaskNameIds.delete(child.taskId);
+    const hasNameChange = this.editingSubtaskNameIds.has(child.taskId) && taskName !== child.taskName;
+    const hasOwnerChange = this.hasPendingSubtaskOwnerChange(child);
+    return (hasNameChange || hasOwnerChange) &&
+      !(hasNameChange && !taskName) &&
+      !this.savingSubtaskNameIds.has(child.taskId) &&
+      !this.assigningSubtaskIds.has(child.taskId);
+  }
+
+  public hasPendingSubtaskOwnerChange(child: TaskDetailsPayload['descendants'][number]): boolean {
+    return Object.prototype.hasOwnProperty.call(this.pendingSubtaskOwnerIds, child.taskId) &&
+      this.pendingSubtaskOwnerIds[child.taskId] !== child.ownerUserId;
+  }
+
+  public saveSubtaskEdits(child: TaskDetailsPayload['descendants'][number]): void {
+    if (!this.canSaveSubtaskEdits(child)) return;
+    const taskName = String(this.subtaskNameEditText[child.taskId] ?? '').trim();
+    const hasNameChange = this.editingSubtaskNameIds.has(child.taskId) && taskName !== child.taskName;
+    const hasOwnerChange = this.hasPendingSubtaskOwnerChange(child);
+    if (hasNameChange && !taskName) {
       this.notifier.error('Task title cannot be empty.');
       return;
     }
-    if (taskName === child.taskName) {
+
+    if (hasNameChange) {
+      this.savingSubtaskNameIds.add(child.taskId);
+      this.eventTasksService.updateEventTaskName(child.taskId, taskName).subscribe({
+        next: (updated) => {
+          this.savingSubtaskNameIds.delete(child.taskId);
+          this.editingSubtaskNameIds.delete(child.taskId);
+          this.subtaskNameEditText[child.taskId] = updated.taskName;
+          this.updateSubtaskName(child.taskId, updated.taskName);
+          this.hierarchyTreeService.notifyTaskNameUpdated(child.taskId, updated.taskName);
+          this.notifier.success('Task title updated.');
+          if (!hasOwnerChange) this.cancelEditSubtaskAssignee(child.taskId, child.ownerName);
+        },
+        error: (error) => {
+          this.savingSubtaskNameIds.delete(child.taskId);
+          this.notifier.error(
+            error?.error?.errors?.[0]?.message ||
+            error?.error?.message ||
+            error?.message ||
+            'Failed to update task title.'
+          );
+        }
+      });
+    } else {
       this.editingSubtaskNameIds.delete(child.taskId);
-      return;
+      this.subtaskNameEditText[child.taskId] = child.taskName;
     }
 
-    this.savingSubtaskNameIds.add(child.taskId);
-    this.eventTasksService.updateEventTaskName(child.taskId, taskName).subscribe({
-      next: (updated) => {
-        this.savingSubtaskNameIds.delete(child.taskId);
-        this.editingSubtaskNameIds.delete(child.taskId);
-        this.subtaskNameEditText[child.taskId] = updated.taskName;
-        this.updateSubtaskName(child.taskId, updated.taskName);
-        this.hierarchyTreeService.notifyTaskNameUpdated(child.taskId, updated.taskName);
-        this.notifier.success('Task title updated.');
-      },
-      error: (error) => {
-        this.savingSubtaskNameIds.delete(child.taskId);
-        this.editingSubtaskNameIds.delete(child.taskId);
-        this.subtaskNameEditText[child.taskId] = child.taskName;
-        this.notifier.error(
-          error?.error?.errors?.[0]?.message ||
-          error?.error?.message ||
-          error?.message ||
-          'Failed to update task title.'
-        );
-      }
-    });
+    if (hasOwnerChange) {
+      this.saveSubtaskAssignee(child);
+    }
   }
 
   public getRoleColorClass(role?: string | null): string {
@@ -415,11 +482,13 @@ export class TaskDetailsComponent implements OnInit {
       next.delete(taskId);
       return next;
     });
+    this.pendingSubtaskOwnerIds[taskId] = child.ownerUserId;
     this.editingSubtaskAssigneeIds.add(taskId);
   }
 
   public cancelEditSubtaskAssignee(taskId: number, ownerName: string | null): void {
     this.editingSubtaskAssigneeIds.delete(taskId);
+    delete this.pendingSubtaskOwnerIds[taskId];
     this.subtaskAssigneeSearchText[taskId] = ownerName || '';
     this.clearedSubtaskAssigneeSearchIds.update((ids) => {
       const next = new Set(ids);
@@ -436,6 +505,22 @@ export class TaskDetailsComponent implements OnInit {
 
   public onSubtaskAssigneeSearch(taskId: number, value: string): void {
     this.subtaskAssigneeSearchText[taskId] = value;
+  }
+
+  public onSubtaskAssigneeAutocompleteClosed(taskId: number, ownerName: string | null): void {
+    if (this.assigningSubtaskIds.has(taskId)) return;
+    if (Object.prototype.hasOwnProperty.call(this.pendingSubtaskOwnerIds, taskId)) {
+      const pendingOwnerId = this.pendingSubtaskOwnerIds[taskId];
+      const pendingOwner = this.task()?.taskAssignees.find((member) => member.userId === pendingOwnerId);
+      this.subtaskAssigneeSearchText[taskId] = pendingOwner?.name || '';
+    } else {
+      this.subtaskAssigneeSearchText[taskId] = ownerName || '';
+    }
+    this.clearedSubtaskAssigneeSearchIds.update((ids) => {
+      const next = new Set(ids);
+      next.delete(taskId);
+      return next;
+    });
   }
 
   public clearSubtaskAssigneeSearch(
@@ -458,17 +543,44 @@ export class TaskDetailsComponent implements OnInit {
     const child = this.task()?.descendants.find((entry) => entry.taskId === taskId);
     if (!child?.canAssignOwner || this.assigningSubtaskIds.has(taskId)) return;
     const ownerUserId = event.option.value === '' ? null : Number(event.option.value);
+    if (
+      event.option.disabled ||
+      ownerUserId === child.ownerUserId ||
+      (ownerUserId !== null && this.isCurrentSubtaskAssignee(taskId, ownerUserId))
+    ) {
+      this.pendingSubtaskOwnerIds[taskId] = child.ownerUserId;
+      this.subtaskAssigneeSearchText[taskId] = ownerName || '';
+      this.clearedSubtaskAssigneeSearchIds.update((ids) => {
+        const next = new Set(ids);
+        next.delete(taskId);
+        return next;
+      });
+      return;
+    }
     const assignee = this.task()?.taskAssignees.find((member) => member.userId === ownerUserId);
     if (ownerUserId !== null && !assignee) {
       this.notifier.error('Selected assignee is not a member of this committee.');
       return;
     }
 
+    this.pendingSubtaskOwnerIds[taskId] = ownerUserId;
+    this.subtaskAssigneeSearchText[taskId] = assignee?.name || '';
+    this.clearedSubtaskAssigneeSearchIds.update((ids) => {
+      const next = new Set(ids);
+      next.delete(taskId);
+      return next;
+    });
+  }
+
+  private saveSubtaskAssignee(child: TaskDetailsPayload['descendants'][number]): void {
+    const taskId = child.taskId;
+    const ownerUserId = this.pendingSubtaskOwnerIds[taskId];
     this.assigningSubtaskIds.add(taskId);
     this.eventTasksService.assignEventTask(taskId, ownerUserId).subscribe({
       next: (updated) => {
         this.assigningSubtaskIds.delete(taskId);
         this.editingSubtaskAssigneeIds.delete(taskId);
+        delete this.pendingSubtaskOwnerIds[taskId];
         this.subtaskAssigneeSearchText[taskId] = updated.ownerName || '';
         this.clearedSubtaskAssigneeSearchIds.update((ids) => {
           const next = new Set(ids);
@@ -485,8 +597,6 @@ export class TaskDetailsComponent implements OnInit {
       },
       error: (error) => {
         this.assigningSubtaskIds.delete(taskId);
-        this.editingSubtaskAssigneeIds.delete(taskId);
-        this.subtaskAssigneeSearchText[taskId] = ownerName || '';
         this.notifier.error(
           error?.error?.errors?.[0]?.message ||
           error?.error?.message ||
@@ -638,6 +748,12 @@ export class TaskDetailsComponent implements OnInit {
     const requestId = ++this.requestId;
     this.isLoading.set(true);
     this.task.set(null);
+    this.pendingSubtaskOwnerIds = {};
+    this.subtaskAssigneeSearchText = {};
+    this.subtaskNameEditText = {};
+    this.editingSubtaskAssigneeIds.clear();
+    this.editingSubtaskNameIds.clear();
+    this.clearedSubtaskAssigneeSearchIds.set(new Set<number>());
     this.loadingState.begin();
 
     this.service.getTaskDetails(taskId).pipe(

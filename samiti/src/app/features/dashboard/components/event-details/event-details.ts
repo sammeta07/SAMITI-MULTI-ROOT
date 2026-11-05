@@ -130,6 +130,16 @@ export class EventDetailsComponent implements OnInit, OnDestroy {
     this.router.navigate(['/dashboard', 'event', eventId, tab]);
   }
 
+  public expandEventTasks(): void {
+    const component = this.routerOutlet?.component;
+    if (component instanceof EventTasksComponent) component.expandAllTasks();
+  }
+
+  public collapseEventTasks(): void {
+    const component = this.routerOutlet?.component;
+    if (component instanceof EventTasksComponent) component.collapseAllTasks();
+  }
+
   public get eventData(): EventVotingPayload | null {
     return this.stateService.eventData();
   }

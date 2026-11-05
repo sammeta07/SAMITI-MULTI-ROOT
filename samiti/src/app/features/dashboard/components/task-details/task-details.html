@@ -176,7 +176,7 @@
                     type="button"
                     aria-label="Save task name"
                     title="Save task name"
-                    [disabled]="isSavingTaskName() || !editingTaskName.trim()"
+                    [disabled]="!canSaveTaskName(taskDetails)"
                     (click)="saveTaskName(taskDetails)"
                   >
                     <mat-icon>{{ isSavingTaskName() ? 'hourglass_top' : 'check' }}</mat-icon>
@@ -234,7 +234,7 @@
       <!-- Tabs Workspace -->
       <div
         class="task-tabs-container"
-        [class.show-create-subtask]="selectedTaskTabIndex === 2 && taskDetails.canCreateTasks"
+        [class.show-subtask-actions]="selectedTaskTabIndex === 2 && (taskDetails.canCreateTasks || taskDetails.children.length > 0)"
       >
         <mat-tab-group
           class="tasks-tabs samiti-nav-tabs"
@@ -283,13 +283,54 @@
 
             <section class="horizontal-full-card tasks-section-style task-subtasks-section">
               <div class="horizontal-list-container">
+                @if (isCreatingSubtask) {
+                  <div class="task-subtask-create-row">
+                    <input
+                      type="text"
+                      maxlength="255"
+                      placeholder="Enter subtask title"
+                      [(ngModel)]="newSubtaskName"
+                      [disabled]="isSavingSubtask"
+                      aria-label="Subtask title"
+                      (keydown.enter)="onSaveSubtask(taskDetails)"
+                      (keydown.escape)="onCancelSubtask()"
+                    />
+                    <div class="task-subtask-create-actions">
+                      <button
+                        type="button"
+                        class="task-subtask-create-button task-subtask-save-button"
+                        [disabled]="!newSubtaskName.trim() || isSavingSubtask"
+                        aria-label="Save subtask"
+                        matTooltip="Save subtask"
+                        (click)="onSaveSubtask(taskDetails)"
+                      >
+                        <mat-icon>{{ isSavingSubtask ? 'hourglass_top' : 'save' }}</mat-icon>
+                      </button>
+                      <button
+                        type="button"
+                        class="task-subtask-create-button task-subtask-cancel-button"
+                        [disabled]="isSavingSubtask"
+                        aria-label="Cancel subtask creation"
+                        matTooltip="Cancel"
+                        (click)="onCancelSubtask()"
+                      >
+                        <mat-icon>close</mat-icon>
+                      </button>
+                    </div>
+                  </div>
+                }
+
                 <ng-template #subtaskPanelTemplate let-entry>
                   @let child = entry.task;
                   @let ownerDesignation = getSubtaskOwnerDesignation(child.taskId);
                   @let isUpdatingOwner = assigningSubtaskIds.has(child.taskId);
                   @let isEditingOwner = isEditingSubtaskAssignee(child.taskId);
 
-                  <mat-expansion-panel class="event-task-panel task-subtask-panel">
+                  <mat-expansion-panel
+                    class="event-task-panel task-subtask-panel"
+                    [class.task-nested-panel]="entry.depth > 0"
+                    [style.--task-level-background]="getSubtaskLevelBackground(entry.depth)"
+                  >
                     <mat-expansion-panel-header>
                       <div class="task-panel-summary">
                         <!-- Panel Left: Number, Indicator, Name & Count -->
@@ -308,9 +349,8 @@
                               [disabled]="savingSubtaskNameIds.has(child.taskId)"
                               [attr.aria-label]="'Edit title for ' + child.taskName"
                               (input)="subtaskNameEditText[child.taskId] = $any($event.target).value"
-                              (blur)="saveSubtaskNameOnBlur(child)"
                               (keydown)="$event.stopPropagation()"
-                              (keydown.enter)="$any($event.target).blur(); $event.stopPropagation()"
+                              (keydown.enter)="saveSubtaskEdits(child); $event.preventDefault(); $event.stopPropagation()"
                               (keydown.escape)="cancelEditSubtaskRow(child); $event.stopPropagation()"
                               (click)="$event.stopPropagation()"
                             />
@@ -357,7 +397,7 @@
                               <span class="task-assignee-autocomplete-box">
                                 <mat-form-field
                                   class="task-panel-assignee-field"
-                                  [class.task-assignee-unassigned]="!child.ownerUserId"
+                                  [class.task-assignee-unassigned]="isSubtaskAssigneeUnassigned(child.taskId, child.ownerUserId)"
                                   appearance="fill"
                                   subscriptSizing="dynamic"
                                 >
@@ -365,9 +405,9 @@
                                   @if (!isSubtaskAssigneeSearchCleared(child.taskId) && ownerDesignation) {
                                     <span matPrefix class="task-assignee-selected-owner-avatar">
                                       @if (ownerDesignation.photo) {
-                                        <img [src]="ownerDesignation.photo" [alt]="child.ownerName || 'Task owner'" />
+                                        <img [src]="ownerDesignation.photo" [alt]="getSubtaskAssigneeDisplay(child.taskId, child.ownerName) || 'Task owner'" />
                                       } @else {
-                                        <span>{{ getInitials(child.ownerName) }}</span>
+                                        <span>{{ getInitials(getSubtaskAssigneeDisplay(child.taskId, child.ownerName)) }}</span>
                                       }
                                     </span>
                                   }
@@ -389,38 +429,33 @@
                                       <mat-progress-spinner mode="indeterminate" diameter="13" strokeWidth="2"></mat-progress-spinner>
                                       <span>Saving...</span>
                                     </span>
-                                  } @else if (hasSubtaskAssigneeSearch(child.taskId)) {
-                                    <button
-                                      matSuffix
-                                      mat-icon-button
-                                      class="task-assignee-clear-btn"
-                                      type="button"
-                                      aria-label="Clear member search"
-                                      title="Clear search"
-                                      (mousedown)="clearSubtaskAssigneeSearch(child.taskId, subtaskAssigneeTrigger, $event)"
-                                    >
-                                      <mat-icon>close</mat-icon>
-                                    </button>
+                                  } @else {
+                                    <span matSuffix class="task-assignee-input-suffix">
+                                      @if (hasSubtaskAssigneeSearch(child.taskId)) {
+                                        <button
+                                          class="task-assignee-clear-btn"
+                                          type="button"
+                                          aria-label="Clear member search"
+                                          title="Clear search"
+                                          (mousedown)="clearSubtaskAssigneeSearch(child.taskId, subtaskAssigneeTrigger, $event)"
+                                        >
+                                          <mat-icon>close</mat-icon>
+                                        </button>
+                                      }
+                                    </span>
                                   }
                                   <mat-autocomplete
                                     #subtaskAssigneeAutocomplete="matAutocomplete"
                                     class="da-task-assignee-autocomplete"
+                                    [displayWith]="displaySubtaskAssigneeName"
                                     hideSingleSelectionIndicator
+                                    (closed)="onSubtaskAssigneeAutocompleteClosed(child.taskId, child.ownerName)"
                                     (optionSelected)="onSubtaskAssigneeChange(child.taskId, child.ownerName, $event)"
                                   >
-                                    <mat-option [value]="''" [disabled]="!child.ownerUserId" class="da-opt-row">
-                                      <div class="mat-auto-options">
-                                        <mat-icon class="da-opt-unassign-icon">person_off</mat-icon>
-                                        <div class="mat-auto-options-details">
-                                          <span class="da-opt-name">Unassign task</span>
-                                          <span class="da-opt-email">Remove the current assignee</span>
-                                        </div>
-                                      </div>
-                                    </mat-option>
-                                    @for (member of getFilteredSubtaskAssignees(child.taskId); track member.userId) {
+                                    @for (member of getFilteredSubtaskAssignees(child.taskId, child.ownerUserId); track member.userId) {
                                       <mat-option
                                         [value]="member.userId"
-                                        [disabled]="member.userId === child.ownerUserId"
+                                        [disabled]="isCurrentSubtaskAssignee(child.taskId, member.userId)"
                                         class="da-opt-row"
                                         [ngClass]="getRoleColorClass(member.committeeRole)"
                                       >
@@ -449,17 +484,6 @@
                                   </mat-autocomplete>
                                 </mat-form-field>
                               </span>
-                              <button
-                                mat-icon-button
-                                class="task-assignee-cancel-btn"
-                                type="button"
-                                aria-label="Cancel assignee edit"
-                                matTooltip="Cancel edit"
-                                [disabled]="isUpdatingOwner"
-                                (click)="cancelEditSubtaskAssignee(child.taskId, child.ownerName)"
-                              >
-                                <mat-icon>close</mat-icon>
-                              </button>
                             </div>
                           } @else {
                             <div class="task-assignee-value-layout">
@@ -514,7 +538,20 @@
                               <mat-icon>edit</mat-icon>
                             </button>
                           }
-                          @if (child.canAssignOwner) {
+                          @if (isEditingSubtaskRow(child.taskId)) {
+                            <button
+                              mat-icon-button
+                              type="button"
+                              class="task-panel-save-icon"
+                              aria-label="Save subtask changes"
+                              matTooltip="Save task changes"
+                              [disabled]="!canSaveSubtaskEdits(child)"
+                              (mousedown)="$event.preventDefault(); $event.stopPropagation()"
+                              (click)="saveSubtaskEdits(child)"
+                            >
+                              <mat-icon>{{ savingSubtaskNameIds.has(child.taskId) || assigningSubtaskIds.has(child.taskId) ? 'hourglass_top' : 'save' }}</mat-icon>
+                            </button>
+                          } @else if (child.canAssignOwner) {
                             <button
                               mat-icon-button
                               type="button"
@@ -531,7 +568,6 @@
                       </div>
                     </mat-expansion-panel-header>
 
-                    <!-- Outline-Style Detail Cards (Zero Extra Height, Pure Text Fit) -->
                     <div class="task-details-grid">
                       <div class="task-detail-card" title="Task ID: #{{ child.taskId }}">
                         <span class="task-detail-label">Task ID</span>
@@ -576,16 +612,14 @@
 
                     <!-- Recursive Subtasks Tree -->
                     @if (getSubtaskChildren(child.taskId).length > 0) {
-                      <div class="task-children-container">
-                        <mat-accordion class="task-expansion-list" [multi]="true">
-                          @for (nestedChild of getSubtaskChildren(child.taskId); track nestedChild.taskId) {
-                            <ng-container
-                              [ngTemplateOutlet]="subtaskPanelTemplate"
-                              [ngTemplateOutletContext]="{ $implicit: { task: nestedChild, depth: entry.depth + 1 } }"
-                            ></ng-container>
-                          }
-                        </mat-accordion>
-                      </div>
+                      <mat-accordion class="task-expansion-list" [multi]="true">
+                        @for (nestedChild of getSubtaskChildren(child.taskId); track nestedChild.taskId) {
+                          <ng-container
+                            [ngTemplateOutlet]="subtaskPanelTemplate"
+                            [ngTemplateOutletContext]="{ $implicit: { task: nestedChild, depth: entry.depth + 1 } }"
+                          ></ng-container>
+                        }
+                      </mat-accordion>
                     }
                   </mat-expansion-panel>
                 </ng-template>
@@ -606,55 +640,31 @@
                   </div>
                 }
 
-                @if (isCreatingSubtask) {
-                  <div class="task-subtask-create-row">
-                    <input
-                      type="text"
-                      maxlength="255"
-                      placeholder="Enter subtask title"
-                      [(ngModel)]="newSubtaskName"
-                      [disabled]="isSavingSubtask"
-                      aria-label="Subtask title"
-                      (keydown.enter)="onSaveSubtask(taskDetails)"
-                      (keydown.escape)="onCancelSubtask()"
-                    />
-                    <button
-                      type="button"
-                      class="task-subtask-create-button"
-                      [disabled]="!newSubtaskName.trim() || isSavingSubtask"
-                      aria-label="Save subtask"
-                      (click)="onSaveSubtask(taskDetails)"
-                    >
-                      <mat-icon>{{ isSavingSubtask ? 'hourglass_top' : 'save' }}</mat-icon>
-                    </button>
-                    <button
-                      type="button"
-                      class="task-subtask-create-button"
-                      [disabled]="isSavingSubtask"
-                      aria-label="Cancel subtask creation"
-                      (click)="onCancelSubtask()"
-                    >
-                      <mat-icon>close</mat-icon>
-                    </button>
-                  </div>
-                }
               </div>
             </section>
           </mat-tab>
         </mat-tab-group>
 
-        @if (selectedTaskTabIndex === 2 && taskDetails.canCreateTasks) {
-          <button
-            mat-flat-button
-            class="create-subtask-tab-action"
-            type="button"
-            aria-label="Add subtask"
-            [disabled]="isCreatingSubtask || isSavingSubtask"
-            (click)="onCreateSubtask(taskDetails)"
-          >
-            <mat-icon>add</mat-icon>
-            <span>Subtask</span>
-          </button>
+        @if (selectedTaskTabIndex === 2 && (taskDetails.children.length > 0 || taskDetails.canCreateTasks)) {
+          <div class="subtask-tab-actions">
+            @if (taskDetails.children.length > 0) {
+              <button mat-button type="button" class="expand-collapse-btn" (click)="expandAllSubtasks()">Expand All</button>
+              <button mat-button type="button" class="expand-collapse-btn" (click)="collapseAllSubtasks()">Collapse All</button>
+            }
+            @if (taskDetails.canCreateTasks) {
+              <button
+                mat-flat-button
+                class="create-subtask-tab-action"
+                type="button"
+                aria-label="Add subtask"
+                [disabled]="isCreatingSubtask || isSavingSubtask"
+                (click)="onCreateSubtask(taskDetails)"
+              >
+                <mat-icon>add</mat-icon>
+                <span>Subtask</span>
+              </button>
+            }
+          </div>
         }
       </div>
 

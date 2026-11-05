@@ -1,9 +1,9 @@
-import { Component, inject, signal, OnInit, OnDestroy } from '@angular/core';
+import { Component, inject, signal, OnInit, OnDestroy, QueryList, ViewChildren } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ActivatedRoute } from '@angular/router';
 import { MatIconModule } from '@angular/material/icon';
 import { MatButtonModule } from '@angular/material/button';
-import { MatExpansionModule } from '@angular/material/expansion';
+import { MatExpansionModule, MatExpansionPanel } from '@angular/material/expansion';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatAutocompleteModule, MatAutocompleteSelectedEvent, MatAutocompleteTrigger } from '@angular/material/autocomplete';
 import { MatFormFieldModule } from '@angular/material/form-field';
@@ -12,7 +12,7 @@ import { MatTooltipModule } from '@angular/material/tooltip';
 import { firstValueFrom, Subscription } from 'rxjs';
 
 import { EventTasksService } from './event-tasks.service';
-import { EventTaskEntry, EventTasksPayload, TaskAssignee, TASK_STATUSES } from './event-tasks.models';
+import { EventTaskEntry, EventTasksPayload, TaskAssignee, TASK_STATUSES, taskHierarchyLevelBackground } from './event-tasks.models';
 import { NotifierService } from '../../../../../shared/notifier/notifier.service';
 import { ConfirmDialogService } from '../../../../../components/dialog/confirm/confirm-dialog.service';
 import { ConfirmDialogData } from '../../../../../components/dialog/confirm/confirm-dialog.models';
@@ -37,6 +37,8 @@ import { EventDetailsStateService } from '../event-details-state.service';
   styleUrl: './event-tasks.scss'
 })
 export class EventTasksComponent implements OnInit, OnDestroy {
+  @ViewChildren(MatExpansionPanel) private taskPanels!: QueryList<MatExpansionPanel>;
+
   private readonly route = inject(ActivatedRoute);
   private readonly tasksService = inject(EventTasksService);
   private readonly notifier = inject(NotifierService);
@@ -142,6 +144,18 @@ export class EventTasksComponent implements OnInit, OnDestroy {
       (target.depth === 0 || entry.task.parentTaskId === target.task.parentTaskId)
     );
     return siblings.findIndex((entry) => entry.task.taskId === taskId) + 1;
+  }
+
+  public getTaskLevelBackground(depth: number): string {
+    return taskHierarchyLevelBackground(depth);
+  }
+
+  public expandAllTasks(): void {
+    this.taskPanels.forEach((panel) => panel.open());
+  }
+
+  public collapseAllTasks(): void {
+    this.taskPanels.forEach((panel) => panel.close());
   }
 
   public ngOnInit(): void {

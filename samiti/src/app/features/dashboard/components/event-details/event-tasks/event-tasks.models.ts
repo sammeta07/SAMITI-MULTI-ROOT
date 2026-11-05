@@ -1,6 +1,16 @@
 export type TaskStatus = 'NEW' | 'IN_PROGRESS' | 'COMPLETED' | 'HOLD' | 'WONT_FIX';
 export const TASK_STATUSES: TaskStatus[] = ['NEW', 'IN_PROGRESS', 'COMPLETED', 'HOLD', 'WONT_FIX'];
 
+const TASK_HIERARCHY_LEVEL_BACKGROUNDS = [
+  '#e2e8f0',
+  '#dbeafe'
+];
+
+export function taskHierarchyLevelBackground(depth: number): string {
+  const level = Math.max(0, Math.floor(depth));
+  return TASK_HIERARCHY_LEVEL_BACKGROUNDS[level % TASK_HIERARCHY_LEVEL_BACKGROUNDS.length];
+}
+
 export interface EventTaskEntry {
   id: number;
   taskId: number;
