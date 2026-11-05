@@ -92,9 +92,8 @@
                       [disabled]="savingTaskNameIds.has(task.taskId)"
                       [attr.aria-label]="'Edit title for ' + task.taskName"
                       (input)="taskNameEditText[task.taskId] = $any($event.target).value"
-                      (blur)="saveTaskNameOnBlur(task)"
                       (keydown)="$event.stopPropagation()"
-                      (keydown.enter)="$any($event.target).blur(); $event.stopPropagation()"
+                      (keydown.enter)="saveTaskEdits(task); $event.preventDefault(); $event.stopPropagation()"
                       (keydown.escape)="cancelEditTaskName(task); $event.stopPropagation()"
                       (click)="$event.stopPropagation()"
                     />
@@ -155,9 +154,9 @@
                           @if (!isTaskAssigneeSearchCleared(task.taskId) && ownerDesignation) {
                             <span matPrefix class="task-assignee-selected-owner-avatar">
                               @if (ownerDesignation.photo) {
-                                <img [src]="ownerDesignation.photo" [alt]="task.ownerName || 'Task owner'" />
+                                <img [src]="ownerDesignation.photo" [alt]="getTaskAssigneeDisplay(task) || 'Task owner'" />
                               } @else {
-                                <span>{{ getInitials(task.ownerName) }}</span>
+                                <span>{{ getInitials(getTaskAssigneeDisplay(task)) }}</span>
                               }
                             </span>
                           }
@@ -197,13 +196,15 @@
                           <mat-autocomplete
                             #taskAssigneeAutocomplete="matAutocomplete"
                             class="da-task-assignee-autocomplete"
+                            [displayWith]="displayTaskAssigneeName"
                             hideSingleSelectionIndicator
+                            (closed)="onTaskAssigneeAutocompleteClosed(task)"
                             (optionSelected)="onTaskAssigneeChange(task, $event)"
                           >
-                            @for (member of getFilteredTaskAssignees(task.taskId); track member.userId) {
+                            @for (member of getFilteredTaskAssignees(task.taskId, task.ownerUserId); track member.userId) {
                               <mat-option
                                 [value]="member.userId"
-                                [disabled]="member.userId === task.ownerUserId"
+                                [disabled]="isCurrentTaskAssignee(task, member.userId)"
                                 class="da-opt-row"
                                 [ngClass]="getRoleColorClass(member.committeeRole)"
                               >
@@ -290,7 +291,20 @@
                       <mat-icon>edit</mat-icon>
                     </button>
                   }
-                  @if (task.canDelete) {
+                  @if (isEditingTaskRow(task)) {
+                    <button
+                      mat-icon-button
+                      type="button"
+                      class="task-panel-save-icon"
+                      aria-label="Save task changes"
+                      matTooltip="Save task changes"
+                      [disabled]="!canSaveTaskEdits(task)"
+                      (mousedown)="$event.preventDefault(); $event.stopPropagation()"
+                      (click)="saveTaskEdits(task)"
+                    >
+                      <mat-icon>{{ savingTaskNameIds.has(task.taskId) || assigningTaskIds.has(task.taskId) ? 'hourglass_top' : 'save' }}</mat-icon>
+                    </button>
+                  } @else if (task.canDelete) {
                     <button
                       mat-icon-button
                       type="button"

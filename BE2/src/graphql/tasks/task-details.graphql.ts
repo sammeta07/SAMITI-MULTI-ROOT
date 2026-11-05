@@ -173,9 +173,7 @@ export const taskDetailsResolvers = {
         const isChildParentOwner = Number(child.parentOwnerUserId) === userId;
         return {
           canEditTask: Number(child.createdBy) === userId || isMasterAdmin,
-          canManage: isRootTask
-            ? Number(child.ownerUserId) === userId || isMasterAdmin
-            : isChildParentOwner || isMasterAdmin,
+          canManage: Number(child.ownerUserId) === userId || isMasterAdmin,
           canAssignOwner: isRootTask
             ? canAssignRootTaskOwners || Number(child.createdBy) === userId
             : isMasterAdmin || isChildParentOwner,
@@ -318,9 +316,7 @@ export const taskDetailsResolvers = {
           createdAt: String(todo.createdAt)
         })),
         todoAssignees: await getTodoAssignees(Number(task.committeeId)),
-        canManage: task.parentTaskId !== null
-          ? isMasterAdmin || isParentTaskOwner
-          : isMasterAdmin || isTaskOwner,
+        canManage: isMasterAdmin || isTaskOwner,
         canCreateTasks: canCreateSubtasks,
         canManageTodos,
         canToggleTodos: canManageTodos

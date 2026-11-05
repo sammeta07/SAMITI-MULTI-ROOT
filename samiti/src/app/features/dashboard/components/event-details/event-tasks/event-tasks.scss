@@ -329,6 +329,43 @@
   color: #94a3b8;
 }
 
+.task-panel-save-icon {
+  --mat-icon-button-container-shape: 6px;
+  --mdc-icon-button-state-layer-shape: 6px;
+  display: inline-flex !important;
+  width: 28px !important;
+  height: 28px !important;
+  min-width: 28px !important;
+  justify-self: end;
+  align-items: center !important;
+  justify-content: center !important;
+  padding: 0 !important;
+  border: 1px solid #bbf7d0 !important;
+  border-radius: 6px !important;
+  background: #fff !important;
+  color: #15803d !important;
+
+  mat-icon {
+    width: 16px !important;
+    height: 16px !important;
+    font-size: 16px !important;
+    line-height: 16px !important;
+  }
+
+  &:hover:not(:disabled) {
+    background: #f0fdf4 !important;
+    border-color: #86efac !important;
+  }
+
+  &:disabled {
+    border-color: #e2e8f0 !important;
+    background: #f1f5f9 !important;
+    color: #94a3b8 !important;
+    cursor: not-allowed !important;
+    opacity: 0.65;
+  }
+}
+
 .task-title-text {
   overflow: hidden;
   text-overflow: ellipsis;
@@ -764,6 +801,7 @@
     &.mdc-list-item--disabled {
       background: #f8fafc;
       cursor: not-allowed;
+      pointer-events: auto;
       opacity: 0.6;
     }
   }
@@ -771,6 +809,10 @@
   .da-opt-row {
     border-left: none;
     min-height: 36px;
+  }
+
+  .mdc-list-item__primary-text {
+    width: 100%;
   }
 
   .mat-auto-options {

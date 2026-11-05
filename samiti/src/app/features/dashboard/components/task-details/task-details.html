@@ -96,9 +96,9 @@
                     <a
                       class="task-details-popover-value task-details-parent-link"
                       [routerLink]="['/dashboard', 'task', taskDetails.parentTaskId]"
-                      title="Open parent task"
+                      [title]="(taskDetails.parentTaskName || 'Parent task') | titlecase"
                     >
-                      {{ (taskDetails.parentTaskName || 'Parent task') | titlecase }}
+                      #{{ taskDetails.parentTaskId }}
                     </a>
                   } @else {
                     <span class="task-details-popover-value">None</span>
@@ -139,9 +139,9 @@
                   <a
                     class="task-details-metadata-value task-details-parent-link"
                     [routerLink]="['/dashboard', 'task', taskDetails.parentTaskId]"
-                    title="Open parent task"
+                    [title]="(taskDetails.parentTaskName || 'Parent task') | titlecase"
                   >
-                    {{ (taskDetails.parentTaskName || 'Parent task') | titlecase }}
+                    #{{ taskDetails.parentTaskId }}
                   </a>
                 } @else {
                   <span class="task-details-metadata-value">None</span>

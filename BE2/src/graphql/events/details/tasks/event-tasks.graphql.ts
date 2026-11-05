@@ -253,10 +253,6 @@ async function getTaskManagementPermission(taskId: number, userId: number): Prom
     throwEventError('NOT_FOUND', 'Task not found');
   }
   const task = taskRows[0];
-  if (task.parentTaskId !== null) {
-    return Number(task.parentOwnerUserId) === userId ||
-      hasPermission(userId, PERMISSIONS.EVENT_TASK_MANAGE_ANY, { type: 'EVENT', id: Number(task.eventId) });
-  }
   return Number(task.ownerUserId) === userId ||
     hasPermission(userId, PERMISSIONS.EVENT_TASK_MANAGE_ANY, { type: 'EVENT', id: Number(task.eventId) });
 }
@@ -411,9 +407,7 @@ export const eventTasksResolvers = {
           createdAt: String(taskRow.createdAt),
           ownerAssignedAt: taskRow.ownerAssignedAt || null,
           updatedAt: String(taskRow.updatedAt),
-          canManage: isRootTask
-            ? Number(taskRow.ownerUserId) === loggedInUserId || canManageAnyTasks
-            : Number(taskRow.parentOwnerUserId) === loggedInUserId || canManageAnyTasks,
+          canManage: Number(taskRow.ownerUserId) === loggedInUserId || canManageAnyTasks,
           canEditTask: Number(taskRow.createdBy) === loggedInUserId || canManageAnyTasks,
           canAssignOwner: isRootTask
             ? canAssignRootTaskOwners || Number(taskRow.createdBy) === loggedInUserId

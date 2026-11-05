@@ -51,6 +51,7 @@ export class EventTasksComponent implements OnInit, OnDestroy {
   public eventData: EventTaskEntry[] | null = null;
   public taskAssignees: TaskAssignee[] = [];
   public taskAssigneeSearchText: Record<number, string> = {};
+  public pendingTaskOwnerIds: Record<number, number | null> = {};
   public taskNameEditText: Record<number, string> = {};
   public canCreateTasks = false;
 
@@ -161,7 +162,7 @@ export class EventTasksComponent implements OnInit, OnDestroy {
   }
 
   // --- Assignee Search & Editing ---
-  public getFilteredTaskAssignees(taskId: number): TaskAssignee[] {
+  public getFilteredTaskAssignees(taskId: number, ownerUserId: number | null): TaskAssignee[] {
     const search = (this.taskAssigneeSearchText[taskId] || '').trim().toLowerCase();
     return this.taskAssignees
       .filter(
@@ -170,8 +171,25 @@ export class EventTasksComponent implements OnInit, OnDestroy {
           (assignee.name || '').toLowerCase().includes(search) ||
           (assignee.email || '').toLowerCase().includes(search)
       )
-      .sort((a, b) => Number(b.isWinner) - Number(a.isWinner) || (a.name || '').localeCompare(b.name || ''));
+      .sort(
+        (a, b) =>
+          Number(ownerUserId !== null && Number(b.userId) === Number(ownerUserId)) -
+            Number(ownerUserId !== null && Number(a.userId) === Number(ownerUserId)) ||
+          Number(b.isWinner) - Number(a.isWinner) ||
+          (a.name || '').localeCompare(b.name || '')
+      );
   }
+
+  public isCurrentTaskAssignee(task: EventTaskEntry, userId: number): boolean {
+    return task.ownerUserId !== null && Number(task.ownerUserId) === Number(userId);
+  }
+
+  public readonly displayTaskAssigneeName = (value: string | number | null): string => {
+    if (value === null || value === undefined) return '';
+    if (typeof value === 'string') return value;
+    const assignee = this.taskAssignees.find((member) => Number(member.userId) === value);
+    return assignee?.name || String(value);
+  };
 
   public getTaskAssigneeDisplay(task: EventTaskEntry): string {
     return Object.prototype.hasOwnProperty.call(this.taskAssigneeSearchText, task.taskId)
@@ -180,10 +198,14 @@ export class EventTasksComponent implements OnInit, OnDestroy {
   }
 
   public getTaskOwnerDesignation(task: EventTaskEntry): Pick<TaskAssignee, 'committeeRole' | 'roleIcon' | 'roleColor' | 'photo'> | null {
-    if (task.ownerUserId === null || task.ownerUserId === undefined) {
+    const ownerUserId = this.editingTaskAssigneeIds.has(task.taskId) &&
+      Object.prototype.hasOwnProperty.call(this.pendingTaskOwnerIds, task.taskId)
+      ? this.pendingTaskOwnerIds[task.taskId]
+      : task.ownerUserId;
+    if (ownerUserId === null || ownerUserId === undefined) {
       return null;
     }
-    const owner = this.taskAssignees.find((assignee) => assignee.userId === task.ownerUserId);
+    const owner = this.taskAssignees.find((assignee) => Number(assignee.userId) === Number(ownerUserId));
     return {
       committeeRole: owner?.committeeRole || 'COMMITTEE_MEMBER',
       roleIcon: owner?.roleIcon || null,
@@ -231,40 +253,105 @@ export class EventTasksComponent implements OnInit, OnDestroy {
     this.taskNameEditText[task.taskId] = task.taskName;
   }
 
-  public saveTaskNameOnBlur(task: EventTaskEntry): void {
-    if (!this.editingTaskNameIds.has(task.taskId) || this.savingTaskNameIds.has(task.taskId)) return;
+  public canSaveTaskEdits(task: EventTaskEntry): boolean {
     const taskName = String(this.taskNameEditText[task.taskId] ?? '').trim();
-    if (!taskName) {
-      this.taskNameEditText[task.taskId] = task.taskName;
-      this.editingTaskNameIds.delete(task.taskId);
+    const hasNameChange = this.editingTaskNameIds.has(task.taskId) && taskName !== task.taskName;
+    const hasOwnerChange = this.hasPendingTaskOwnerChange(task);
+    return (hasNameChange || hasOwnerChange) &&
+      !(hasNameChange && !taskName) &&
+      !this.savingTaskNameIds.has(task.taskId) &&
+      !this.assigningTaskIds.has(task.taskId);
+  }
+
+  public hasPendingTaskOwnerChange(task: EventTaskEntry): boolean {
+    return Object.prototype.hasOwnProperty.call(this.pendingTaskOwnerIds, task.taskId) &&
+      this.pendingTaskOwnerIds[task.taskId] !== task.ownerUserId;
+  }
+
+  public saveTaskEdits(task: EventTaskEntry): void {
+    if (!this.canSaveTaskEdits(task)) return;
+
+    const taskName = String(this.taskNameEditText[task.taskId] ?? '').trim();
+    const hasNameChange = this.editingTaskNameIds.has(task.taskId) && taskName !== task.taskName;
+    const hasOwnerChange = this.hasPendingTaskOwnerChange(task);
+    if (hasNameChange && !taskName) {
       this.notifier.error('Task title cannot be empty.');
       return;
     }
-    if (taskName === task.taskName) {
+
+    if (hasNameChange) {
+      this.savingTaskNameIds.add(task.taskId);
+      this.tasksService.updateEventTaskName(task.taskId, taskName).subscribe({
+        next: (updatedTask) => {
+          this.savingTaskNameIds.delete(task.taskId);
+          this.editingTaskNameIds.delete(task.taskId);
+          if (this.currentEventId === task.eventId) {
+            this.eventData = this.tasks.map((entry) => entry.taskId === task.taskId
+              ? { ...entry, taskName: updatedTask.taskName, updatedAt: updatedTask.updatedAt }
+              : entry);
+            this.hierarchyTreeService.notifyTaskNameUpdated(task.taskId, updatedTask.taskName);
+            this.notifier.success('Task title updated.');
+          }
+          this.taskNameEditText[task.taskId] = updatedTask.taskName;
+          if (!hasOwnerChange) this.cancelEditTaskAssignee(task);
+        },
+        error: (error) => {
+          this.savingTaskNameIds.delete(task.taskId);
+          this.notifier.error(error?.message || 'Failed to update task title.');
+        }
+      });
+    } else {
       this.editingTaskNameIds.delete(task.taskId);
-      return;
+      this.taskNameEditText[task.taskId] = task.taskName;
     }
 
-    this.savingTaskNameIds.add(task.taskId);
-    this.tasksService.updateEventTaskName(task.taskId, taskName).subscribe({
-      next: (updatedTask) => {
-        this.savingTaskNameIds.delete(task.taskId);
-        this.editingTaskNameIds.delete(task.taskId);
-        if (this.currentEventId !== task.eventId) return;
-        this.eventData = this.tasks.map((entry) => entry.taskId === task.taskId
-          ? { ...entry, taskName: updatedTask.taskName, updatedAt: updatedTask.updatedAt }
-          : entry);
-        this.taskNameEditText[task.taskId] = updatedTask.taskName;
-        this.hierarchyTreeService.notifyTaskNameUpdated(task.taskId, updatedTask.taskName);
-        this.notifier.success('Task title updated.');
-      },
-      error: (error) => {
-        this.savingTaskNameIds.delete(task.taskId);
-        this.editingTaskNameIds.delete(task.taskId);
-        this.taskNameEditText[task.taskId] = task.taskName;
-        this.notifier.error(error?.message || 'Failed to update task title.');
-      }
-    });
+    if (hasOwnerChange) {
+      const ownerUserId = this.pendingTaskOwnerIds[task.taskId];
+      this.assigningTaskIds.add(task.taskId);
+      this.tasksService.assignEventTask(task.taskId, ownerUserId).subscribe({
+        next: (updatedTask) => {
+          this.assigningTaskIds.delete(task.taskId);
+          this.editingTaskAssigneeIds.delete(task.taskId);
+          delete this.pendingTaskOwnerIds[task.taskId];
+          this.taskAssigneeSearchText[task.taskId] = updatedTask.ownerName || '';
+          this.clearedTaskAssigneeSearchIds.update((ids) => {
+            const next = new Set(ids);
+            next.delete(task.taskId);
+            return next;
+          });
+          if (!hasNameChange) {
+            this.editingTaskNameIds.delete(task.taskId);
+            this.taskNameEditText[task.taskId] = task.taskName;
+          }
+          if (this.currentEventId === task.eventId) {
+            this.eventData = this.tasks.map((entry) => entry.taskId === task.taskId
+              ? {
+                  ...entry,
+                  ownerUserId: updatedTask.ownerUserId,
+                  ownerName: updatedTask.ownerName,
+                  assignedByName: updatedTask.assignedByName,
+                  ownerAssignedAt: updatedTask.ownerAssignedAt,
+                  updatedAt: updatedTask.updatedAt
+                }
+              : entry);
+            this.hierarchyTreeService.triggerHierarchyTreeRefresh();
+            this.notifier.success(
+              ownerUserId === null
+                ? `Task "${updatedTask.taskName}" is unassigned.`
+                : `Task "${updatedTask.taskName}" assigned to ${updatedTask.ownerName}.`
+            );
+          }
+        },
+        error: (error) => {
+          this.assigningTaskIds.delete(task.taskId);
+          this.notifier.error(
+            error?.error?.errors?.[0]?.message ||
+            error?.error?.message ||
+            'Failed to assign task.'
+          );
+        }
+      });
+    }
   }
 
   public isTaskAssigneeSearchCleared(taskId: number): boolean {
@@ -285,11 +372,13 @@ export class EventTasksComponent implements OnInit, OnDestroy {
       next.delete(task.taskId);
       return next;
     });
+    this.pendingTaskOwnerIds[task.taskId] = task.ownerUserId;
     this.editingTaskAssigneeIds.add(task.taskId);
   }
 
   public cancelEditTaskAssignee(task: EventTaskEntry): void {
     this.editingTaskAssigneeIds.delete(task.taskId);
+    delete this.pendingTaskOwnerIds[task.taskId];
     this.taskAssigneeSearchText[task.taskId] = task.ownerName || '';
     this.clearedTaskAssigneeSearchIds.update((ids) => {
       const next = new Set(ids);
@@ -302,6 +391,21 @@ export class EventTasksComponent implements OnInit, OnDestroy {
     this.taskAssigneeSearchText[taskId] = '';
     this.clearedTaskAssigneeSearchIds.update((ids) => new Set(ids).add(taskId));
     trigger.openPanel();
+  }
+
+  public onTaskAssigneeAutocompleteClosed(task: EventTaskEntry): void {
+    if (this.assigningTaskIds.has(task.taskId)) {
+      return;
+    }
+
+    const pendingOwnerId = this.pendingTaskOwnerIds[task.taskId];
+    const pendingOwner = this.taskAssignees.find((member) => member.userId === pendingOwnerId);
+    this.taskAssigneeSearchText[task.taskId] = pendingOwner?.name || task.ownerName || '';
+    this.clearedTaskAssigneeSearchIds.update((ids) => {
+      const next = new Set(ids);
+      next.delete(task.taskId);
+      return next;
+    });
   }
 
   public onTaskAssigneeSearch(taskId: number, value: string): void {
@@ -326,12 +430,28 @@ export class EventTasksComponent implements OnInit, OnDestroy {
     }
 
     const ownerUserId = event.option.value === '' ? null : Number(event.option.value);
+    if (
+      event.option.disabled ||
+      ownerUserId === task.ownerUserId ||
+      (ownerUserId !== null && this.isCurrentTaskAssignee(task, ownerUserId))
+    ) {
+      this.pendingTaskOwnerIds[task.taskId] = task.ownerUserId;
+      this.taskAssigneeSearchText[task.taskId] = task.ownerName || '';
+      this.clearedTaskAssigneeSearchIds.update((ids) => {
+        const next = new Set(ids);
+        next.delete(task.taskId);
+        return next;
+      });
+      return;
+    }
+
     if (ownerUserId !== null && !this.taskAssignees.some((assignee) => assignee.userId === ownerUserId)) {
       this.notifier.error('Selected assignee is not a member of this committee.');
       return;
     }
 
     const selectedAssignee = this.taskAssignees.find((assignee) => assignee.userId === ownerUserId);
+    this.pendingTaskOwnerIds[task.taskId] = ownerUserId;
     this.taskAssigneeSearchText[task.taskId] = selectedAssignee?.name || '';
     this.clearedTaskAssigneeSearchIds.update((ids) => {
       const next = new Set(ids);
@@ -339,37 +459,6 @@ export class EventTasksComponent implements OnInit, OnDestroy {
       return next;
     });
 
-    this.assigningTaskIds.add(task.taskId);
-    this.tasksService.assignEventTask(task.taskId, ownerUserId).subscribe({
-      next: (updatedTask) => {
-        this.assigningTaskIds.delete(task.taskId);
-        this.editingTaskAssigneeIds.delete(task.taskId);
-        if (this.currentEventId === task.eventId) {
-          this.eventData = this.tasks.map((entry) =>
-            entry.taskId === updatedTask.taskId ? updatedTask : entry
-          );
-          this.taskAssigneeSearchText[task.taskId] = updatedTask.ownerName || '';
-          this.hierarchyTreeService.triggerHierarchyTreeRefresh();
-          this.notifier.success(
-            ownerUserId === null
-              ? `Task "${updatedTask.taskName}" is unassigned.`
-              : `Task "${updatedTask.taskName}" assigned to ${updatedTask.ownerName}.`
-          );
-        }
-      },
-      error: (error) => {
-        this.assigningTaskIds.delete(task.taskId);
-        this.editingTaskAssigneeIds.delete(task.taskId);
-        if (this.currentEventId === task.eventId) {
-          this.taskAssigneeSearchText[task.taskId] = task.ownerName || '';
-        }
-        this.notifier.error(
-          error?.error?.errors?.[0]?.message ||
-          error?.error?.message ||
-          'Failed to assign task.'
-        );
-      }
-    });
   }
 
   // --- Task Status Methods ---
@@ -518,6 +607,7 @@ export class EventTasksComponent implements OnInit, OnDestroy {
   private loadEventTasks(eventId: string): void {
     const requestId = ++this.taskLoadRequestId;
     this.taskAssigneeSearchText = {};
+    this.pendingTaskOwnerIds = {};
     this.isLoading = true;
     this.hasLoadError = false;
 
