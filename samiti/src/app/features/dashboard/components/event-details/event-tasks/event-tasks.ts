@@ -1,6 +1,6 @@
 import { Component, inject, signal, OnInit, OnDestroy, QueryList, ViewChildren } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { ActivatedRoute } from '@angular/router';
+import { ActivatedRoute, Router } from '@angular/router';
 import { MatIconModule } from '@angular/material/icon';
 import { MatButtonModule } from '@angular/material/button';
 import { MatExpansionModule, MatExpansionPanel } from '@angular/material/expansion';
@@ -40,6 +40,7 @@ export class EventTasksComponent implements OnInit, OnDestroy {
   @ViewChildren(MatExpansionPanel) private taskPanels!: QueryList<MatExpansionPanel>;
 
   private readonly route = inject(ActivatedRoute);
+  private readonly router = inject(Router);
   private readonly tasksService = inject(EventTasksService);
   private readonly notifier = inject(NotifierService);
   private readonly confirmDialog = inject(ConfirmDialogService);
@@ -74,6 +75,12 @@ export class EventTasksComponent implements OnInit, OnDestroy {
 
   public get tasks(): EventTaskEntry[] {
     return this.eventData ?? [];
+  }
+
+  public navigateToTask(taskId: number, event: Event): void {
+    event.preventDefault();
+    event.stopPropagation();
+    void this.router.navigate(['/dashboard', 'task', taskId]);
   }
 
   public get flattenedTasks(): Array<{ task: EventTaskEntry; depth: number }> {

@@ -279,7 +279,12 @@
             <ng-template mat-tab-label>
               <mat-icon class="tab-leading-icon">account_tree</mat-icon>
               <span class="tab-name-text">Subtasks</span>
-              <span class="tab-badge">{{ taskDetails.children.length }}</span>
+              <span
+                class="tab-badge subtask-count-badge"
+                [matTooltip]="taskDetails.children.length + ' direct / ' + getSubtaskDescendantCount(taskDetails.taskId) + ' total subtasks'"
+              >
+                {{ taskDetails.children.length }} / {{ getSubtaskDescendantCount(taskDetails.taskId) }}
+              </span>
             </ng-template>
 
             <section class="horizontal-full-card tasks-section-style task-subtasks-section">

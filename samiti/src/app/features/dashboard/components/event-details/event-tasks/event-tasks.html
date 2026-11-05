@@ -99,7 +99,16 @@
                       (click)="$event.stopPropagation()"
                     />
                   } @else {
-                    <span class="task-title-text" [title]="task.taskName">{{ task.taskName }}</span>
+                    <span
+                      class="task-title-text task-title-link"
+                      role="link"
+                      tabindex="0"
+                      [title]="task.taskName"
+                      (click)="navigateToTask(task.taskId, $event)"
+                      (keydown.enter)="navigateToTask(task.taskId, $event)"
+                    >
+                      {{ task.taskName }}
+                    </span>
                   }
                   <span
                     class="task-child-count-pill"

@@ -404,6 +404,16 @@
   color: #0f172a;
 }
 
+.task-title-link {
+  cursor: pointer;
+
+  &:hover,
+  &:focus-visible {
+    color: #2563eb;
+    text-decoration: underline;
+  }
+}
+
 .task-title-edit-input {
   min-width: 80px;
   width: 100%;
