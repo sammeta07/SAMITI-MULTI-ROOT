@@ -335,7 +335,7 @@
 
                   <mat-expansion-panel
                     class="event-task-panel task-subtask-panel"
-                    [class.task-nested-panel]="entry.depth > 0"
+                    [expanded]="false"
                     [style.--task-level-background]="getSubtaskLevelBackground(entry.depth)"
                   >
                     <mat-expansion-panel-header>
@@ -362,7 +362,15 @@
                               (click)="$event.stopPropagation()"
                             />
                           } @else {
-                            <span class="task-title-text" [title]="child.taskName">{{ child.taskName }}</span>
+                            <span
+                              class="task-title-text task-title-link"
+                              role="link"
+                              tabindex="0"
+                              [title]="child.taskName"
+                              [routerLink]="['/dashboard', 'task', child.taskId]"
+                            >
+                              {{ child.taskName }}
+                            </span>
                           }
                           <span
                             class="task-child-count-pill"
@@ -494,7 +502,10 @@
                             </div>
                           } @else {
                             <div class="task-assignee-value-layout">
-                              <span class="task-assignee-owner" [class.task-assignee-owner-unassigned]="!child.ownerUserId">
+                              <span
+                                class="task-assignee-owner"
+                                [class.task-assignee-owner-unassigned]="!child.ownerUserId"
+                              >
                                 @if (ownerDesignation) {
                                   <span class="task-assignee-owner-avatar">
                                     @if (ownerDesignation.photo) {
@@ -509,7 +520,8 @@
                                   <span
                                     class="task-assignee-owner-designation"
                                     [style.color]="ownerDesignation?.roleColor || '#16a34a'"
-                                    [title]="ownerDesignation?.committeeRole || ''"
+                                    [attr.aria-label]="ownerDesignation?.committeeRole"
+                                    [title]="ownerDesignation?.committeeRole"
                                   >
                                     {{ ownerDesignation?.roleIcon }}
                                   </span>
@@ -518,28 +530,30 @@
                             </div>
                           }
                         </div>
+
+                        <!-- Actions -->
                         <div class="task-row-actions" (click)="$event.stopPropagation()" (keydown)="$event.stopPropagation()">
                           @if (isEditingSubtaskRow(child.taskId)) {
-                            <button
-                              mat-icon-button
-                              class="task-assignee-cancel-btn"
-                              type="button"
-                              aria-label="Cancel task edit"
-                              matTooltip="Cancel edit"
-                              [disabled]="isUpdatingOwner || savingSubtaskNameIds.has(child.taskId)"
-                              (mousedown)="$event.preventDefault(); $event.stopPropagation()"
-                              (click)="cancelEditSubtaskRow(child)"
-                            >
-                              <mat-icon>close</mat-icon>
-                            </button>
+                            <span class="task-assignee-cancel-box" matTooltip="Cancel edit">
+                              <button
+                                mat-icon-button
+                                class="task-assignee-cancel-btn"
+                                type="button"
+                                aria-label="Cancel task edit"
+                                (mousedown)="$event.preventDefault(); $event.stopPropagation()"
+                                (click)="cancelEditSubtaskRow(child)"
+                              >
+                                <mat-icon>close</mat-icon>
+                              </button>
+                            </span>
                           } @else if (child.canEditTask || child.canAssignOwner) {
                             <button
                               mat-icon-button
                               class="task-assignee-edit-btn task-title-edit-button"
                               type="button"
                               aria-label="Edit task"
-                              [matTooltip]="child.canEditTask && child.canAssignOwner ? 'Edit task title and assignee' : child.canEditTask ? 'Edit task title' : child.status?.toUpperCase() === 'COMPLETED' ? 'Completed tasks cannot be reassigned' : 'Assign task owner'"
-                              [disabled]="isUpdatingOwner || savingSubtaskNameIds.has(child.taskId) || (!child.canEditTask && child.status?.toUpperCase() === 'COMPLETED')"
+                              [matTooltip]="child.canEditTask && child.canAssignOwner ? 'Edit task title and assignee' : child.canEditTask ? 'Edit task title' : 'Assign task owner'"
+                              [disabled]="isUpdatingOwner || savingSubtaskNameIds.has(child.taskId) || (child.status?.toUpperCase() === 'COMPLETED' && !child.canEditTask)"
                               (click)="editSubtaskRow(child)"
                             >
                               <mat-icon>edit</mat-icon>
@@ -582,43 +596,58 @@
                     </mat-expansion-panel-header>
 
                     <div class="task-details-grid">
-                      <div class="task-detail-card" title="Task ID: #{{ child.taskId }}">
-                        <span class="task-detail-label">Task ID</span>
-                        <span class="task-detail-icon"><mat-icon>tag</mat-icon></span>
-                        <div class="task-detail-body">
-                          <span class="task-detail-value id-badge">#{{ child.taskId }}</span>
+                      <!-- 1. Task ID -->
+                      <div class="task-outline-field">
+                        <span class="outline-label">Task ID</span>
+                        <div class="outline-content">
+                          <mat-icon class="outline-icon">tag</mat-icon>
+                          <span class="outline-value id-badge">#{{ child.taskId }}</span>
                         </div>
                       </div>
 
-                      <div class="task-detail-card" [title]="'Created By: ' + (child.createdByName || 'Unknown')">
-                        <span class="task-detail-label">Created By</span>
-                        <span class="task-detail-icon"><mat-icon>person</mat-icon></span>
-                        <div class="task-detail-body">
-                          <span class="task-detail-value">{{ (child.createdByName || 'Unknown') | titlecase }}</span>
+                      <!-- 2. Created By -->
+                      <div class="task-outline-field">
+                        <span class="outline-label">Created By</span>
+                        <div class="outline-content">
+                          <mat-icon class="outline-icon">person</mat-icon>
+                          <span class="outline-value" [title]="child.createdByName">{{ (child.createdByName || 'Unknown') | titlecase }}</span>
                         </div>
                       </div>
 
-                      <div class="task-detail-card" [title]="'Created At: ' + (child.createdAt ? (child.createdAt | date: 'dd-MMM-yyyy, hh:mm a') : 'Unknown')">
-                        <span class="task-detail-label">Created At</span>
-                        <span class="task-detail-icon"><mat-icon>calendar_today</mat-icon></span>
-                        <div class="task-detail-body">
-                          <span class="task-detail-value">{{ child.createdAt ? (child.createdAt | date: 'dd-MMM-yyyy, hh:mm a') : 'Unknown' }}</span>
+                      <!-- 3. Created At -->
+                      <div class="task-outline-field">
+                        <span class="outline-label">Created At</span>
+                        <div class="outline-content">
+                          <mat-icon class="outline-icon">calendar_today</mat-icon>
+                          <span class="outline-value" [title]="child.createdAt | date: 'dd-MMM-yyyy, hh:mm a'">
+                            {{ child.createdAt | date: 'dd-MMM-yy, hh:mm a' }}
+                          </span>
                         </div>
                       </div>
 
-                      <div class="task-detail-card" [title]="'Assigned By: ' + (child.assignedByName || 'Not assigned')">
-                        <span class="task-detail-label">Assigned By</span>
-                        <span class="task-detail-icon"><mat-icon>person_add</mat-icon></span>
-                        <div class="task-detail-body">
-                          <span class="task-detail-value">{{ (child.assignedByName || 'Not assigned') | titlecase }}</span>
+                      <!-- 4. Assigned By -->
+                      <div class="task-outline-field">
+                        <span class="outline-label">Assigned By</span>
+                        <div class="outline-content">
+                          <mat-icon class="outline-icon">person_add</mat-icon>
+                          <span class="outline-value" [title]="child.assignedByName">{{ (child.assignedByName || 'Not assigned') | titlecase }}</span>
                         </div>
                       </div>
 
-                      <div class="task-detail-card" [title]="'Assigned At: ' + (child.ownerAssignedAt ? (child.ownerAssignedAt | date: 'dd-MMM-yyyy, hh:mm a') : 'Not assigned')">
-                        <span class="task-detail-label">Assigned At</span>
-                        <span class="task-detail-icon"><mat-icon>assignment_ind</mat-icon></span>
-                        <div class="task-detail-body">
-                          <span class="task-detail-value">{{ child.ownerAssignedAt ? (child.ownerAssignedAt | date: 'dd-MMM-yyyy, hh:mm a') : 'Not assigned' }}</span>
+                      <!-- 5. Assigned At -->
+                      <div class="task-outline-field">
+                        <span class="outline-label">Assigned At</span>
+                        <div class="outline-content">
+                          <mat-icon class="outline-icon">assignment_ind</mat-icon>
+                          <span class="outline-value">
+                            @if (child.ownerAssignedAt) {
+                              <span [title]="child.ownerAssignedAt | date: 'dd-MMM-yyyy, hh:mm a'">
+                                {{ child.ownerAssignedAt | date: 'dd-MMM-yy, hh:mm a' }}
+                              </span>
+                            } @else {
+                              <span class="muted-text">Not assigned</span>
+                            }
+                          </span>
                         </div>
                       </div>
                     </div>

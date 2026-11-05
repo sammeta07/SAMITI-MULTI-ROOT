@@ -94,7 +94,7 @@
                       [attr.aria-label]="'Edit title for ' + task.taskName"
                       (input)="taskNameEditText[task.taskId] = $any($event.target).value"
                       (keydown)="$event.stopPropagation()"
-                      (keydown.enter)="saveTaskEdits(task); $event.preventDefault(); $event.stopPropagation()"
+                      (keydown.enter)="saveTaskEdits(task); $event.preventDefault();$event.stopPropagation()"
                       (keydown.escape)="cancelEditTaskName(task); $event.stopPropagation()"
                       (click)="$event.stopPropagation()"
                     />
@@ -274,6 +274,7 @@
                     </div>
                   }
                 </div>
+
                 <div class="task-row-actions" (click)="$event.stopPropagation()" (keydown)="$event.stopPropagation()">
                   @if (isEditingTaskRow(task)) {
                     <span class="task-assignee-cancel-box" matTooltip="Cancel edit">
@@ -282,7 +283,7 @@
                         class="task-assignee-cancel-btn"
                         type="button"
                         aria-label="Cancel task edit"
-                        (mousedown)="$event.preventDefault(); $event.stopPropagation()"
+                        (mousedown)="$event.preventDefault();$event.stopPropagation()"
                         (click)="cancelEditTaskRow(task)"
                       >
                         <mat-icon>close</mat-icon>
@@ -295,7 +296,7 @@
                       type="button"
                       aria-label="Edit task"
                       [matTooltip]="task.canEditTask && task.canAssignOwner ? 'Edit task title and assignee' : task.canEditTask ? 'Edit task title' : 'Assign task owner'"
-                      [disabled]="isUpdatingOwner || savingTaskNameIds.has(task.taskId) || task.status?.toUpperCase() === 'COMPLETED' && !task.canEditTask"
+                      [disabled]="isUpdatingOwner || savingTaskNameIds.has(task.taskId) || (task.status?.toUpperCase() === 'COMPLETED' && !task.canEditTask)"
                       (click)="editTaskRow(task)"
                     >
                       <mat-icon>edit</mat-icon>
@@ -309,7 +310,7 @@
                       aria-label="Save task changes"
                       matTooltip="Save task changes"
                       [disabled]="!canSaveTaskEdits(task)"
-                      (mousedown)="$event.preventDefault(); $event.stopPropagation()"
+                      (mousedown)="$event.preventDefault();$event.stopPropagation()"
                       (click)="saveTaskEdits(task)"
                     >
                       <mat-icon>{{ savingTaskNameIds.has(task.taskId) || assigningTaskIds.has(task.taskId) ? 'hourglass_top' : 'save' }}</mat-icon>

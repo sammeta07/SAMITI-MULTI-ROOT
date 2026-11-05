@@ -176,6 +176,7 @@
   display: flex;
   flex-direction: column;
   gap: 6px;
+  margin-top: 6px;
 }
 
 .event-task-panel {
@@ -212,7 +213,7 @@
 }
 
 :host ::ng-deep .event-task-panel .mat-expansion-panel-body {
-  padding: 0 12px 10px 12px;
+  padding: 0 12px 10px 12px !important;
 }
 
 :host ::ng-deep .event-task-panel .mat-expansion-panel-header .mat-expansion-indicator {
@@ -812,9 +813,6 @@
 /* Autocomplete Overlay Panel */
 :host ::ng-deep .mat-mdc-autocomplete-panel.da-task-assignee-autocomplete {
   z-index: 11000 !important;
-  width: min(320px, calc(100vw - 24px)) !important;
-  min-width: min(300px, calc(100vw - 24px)) !important;
-  max-width: calc(100vw - 24px) !important;
   max-height: 200px !important;
   overflow-y: auto !important;
   padding: 3px !important;
@@ -944,7 +942,6 @@
 /* Material Outline Style Task Details Grid */
 .task-details-grid {
   display: grid;
-  /* Task ID compact, names balanced, and dates given maximum width to prevent text truncation */
   grid-template-columns: minmax(70px, 0.6fr) minmax(115px, 1.1fr) minmax(170px, 1.4fr) minmax(115px, 1.1fr) minmax(170px, 1.4fr);
   gap: 6px;
   margin-top: 12px;
@@ -957,7 +954,7 @@
   position: relative;
   display: flex;
   align-items: center;
-  height: 26px; /* Exact height maintain rahegi bina row badhaye */
+  height: 26px;
   padding: 0 6px;
   background: #ffffff;
   border: 1px solid #cbd5e1;
@@ -970,7 +967,6 @@
     border-color: #94a3b8;
   }
 
-  /* Floating Outline Input Label */
   .outline-label {
     position: absolute;
     top: -6px;
@@ -1097,7 +1093,6 @@
     min-width: 0;
     padding: 0 4px;
   }
-
 }
 
 @media (max-width: 580px) {
