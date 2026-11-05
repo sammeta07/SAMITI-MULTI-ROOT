@@ -212,18 +212,19 @@
             }
             @if (taskDetails.canDeleteTask && !isEditingTask()) {
               <div class="task-header-actions">
-                <button
-                  mat-button
-                  class="task-header-icon-button task-delete-button"
-                  type="button"
-                  aria-label="Delete task"
-                  title="Delete task"
-                  [disabled]="isDeletingTask()"
-                  (click)="onDeleteTask(taskDetails)"
-                >
-                  <mat-icon>{{ isDeletingTask() ? 'hourglass_top' : 'delete_outline' }}</mat-icon>
-                  <span class="task-header-button-label">Delete</span>
-                </button>
+                <span class="task-delete-tooltip-host" [matTooltip]="getTaskDeletionTooltip(taskDetails)">
+                  <button
+                    mat-button
+                    class="task-header-icon-button task-delete-button"
+                    type="button"
+                    aria-label="Delete task"
+                    [disabled]="isDeletingTask() || !!getTaskDeletionBlockReason(taskDetails)"
+                    (click)="onDeleteTask(taskDetails)"
+                  >
+                    <mat-icon>{{ isDeletingTask() ? 'hourglass_top' : 'delete_outline' }}</mat-icon>
+                    <span class="task-header-button-label">Delete</span>
+                  </button>
+                </span>
               </div>
             }
           </div>
@@ -551,18 +552,24 @@
                             >
                               <mat-icon>{{ savingSubtaskNameIds.has(child.taskId) || assigningSubtaskIds.has(child.taskId) ? 'hourglass_top' : 'save' }}</mat-icon>
                             </button>
-                          } @else if (child.canAssignOwner) {
-                            <button
-                              mat-icon-button
-                              type="button"
-                              class="task-panel-delete-icon"
-                              aria-label="Delete subtask"
-                              title="Delete subtask"
+                          } @else if (child.canDelete) {
+                            <span
+                              class="task-delete-tooltip-host"
+                              [matTooltip]="getSubtaskDeletionTooltip(child)"
                               (click)="$event.stopPropagation()"
                               (keydown)="$event.stopPropagation()"
                             >
-                              <mat-icon>delete_outline</mat-icon>
-                            </button>
+                              <button
+                                mat-icon-button
+                                type="button"
+                                class="task-panel-delete-icon"
+                                aria-label="Delete subtask"
+                                [disabled]="deletingSubtaskIds.has(child.taskId) || !!getTaskDeletionBlockReason(child)"
+                                (click)="onDeleteSubtask(child, $event)"
+                              >
+                                <mat-icon>{{ deletingSubtaskIds.has(child.taskId) ? 'hourglass_top' : 'delete_outline' }}</mat-icon>
+                              </button>
+                            </span>
                           }
                         </div>
                       </div>

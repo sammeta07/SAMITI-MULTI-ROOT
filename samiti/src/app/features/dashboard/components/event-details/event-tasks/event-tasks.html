@@ -306,17 +306,23 @@
                       <mat-icon>{{ savingTaskNameIds.has(task.taskId) || assigningTaskIds.has(task.taskId) ? 'hourglass_top' : 'save' }}</mat-icon>
                     </button>
                   } @else if (task.canDelete) {
-                    <button
-                      mat-icon-button
-                      type="button"
-                      class="task-panel-delete-icon"
-                      aria-label="Delete task"
-                      [matTooltip]="deletingTaskIds.has(task.taskId) ? 'Deleting task...' : 'Delete task'"
-                      [disabled]="deletingTaskIds.has(task.taskId)"
-                      (click)="onDeleteTask(task, $event)"
+                    <span
+                      class="task-delete-tooltip-host"
+                      [matTooltip]="getTaskDeletionTooltip(task)"
+                      (click)="$event.stopPropagation()"
+                      (keydown)="$event.stopPropagation()"
                     >
-                      <mat-icon>{{ deletingTaskIds.has(task.taskId) ? 'hourglass_top' : 'delete_outline' }}</mat-icon>
-                    </button>
+                      <button
+                        mat-icon-button
+                        type="button"
+                        class="task-panel-delete-icon"
+                        aria-label="Delete task"
+                        [disabled]="deletingTaskIds.has(task.taskId) || !!getTaskDeletionBlockReason(task)"
+                        (click)="onDeleteTask(task, $event)"
+                      >
+                        <mat-icon>{{ deletingTaskIds.has(task.taskId) ? 'hourglass_top' : 'delete_outline' }}</mat-icon>
+                      </button>
+                    </span>
                   }
                 </div>
               </div>

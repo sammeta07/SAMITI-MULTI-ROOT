@@ -134,11 +134,6 @@ export const taskDetailsResolvers = {
             { type: 'EVENT', id: Number(task.eventId) }
           )
         : isMasterAdmin || isParentTaskOwner;
-      const canDeleteRootTask = await hasPermission(
-        userId,
-        PERMISSIONS.EVENT_TASK_DELETE,
-        { type: 'EVENT', id: Number(task.eventId) }
-      );
       const canAssignRootTaskOwners = await hasPermission(
         userId,
         PERMISSIONS.EVENT_TASK_ASSIGN_OWNER,
@@ -177,9 +172,9 @@ export const taskDetailsResolvers = {
           canAssignOwner: isRootTask
             ? canAssignRootTaskOwners || Number(child.createdBy) === userId
             : isMasterAdmin || isChildParentOwner,
-          canDelete: isRootTask
-            ? canDeleteRootTask || Number(child.createdBy) === userId
-            : isMasterAdmin || isChildParentOwner
+          canDelete: isMasterAdmin ||
+            Number(child.createdBy) === userId ||
+            (!isRootTask && isChildParentOwner)
         };
       };
       const childrenByParentId = new Map<number, any[]>();
@@ -267,9 +262,7 @@ export const taskDetailsResolvers = {
         updatedAt: String(task.updatedAt),
         canEditTask: isTaskCreator || isMasterAdmin,
         canAssignOwner,
-        canDeleteTask: task.parentTaskId !== null
-          ? isMasterAdmin || isParentTaskOwner
-          : canDeleteRootTask || isTaskCreator,
+        canDeleteTask: isMasterAdmin || isTaskCreator || (task.parentTaskId !== null && isParentTaskOwner),
         children: children.map((child) => ({
           taskId: Number(child.taskId),
           parentTaskId: Number(taskId),

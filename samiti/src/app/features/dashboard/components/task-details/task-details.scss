@@ -106,6 +106,14 @@
   gap: 4px;
 }
 
+.task-delete-tooltip-host {
+  display: inline-flex;
+
+  button:disabled {
+    pointer-events: none;
+  }
+}
+
 .task-header-icon-button {
   display: inline-flex !important;
   box-sizing: border-box;
@@ -181,6 +189,20 @@
     .task-header-button-label,
     mat-icon {
       color: #ffffff !important;
+    }
+  }
+
+  &:disabled {
+    --mdc-text-button-label-text-color: #64748b;
+    border-color: #cbd5e1 !important;
+    background: #e2e8f0 !important;
+    color: #64748b !important;
+    cursor: not-allowed !important;
+    opacity: 1 !important;
+
+    .task-header-button-label,
+    mat-icon {
+      color: #64748b !important;
     }
   }
 }
@@ -734,6 +756,18 @@
   &:hover {
     background: #fef2f2 !important;
     border-color: #fca5a5 !important;
+  }
+
+  &:disabled {
+    border-color: #cbd5e1 !important;
+    background: #e2e8f0 !important;
+    color: #64748b !important;
+    cursor: not-allowed !important;
+    opacity: 1 !important;
+
+    mat-icon {
+      color: #64748b !important;
+    }
   }
 
   &:focus-visible {

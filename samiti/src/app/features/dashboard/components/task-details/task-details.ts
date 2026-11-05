@@ -23,7 +23,7 @@ import { DashboardHierarchyTreeService } from '../dashboard-hierarchy-tree/dashb
 import { TASK_STATUSES, TaskAssignee, TaskStatus, taskHierarchyLevelBackground } from '../event-details/event-tasks/event-tasks.models';
 import { EventTasksService } from '../event-details/event-tasks/event-tasks.service';
 import { EventDetailsStateService } from '../event-details/event-details-state.service';
-import { TaskDetailsPayload } from './task-details.models';
+import { TaskChild, TaskDetailsPayload } from './task-details.models';
 import { TaskDetailsService } from './task-details.service';
 
 @Component({
@@ -75,6 +75,7 @@ export class TaskDetailsComponent implements OnInit {
   public newSubtaskName = '';
   public editingTaskName = '';
   public readonly assigningSubtaskIds = new Set<number>();
+  public readonly deletingSubtaskIds = new Set<number>();
   public readonly editingSubtaskAssigneeIds = new Set<number>();
   public readonly editingSubtaskNameIds = new Set<number>();
   public readonly savingSubtaskNameIds = new Set<number>();
@@ -231,21 +232,25 @@ export class TaskDetailsComponent implements OnInit {
   }
 
   public async onDeleteTask(task: TaskDetailsPayload): Promise<void> {
-    if (!task.canDeleteTask || this.isDeletingTask()) return;
+    if (!task.canDeleteTask || this.isDeletingTask() || this.getTaskDeletionBlockReason(task)) return;
 
     const dialogData: ConfirmDialogData = {
       title: 'Delete Task',
-      message: `Are you sure you want to delete "${task.taskName}"? Tasks with subtasks must have those subtasks removed first.`,
+      message: `Delete "${task.taskName}" and its subtasks? Only NEW tasks can be deleted, and all descendants must also be NEW.`,
       confirmText: 'Delete',
       cancelText: 'Cancel'
     };
     const result = await firstValueFrom(this.confirmDialog.open(dialogData).afterClosed());
-    if (!result?.confirmed) return;
+    if (!result?.confirmed || !task.canDeleteTask || this.getTaskDeletionBlockReason(task)) return;
 
     this.isDeletingTask.set(true);
     try {
       await firstValueFrom(this.service.deleteTask(task.taskId));
       this.notifier.success(`Task "${task.taskName}" deleted successfully.`);
+      this.eventDetailsState.decrementTaskCounts(
+        task.parentTaskId === null,
+        1 + this.getSubtaskDescendantCount(task.taskId)
+      );
       this.hierarchyTreeService.triggerHierarchyTreeRefresh();
       if (task.parentTaskId) {
         await this.router.navigate(['/dashboard', 'task', task.parentTaskId]);
@@ -258,6 +263,42 @@ export class TaskDetailsComponent implements OnInit {
       );
     } finally {
       this.isDeletingTask.set(false);
+    }
+  }
+
+  public async onDeleteSubtask(task: TaskChild, event: Event): Promise<void> {
+    event.stopPropagation();
+    if (!task.canDelete || this.deletingSubtaskIds.has(task.taskId) || this.getTaskDeletionBlockReason(task)) return;
+
+    const result = await firstValueFrom(this.confirmDialog.open({
+      title: 'Delete Subtask',
+      message: `Delete "${task.taskName}" and its subtasks? Only NEW tasks can be deleted, and all descendants must also be NEW.`,
+      confirmText: 'Delete',
+      cancelText: 'Cancel'
+    }).afterClosed());
+    if (!result?.confirmed || !task.canDelete || this.getTaskDeletionBlockReason(task)) return;
+
+    const deletedTaskIds = this.getTaskAndDescendantIds(task.taskId);
+    this.deletingSubtaskIds.add(task.taskId);
+    try {
+      await firstValueFrom(this.service.deleteTask(task.taskId));
+      this.task.update((current) => current
+        ? {
+            ...current,
+            children: current.children.filter((child) => !deletedTaskIds.has(child.taskId)),
+            descendants: current.descendants.filter((child) => !deletedTaskIds.has(child.taskId))
+          }
+        : current
+      );
+      this.eventDetailsState.decrementTaskCounts(false, deletedTaskIds.size);
+      this.hierarchyTreeService.triggerHierarchyTreeRefresh();
+      this.notifier.success(`Subtask "${task.taskName}" deleted successfully.`);
+    } catch (error) {
+      this.notifier.error(
+        error instanceof Error ? error.message : 'Failed to delete subtask.'
+      );
+    } finally {
+      this.deletingSubtaskIds.delete(task.taskId);
     }
   }
 
@@ -278,6 +319,67 @@ export class TaskDetailsComponent implements OnInit {
 
   public getSubtaskChildren(parentTaskId: number): TaskDetailsPayload['descendants'] {
     return (this.task()?.descendants ?? []).filter((child) => child.parentTaskId === parentTaskId);
+  }
+
+  public getTaskDeletionBlockReason(task: Pick<TaskDetailsPayload, 'taskId' | 'status'>): string | null {
+    if (String(task.status || '').toUpperCase() !== 'NEW') {
+      return this.formatTaskDeletionBlockReason([task]);
+    }
+
+    const pending = [...this.getSubtaskChildren(task.taskId)];
+    const visited = new Set<number>([task.taskId]);
+    const blockedDescendants: TaskChild[] = [];
+    while (pending.length > 0) {
+      const descendant = pending.pop();
+      if (!descendant || visited.has(descendant.taskId)) continue;
+      visited.add(descendant.taskId);
+      if (String(descendant.status || '').toUpperCase() !== 'NEW') {
+        blockedDescendants.push(descendant);
+      }
+      pending.push(...this.getSubtaskChildren(descendant.taskId));
+    }
+
+    return blockedDescendants.length ? this.formatTaskDeletionBlockReason(blockedDescendants) : null;
+  }
+
+  private formatTaskDeletionBlockReason(tasks: Array<Pick<TaskChild, 'taskId' | 'status'>>): string {
+    const tasksByStatus = new Map<string, number[]>();
+    for (const task of tasks) {
+      const status = String(task.status || 'UNKNOWN').replace(/[_-]+/g, ' ').toLowerCase();
+      const taskIds = tasksByStatus.get(status) ?? [];
+      taskIds.push(task.taskId);
+      tasksByStatus.set(status, taskIds);
+    }
+
+    return [...tasksByStatus].map(([status, taskIds]) => {
+      const subject = taskIds.length === 1 ? `Task ID ${taskIds[0]}` : `Task IDs ${taskIds.join(', ')}`;
+      return `${subject} ${taskIds.length === 1 ? 'is' : 'are'} ${status}`;
+    }).join('; ');
+  }
+
+  public getTaskDeletionTooltip(task: TaskDetailsPayload): string {
+    if (this.isDeletingTask()) return 'Deleting task...';
+    return this.getTaskDeletionBlockReason(task) ?? 'Delete task';
+  }
+
+  public getSubtaskDeletionTooltip(task: TaskChild): string {
+    if (this.deletingSubtaskIds.has(task.taskId)) return 'Deleting task...';
+    return this.getTaskDeletionBlockReason(task) ?? 'Delete subtask';
+  }
+
+  private getTaskAndDescendantIds(taskId: number): Set<number> {
+    const taskIds = new Set<number>([taskId]);
+    const pending = [taskId];
+    while (pending.length > 0) {
+      const parentId = pending.pop();
+      if (parentId === undefined) continue;
+      for (const child of this.getSubtaskChildren(parentId)) {
+        if (taskIds.has(child.taskId)) continue;
+        taskIds.add(child.taskId);
+        pending.push(child.taskId);
+      }
+    }
+    return taskIds;
   }
 
   public getSubtaskNumber(taskId: number): number {

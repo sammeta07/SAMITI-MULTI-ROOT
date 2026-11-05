@@ -119,6 +119,59 @@ export class EventTasksComponent implements OnInit, OnDestroy {
     return this.tasks.filter((task) => task.parentTaskId === parentTaskId);
   }
 
+  public getTaskDeletionBlockReason(task: EventTaskEntry): string | null {
+    if (String(task.status || '').toUpperCase() !== 'NEW') {
+      return this.formatTaskDeletionBlockReason([task]);
+    }
+
+    const blockedDescendants: EventTaskEntry[] = [];
+    for (const descendantId of this.getTaskAndDescendantIds(task.taskId)) {
+      if (descendantId === task.taskId) continue;
+      const descendant = this.tasks.find((entry) => entry.taskId === descendantId);
+      if (!descendant) continue;
+      if (String(descendant.status || '').toUpperCase() !== 'NEW') {
+        blockedDescendants.push(descendant);
+      }
+    }
+
+    return blockedDescendants.length ? this.formatTaskDeletionBlockReason(blockedDescendants) : null;
+  }
+
+  private formatTaskDeletionBlockReason(tasks: Array<Pick<EventTaskEntry, 'taskId' | 'status'>>): string {
+    const tasksByStatus = new Map<string, number[]>();
+    for (const task of tasks) {
+      const status = String(task.status || 'UNKNOWN').replace(/[_-]+/g, ' ').toLowerCase();
+      const taskIds = tasksByStatus.get(status) ?? [];
+      taskIds.push(task.taskId);
+      tasksByStatus.set(status, taskIds);
+    }
+
+    return [...tasksByStatus].map(([status, taskIds]) => {
+      const subject = taskIds.length === 1 ? `Task ID ${taskIds[0]}` : `Task IDs ${taskIds.join(', ')}`;
+      return `${subject} ${taskIds.length === 1 ? 'is' : 'are'} ${status}`;
+    }).join('; ');
+  }
+
+  public getTaskDeletionTooltip(task: EventTaskEntry): string {
+    if (this.deletingTaskIds.has(task.taskId)) return 'Deleting task...';
+    return this.getTaskDeletionBlockReason(task) ?? 'Delete task';
+  }
+
+  private getTaskAndDescendantIds(taskId: number): Set<number> {
+    const taskIds = new Set<number>([taskId]);
+    const pending = [taskId];
+    while (pending.length > 0) {
+      const parentId = pending.pop();
+      if (parentId === undefined) continue;
+      for (const child of this.getChildTasks(parentId)) {
+        if (taskIds.has(child.taskId)) continue;
+        taskIds.add(child.taskId);
+        pending.push(child.taskId);
+      }
+    }
+    return taskIds;
+  }
+
   public getDescendantTaskCount(parentTaskId: number): number {
     const visited = new Set<number>([parentTaskId]);
     const countDescendants = (taskId: number): number => {
@@ -516,24 +569,25 @@ export class EventTasksComponent implements OnInit, OnDestroy {
 
   public async onDeleteTask(task: EventTaskEntry, event: Event): Promise<void> {
     event.stopPropagation();
-    if (!task.canDelete || this.deletingTaskIds.has(task.taskId)) return;
+    if (!task.canDelete || this.deletingTaskIds.has(task.taskId) || this.getTaskDeletionBlockReason(task)) return;
 
     const dialogData: ConfirmDialogData = {
       title: 'Delete Task',
-      message: `Are you sure you want to delete "${task.taskName}"? Tasks with subtasks must have those subtasks removed first.`,
+      message: `Delete "${task.taskName}" and its subtasks? Only NEW tasks can be deleted, and all descendants must also be NEW.`,
       confirmText: 'Delete',
       cancelText: 'Cancel'
     };
     const result = await firstValueFrom(this.confirmDialog.open(dialogData).afterClosed());
-    if (!result?.confirmed || !task.canDelete || this.deletingTaskIds.has(task.taskId)) return;
+    if (!result?.confirmed || !task.canDelete || this.deletingTaskIds.has(task.taskId) || this.getTaskDeletionBlockReason(task)) return;
 
+    const deletedTaskIds = this.getTaskAndDescendantIds(task.taskId);
     this.deletingTaskIds.add(task.taskId);
     try {
       await firstValueFrom(this.tasksService.deleteEventTask(task.taskId));
       if (this.currentEventId !== task.eventId) return;
 
-      this.eventData = this.tasks.filter((entry) => entry.taskId !== task.taskId);
-      this.eventDetailsState.decrementTaskCounts(task.parentTaskId === null);
+      this.eventData = this.tasks.filter((entry) => !deletedTaskIds.has(entry.taskId));
+      this.eventDetailsState.decrementTaskCounts(task.parentTaskId === null, deletedTaskIds.size);
       this.hierarchyTreeService.triggerHierarchyTreeRefresh();
       this.notifier.success(`Task "${task.taskName}" deleted successfully.`);
     } catch (error) {

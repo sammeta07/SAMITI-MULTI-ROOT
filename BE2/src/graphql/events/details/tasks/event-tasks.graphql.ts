@@ -213,27 +213,21 @@ async function getTaskDeletionPermission(taskId: number, userId: number): Promis
   );
   if (rows.length === 0) throwEventError('NOT_FOUND', 'Task not found');
   const task = rows[0];
-  if (task.parentTaskId !== null) {
-    return Number(task.parentOwnerUserId) === userId ||
-      await hasPermission(userId, PERMISSIONS.EVENT_TASK_MANAGE_ANY, { type: 'EVENT', id: Number(task.eventId) });
-  }
-  return Number(task.createdBy) === userId ||
-    hasPermission(userId, PERMISSIONS.EVENT_TASK_DELETE, { type: 'EVENT', id: Number(task.eventId) });
+  const isMasterAdmin = await hasPermission(
+    userId,
+    PERMISSIONS.EVENT_TASK_MANAGE_ANY,
+    { type: 'EVENT', id: Number(task.eventId) }
+  );
+  return isMasterAdmin ||
+    Number(task.createdBy) === userId ||
+    (task.parentTaskId !== null && Number(task.parentOwnerUserId) === userId);
 }
 
 async function assertCanDeleteTask(taskId: number, userId: number): Promise<void> {
   if (!await getTaskDeletionPermission(taskId, userId)) {
-    const rows = await query<any[]>(
-      `SELECT parent_id AS parentTaskId FROM tasks WHERE id = ? LIMIT 1`,
-      [taskId]
-    );
-    if (rows.length === 0) throwEventError('NOT_FOUND', 'Task not found');
-    const isSubtask = rows[0].parentTaskId !== null;
     throwEventError(
       'FORBIDDEN',
-      isSubtask
-        ? 'Only the parent task owner or a master admin can delete this subtask'
-        : 'Only the task creator or an authorized event role can delete a root task'
+      'Only the task creator, the direct parent task owner, or a master admin can delete this task'
     );
   }
 }
@@ -306,11 +300,6 @@ export const eventTasksResolvers = {
         PERMISSIONS.EVENT_TASK_UPDATE,
         { type: 'EVENT', id: eventId }
       );
-      const canDeleteRootTasks = await hasPermission(
-        loggedInUserId,
-        PERMISSIONS.EVENT_TASK_DELETE,
-        { type: 'EVENT', id: eventId }
-      );
       const canManageAnyTasks = await hasPermission(
         loggedInUserId,
         PERMISSIONS.EVENT_TASK_MANAGE_ANY,
@@ -341,7 +330,7 @@ export const eventTasksResolvers = {
          LIMIT 1`,
         [eventId, loggedInUserId, loggedInUserId]
       );
-      if (!hasCommitteeAccess && !canAssignRootTasks && !canDeleteRootTasks &&
+      if (!hasCommitteeAccess && !canAssignRootTasks &&
         !canManageAnyTasks && !canUpdateRootTasks && ownedTaskRows.length === 0) {
         throwEventError('FORBIDDEN', 'You are not allowed to access this event');
       }
@@ -412,9 +401,9 @@ export const eventTasksResolvers = {
           canAssignOwner: isRootTask
             ? canAssignRootTaskOwners || Number(taskRow.createdBy) === loggedInUserId
             : canManageAnyTasks || Number(taskRow.parentOwnerUserId) === loggedInUserId,
-          canDelete: isRootTask
-            ? canDeleteRootTasks || Number(taskRow.createdBy) === loggedInUserId
-            : canManageAnyTasks || Number(taskRow.parentOwnerUserId) === loggedInUserId
+          canDelete: canManageAnyTasks ||
+            Number(taskRow.createdBy) === loggedInUserId ||
+            (!isRootTask && Number(taskRow.parentOwnerUserId) === loggedInUserId)
           };
         }),
         canCreateTasks: canAssignRootTasks,
@@ -512,15 +501,38 @@ export const eventTasksResolvers = {
 
       const userId = await getLoggedInUserId(context);
       await assertCanDeleteTask(taskId, userId);
-      const childRows = await query<any[]>(
-        `SELECT id
+      const taskRows = await query<any[]>(
+        `SELECT status
          FROM tasks
-         WHERE parent_id = ?
+         WHERE id = ?
          LIMIT 1`,
         [taskId]
       );
-      if (childRows.length > 0) {
-        throwEventError('BAD_REQUEST', 'Remove all subtasks before deleting this task');
+      if (taskRows.length === 0) {
+        throwEventError('NOT_FOUND', 'Task not found');
+      }
+      if (String(taskRows[0]?.status || '').toUpperCase() !== 'NEW') {
+        throwEventError('BAD_REQUEST', 'Only NEW tasks can be deleted');
+      }
+
+      const nonNewDescendantRows = await query<any[]>(
+        `WITH RECURSIVE task_descendants (id, status) AS (
+           SELECT id, status
+           FROM tasks
+           WHERE parent_id = ?
+           UNION ALL
+           SELECT child.id, child.status
+           FROM tasks child
+           INNER JOIN task_descendants parent ON child.parent_id = parent.id
+         )
+         SELECT id
+         FROM task_descendants
+         WHERE UPPER(COALESCE(status, '')) <> 'NEW'
+         LIMIT 1`,
+        [taskId]
+      );
+      if (nonNewDescendantRows.length > 0) {
+        throwEventError('BAD_REQUEST', 'Cannot delete this task because a descendant is not NEW');
       }
 
       const result = await execute('DELETE FROM tasks WHERE id = ?', [taskId]);

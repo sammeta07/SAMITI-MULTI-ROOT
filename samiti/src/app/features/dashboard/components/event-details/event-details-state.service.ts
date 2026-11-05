@@ -25,12 +25,12 @@ export class EventDetailsStateService {
     );
   }
 
-  public decrementTaskCounts(isParentTask: boolean): void {
+  public decrementTaskCounts(isParentTask: boolean, taskCount = 1): void {
     this.headerData.update((header) =>
       header
         ? {
             ...header,
-            tasksCount: Math.max(0, (header.tasksCount ?? 0) - 1),
+            tasksCount: Math.max(0, (header.tasksCount ?? 0) - taskCount),
             parentTasksCount: Math.max(0, (header.parentTasksCount ?? 0) - (isParentTask ? 1 : 0))
           }
         : header

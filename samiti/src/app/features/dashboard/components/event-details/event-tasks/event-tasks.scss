@@ -253,6 +253,14 @@
   gap: 6px;
 }
 
+.task-delete-tooltip-host {
+  display: inline-flex;
+
+  button:disabled {
+    pointer-events: none;
+  }
+}
+
 .task-panel-delete-icon {
   --mat-icon-button-container-shape: 6px;
   --mdc-icon-button-state-layer-shape: 6px;
@@ -279,6 +287,18 @@
   &:hover {
     background: #fef2f2 !important;
     border-color: #fca5a5 !important;
+  }
+
+  &:disabled {
+    border-color: #cbd5e1 !important;
+    background: #e2e8f0 !important;
+    color: #64748b !important;
+    cursor: not-allowed !important;
+    opacity: 1 !important;
+
+    mat-icon {
+      color: #64748b !important;
+    }
   }
 
   &:focus-visible {
