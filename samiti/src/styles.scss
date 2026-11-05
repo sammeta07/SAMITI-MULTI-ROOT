@@ -29,7 +29,7 @@
 
   /* Shared control sizing */
   --samiti-pill-height: 28px;
-  --samiti-action-height: 32px;
+  --samiti-action-height: 28px;
   --samiti-tab-height: 36px;
   --samiti-pill-radius: 6px;
   --samiti-action-radius: 6px;
@@ -52,6 +52,38 @@ html body .mat-mdc-button-base:not(.mat-mdc-icon-button) {
     height: 16px !important;
     font-size: 16px !important;
   }
+}
+
+/* Keep native and Material buttons compact across app views and overlays. */
+:root :is(button, .mat-mdc-button-base):not(.user-avatar-btn):not([hidden]) {
+  box-sizing: border-box;
+  height: var(--samiti-action-height) !important;
+  min-height: var(--samiti-action-height) !important;
+  max-height: var(--samiti-action-height) !important;
+  border-radius: var(--samiti-action-radius) !important;
+}
+
+:root button:is(
+  .mat-mdc-icon-button,
+  .mat-icon-button,
+  .mat-mdc-fab,
+  .mat-mdc-mini-fab,
+  [class*="icon-button"],
+  [class*="icon-btn"],
+  [class*="button-icon"],
+  [class*="btn-icon"],
+  [class*="-icon"]
+):not([hidden]) {
+  width: var(--samiti-action-height) !important;
+  min-width: var(--samiti-action-height) !important;
+  max-width: var(--samiti-action-height) !important;
+  height: var(--samiti-action-height) !important;
+  min-height: var(--samiti-action-height) !important;
+  max-height: var(--samiti-action-height) !important;
+  padding: 0 !important;
+  border-radius: var(--samiti-action-radius) !important;
+  --mat-icon-button-container-shape: var(--samiti-action-radius);
+  --mat-icon-button-state-layer-size: var(--samiti-action-height);
 }
 
 html body :is(

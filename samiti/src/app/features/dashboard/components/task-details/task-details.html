@@ -18,6 +18,7 @@
             @if (isEditingTask()) {
               <input
                 class="task-header-title task-title-edit-input"
+                id="task-name"
                 [(ngModel)]="editingTaskName"
                 maxlength="255"
                 [disabled]="isSavingTaskName()"
@@ -665,7 +666,7 @@
             }
             @if (taskDetails.canCreateTasks) {
               <button
-                mat-flat-button
+                mat-stroked-button
                 class="create-subtask-tab-action"
                 type="button"
                 aria-label="Add subtask"

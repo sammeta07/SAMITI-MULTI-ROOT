@@ -195,6 +195,7 @@ export class TaskDetailsComponent implements OnInit {
     if (!task.canEditTask || this.isSavingTaskName() || this.isDeletingTask()) return;
     this.editingTaskName = task.taskName;
     this.isEditingTask.set(true);
+    setTimeout(() => document.getElementById('task-name')?.focus());
   }
 
   public cancelTaskEditing(): void {

@@ -446,7 +446,7 @@
   width: 100%;
   box-sizing: border-box;
   align-items: center;
-  justify-content: center;
+  justify-content: flex-start;
   padding: 0 8px;
   border: 1px solid #cbd5e1;
   border-radius: var(--samiti-pill-radius, 6px);
@@ -947,7 +947,8 @@
   /* Task ID compact, names balanced, and dates given maximum width to prevent text truncation */
   grid-template-columns: minmax(70px, 0.6fr) minmax(115px, 1.1fr) minmax(170px, 1.4fr) minmax(115px, 1.1fr) minmax(170px, 1.4fr);
   gap: 6px;
-  padding: 6px 0 2px 0;
+  margin-top: 12px;
+  padding: 0;
   width: 100%;
   box-sizing: border-box;
 }
