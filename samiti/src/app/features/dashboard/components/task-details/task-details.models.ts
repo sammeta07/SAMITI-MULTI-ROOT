@@ -5,6 +5,13 @@ export interface TaskChild {
   taskId: number;
   parentTaskId: number | null;
   taskName: string;
+  budgetAmount: string;
+  budgetRequestId: number | null;
+  requestedBudgetAmount: string | null;
+  budgetRequestStatus: string | null;
+  budgetRequestedByName: string | null;
+  canReviewBudgetRequest: boolean;
+  canRequestBudgetIncrease: boolean;
   status: string | null;
   ownerUserId: number | null;
   ownerName: string | null;
@@ -21,6 +28,13 @@ export interface TaskChild {
 export interface TaskDetailsPayload {
   taskId: number;
   taskName: string;
+  budgetAmount: string;
+  budgetRequestId: number | null;
+  requestedBudgetAmount: string | null;
+  budgetRequestStatus: string | null;
+  budgetRequestedByName: string | null;
+  canReviewBudgetRequest: boolean;
+  canRequestBudgetIncrease: boolean;
   status: string | null;
   eventId: number;
   eventName: string;

@@ -2,7 +2,7 @@ import { inject, Injectable } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Observable, map } from 'rxjs';
 import { environment } from '../../../../../environments/environment';
-import { TaskStatus } from '../event-details/event-tasks/event-tasks.models';
+import { TaskBudgetUpdateResult, TaskStatus } from '../event-details/event-tasks/event-tasks.models';
 import { TaskDetailsPayload } from './task-details.models';
 
 interface GraphqlResponse<T> {
@@ -22,6 +22,13 @@ export class TaskDetailsService {
       taskDetails(id: $id) {
         taskId
         taskName
+        budgetAmount
+        budgetRequestId
+        requestedBudgetAmount
+        budgetRequestStatus
+        budgetRequestedByName
+        canReviewBudgetRequest
+        canRequestBudgetIncrease
         status
         eventId
         eventName
@@ -41,6 +48,13 @@ export class TaskDetailsService {
           taskId
           parentTaskId
           taskName
+          budgetAmount
+          budgetRequestId
+          requestedBudgetAmount
+          budgetRequestStatus
+          budgetRequestedByName
+          canReviewBudgetRequest
+          canRequestBudgetIncrease
           status
           ownerUserId
           ownerName
@@ -57,6 +71,13 @@ export class TaskDetailsService {
           taskId
           parentTaskId
           taskName
+          budgetAmount
+          budgetRequestId
+          requestedBudgetAmount
+          budgetRequestStatus
+          budgetRequestedByName
+          canReviewBudgetRequest
+          canRequestBudgetIncrease
           status
           ownerUserId
           ownerName
@@ -86,7 +107,12 @@ export class TaskDetailsService {
           isCompleted
           assignedUserId
           assignedUserName
+          createdByName
           createdAt
+          assignedByName
+          assignedAt
+          updatedByName
+          updatedAt
         }
         todoAssignees {
           userId
@@ -175,6 +201,109 @@ export class TaskDetailsService {
           throw new Error('GraphQL response is missing updateEventTaskName');
         }
         return updatedTask;
+      })
+    );
+  }
+
+  public updateTaskBudget(
+    taskId: number,
+    budgetAmount: string,
+    status?: TaskStatus
+  ): Observable<TaskBudgetUpdateResult> {
+    const mutation = `mutation UpdateEventTaskBudget($taskId: Int!, $budgetAmount: String!, $status: String) {
+      updateEventTaskBudget(taskId: $taskId, budgetAmount: $budgetAmount, status: $status) {
+        budgetAmount
+        status
+        updatedAt
+        requestId
+        requestStatus
+        requestedBudgetAmount
+      }
+    }`;
+
+    return this.http.post<GraphqlResponse<{
+      updateEventTaskBudget: TaskBudgetUpdateResult;
+    }>>(
+      this.graphqlUrl,
+      { query: mutation, variables: { taskId, budgetAmount, status } },
+      { withCredentials: true }
+    ).pipe(
+      map((response) => {
+        if (response.errors?.length) {
+          throw new Error(response.errors.map((error) => error.message).join('; '));
+        }
+        const updatedTask = response.data?.updateEventTaskBudget;
+        if (!updatedTask) {
+          throw new Error('GraphQL response is missing updateEventTaskBudget');
+        }
+        return updatedTask;
+      })
+    );
+  }
+
+  public requestTaskBudgetIncrease(taskId: number, amount: string): Observable<TaskBudgetUpdateResult> {
+    const mutation = `mutation RequestTaskBudgetIncrease($taskId: Int!, $amount: String!) {
+      requestTaskBudgetIncrease(taskId: $taskId, amount: $amount) {
+        budgetAmount
+        status
+        updatedAt
+        requestId
+        requestStatus
+        requestedBudgetAmount
+      }
+    }`;
+
+    return this.http.post<GraphqlResponse<{
+      requestTaskBudgetIncrease: TaskBudgetUpdateResult;
+    }>>(
+      this.graphqlUrl,
+      { query: mutation, variables: { taskId, amount } },
+      { withCredentials: true }
+    ).pipe(
+      map((response) => {
+        if (response.errors?.length) {
+          throw new Error(response.errors.map((error) => error.message).join('; '));
+        }
+        const result = response.data?.requestTaskBudgetIncrease;
+        if (!result) {
+          throw new Error('GraphQL response is missing requestTaskBudgetIncrease');
+        }
+        return result;
+      })
+    );
+  }
+
+  public reviewTaskBudgetRequest(
+    requestId: number,
+    decision: 'APPROVE' | 'REJECT'
+  ): Observable<TaskBudgetUpdateResult> {
+    const mutation = `mutation ReviewTaskBudgetRequest($requestId: Int!, $decision: String!) {
+      reviewTaskBudgetRequest(requestId: $requestId, decision: $decision) {
+        budgetAmount
+        status
+        updatedAt
+        requestId
+        requestStatus
+        requestedBudgetAmount
+      }
+    }`;
+
+    return this.http.post<GraphqlResponse<{
+      reviewTaskBudgetRequest: TaskBudgetUpdateResult;
+    }>>(
+      this.graphqlUrl,
+      { query: mutation, variables: { requestId, decision } },
+      { withCredentials: true }
+    ).pipe(
+      map((response) => {
+        if (response.errors?.length) {
+          throw new Error(response.errors.map((error) => error.message).join('; '));
+        }
+        const result = response.data?.reviewTaskBudgetRequest;
+        if (!result) {
+          throw new Error('GraphQL response is missing reviewTaskBudgetRequest');
+        }
+        return result;
       })
     );
   }

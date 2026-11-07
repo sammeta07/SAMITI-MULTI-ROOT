@@ -27,6 +27,13 @@ export class EventTasksService {
           parentTaskId
           parentTaskName
           taskName
+          budgetAmount
+          budgetRequestId
+          requestedBudgetAmount
+          budgetRequestStatus
+          budgetRequestedByName
+          canReviewBudgetRequest
+          canRequestBudgetIncrease
           status
           ownerUserId
           ownerName
@@ -72,6 +79,13 @@ export class EventTasksService {
         parentTaskId
         parentTaskName
         taskName
+        budgetAmount
+        budgetRequestId
+        requestedBudgetAmount
+        budgetRequestStatus
+        budgetRequestedByName
+        canReviewBudgetRequest
+        canRequestBudgetIncrease
         status
         ownerUserId
         ownerName

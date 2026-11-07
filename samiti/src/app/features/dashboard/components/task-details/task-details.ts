@@ -20,11 +20,12 @@ import { ConfirmDialogData } from '../../../../components/dialog/confirm/confirm
 import { TodoItem } from '../../models/todo.models';
 import { TodoChecklistComponent } from '../todo-checklist/todo-checklist.component';
 import { DashboardHierarchyTreeService } from '../dashboard-hierarchy-tree/dashboard-hierarchy-tree.service';
-import { TASK_STATUSES, TaskAssignee, TaskStatus, taskHierarchyLevelBackground } from '../event-details/event-tasks/event-tasks.models';
+import { calculateTaskBudgetRemaining, formatTaskBudgetAmount, formatTaskBudgetAmountCompact, isValidTaskBudgetAmount, TASK_STATUSES, TaskAssignee, TaskStatus, taskHierarchyLevelBackground } from '../event-details/event-tasks/event-tasks.models';
 import { EventTasksService } from '../event-details/event-tasks/event-tasks.service';
 import { EventDetailsStateService } from '../event-details/event-details-state.service';
 import { TaskChild, TaskDetailsPayload } from './task-details.models';
 import { TaskDetailsService } from './task-details.service';
+import { TaskFinanceComponent } from '../task-finance/task-finance.component';
 
 @Component({
   selector: 'app-task-details',
@@ -42,7 +43,8 @@ import { TaskDetailsService } from './task-details.service';
     MatFormFieldModule,
     MatInputModule,
     MatTooltipModule,
-    TodoChecklistComponent
+    TodoChecklistComponent,
+    TaskFinanceComponent
   ],
   templateUrl: './task-details.html',
   styleUrl: './task-details.scss'
@@ -64,26 +66,41 @@ export class TaskDetailsComponent implements OnInit {
   public readonly isLoading = signal(true);
   public readonly task = signal<TaskDetailsPayload | null>(null);
   public readonly taskStatuses = TASK_STATUSES;
-  public readonly isUpdatingStatus = signal(false);
   public readonly isStatusDropdownOpen = signal(false);
   public readonly isEditingTask = signal(false);
   public readonly isSavingTaskName = signal(false);
+  public readonly isEditingBudget = signal(false);
+  public readonly isSavingBudget = signal(false);
   public readonly isDeletingTask = signal(false);
   public selectedTaskTabIndex = 0;
+  public isCreatingChecklist = false;
+  public newChecklistName = '';
   public isCreatingSubtask = false;
   public isSavingSubtask = false;
   public newSubtaskName = '';
+  public newSubtaskBudget: string | number = '0.00';
   public editingTaskName = '';
+  public editingBudgetAmount: string | number = '0.00';
+  public budgetIncreaseAmount: string | number = '';
+  public readonly isRequestingBudgetIncrease = signal(false);
+  public editingBudgetStatus: TaskStatus = 'NEW';
   public readonly assigningSubtaskIds = new Set<number>();
   public readonly deletingSubtaskIds = new Set<number>();
   public readonly editingSubtaskAssigneeIds = new Set<number>();
   public readonly editingSubtaskNameIds = new Set<number>();
   public readonly savingSubtaskNameIds = new Set<number>();
-  public readonly updatingSubtaskStatusIds = new Set<number>();
+  public readonly editingSubtaskBudgetIds = new Set<number>();
+  public readonly savingSubtaskBudgetIds = new Set<number>();
+  public readonly reviewingSubtaskBudgetRequestIds = new Set<number>();
+  public readonly reviewingTaskBudgetRequestIds = new Set<number>();
+  public readonly requestingSubtaskBudgetIncreaseIds = new Set<number>();
   public readonly clearedSubtaskAssigneeSearchIds = signal<Set<number>>(new Set<number>());
   public subtaskAssigneeSearchText: Record<number, string> = {};
   public pendingSubtaskOwnerIds: Record<number, number | null> = {};
   public subtaskNameEditText: Record<number, string> = {};
+  public subtaskBudgetEditAmounts: Record<number, string | number> = {};
+  public subtaskBudgetIncreaseAmounts: Record<number, string | number> = {};
+  public subtaskBudgetEditStatuses: Record<number, TaskStatus> = {};
 
   public ngOnInit(): void {
     this.route.paramMap.pipe(takeUntilDestroyed(this.destroyRef)).subscribe((params) => {
@@ -103,6 +120,23 @@ export class TaskDetailsComponent implements OnInit {
     this.task.update((current) => current ? { ...current, todos } : current);
   }
 
+  public onCreateChecklistItem(task: TaskDetailsPayload): void {
+    if (!task.canManageTodos) return;
+    this.newChecklistName = '';
+    this.isCreatingChecklist = true;
+  }
+
+  public onCancelChecklistItem(checklist: TodoChecklistComponent): void {
+    if (checklist.isAdding) return;
+    this.newChecklistName = '';
+    this.isCreatingChecklist = false;
+  }
+
+  public onChecklistItemAdded(): void {
+    this.newChecklistName = '';
+    this.isCreatingChecklist = false;
+  }
+
   public getSubtaskLevelBackground(depth: number): string {
     return taskHierarchyLevelBackground(depth);
   }
@@ -118,6 +152,7 @@ export class TaskDetailsComponent implements OnInit {
   public onCreateSubtask(task: TaskDetailsPayload): void {
     if (!task.canCreateTasks || this.isCreatingSubtask || this.isSavingSubtask) return;
     this.newSubtaskName = '';
+    this.newSubtaskBudget = '0.00';
     this.isCreatingSubtask = true;
   }
 
@@ -125,18 +160,21 @@ export class TaskDetailsComponent implements OnInit {
     if (this.isSavingSubtask) return;
     this.isCreatingSubtask = false;
     this.newSubtaskName = '';
+    this.newSubtaskBudget = '0.00';
   }
 
   public async onSaveSubtask(task: TaskDetailsPayload): Promise<void> {
     const taskName = this.newSubtaskName.trim();
-    if (!task.canCreateTasks || !taskName || taskName.length > 255 || this.isSavingSubtask) return;
+    if (!task.canCreateTasks || !taskName || taskName.length > 255 ||
+      !isValidTaskBudgetAmount(this.newSubtaskBudget) || this.isSavingSubtask) return;
 
     this.isSavingSubtask = true;
     try {
       const child = await firstValueFrom(this.eventTasksService.createEventTask({
         eventId: task.eventId,
         parentTaskId: task.taskId,
-        taskName
+        taskName,
+        budgetAmount: String(this.newSubtaskBudget).trim()
       }));
       this.task.update((current) =>
         current?.taskId === task.taskId
@@ -146,6 +184,13 @@ export class TaskDetailsComponent implements OnInit {
                 taskId: child.taskId,
                 parentTaskId: task.taskId,
                 taskName: child.taskName,
+                budgetAmount: child.budgetAmount,
+                budgetRequestId: null,
+                requestedBudgetAmount: null,
+                budgetRequestStatus: null,
+                budgetRequestedByName: null,
+                canReviewBudgetRequest: false,
+                canRequestBudgetIncrease: child.canRequestBudgetIncrease,
                 status: child.status,
                 ownerUserId: child.ownerUserId,
                 ownerName: child.ownerName,
@@ -162,6 +207,13 @@ export class TaskDetailsComponent implements OnInit {
                 taskId: child.taskId,
                 parentTaskId: task.taskId,
                 taskName: child.taskName,
+                budgetAmount: child.budgetAmount,
+                budgetRequestId: null,
+                requestedBudgetAmount: null,
+                budgetRequestStatus: null,
+                budgetRequestedByName: null,
+                canReviewBudgetRequest: false,
+                canRequestBudgetIncrease: child.canRequestBudgetIncrease,
                 status: child.status,
                 ownerUserId: child.ownerUserId,
                 ownerName: child.ownerName,
@@ -181,6 +233,7 @@ export class TaskDetailsComponent implements OnInit {
       this.hierarchyTreeService.triggerHierarchyTreeRefresh();
       this.isCreatingSubtask = false;
       this.newSubtaskName = '';
+      this.newSubtaskBudget = '0.00';
       this.notifier.success(`Subtask "${child.taskName}" created.`);
     } catch (error) {
       this.notifier.error(
@@ -229,6 +282,235 @@ export class TaskDetailsComponent implements OnInit {
       );
     } finally {
       this.isSavingTaskName.set(false);
+    }
+  }
+
+  public startBudgetEditing(task: TaskDetailsPayload): void {
+    if (!task.canEditTask && !task.canManage) return;
+    if (this.isSavingBudget()) return;
+    this.editingBudgetAmount = task.budgetAmount;
+    this.editingBudgetStatus = this.statusValue(task.status) as TaskStatus;
+    this.isEditingBudget.set(true);
+  }
+
+  public cancelBudgetEditing(): void {
+    if (this.isSavingBudget()) return;
+    this.isEditingBudget.set(false);
+    this.editingBudgetAmount = '';
+    this.editingBudgetStatus = 'NEW';
+  }
+
+  public isValidTaskBudgetAmount(value: string | number | null | undefined): boolean {
+    return isValidTaskBudgetAmount(value);
+  }
+
+  public formatTaskBudgetAmount(value: string | number | null | undefined): string {
+    return formatTaskBudgetAmount(value);
+  }
+
+  public formatTaskBudgetAmountCompact(value: string | number | null | undefined): string {
+    return formatTaskBudgetAmountCompact(value);
+  }
+
+  public getTaskBudgetRemainingDisplay(taskId: number, budgetAmount: string | number): string {
+    const remaining = calculateTaskBudgetRemaining(
+      taskId,
+      budgetAmount,
+      this.task()?.descendants ?? []
+    );
+    return formatTaskBudgetAmountCompact(remaining);
+  }
+
+  public reviewSubtaskBudgetRequest(
+    child: TaskDetailsPayload['descendants'][number],
+    decision: 'APPROVE' | 'REJECT'
+  ): void {
+    const requestId = child.budgetRequestId;
+    if (!requestId || !child.canReviewBudgetRequest || this.reviewingSubtaskBudgetRequestIds.has(child.taskId)) return;
+    this.reviewingSubtaskBudgetRequestIds.add(child.taskId);
+    this.service.reviewTaskBudgetRequest(requestId, decision).subscribe({
+      next: (result) => {
+        this.reviewingSubtaskBudgetRequestIds.delete(child.taskId);
+        this.updateSubtaskBudget(child.taskId, {
+          budgetAmount: result.budgetAmount,
+          budgetRequestId: null,
+          requestedBudgetAmount: null,
+          budgetRequestStatus: null,
+          budgetRequestedByName: null,
+          canReviewBudgetRequest: false
+        });
+        this.hierarchyTreeService.triggerHierarchyTreeRefresh();
+        this.notifier.success(decision === 'APPROVE' ? 'Budget request approved.' : 'Budget request rejected.');
+      },
+      error: (error: Error) => {
+        this.reviewingSubtaskBudgetRequestIds.delete(child.taskId);
+        this.notifier.error(error.message || 'Failed to review budget request.');
+      }
+    });
+  }
+
+  public reviewTaskBudgetRequest(
+    task: TaskDetailsPayload,
+    decision: 'APPROVE' | 'REJECT'
+  ): void {
+    const requestId = task.budgetRequestId;
+    if (!requestId || !task.canReviewBudgetRequest || this.reviewingTaskBudgetRequestIds.has(task.taskId)) return;
+    this.reviewingTaskBudgetRequestIds.add(task.taskId);
+    this.service.reviewTaskBudgetRequest(requestId, decision).subscribe({
+      next: (result) => {
+        this.reviewingTaskBudgetRequestIds.delete(task.taskId);
+        this.task.update((current) => current?.taskId === task.taskId
+          ? {
+              ...current,
+                budgetAmount: result.budgetAmount,
+                budgetRequestId: null,
+                requestedBudgetAmount: null,
+                budgetRequestStatus: null,
+              budgetRequestedByName: null,
+              canReviewBudgetRequest: false,
+              updatedAt: result.updatedAt
+            }
+          : current
+        );
+        this.hierarchyTreeService.triggerHierarchyTreeRefresh();
+        this.notifier.success(decision === 'APPROVE' ? 'Budget request approved.' : 'Budget request rejected.');
+      },
+      error: (error: Error) => {
+        this.reviewingTaskBudgetRequestIds.delete(task.taskId);
+        this.notifier.error(error.message || 'Failed to review budget request.');
+      }
+    });
+  }
+
+  public canSubmitBudgetIncrease(value: string | number | null | undefined): boolean {
+    return isValidTaskBudgetAmount(value) && Number(value) > 0;
+  }
+
+  public async requestBudgetIncrease(task: TaskDetailsPayload): Promise<void> {
+    const amount = String(this.budgetIncreaseAmount).trim();
+    if (
+      !task.canRequestBudgetIncrease ||
+      task.budgetRequestStatus === 'PENDING' ||
+      this.isRequestingBudgetIncrease() ||
+      !this.canSubmitBudgetIncrease(amount)
+    ) return;
+
+    this.isRequestingBudgetIncrease.set(true);
+    try {
+      const result = await firstValueFrom(this.service.requestTaskBudgetIncrease(task.taskId, amount));
+      this.task.update((current) => current?.taskId === task.taskId
+        ? {
+            ...current,
+            budgetAmount: result.budgetAmount,
+            budgetRequestId: result.requestId,
+            requestedBudgetAmount: result.requestedBudgetAmount,
+            budgetRequestStatus: result.requestStatus,
+            budgetRequestedByName: 'You',
+            canReviewBudgetRequest: false,
+            updatedAt: result.updatedAt
+          }
+        : current
+      );
+      this.budgetIncreaseAmount = '';
+      this.hierarchyTreeService.triggerHierarchyTreeRefresh();
+      this.notifier.success('Budget increase request sent for approval.');
+    } catch (error) {
+      this.notifier.error(
+        error instanceof Error ? error.message : 'Failed to request a budget increase.'
+      );
+    } finally {
+      this.isRequestingBudgetIncrease.set(false);
+    }
+  }
+
+  public requestSubtaskBudgetIncrease(child: TaskChild): void {
+    const amount = String(this.subtaskBudgetIncreaseAmounts[child.taskId] ?? '').trim();
+    if (
+      !child.canRequestBudgetIncrease ||
+      child.budgetRequestStatus === 'PENDING' ||
+      this.requestingSubtaskBudgetIncreaseIds.has(child.taskId) ||
+      !this.canSubmitBudgetIncrease(amount)
+    ) return;
+
+    this.requestingSubtaskBudgetIncreaseIds.add(child.taskId);
+    this.service.requestTaskBudgetIncrease(child.taskId, amount).subscribe({
+      next: (result) => {
+        this.requestingSubtaskBudgetIncreaseIds.delete(child.taskId);
+        delete this.subtaskBudgetIncreaseAmounts[child.taskId];
+        this.updateSubtaskBudget(child.taskId, {
+          budgetAmount: result.budgetAmount,
+          budgetRequestId: result.requestId,
+          requestedBudgetAmount: result.requestedBudgetAmount,
+          budgetRequestStatus: result.requestStatus,
+          budgetRequestedByName: 'You',
+          canReviewBudgetRequest: false
+        });
+        this.hierarchyTreeService.triggerHierarchyTreeRefresh();
+        this.notifier.success('Budget increase request sent for approval.');
+      },
+      error: (error: Error) => {
+        this.requestingSubtaskBudgetIncreaseIds.delete(child.taskId);
+        this.notifier.error(error.message || 'Failed to request a budget increase.');
+      }
+    });
+  }
+
+  public canSaveTaskBudget(task: TaskDetailsPayload): boolean {
+    const amount = String(this.editingBudgetAmount).trim();
+    return (task.canEditTask || task.canManage) &&
+      !this.isSavingBudget() &&
+      isValidTaskBudgetAmount(amount) &&
+      (Number(amount).toFixed(2) !== Number(task.budgetAmount).toFixed(2) ||
+        (task.canManage && this.editingBudgetStatus !== this.statusValue(task.status)));
+  }
+
+  public async saveTaskBudget(task: TaskDetailsPayload): Promise<void> {
+    const budgetAmount = String(this.editingBudgetAmount).trim();
+    if (!this.canSaveTaskBudget(task)) return;
+    const hasStatusChange = task.canManage &&
+      this.editingBudgetStatus !== this.statusValue(task.status);
+
+    this.isSavingBudget.set(true);
+    try {
+      const updatedTask = await firstValueFrom(
+        this.service.updateTaskBudget(
+          task.taskId,
+          budgetAmount,
+          task.canManage && this.editingBudgetStatus !== this.statusValue(task.status)
+            ? this.editingBudgetStatus
+            : undefined
+        )
+      );
+      this.task.update((current) =>
+        current?.taskId === task.taskId
+          ? {
+              ...current,
+              budgetAmount: updatedTask.budgetAmount,
+              status: updatedTask.status,
+              budgetRequestId: updatedTask.requestId,
+              requestedBudgetAmount: updatedTask.requestedBudgetAmount,
+              budgetRequestStatus: updatedTask.requestStatus,
+              budgetRequestedByName: updatedTask.requestStatus === 'PENDING' ? 'You' : null,
+              canReviewBudgetRequest: false,
+              updatedAt: updatedTask.updatedAt
+            }
+          : current
+      );
+      this.hierarchyTreeService.triggerHierarchyTreeRefresh();
+      this.isEditingBudget.set(false);
+      this.editingBudgetAmount = '';
+      this.editingBudgetStatus = 'NEW';
+      this.notifier.success(updatedTask.requestStatus === 'PENDING'
+        ? 'Budget increase request sent for approval.'
+        : hasStatusChange
+          ? 'Task budget and status updated successfully.'
+          : 'Task budget updated successfully.');
+    } catch (error) {
+      this.notifier.error(
+        error instanceof Error ? error.message : 'Failed to update task budget.'
+      );
+    } finally {
+      this.isSavingBudget.set(false);
     }
   }
 
@@ -467,7 +749,9 @@ export class TaskDetailsComponent implements OnInit {
   }
 
   public isEditingSubtaskRow(taskId: number): boolean {
-    return this.isEditingSubtaskName(taskId) || this.isEditingSubtaskAssignee(taskId);
+    return this.isEditingSubtaskName(taskId) ||
+      this.isEditingSubtaskAssignee(taskId) ||
+      this.editingSubtaskBudgetIds.has(taskId);
   }
 
   public isSubtaskAssigneeSearchCleared(taskId: number): boolean {
@@ -487,15 +771,33 @@ export class TaskDetailsComponent implements OnInit {
 
   public editSubtaskRow(child: TaskDetailsPayload['descendants'][number]): void {
     if (this.isEditingSubtaskRow(child.taskId)) return;
+    if (child.canManage) {
+      this.subtaskBudgetEditAmounts[child.taskId] = child.budgetAmount;
+      this.subtaskBudgetEditStatuses[child.taskId] = this.statusValue(child.status) as TaskStatus;
+      this.editingSubtaskBudgetIds.add(child.taskId);
+      return;
+    }
     if (child.canEditTask) this.editSubtaskName(child);
+    if (child.canEditTask) {
+      this.subtaskBudgetEditAmounts[child.taskId] = child.budgetAmount;
+      this.editingSubtaskBudgetIds.add(child.taskId);
+    }
     if (child.canAssignOwner && child.status?.toUpperCase() !== 'COMPLETED') {
       this.editSubtaskAssignee(child.taskId, child.ownerName);
     }
   }
 
   public cancelEditSubtaskRow(child: TaskDetailsPayload['descendants'][number]): void {
+    if (
+      this.savingSubtaskNameIds.has(child.taskId) ||
+      this.assigningSubtaskIds.has(child.taskId) ||
+      this.savingSubtaskBudgetIds.has(child.taskId)
+    ) return;
     this.cancelEditSubtaskName(child);
     this.cancelEditSubtaskAssignee(child.taskId, child.ownerName);
+    this.editingSubtaskBudgetIds.delete(child.taskId);
+    delete this.subtaskBudgetEditAmounts[child.taskId];
+    delete this.subtaskBudgetEditStatuses[child.taskId];
   }
 
   public editSubtaskName(child: TaskDetailsPayload['descendants'][number]): void {
@@ -514,10 +816,18 @@ export class TaskDetailsComponent implements OnInit {
     const taskName = String(this.subtaskNameEditText[child.taskId] ?? '').trim();
     const hasNameChange = this.editingSubtaskNameIds.has(child.taskId) && taskName !== child.taskName;
     const hasOwnerChange = this.hasPendingSubtaskOwnerChange(child);
-    return (hasNameChange || hasOwnerChange) &&
+    const budgetAmount = String(this.subtaskBudgetEditAmounts[child.taskId] ?? '').trim();
+    const isEditingBudget = this.editingSubtaskBudgetIds.has(child.taskId);
+    const hasBudgetChange = isEditingBudget &&
+      Number(budgetAmount).toFixed(2) !== Number(child.budgetAmount).toFixed(2);
+    const hasStatusChange = child.canManage &&
+      this.subtaskBudgetEditStatuses[child.taskId] !== this.statusValue(child.status);
+    return (hasNameChange || hasOwnerChange || hasBudgetChange || hasStatusChange) &&
       !(hasNameChange && !taskName) &&
+      (!isEditingBudget || isValidTaskBudgetAmount(budgetAmount)) &&
       !this.savingSubtaskNameIds.has(child.taskId) &&
-      !this.assigningSubtaskIds.has(child.taskId);
+      !this.assigningSubtaskIds.has(child.taskId) &&
+      !this.savingSubtaskBudgetIds.has(child.taskId);
   }
 
   public hasPendingSubtaskOwnerChange(child: TaskDetailsPayload['descendants'][number]): boolean {
@@ -530,9 +840,18 @@ export class TaskDetailsComponent implements OnInit {
     const taskName = String(this.subtaskNameEditText[child.taskId] ?? '').trim();
     const hasNameChange = this.editingSubtaskNameIds.has(child.taskId) && taskName !== child.taskName;
     const hasOwnerChange = this.hasPendingSubtaskOwnerChange(child);
+    const budgetAmount = String(this.subtaskBudgetEditAmounts[child.taskId] ?? '').trim();
+    const hasBudgetChange = this.editingSubtaskBudgetIds.has(child.taskId) &&
+      Number(budgetAmount).toFixed(2) !== Number(child.budgetAmount).toFixed(2);
+    const hasStatusChange = child.canManage &&
+      this.subtaskBudgetEditStatuses[child.taskId] !== this.statusValue(child.status);
     if (hasNameChange && !taskName) {
       this.notifier.error('Task title cannot be empty.');
       return;
+    }
+
+    if (!hasOwnerChange) {
+      this.cancelEditSubtaskAssignee(child.taskId, child.ownerName);
     }
 
     if (hasNameChange) {
@@ -545,7 +864,6 @@ export class TaskDetailsComponent implements OnInit {
           this.updateSubtaskName(child.taskId, updated.taskName);
           this.hierarchyTreeService.notifyTaskNameUpdated(child.taskId, updated.taskName);
           this.notifier.success('Task title updated.');
-          if (!hasOwnerChange) this.cancelEditSubtaskAssignee(child.taskId, child.ownerName);
         },
         error: (error) => {
           this.savingSubtaskNameIds.delete(child.taskId);
@@ -564,6 +882,50 @@ export class TaskDetailsComponent implements OnInit {
 
     if (hasOwnerChange) {
       this.saveSubtaskAssignee(child);
+    }
+
+    if (hasBudgetChange || hasStatusChange) {
+      this.savingSubtaskBudgetIds.add(child.taskId);
+      this.service.updateTaskBudget(
+        child.taskId,
+        budgetAmount,
+        hasStatusChange ? this.subtaskBudgetEditStatuses[child.taskId] : undefined
+      ).subscribe({
+        next: (updatedTask) => {
+          this.savingSubtaskBudgetIds.delete(child.taskId);
+          this.editingSubtaskBudgetIds.delete(child.taskId);
+          delete this.subtaskBudgetEditAmounts[child.taskId];
+          delete this.subtaskBudgetEditStatuses[child.taskId];
+          this.updateSubtaskBudget(child.taskId, {
+            budgetAmount: updatedTask.budgetAmount,
+            status: updatedTask.status,
+            budgetRequestId: updatedTask.requestId,
+            requestedBudgetAmount: updatedTask.requestedBudgetAmount,
+            budgetRequestStatus: updatedTask.requestStatus,
+            budgetRequestedByName: updatedTask.requestStatus === 'PENDING' ? 'You' : null,
+            canReviewBudgetRequest: false
+          });
+          this.hierarchyTreeService.triggerHierarchyTreeRefresh();
+          this.notifier.success(updatedTask.requestStatus === 'PENDING'
+            ? 'Budget increase request sent for approval.'
+            : hasStatusChange
+              ? 'Subtask budget and status updated.'
+              : 'Subtask budget updated.');
+        },
+        error: (error) => {
+          this.savingSubtaskBudgetIds.delete(child.taskId);
+          this.notifier.error(
+            error?.error?.errors?.[0]?.message ||
+            error?.error?.message ||
+            error?.message ||
+            'Failed to update subtask budget.'
+          );
+        }
+      });
+    } else {
+      this.editingSubtaskBudgetIds.delete(child.taskId);
+      delete this.subtaskBudgetEditAmounts[child.taskId];
+      delete this.subtaskBudgetEditStatuses[child.taskId];
     }
   }
 
@@ -710,44 +1072,6 @@ export class TaskDetailsComponent implements OnInit {
     });
   }
 
-  public canUpdateSubtaskStatus(taskId: number): boolean {
-    const child = this.task()?.descendants.find((entry) => entry.taskId === taskId);
-    return Boolean(child?.canManage);
-  }
-
-  public onSubtaskStatusChange(taskId: number, event: Event): void {
-    const select = event.currentTarget;
-    const currentTask = this.task();
-    const child = currentTask?.descendants.find((entry) => entry.taskId === taskId);
-    if (!(select instanceof HTMLSelectElement) || !currentTask || !child) return;
-
-    const status = this.taskStatuses.find((candidate) => candidate === select.value);
-    if (!status || !this.canUpdateSubtaskStatus(taskId) || this.updatingSubtaskStatusIds.has(taskId)) {
-      select.value = child.status || 'NEW';
-      return;
-    }
-
-    this.updatingSubtaskStatusIds.add(taskId);
-    this.eventTasksService.updateEventTaskStatus(taskId, status).subscribe({
-      next: (updated) => {
-        this.updatingSubtaskStatusIds.delete(taskId);
-        this.updateSubtaskEntry(updated);
-        this.hierarchyTreeService.triggerHierarchyTreeRefresh();
-        this.notifier.success(`Task "${updated.taskName}" status updated to ${this.displayStatus(updated.status)}.`);
-      },
-      error: (error) => {
-        this.updatingSubtaskStatusIds.delete(taskId);
-        select.value = child.status || 'NEW';
-        this.notifier.error(
-          error?.error?.errors?.[0]?.message ||
-          error?.error?.message ||
-          error?.message ||
-          'Failed to update task status.'
-        );
-      }
-    });
-  }
-
   private updateSubtaskEntry(updated: {
     taskId: number;
     status: string | null;
@@ -802,49 +1126,24 @@ export class TaskDetailsComponent implements OnInit {
     });
   }
 
+  private updateSubtaskBudget(
+    taskId: number,
+    budget: Partial<TaskDetailsPayload['descendants'][number]>
+  ): void {
+    this.task.update((current) => {
+      if (!current) return current;
+      const updateEntry = (child: TaskDetailsPayload['descendants'][number]) =>
+        child.taskId === taskId ? { ...child, ...budget } : child;
+      return {
+        ...current,
+        children: current.children.map(updateEntry),
+        descendants: current.descendants.map(updateEntry)
+      };
+    });
+  }
+
   public statusValue(status: string | null): string {
     return String(status || 'NEW').trim().toUpperCase();
-  }
-
-  public canUpdateStatus(task: TaskDetailsPayload): boolean {
-    return task.canManage;
-  }
-
-  public onStatusChange(event: Event, task: TaskDetailsPayload): void {
-    const select = event.currentTarget;
-    if (!(select instanceof HTMLSelectElement)) {
-      return;
-    }
-
-    const statusValue = select.value;
-    const status = this.taskStatuses.find((candidate) => candidate === statusValue);
-    if (!status || !this.canUpdateStatus(task) || this.isUpdatingStatus()) {
-      select.value = this.statusValue(task.status);
-      return;
-    }
-
-    this.isUpdatingStatus.set(true);
-    this.service.updateTaskStatus(task.taskId, status).subscribe({
-      next: (updatedTask) => {
-        this.isUpdatingStatus.set(false);
-        this.task.update((current) =>
-          current?.taskId === updatedTask.taskId
-            ? { ...current, status: updatedTask.status, updatedAt: updatedTask.updatedAt }
-            : current
-        );
-        this.notifier.success(`Task status updated to ${this.displayStatus(updatedTask.status)}.`);
-      },
-      error: (error) => {
-        this.isUpdatingStatus.set(false);
-        select.value = this.statusValue(task.status);
-        this.notifier.error(
-          error?.error?.errors?.[0]?.message ||
-          error?.error?.message ||
-          error?.message ||
-          'Failed to update task status.'
-        );
-      }
-    });
   }
 
   private loadTask(taskId: string): void {

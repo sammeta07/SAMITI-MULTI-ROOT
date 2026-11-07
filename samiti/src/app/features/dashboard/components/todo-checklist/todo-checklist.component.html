@@ -1,9 +1,168 @@
   @if (!tableView && (items.length > 0 || canManage)) {
     <div class="todo-heading">Checklist</div>
   }
-  @if (tableView) {
+  @if (expansionView) {
+    @if (items.length) {
+      <mat-accordion class="todo-expansion-list" [multi]="true">
+        @for (item of items; track item.id; let i = $index) {
+          <mat-expansion-panel class="todo-expansion-panel task-subtask-panel" [style.--task-level-background]="'#e2e8f0'">
+            <mat-expansion-panel-header>
+              <div class="todo-panel-summary">
+                <div class="todo-panel-title">
+                  <span class="todo-panel-count">{{ i + 1 }}</span>
+                  @if (editingId === item.id) {
+                    <input
+                      class="todo-panel-title-input"
+                      [(ngModel)]="editTitle"
+                      [ngModelOptions]="{ standalone: true }"
+                      [disabled]="pendingIds.has(item.id)"
+                      [attr.aria-label]="'Edit ' + item.title"
+                      (click)="$event.stopPropagation()"
+                      (keydown)="$event.stopPropagation()"
+                      (keydown.enter)="saveExpansionChanges(item); $event.preventDefault()"
+                      (keydown.escape)="cancelEditing(); $event.stopPropagation()"
+                    />
+                  } @else {
+                    <span class="todo-title" [class.todo-completed]="item.isCompleted">{{ toSentenceCase(item.title) }}</span>
+                  }
+                </div>
+
+                <div class="todo-panel-meta">
+                  @if (item.assignedUserName) {
+                    <span class="todo-panel-meta-item" [matTooltip]="'Assigned to ' + item.assignedUserName">
+                      <mat-icon>person</mat-icon>
+                      {{ item.assignedUserName }}
+                    </span>
+                  }
+                </div>
+
+                @if (editingId === item.id) {
+                  <span class="todo-status-dropdown-wrapper">
+                    <select
+                      class="todo-panel-status-dropdown"
+                      [class.todo-status-completed]="editStatus === 'COMPLETED'"
+                      [class.todo-status-in-progress]="editStatus === 'IN_PROGRESS'"
+                      [class.todo-status-pending]="editStatus === 'PENDING'"
+                      [(ngModel)]="editStatus"
+                      [ngModelOptions]="{ standalone: true }"
+                      [disabled]="pendingIds.has(item.id)"
+                      [attr.aria-label]="'Update status for ' + item.title"
+                      (click)="$event.stopPropagation()"
+                      (focus)="statusDropdownOpen = true"
+                      (blur)="statusDropdownOpen = false"
+                    >
+                      <option value="PENDING">Pending</option>
+                      <option value="IN_PROGRESS">In progress</option>
+                      <option value="COMPLETED">Completed</option>
+                    </select>
+                    <mat-icon aria-hidden="true">{{ statusDropdownOpen ? 'expand_less' : 'expand_more' }}</mat-icon>
+                  </span>
+                } @else {
+                  <span
+                    class="todo-panel-status todo-status-label"
+                    [class.todo-status-completed]="item.status === 'COMPLETED'"
+                    [class.todo-status-in-progress]="item.status === 'IN_PROGRESS'"
+                    [class.todo-status-pending]="item.status === 'PENDING'"
+                  >
+                    {{ (item.status === 'COMPLETED' ? 'Completed' : item.status === 'IN_PROGRESS' ? 'In progress' : 'Pending') | uppercase }}
+                  </span>
+                }
+
+                <div class="todo-panel-actions" (click)="$event.stopPropagation()" (keydown)="$event.stopPropagation()">
+                @if (canManage) {
+                  @if (editingId === item.id) {
+                    <button
+                      type="button"
+                      class="todo-action-button todo-save-action"
+                      (click)="saveExpansionChanges(item)"
+                      [disabled]="pendingIds.has(item.id)"
+                      aria-label="Save checklist item"
+                      matTooltip="Save checklist item"
+                    >
+                      <mat-icon>check</mat-icon>
+                    </button>
+                    <button
+                      type="button"
+                      class="todo-action-button todo-cancel-action"
+                      (click)="cancelEditing()"
+                      [disabled]="pendingIds.has(item.id)"
+                      aria-label="Cancel editing checklist item"
+                      matTooltip="Cancel editing"
+                    >
+                      <mat-icon>close</mat-icon>
+                    </button>
+                  } @else {
+                    <button
+                      type="button"
+                      class="todo-action-button todo-edit-action"
+                      (click)="startEditing(item)"
+                      [disabled]="pendingIds.has(item.id)"
+                      aria-label="Edit checklist item"
+                      matTooltip="Edit checklist item"
+                    >
+                      <mat-icon>edit_outline</mat-icon>
+                    </button>
+                    <button
+                      type="button"
+                      class="todo-action-button todo-delete-action"
+                      (click)="remove(item)"
+                      [disabled]="pendingIds.has(item.id)"
+                      aria-label="Delete checklist item"
+                      matTooltip="Delete checklist item"
+                    >
+                      <mat-icon>delete_outline</mat-icon>
+                    </button>
+                  }
+                }
+              </div>
+              </div>
+            </mat-expansion-panel-header>
+
+            <div class="todo-details-grid">
+              <div class="todo-detail-field">
+                <span class="todo-detail-label">Checklist ID</span>
+                <div class="todo-detail-value">
+                  <mat-icon>tag</mat-icon>
+                  <span>#{{ item.id }}</span>
+                </div>
+              </div>
+              <div class="todo-detail-field">
+                <span class="todo-detail-label">Created by</span>
+                <div class="todo-detail-value">
+                  <mat-icon>person</mat-icon>
+                  <span>{{ (item.createdByName || 'Unknown') | titlecase }}</span>
+                </div>
+              </div>
+              <div class="todo-detail-field">
+                <span class="todo-detail-label">Created at</span>
+                <div class="todo-detail-value" [title]="item.createdAt | date: 'dd-MMM-yyyy, hh:mm a'">
+                  <mat-icon>calendar_today</mat-icon>
+                  <span>{{ item.createdAt | date: 'dd-MMM-yy, hh:mm a' }}</span>
+                </div>
+              </div>
+              <div class="todo-detail-field">
+                <span class="todo-detail-label">Last updated</span>
+                <div class="todo-detail-value" [title]="(item.updatedAt || item.createdAt) | date: 'dd-MMM-yyyy, hh:mm a'">
+                  <mat-icon>update</mat-icon>
+                  <span>{{ (item.updatedAt || item.createdAt) | date: 'dd-MMM-yy, hh:mm a' }}</span>
+                </div>
+              </div>
+            </div>
+          </mat-expansion-panel>
+        }
+      </mat-accordion>
+    } @else {
+      <div class="todo-empty-state">
+        <span class="todo-empty-icon"><mat-icon>playlist_add_check</mat-icon></span>
+        <span class="todo-empty-title">No checklist items yet</span>
+        <span class="todo-empty-description">
+          {{ canManage ? 'Add a new item using the button above to get started.' : 'Checklist items will appear here once added.' }}
+        </span>
+      </div>
+    }
+  } @else if (tableView) {
     <div class="todo-table-card">
-      @if (canManage) {
+      @if (canManage && !hideTableAddForm) {
         <div class="todo-toolbar">
           <form class="todo-add-form table-add-form" (ngSubmit)="add()">
             <input

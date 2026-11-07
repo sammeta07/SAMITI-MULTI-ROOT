@@ -8,6 +8,13 @@ export const taskDetailsTypes = `
     taskId: Int!
     parentTaskId: Int
     taskName: String!
+    budgetAmount: String!
+    budgetRequestId: Int
+    requestedBudgetAmount: String
+    budgetRequestStatus: String
+    budgetRequestedByName: String
+    canReviewBudgetRequest: Boolean!
+    canRequestBudgetIncrease: Boolean!
     status: String
     ownerUserId: Int
     ownerName: String
@@ -35,6 +42,13 @@ export const taskDetailsTypes = `
   type TaskDetails {
     taskId: Int!
     taskName: String!
+    budgetAmount: String!
+    budgetRequestId: Int
+    requestedBudgetAmount: String
+    budgetRequestStatus: String
+    budgetRequestedByName: String
+    canReviewBudgetRequest: Boolean!
+    canRequestBudgetIncrease: Boolean!
     status: String
     eventId: Int!
     eventName: String!
@@ -78,6 +92,11 @@ export const taskDetailsResolvers = {
         `SELECT
            t.id AS taskId,
            t.name AS taskName,
+           CAST(t.budget_amount AS CHAR) AS budgetAmount,
+           budgetRequest.id AS budgetRequestId,
+           CAST(GREATEST(0, budgetRequest.requested_amount - t.budget_amount) AS CHAR) AS requestedBudgetAmount,
+           budgetRequest.status AS budgetRequestStatus,
+           budgetRequester.name AS budgetRequestedByName,
            t.status,
            t.event_id AS eventId,
            e.name AS eventName,
@@ -96,6 +115,9 @@ export const taskDetailsResolvers = {
          FROM tasks t
          INNER JOIN events e ON e.id = t.event_id
          LEFT JOIN tasks parent ON parent.id = t.parent_id
+         LEFT JOIN task_budget_requests budgetRequest
+           ON budgetRequest.task_id = t.id AND budgetRequest.status = 'PENDING'
+         LEFT JOIN users budgetRequester ON budgetRequester.id = budgetRequest.requested_by
          LEFT JOIN users owner ON owner.id = t.owner_user_id
          LEFT JOIN users creator ON creator.id = t.created_by
          LEFT JOIN users_committees uc
@@ -146,6 +168,11 @@ export const taskDetailsResolvers = {
            t.parent_id AS parentTaskId,
            parent.owner_user_id AS parentOwnerUserId,
            t.name AS taskName,
+           CAST(t.budget_amount AS CHAR) AS budgetAmount,
+           budgetRequest.id AS budgetRequestId,
+           CAST(GREATEST(0, budgetRequest.requested_amount - t.budget_amount) AS CHAR) AS requestedBudgetAmount,
+           budgetRequest.status AS budgetRequestStatus,
+           budgetRequester.name AS budgetRequestedByName,
            t.status,
            t.owner_user_id AS ownerUserId,
            t.created_by AS createdBy,
@@ -156,6 +183,9 @@ export const taskDetailsResolvers = {
            DATE_FORMAT(t.owner_assigned_at, '%Y-%m-%d %H:%i:%s') AS ownerAssignedAt
          FROM tasks t
          LEFT JOIN tasks parent ON parent.id = t.parent_id
+         LEFT JOIN task_budget_requests budgetRequest
+           ON budgetRequest.task_id = t.id AND budgetRequest.status = 'PENDING'
+         LEFT JOIN users budgetRequester ON budgetRequester.id = budgetRequest.requested_by
          LEFT JOIN users owner ON owner.id = t.owner_user_id
          LEFT JOIN users assignedBy ON assignedBy.id = t.owner_assigned_by
          LEFT JOIN users creator ON creator.id = t.created_by
@@ -174,7 +204,12 @@ export const taskDetailsResolvers = {
             : isMasterAdmin || isChildParentOwner,
           canDelete: isMasterAdmin ||
             Number(child.createdBy) === userId ||
-            (!isRootTask && isChildParentOwner)
+            (!isRootTask && isChildParentOwner),
+          canReviewBudgetRequest: Boolean(child.budgetRequestId) &&
+            (Number(child.createdBy) === userId || isMasterAdmin),
+          canRequestBudgetIncrease: Number(child.ownerUserId) === userId &&
+            Number(child.createdBy) !== userId &&
+            !isMasterAdmin
         };
       };
       const childrenByParentId = new Map<number, any[]>();
@@ -208,9 +243,17 @@ export const taskDetailsResolvers = {
            todo.is_completed AS isCompleted,
            todo.assigned_user_id AS assignedUserId,
            assignee.name AS assignedUserName,
-           DATE_FORMAT(todo.created_at, '%Y-%m-%d %H:%i:%s') AS createdAt
+           creator.name AS createdByName,
+           DATE_FORMAT(todo.created_at, '%Y-%m-%d %H:%i:%s') AS createdAt,
+           assigner.name AS assignedByName,
+           DATE_FORMAT(todo.assigned_at, '%Y-%m-%d %H:%i:%s') AS assignedAt,
+           updater.name AS updatedByName,
+           DATE_FORMAT(todo.updated_at, '%Y-%m-%d %H:%i:%s') AS updatedAt
          FROM todos todo
          LEFT JOIN users assignee ON assignee.id = todo.assigned_user_id
+         LEFT JOIN users creator ON creator.id = todo.created_by
+         LEFT JOIN users assigner ON assigner.id = todo.assigned_by
+         LEFT JOIN users updater ON updater.id = todo.updated_by
          WHERE todo.task_id = ?
          ORDER BY todo.created_at ASC, todo.id ASC`,
         [taskId]
@@ -249,6 +292,14 @@ export const taskDetailsResolvers = {
       return {
         taskId: Number(task.taskId),
         taskName: String(task.taskName || 'Untitled Task'),
+        budgetAmount: String(task.budgetAmount),
+        budgetRequestId: task.budgetRequestId === null ? null : Number(task.budgetRequestId),
+        requestedBudgetAmount: task.requestedBudgetAmount === null ? null : String(task.requestedBudgetAmount),
+        budgetRequestStatus: task.budgetRequestStatus || null,
+        budgetRequestedByName: task.budgetRequestedByName || null,
+        canReviewBudgetRequest: Boolean(task.budgetRequestId) &&
+          (isTaskCreator || isMasterAdmin),
+        canRequestBudgetIncrease: isTaskOwner && !isTaskCreator && !isMasterAdmin,
         status: task.status ? String(task.status) : null,
         eventId: Number(task.eventId),
         eventName: String(task.eventName || ''),
@@ -267,6 +318,11 @@ export const taskDetailsResolvers = {
           taskId: Number(child.taskId),
           parentTaskId: Number(taskId),
           taskName: String(child.taskName || 'Untitled Task'),
+          budgetAmount: String(child.budgetAmount),
+          budgetRequestId: child.budgetRequestId === null ? null : Number(child.budgetRequestId),
+          requestedBudgetAmount: child.requestedBudgetAmount === null ? null : String(child.requestedBudgetAmount),
+          budgetRequestStatus: child.budgetRequestStatus || null,
+          budgetRequestedByName: child.budgetRequestedByName || null,
           status: child.status ? String(child.status) : null,
           ownerUserId: child.ownerUserId === null ? null : Number(child.ownerUserId),
           ownerName: child.ownerName || null,
@@ -280,6 +336,11 @@ export const taskDetailsResolvers = {
           taskId: Number(descendant.taskId),
           parentTaskId: descendant.parentTaskId === null ? null : Number(descendant.parentTaskId),
           taskName: String(descendant.taskName || 'Untitled Task'),
+          budgetAmount: String(descendant.budgetAmount),
+          budgetRequestId: descendant.budgetRequestId === null ? null : Number(descendant.budgetRequestId),
+          requestedBudgetAmount: descendant.requestedBudgetAmount === null ? null : String(descendant.requestedBudgetAmount),
+          budgetRequestStatus: descendant.budgetRequestStatus || null,
+          budgetRequestedByName: descendant.budgetRequestedByName || null,
           status: descendant.status ? String(descendant.status) : null,
           ownerUserId: descendant.ownerUserId === null ? null : Number(descendant.ownerUserId),
           ownerName: descendant.ownerName || null,
@@ -306,7 +367,12 @@ export const taskDetailsResolvers = {
           isCompleted: Boolean(Number(todo.isCompleted)),
           assignedUserId: todo.assignedUserId === null ? null : Number(todo.assignedUserId),
           assignedUserName: todo.assignedUserName || null,
-          createdAt: String(todo.createdAt)
+          createdByName: todo.createdByName || null,
+          createdAt: String(todo.createdAt),
+          assignedByName: todo.assignedByName || null,
+          assignedAt: todo.assignedAt || null,
+          updatedByName: todo.updatedByName || null,
+          updatedAt: String(todo.updatedAt)
         })),
         todoAssignees: await getTodoAssignees(Number(task.committeeId)),
         canManage: isMasterAdmin || isTaskOwner,

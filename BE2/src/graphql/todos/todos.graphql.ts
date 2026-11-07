@@ -21,7 +21,12 @@ export const todoTypes = `
     isCompleted: Boolean!
     assignedUserId: Int
     assignedUserName: String
+    createdByName: String
     createdAt: String!
+    assignedByName: String
+    assignedAt: String
+    updatedByName: String
+    updatedAt: String
   }
 
   type TodoAssignee {
@@ -39,6 +44,7 @@ export const todoTypes = `
 export const todoMutationFields = `
   createTodo(input: CreateTodoInput!): TodoItem!
   updateTodo(todoId: Int!, title: String!, isCompleted: Boolean!): TodoItem!
+  updateTodoDetails(todoId: Int!, title: String!, status: TodoStatus!): TodoItem!
   setTodoStatus(todoId: Int!, status: TodoStatus!): TodoItem!
   assignTodo(todoId: Int!, ownerUserId: Int): TodoItem!
   deleteTodo(todoId: Int!): Boolean!
@@ -132,9 +138,17 @@ async function getTodoItem(todoId: number) {
        todo.is_completed AS isCompleted,
        todo.assigned_user_id AS assignedUserId,
        assignee.name AS assignedUserName,
-       DATE_FORMAT(todo.created_at, '%Y-%m-%d %H:%i:%s') AS createdAt
+       creator.name AS createdByName,
+       DATE_FORMAT(todo.created_at, '%Y-%m-%d %H:%i:%s') AS createdAt,
+       assigner.name AS assignedByName,
+       DATE_FORMAT(todo.assigned_at, '%Y-%m-%d %H:%i:%s') AS assignedAt,
+       updater.name AS updatedByName,
+       DATE_FORMAT(todo.updated_at, '%Y-%m-%d %H:%i:%s') AS updatedAt
      FROM todos todo
      LEFT JOIN users assignee ON assignee.id = todo.assigned_user_id
+     LEFT JOIN users creator ON creator.id = todo.created_by
+     LEFT JOIN users assigner ON assigner.id = todo.assigned_by
+     LEFT JOIN users updater ON updater.id = todo.updated_by
      WHERE todo.id = ?
      LIMIT 1`,
     [todoId]
@@ -148,7 +162,12 @@ async function getTodoItem(todoId: number) {
     isCompleted: Boolean(Number(row.isCompleted)),
     assignedUserId: row.assignedUserId === null ? null : Number(row.assignedUserId),
     assignedUserName: row.assignedUserName || null,
-    createdAt: String(row.createdAt)
+    createdByName: row.createdByName || null,
+    createdAt: String(row.createdAt),
+    assignedByName: row.assignedByName || null,
+    assignedAt: row.assignedAt || null,
+    updatedByName: row.updatedByName || null,
+    updatedAt: String(row.updatedAt)
   };
 }
 
@@ -206,6 +225,31 @@ export const todoResolvers = {
              updated_by = ?
          WHERE id = ?`,
         [title, args.isCompleted ? 1 : 0, args.isCompleted ? 'COMPLETED' : 'PENDING', args.isCompleted ? 1 : 0, userId, todoId]
+      );
+      return getTodoItem(todoId);
+    },
+
+    async updateTodoDetails(_: any, args: { todoId?: number; title?: string; status?: string }, context: any) {
+      const todoId = Number(args?.todoId);
+      const title = String(args?.title || '').trim();
+      const status = String(args?.status || '').toUpperCase();
+      if (!Number.isInteger(todoId) || todoId <= 0 || !title || title.length > 255 ||
+        !['PENDING', 'IN_PROGRESS', 'COMPLETED'].includes(status)) {
+        throwEventError('BAD_REQUEST', 'todoId, a valid title, and a valid status are required');
+      }
+
+      const userId = await getLoggedInUserId(context);
+      const parent = await getTodoParent(todoId);
+      const permission = await getParentPermission(parent.parentType, parent.parentId, userId);
+      if (!permission.canManage) {
+        throwEventError('FORBIDDEN', 'Only the task or program owner or a master admin can manage checklist items');
+      }
+
+      await execute(
+        `UPDATE todos
+         SET title = ?, status = ?, is_completed = ?, updated_by = ?
+         WHERE id = ?`,
+        [title, status, status === 'COMPLETED' ? 1 : 0, userId, todoId]
       );
       return getTodoItem(todoId);
     },

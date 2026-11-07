@@ -8,7 +8,12 @@ export interface TodoItem {
   isCompleted: boolean;
   assignedUserId: number | null;
   assignedUserName: string | null;
+  createdByName?: string | null;
   createdAt: string;
+  assignedByName?: string | null;
+  assignedAt?: string | null;
+  updatedByName?: string | null;
+  updatedAt?: string | null;
 }
 
 export interface TodoAssignee {

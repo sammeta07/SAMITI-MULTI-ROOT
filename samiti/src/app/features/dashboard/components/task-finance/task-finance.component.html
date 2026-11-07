@@ -1,0 +1,156 @@
+<section class="task-finance">
+  <header class="finance-heading">
+    <div>
+      <h3>Task finance</h3>
+      <p>Advances, expenses, reimbursements, and cash returns</p>
+    </div>
+    <button type="button" class="finance-button finance-refresh" [disabled]="isLoading() || isSaving()" (click)="load()">
+      {{ isLoading() ? 'Loading...' : 'Refresh' }}
+    </button>
+  </header>
+
+  @if (isLoading() && !payload()) {
+    <p class="finance-state">Loading finance history...</p>
+  } @else if (payload(); as finance) {
+    <div class="finance-summary">
+      <div><span>Advance issued</span><strong>₹{{ money(finance.summary.advanceIssued) }}</strong></div>
+      <div><span>Advance balance</span><strong>₹{{ money(finance.summary.advanceBalance) }}</strong></div>
+      <div><span>Advance expenses</span><strong>₹{{ money(finance.summary.advanceSpent) }}</strong></div>
+      <div><span>Personal expenses</span><strong>₹{{ money(finance.summary.personalSpent) }}</strong></div>
+      <div><span>Returns pending</span><strong>₹{{ money(finance.summary.returnPending) }}</strong></div>
+      <div><span>Returns received</span><strong>₹{{ money(finance.summary.returnConfirmed) }}</strong></div>
+      <div><span>Reimbursement due</span><strong>₹{{ money(finance.summary.reimbursementDue) }}</strong></div>
+      <div><span>Reimbursement paid</span><strong>₹{{ money(finance.summary.reimbursementPaid) }}</strong></div>
+    </div>
+
+    @if (finance.canRequest) {
+      <div class="finance-owner-actions">
+        <form class="finance-form" (ngSubmit)="submitAdvanceRequest()">
+          <h4>{{ finance.requests.some(request => request.requestType === 'ADVANCE' && ['APPROVED', 'PARTIALLY_APPROVED', 'PAID'].includes(request.status)) ? 'Request additional advance' : 'Request advance' }}</h4>
+          <div class="finance-form-fields">
+            <label>Amount (₹)<input type="number" min="0.01" step="0.01" name="requestAmount" [(ngModel)]="requestAmount" required /></label>
+            <label>Reason<input type="text" maxlength="1000" name="requestReason" [(ngModel)]="requestReason" required /></label>
+            <button type="submit" class="finance-button" [disabled]="isSaving()">Submit request</button>
+          </div>
+        </form>
+
+        <form class="finance-form" (ngSubmit)="submitPersonalExpense()">
+          <h4>Request reimbursement for personal spending</h4>
+          <div class="finance-form-fields">
+            <label>Amount (₹)<input type="number" min="0.01" step="0.01" name="expenseAmount" [(ngModel)]="expenseAmount" required /></label>
+            <label>Expense details<input type="text" maxlength="1000" name="expenseDescription" [(ngModel)]="expenseDescription" required /></label>
+            <button type="submit" class="finance-button" [disabled]="isSaving()">Submit expense</button>
+          </div>
+        </form>
+
+        <form class="finance-form" (ngSubmit)="submitTransaction('ADVANCE_EXPENSE')">
+          <h4>Record spending from the advance</h4>
+          <div class="finance-form-fields">
+            <label>Amount (₹)<input type="number" min="0.01" step="0.01" name="advanceExpenseAmount" [(ngModel)]="advanceExpenseAmount" required /></label>
+            <label>Expense details<input type="text" maxlength="1000" name="advanceExpenseDescription" [(ngModel)]="advanceExpenseDescription" required /></label>
+            <button type="submit" class="finance-button" [disabled]="isSaving()">Record expense</button>
+          </div>
+        </form>
+
+        <form class="finance-form" (ngSubmit)="submitTransaction('ADVANCE_RETURN')">
+          <h4>Return unused advance</h4>
+          <div class="finance-form-fields">
+            <label>Amount (₹)<input type="number" min="0.01" step="0.01" name="returnAmount" [(ngModel)]="returnAmount" required /></label>
+            <label>Return details<input type="text" maxlength="1000" name="returnDescription" [(ngModel)]="returnDescription" required /></label>
+            <button type="submit" class="finance-button" [disabled]="isSaving()">Submit return</button>
+          </div>
+        </form>
+      </div>
+    }
+
+    @if (finance.canApprove) {
+      <section class="finance-list">
+        <h4>Cashier review</h4>
+        @for (request of finance.requests; track request.id) {
+          @if (request.status === 'PENDING') {
+            <article class="finance-item">
+              <div class="finance-item-copy">
+                <strong>{{ request.requestType.replace('_', ' ') }} · ₹{{ money(request.requestedAmount) }}</strong>
+                <span>{{ request.reason }} — {{ request.requestedByName }}</span>
+              </div>
+              @if (request.requestType === 'REIMBURSEMENT') {
+                <div class="finance-actions">
+                  <label>Approve amount (₹)<input type="number" min="0.01" [max]="request.requestedAmount" step="0.01" [name]="'approval-' + request.id" [(ngModel)]="approvalAmounts[request.id]" /></label>
+                  <button type="button" class="finance-button" [disabled]="isSaving()" (click)="reviewRequest(request, 'APPROVE')">Approve</button>
+                  <button type="button" class="finance-button finance-secondary" [disabled]="isSaving()" (click)="reviewRequest(request, 'REJECT')">Reject</button>
+                </div>
+              } @else {
+                <div class="finance-actions">
+                  <label>Approve amount (₹)<input type="number" min="0.01" [max]="request.requestedAmount" step="0.01" [name]="'approval-' + request.id" [(ngModel)]="approvalAmounts[request.id]" /></label>
+                  <button type="button" class="finance-button" [disabled]="isSaving()" (click)="reviewRequest(request, 'APPROVE')">Approve</button>
+                  <button type="button" class="finance-button finance-secondary" [disabled]="isSaving()" (click)="reviewRequest(request, 'REJECT')">Reject</button>
+                </div>
+              }
+            </article>
+          }
+        }
+        @for (transaction of finance.transactions; track transaction.id) {
+          @if (transaction.transactionType === 'ADVANCE_RETURN' && transaction.status === 'PENDING') {
+            <article class="finance-item">
+              <div class="finance-item-copy">
+                <strong>Cash return · ₹{{ money(transaction.amount) }}</strong>
+                <span>{{ transaction.description }} — {{ transaction.createdByName }}</span>
+              </div>
+              <div class="finance-actions">
+                <button type="button" class="finance-button" [disabled]="isSaving()" (click)="reviewReturn(transaction, 'CONFIRM')">Confirm received</button>
+                <button type="button" class="finance-button finance-secondary" [disabled]="isSaving()" (click)="reviewReturn(transaction, 'REJECT')">Reject</button>
+              </div>
+            </article>
+          }
+        }
+        @for (request of finance.requests; track request.id) {
+          @if (isRequestPayable(request)) {
+            @if (request.requestType === 'ADVANCE' || request.requestType === 'TOP_UP') {
+              @if (remainingRequestAmount(request, 'ADVANCE_ISSUED', 'approvedAmount') > 0) {
+                <article class="finance-item">
+                  <div class="finance-item-copy"><strong>Issue approved advance</strong><span>Request #{{ request.id }} · remaining ₹{{ remainingRequestAmount(request, 'ADVANCE_ISSUED', 'approvedAmount') | number: '1.2-2' }}</span></div>
+                  <button type="button" class="finance-button" [disabled]="isSaving()" (click)="issueAdvance(request)">Record cash issued</button>
+                </article>
+              }
+            } @else if (request.requestType === 'REIMBURSEMENT' && remainingRequestAmount(request, 'REIMBURSEMENT_PAID', 'approvedAmount') > 0) {
+              <article class="finance-item">
+                <div class="finance-item-copy"><strong>Pay approved reimbursement</strong><span>Request #{{ request.id }} · remaining ₹{{ remainingRequestAmount(request, 'REIMBURSEMENT_PAID', 'approvedAmount') | number: '1.2-2' }}</span></div>
+                <button type="button" class="finance-button" [disabled]="isSaving()" (click)="payReimbursement(request)">Record payment</button>
+              </article>
+            }
+          }
+        }
+      </section>
+    }
+
+    <section class="finance-list">
+      <h4>Request history</h4>
+      @for (request of finance.requests; track request.id) {
+        <article class="finance-item">
+          <div class="finance-item-copy">
+            <strong>#{{ request.id }} · {{ request.requestType.replace('_', ' ') }} · ₹{{ money(request.requestedAmount) }}</strong>
+            <span>{{ request.reason }} · {{ request.status.replace('_', ' ') }}@if (request.approvedAmount) { · approved ₹{{ money(request.approvedAmount) }} }</span>
+          </div>
+        </article>
+      } @empty {
+        <p class="finance-state">No finance requests yet.</p>
+      }
+    </section>
+
+    <section class="finance-list">
+      <h4>Cash and expense history</h4>
+      @for (transaction of finance.transactions; track transaction.id) {
+        <article class="finance-item">
+          <div class="finance-item-copy">
+            <strong>{{ transaction.transactionType.replace('_', ' ') }} · ₹{{ money(transaction.amount) }}</strong>
+            <span>{{ transaction.description }} · {{ transaction.status.replace('_', ' ') }} · {{ transaction.createdByName }} · {{ transaction.createdAt | date: 'medium' }}</span>
+          </div>
+        </article>
+      } @empty {
+        <p class="finance-state">No cash or expense entries yet.</p>
+      }
+    </section>
+  } @else {
+    <p class="finance-state">Finance data has not been loaded yet.</p>
+  }
+</section>

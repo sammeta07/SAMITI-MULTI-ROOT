@@ -68,7 +68,8 @@ async function executeSqlStatementsFromFile(connection: mysql.Connection, migrat
     '065-remove-event-visibility.sql',
     '066-remove-program-recurring.sql',
     '075-set-event-task-permission-grants.sql',
-    '076-restrict-task-title-edit.sql'
+    '076-restrict-task-title-edit.sql',
+    '080-remove-task-budget-decided.sql'
   ]);
 
   for (const statement of statements) {

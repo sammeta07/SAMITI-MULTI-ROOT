@@ -251,6 +251,7 @@ CREATE TABLE IF NOT EXISTS tasks (
   event_id INT NOT NULL,
   parent_id INT DEFAULT NULL,
   name VARCHAR(255) NOT NULL,
+  budget_amount DECIMAL(12, 2) NOT NULL DEFAULT 0.00,
   owner_user_id INT DEFAULT NULL,
   status VARCHAR(50) DEFAULT NULL,
   created_by INT NOT NULL,

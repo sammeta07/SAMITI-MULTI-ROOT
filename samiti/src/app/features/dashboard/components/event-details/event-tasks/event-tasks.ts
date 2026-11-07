@@ -12,12 +12,14 @@ import { MatTooltipModule } from '@angular/material/tooltip';
 import { firstValueFrom, Subscription } from 'rxjs';
 
 import { EventTasksService } from './event-tasks.service';
-import { EventTaskEntry, EventTasksPayload, TaskAssignee, TASK_STATUSES, taskHierarchyLevelBackground } from './event-tasks.models';
+import { calculateTaskBudgetRemaining, EventTaskEntry, EventTasksPayload, formatTaskBudgetAmount, formatTaskBudgetAmountCompact, isValidTaskBudgetAmount, TaskAssignee, TASK_STATUSES, TaskStatus, taskHierarchyLevelBackground } from './event-tasks.models';
 import { NotifierService } from '../../../../../shared/notifier/notifier.service';
 import { ConfirmDialogService } from '../../../../../components/dialog/confirm/confirm-dialog.service';
 import { ConfirmDialogData } from '../../../../../components/dialog/confirm/confirm-dialog.models';
 import { DashboardHierarchyTreeService } from '../../dashboard-hierarchy-tree/dashboard-hierarchy-tree.service';
 import { EventDetailsStateService } from '../event-details-state.service';
+import { TaskDetailsService } from '../../task-details/task-details.service';
+import { TaskFinanceComponent } from '../../task-finance/task-finance.component';
 
 @Component({
   selector: 'app-event-tasks',
@@ -31,7 +33,8 @@ import { EventDetailsStateService } from '../event-details-state.service';
     MatAutocompleteModule,
     MatFormFieldModule,
     MatInputModule,
-    MatTooltipModule
+    MatTooltipModule,
+    TaskFinanceComponent
   ],
   templateUrl: './event-tasks.html',
   styleUrl: './event-tasks.scss'
@@ -46,6 +49,7 @@ export class EventTasksComponent implements OnInit, OnDestroy {
   private readonly confirmDialog = inject(ConfirmDialogService);
   private readonly hierarchyTreeService = inject(DashboardHierarchyTreeService);
   private readonly eventDetailsState = inject(EventDetailsStateService);
+  private readonly taskDetailsService = inject(TaskDetailsService);
 
   private parentParamsSub?: Subscription;
   private currentEventId: number | null = null;
@@ -62,7 +66,13 @@ export class EventTasksComponent implements OnInit, OnDestroy {
   public readonly editingTaskAssigneeIds = new Set<number>();
   public readonly editingTaskNameIds = new Set<number>();
   public readonly savingTaskNameIds = new Set<number>();
-  public readonly updatingTaskStatusIds = new Set<number>();
+  public readonly editingTaskBudgetIds = new Set<number>();
+  public readonly savingTaskBudgetIds = new Set<number>();
+  public readonly reviewingTaskBudgetRequestIds = new Set<number>();
+  public readonly requestingTaskBudgetIncreaseIds = new Set<number>();
+  public taskBudgetEditAmounts: Record<number, string | number> = {};
+  public taskBudgetIncreaseAmounts: Record<number, string | number> = {};
+  public taskStatusEditValues: Record<number, TaskStatus> = {};
   public readonly deletingTaskIds = new Set<number>();
   public readonly clearedTaskAssigneeSearchIds = signal<Set<number>>(new Set<number>());
 
@@ -70,6 +80,7 @@ export class EventTasksComponent implements OnInit, OnDestroy {
   public isCreatingTask = false;
   public isSavingTask = false;
   public newTaskName = '';
+  public newTaskBudget = '0.00';
   public isLoading = true;
   public hasLoadError = false;
 
@@ -297,20 +308,40 @@ export class EventTasksComponent implements OnInit, OnDestroy {
   }
 
   public isEditingTaskRow(task: EventTaskEntry): boolean {
-    return this.editingTaskNameIds.has(task.taskId) || this.editingTaskAssigneeIds.has(task.taskId);
+    return this.editingTaskNameIds.has(task.taskId) ||
+      this.editingTaskAssigneeIds.has(task.taskId) ||
+      this.editingTaskBudgetIds.has(task.taskId);
   }
 
   public editTaskRow(task: EventTaskEntry): void {
     if (this.isEditingTaskRow(task)) return;
+    if (task.canManage) {
+      this.taskBudgetEditAmounts[task.taskId] = task.budgetAmount;
+      this.taskStatusEditValues[task.taskId] = (task.status || 'NEW') as TaskStatus;
+      this.editingTaskBudgetIds.add(task.taskId);
+      return;
+    }
     if (task.canEditTask) this.editTaskName(task);
+    if (task.canEditTask) {
+      this.taskBudgetEditAmounts[task.taskId] = task.budgetAmount;
+      this.editingTaskBudgetIds.add(task.taskId);
+    }
     if (task.canAssignOwner && task.status?.toUpperCase() !== 'COMPLETED') {
       this.editTaskAssignee(task);
     }
   }
 
   public cancelEditTaskRow(task: EventTaskEntry): void {
+    if (
+      this.savingTaskNameIds.has(task.taskId) ||
+      this.assigningTaskIds.has(task.taskId) ||
+      this.savingTaskBudgetIds.has(task.taskId)
+    ) return;
     this.cancelEditTaskName(task);
     this.cancelEditTaskAssignee(task);
+    this.editingTaskBudgetIds.delete(task.taskId);
+    delete this.taskBudgetEditAmounts[task.taskId];
+    delete this.taskStatusEditValues[task.taskId];
   }
 
   public editTaskName(task: EventTaskEntry): void {
@@ -331,10 +362,18 @@ export class EventTasksComponent implements OnInit, OnDestroy {
     const taskName = String(this.taskNameEditText[task.taskId] ?? '').trim();
     const hasNameChange = this.editingTaskNameIds.has(task.taskId) && taskName !== task.taskName;
     const hasOwnerChange = this.hasPendingTaskOwnerChange(task);
-    return (hasNameChange || hasOwnerChange) &&
+    const budgetAmount = String(this.taskBudgetEditAmounts[task.taskId] ?? '').trim();
+    const isEditingBudget = this.editingTaskBudgetIds.has(task.taskId);
+    const hasBudgetChange = isEditingBudget &&
+      Number(budgetAmount).toFixed(2) !== Number(task.budgetAmount).toFixed(2);
+    const hasStatusChange = task.canManage &&
+      this.taskStatusEditValues[task.taskId] !== (task.status || 'NEW');
+    return (hasNameChange || hasOwnerChange || hasBudgetChange || hasStatusChange) &&
       !(hasNameChange && !taskName) &&
+      (!isEditingBudget || isValidTaskBudgetAmount(budgetAmount)) &&
       !this.savingTaskNameIds.has(task.taskId) &&
-      !this.assigningTaskIds.has(task.taskId);
+      !this.assigningTaskIds.has(task.taskId) &&
+      !this.savingTaskBudgetIds.has(task.taskId);
   }
 
   public hasPendingTaskOwnerChange(task: EventTaskEntry): boolean {
@@ -348,9 +387,18 @@ export class EventTasksComponent implements OnInit, OnDestroy {
     const taskName = String(this.taskNameEditText[task.taskId] ?? '').trim();
     const hasNameChange = this.editingTaskNameIds.has(task.taskId) && taskName !== task.taskName;
     const hasOwnerChange = this.hasPendingTaskOwnerChange(task);
+    const budgetAmount = String(this.taskBudgetEditAmounts[task.taskId] ?? '').trim();
+    const hasBudgetChange = this.editingTaskBudgetIds.has(task.taskId) &&
+      Number(budgetAmount).toFixed(2) !== Number(task.budgetAmount).toFixed(2);
+    const hasStatusChange = task.canManage &&
+      this.taskStatusEditValues[task.taskId] !== (task.status || 'NEW');
     if (hasNameChange && !taskName) {
       this.notifier.error('Task title cannot be empty.');
       return;
+    }
+
+    if (!hasOwnerChange) {
+      this.cancelEditTaskAssignee(task);
     }
 
     if (hasNameChange) {
@@ -367,7 +415,6 @@ export class EventTasksComponent implements OnInit, OnDestroy {
             this.notifier.success('Task title updated.');
           }
           this.taskNameEditText[task.taskId] = updatedTask.taskName;
-          if (!hasOwnerChange) this.cancelEditTaskAssignee(task);
         },
         error: (error) => {
           this.savingTaskNameIds.delete(task.taskId);
@@ -425,6 +472,50 @@ export class EventTasksComponent implements OnInit, OnDestroy {
           );
         }
       });
+    }
+
+    if (hasBudgetChange || hasStatusChange) {
+      this.savingTaskBudgetIds.add(task.taskId);
+      this.taskDetailsService.updateTaskBudget(
+        task.taskId,
+        budgetAmount,
+        hasStatusChange ? this.taskStatusEditValues[task.taskId] : undefined
+      ).subscribe({
+        next: (updatedTask) => {
+          this.savingTaskBudgetIds.delete(task.taskId);
+          this.editingTaskBudgetIds.delete(task.taskId);
+          delete this.taskBudgetEditAmounts[task.taskId];
+          delete this.taskStatusEditValues[task.taskId];
+          if (this.currentEventId === task.eventId) {
+            this.eventData = this.tasks.map((entry) => entry.taskId === task.taskId
+              ? {
+                  ...entry,
+                  budgetAmount: updatedTask.budgetAmount,
+                  status: updatedTask.status,
+                  budgetRequestId: updatedTask.requestId,
+                  requestedBudgetAmount: updatedTask.requestedBudgetAmount,
+                  budgetRequestStatus: updatedTask.requestStatus,
+                  budgetRequestedByName: updatedTask.requestStatus === 'PENDING' ? 'You' : null,
+                  canReviewBudgetRequest: false,
+                  updatedAt: updatedTask.updatedAt
+                }
+              : entry);
+            this.notifier.success(updatedTask.requestStatus === 'PENDING'
+              ? 'Budget increase request sent for approval.'
+              : hasStatusChange
+                ? 'Task budget and status updated.'
+                : 'Task budget updated.');
+          }
+        },
+        error: (error: Error) => {
+          this.savingTaskBudgetIds.delete(task.taskId);
+          this.notifier.error(error.message || 'Failed to update task budget.');
+        }
+      });
+    } else {
+      this.editingTaskBudgetIds.delete(task.taskId);
+      delete this.taskBudgetEditAmounts[task.taskId];
+      delete this.taskStatusEditValues[task.taskId];
     }
   }
 
@@ -535,45 +626,6 @@ export class EventTasksComponent implements OnInit, OnDestroy {
 
   }
 
-  // --- Task Status Methods ---
-  public canUpdateTaskStatus(task: EventTaskEntry): boolean {
-    return task.canManage;
-  }
-
-  public onTaskStatusChange(task: EventTaskEntry, event: Event): void {
-    const select = event.currentTarget;
-    if (!(select instanceof HTMLSelectElement)) return;
-
-    const status = this.taskStatuses.find((candidate) => candidate === select.value);
-    if (!status || !task.canManage || this.updatingTaskStatusIds.has(task.taskId)) {
-      select.value = task.status || 'NEW';
-      return;
-    }
-
-    this.updatingTaskStatusIds.add(task.taskId);
-    this.tasksService.updateEventTaskStatus(task.taskId, status).subscribe({
-      next: (updatedTask) => {
-        this.updatingTaskStatusIds.delete(task.taskId);
-        if (this.currentEventId !== task.eventId) return;
-
-        this.eventData = this.tasks.map((entry) =>
-          entry.taskId === updatedTask.taskId ? updatedTask : entry
-        );
-        this.hierarchyTreeService.triggerHierarchyTreeRefresh();
-        this.notifier.success(`Task "${updatedTask.taskName}" status updated to ${this.statusLabel(updatedTask.status)}.`);
-      },
-      error: (error) => {
-        this.updatingTaskStatusIds.delete(task.taskId);
-        select.value = task.status || 'NEW';
-        this.notifier.error(
-          error?.error?.errors?.[0]?.message ||
-          error?.error?.message ||
-          'Failed to update task status.'
-        );
-      }
-    });
-  }
-
   public async onDeleteTask(task: EventTaskEntry, event: Event): Promise<void> {
     event.stopPropagation();
     if (!task.canDelete || this.deletingTaskIds.has(task.taskId) || this.getTaskDeletionBlockReason(task)) return;
@@ -616,33 +668,127 @@ export class EventTasksComponent implements OnInit, OnDestroy {
     return String(status || 'NEW').replace(/_/g, ' ');
   }
 
+  public isValidTaskBudgetAmount(value: string): boolean {
+    return isValidTaskBudgetAmount(value);
+  }
+
+  public formatTaskBudgetAmount(value: string | number | null | undefined): string {
+    return formatTaskBudgetAmount(value);
+  }
+
+  public formatTaskBudgetAmountCompact(value: string | number | null | undefined): string {
+    return formatTaskBudgetAmountCompact(value);
+  }
+
+  public getTaskBudgetDisplay(task: EventTaskEntry): string {
+    const total = formatTaskBudgetAmountCompact(task.budgetAmount);
+    const remaining = calculateTaskBudgetRemaining(task.taskId, task.budgetAmount, this.tasks);
+    return `Rem ${formatTaskBudgetAmountCompact(remaining)} / Tot ${total}`;
+  }
+
+  public reviewTaskBudgetRequest(task: EventTaskEntry, decision: 'APPROVE' | 'REJECT'): void {
+    const requestId = task.budgetRequestId;
+    if (!requestId || !task.canReviewBudgetRequest || this.reviewingTaskBudgetRequestIds.has(task.taskId)) return;
+    this.reviewingTaskBudgetRequestIds.add(task.taskId);
+    this.taskDetailsService.reviewTaskBudgetRequest(requestId, decision).subscribe({
+      next: (result) => {
+        this.reviewingTaskBudgetRequestIds.delete(task.taskId);
+        this.eventData = this.tasks.map((entry) => entry.taskId === task.taskId
+          ? {
+              ...entry,
+              budgetAmount: result.budgetAmount,
+              budgetRequestId: null,
+              requestedBudgetAmount: null,
+              budgetRequestStatus: null,
+              budgetRequestedByName: null,
+              canReviewBudgetRequest: false,
+              updatedAt: result.updatedAt
+            }
+          : entry);
+        this.notifier.success(decision === 'APPROVE' ? 'Budget request approved.' : 'Budget request rejected.');
+      },
+      error: (error: Error) => {
+        this.reviewingTaskBudgetRequestIds.delete(task.taskId);
+        this.notifier.error(error.message || 'Failed to review budget request.');
+      }
+    });
+  }
+
+  public canSubmitTaskBudgetIncrease(task: EventTaskEntry): boolean {
+    const amount = this.taskBudgetIncreaseAmounts[task.taskId];
+    return task.canRequestBudgetIncrease &&
+      task.budgetRequestStatus !== 'PENDING' &&
+      !this.requestingTaskBudgetIncreaseIds.has(task.taskId) &&
+      isValidTaskBudgetAmount(amount) &&
+      Number(amount) > 0;
+  }
+
+  public requestTaskBudgetIncrease(task: EventTaskEntry): void {
+    const amount = String(this.taskBudgetIncreaseAmounts[task.taskId] ?? '').trim();
+    if (!this.canSubmitTaskBudgetIncrease(task)) return;
+
+    this.requestingTaskBudgetIncreaseIds.add(task.taskId);
+    this.taskDetailsService.requestTaskBudgetIncrease(task.taskId, amount).subscribe({
+      next: (result) => {
+        this.requestingTaskBudgetIncreaseIds.delete(task.taskId);
+        delete this.taskBudgetIncreaseAmounts[task.taskId];
+        this.eventData = this.tasks.map((entry) => entry.taskId === task.taskId
+          ? {
+              ...entry,
+              budgetAmount: result.budgetAmount,
+              budgetRequestId: result.requestId,
+              requestedBudgetAmount: result.requestedBudgetAmount,
+              budgetRequestStatus: result.requestStatus,
+              budgetRequestedByName: 'You',
+              canReviewBudgetRequest: false,
+              updatedAt: result.updatedAt
+            }
+          : entry);
+        this.notifier.success('Budget increase request sent for approval.');
+      },
+      error: (error: Error) => {
+        this.requestingTaskBudgetIncreaseIds.delete(task.taskId);
+        this.notifier.error(error.message || 'Failed to request a budget increase.');
+      }
+    });
+  }
+
   // --- Task Creation ---
   public onCreateTask(): void {
     if (!this.canCreateTasks || !this.currentEventId || this.isCreatingTask || this.isSavingTask) {
       return;
     }
     this.newTaskName = '';
+    this.newTaskBudget = '0.00';
     this.isCreatingTask = true;
   }
 
   public onCancelTask(): void {
     if (this.isSavingTask) return;
     this.isCreatingTask = false;
+    this.newTaskName = '';
+    this.newTaskBudget = '0.00';
   }
 
   public onSaveTask(): void {
     const taskName = this.newTaskName.trim();
-    if (!taskName || taskName.length > 255 || this.isSavingTask || !this.currentEventId) {
+    if (!taskName || taskName.length > 255 || !isValidTaskBudgetAmount(this.newTaskBudget) || this.isSavingTask || !this.currentEventId) {
       return;
     }
 
     const eventId = this.currentEventId;
     this.isSavingTask = true;
-    this.tasksService.createEventTask({ eventId, taskName }).subscribe({
+    this.tasksService.createEventTask({
+      eventId,
+      taskName,
+      budgetAmount: this.newTaskBudget.trim()
+    }).subscribe({
       next: (task) => {
         if (this.currentEventId === eventId) {
           this.eventData = [...this.tasks, task];
           this.isCreatingTask = false;
+          this.newTaskName = '';
+          this.newTaskBudget = '0.00';
           this.eventDetailsState.incrementTaskCounts(true);
         }
         this.isSavingTask = false;

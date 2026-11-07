@@ -1,0 +1,2 @@
+ALTER TABLE tasks
+  ADD COLUMN budget_amount DECIMAL(12, 2) NOT NULL DEFAULT 0.00 AFTER name;

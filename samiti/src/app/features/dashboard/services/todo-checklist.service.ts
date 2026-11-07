@@ -56,6 +56,31 @@ export class TodoChecklistService {
     ).pipe(map((response) => this.extract(response, 'updateTodo')));
   }
 
+  public updateTodoDetails(todoId: number, title: string, status: TodoStatus): Observable<TodoItem> {
+    const mutation = `mutation UpdateTodoDetails($todoId: Int!, $title: String!, $status: TodoStatus!) {
+      updateTodoDetails(todoId: $todoId, title: $title, status: $status) {
+        id
+        title
+        status
+        isCompleted
+        assignedUserId
+        assignedUserName
+        createdByName
+        createdAt
+        assignedByName
+        assignedAt
+        updatedByName
+        updatedAt
+      }
+    }`;
+
+    return this.http.post<GraphqlResponse<{ updateTodoDetails: TodoItem }>>(
+      this.graphqlUrl,
+      { query: mutation, variables: { todoId, title, status } },
+      { withCredentials: true }
+    ).pipe(map((response) => this.extract(response, 'updateTodoDetails')));
+  }
+
   public setStatus(todoId: number, status: TodoStatus): Observable<TodoItem> {
     const mutation = `mutation SetTodoStatus($todoId: Int!, $status: TodoStatus!) {
       setTodoStatus(todoId: $todoId, status: $status) {

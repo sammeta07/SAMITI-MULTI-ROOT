@@ -2,6 +2,7 @@ import { CommonModule } from '@angular/common';
 import { Component, EventEmitter, Input, Output, inject } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { MatCheckboxChange, MatCheckboxModule } from '@angular/material/checkbox';
+import { MatExpansionModule } from '@angular/material/expansion';
 import { MatIconModule } from '@angular/material/icon';
 import { MatTableModule } from '@angular/material/table';
 import { MatTooltipModule } from '@angular/material/tooltip';
@@ -14,7 +15,7 @@ import { TodoChecklistService } from '../../services/todo-checklist.service';
 @Component({
   selector: 'app-todo-checklist',
   standalone: true,
-  imports: [CommonModule, FormsModule, MatCheckboxModule, MatIconModule, MatTableModule, MatTooltipModule],
+  imports: [CommonModule, FormsModule, MatCheckboxModule, MatExpansionModule, MatIconModule, MatTableModule, MatTooltipModule],
   host: {
     '[class.todo-checklist-table-view]': 'tableView'
   },
@@ -33,7 +34,10 @@ export class TodoChecklistComponent {
   @Input() canManage = false;
   @Input() canToggle = false;
   @Input() tableView = false;
+  @Input() expansionView = false;
+  @Input() hideTableAddForm = false;
   @Output() readonly itemsChange = new EventEmitter<TodoItem[]>();
+  @Output() readonly itemAdded = new EventEmitter<void>();
 
   public newTitle = '';
   public isAdding = false;
@@ -41,6 +45,8 @@ export class TodoChecklistComponent {
   public editingId: number | null = null;
   public editTitle = '';
   public editCompleted = false;
+  public editStatus: TodoStatus = 'PENDING';
+  public statusDropdownOpen = false;
 
   public get tableColumns(): string[] {
     return this.canManage || this.canToggle
@@ -58,6 +64,7 @@ export class TodoChecklistComponent {
     this.editingId = item.id;
     this.editTitle = this.toSentenceCase(item.title);
     this.editCompleted = item.isCompleted;
+    this.editStatus = item.status;
   }
 
   public toSentenceCase(value: string): string {
@@ -72,6 +79,31 @@ export class TodoChecklistComponent {
     this.editingId = null;
     this.editTitle = '';
     this.editCompleted = false;
+    this.editStatus = 'PENDING';
+    this.statusDropdownOpen = false;
+  }
+
+  public saveExpansionChanges(item: TodoItem): void {
+    const title = this.toSentenceCase(this.editTitle);
+    if (!this.canManage || this.editingId !== item.id || !title || title.length > 255 || this.pendingIds.has(item.id)) return;
+    if (title === item.title && this.editStatus === item.status) {
+      this.cancelEditing();
+      return;
+    }
+
+    this.pendingIds.add(item.id);
+    this.service.updateTodoDetails(item.id, title, this.editStatus).subscribe({
+      next: (updated) => {
+        this.items = this.items.map((entry) => (entry.id === updated.id ? updated : entry));
+        this.itemsChange.emit(this.items);
+        this.pendingIds.delete(item.id);
+        this.cancelEditing();
+      },
+      error: (error) => {
+        this.pendingIds.delete(item.id);
+        this.notifier.error(error?.error?.errors?.[0]?.message || error?.message || 'Failed to edit checklist item.');
+      }
+    });
   }
 
   public saveChanges(item: TodoItem): void {
@@ -97,8 +129,8 @@ export class TodoChecklistComponent {
     });
   }
 
-  public add(): void {
-    const title = this.toSentenceCase(this.newTitle);
+  public add(value = this.newTitle): void {
+    const title = this.toSentenceCase(value);
     if (!title || title.length > 255 || this.isAdding) return;
 
     this.isAdding = true;
@@ -108,6 +140,7 @@ export class TodoChecklistComponent {
         this.itemsChange.emit(this.items);
         this.newTitle = '';
         this.isAdding = false;
+        this.itemAdded.emit();
       },
       error: (error) => {
         this.isAdding = false;

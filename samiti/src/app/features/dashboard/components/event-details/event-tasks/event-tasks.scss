@@ -53,7 +53,8 @@
 
 .task-inline-create-row {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) auto;
+  width: 100%;
+  grid-template-columns: minmax(0, 1fr) auto auto;
   gap: 8px;
   align-items: center;
 }
@@ -61,14 +62,79 @@
 .task-create-title {
   display: flex;
   min-width: 0;
-  flex-direction: column;
-  justify-content: center;
+  width: 100%;
+  align-items: center;
+}
+
+.task-create-budget {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: #64748b;
+  font-size: 0.65rem;
+  font-weight: 600;
+
+  input {
+    width: 120px;
+    height: 28px;
+    box-sizing: border-box;
+    padding: 0 7px;
+    border: 1px solid #cbd5e1;
+    border-radius: 6px;
+    color: #1e293b;
+    font: inherit;
+    font-size: 0.72rem;
+  }
+}
+
+.task-budget-request {
+  display: inline-flex;
+  flex: 0 0 auto;
+  align-items: center;
+  gap: 2px;
+  color: #92400e;
+  font-size: 0.72rem;
+  font-weight: 700;
+  white-space: nowrap;
+
+  .task-budget-request-direction {
+    width: 14px;
+    height: 14px;
+    color: #64748b;
+    font-size: 14px;
+    line-height: 14px;
+  }
+
+  button {
+    display: inline-flex;
+    width: 14px !important;
+    min-width: 14px;
+    max-width: 14px;
+    height: 14px !important;
+    min-height: 14px !important;
+    max-height: 14px;
+    flex: 0 0 14px;
+    align-items: center;
+    justify-content: center;
+    padding: 0;
+    border: 1px solid #fcd34d;
+    border-radius: 4px;
+    background: #fffbeb;
+    color: #92400e;
+
+    mat-icon {
+      width: 9px;
+      height: 9px;
+      font-size: 9px;
+    }
+  }
 }
 
 .task-create-input-wrapper {
   position: relative;
   display: flex;
   min-width: 0;
+  width: 100%;
   align-items: center;
 
   input {
@@ -198,16 +264,16 @@
 
   .mat-expansion-panel-header {
     display: flex;
-    --mat-expansion-header-collapsed-state-height: 42px;
-    --mat-expansion-header-expanded-state-height: 42px;
-    height: 42px !important;
-    min-height: 42px !important;
-    padding: 0 12px;
+    --mat-expansion-header-collapsed-state-height: 66px;
+    --mat-expansion-header-expanded-state-height: 66px;
+    height: auto !important;
+    min-height: 66px !important;
+    padding: 4px 12px;
     align-items: center;
 
     .mat-content {
       min-width: 0;
-      align-items: center;
+      align-items: stretch;
     }
   }
 }
@@ -240,10 +306,33 @@
   display: grid;
   width: 100%;
   min-width: 0;
-  min-height: 28px;
+  min-height: 58px;
   align-items: center;
-  grid-template-columns: minmax(0, 1fr) 115px minmax(0, 260px) 62px;
+  grid-template-columns: minmax(260px, 1fr) minmax(0, 260px) 62px;
+  grid-template-rows: 28px 28px;
   gap: 6px;
+  row-gap: 2px;
+}
+
+.task-panel-title {
+  grid-column: 1 / 3;
+  grid-row: 1;
+}
+
+.task-panel-status-wrapper {
+  grid-column: 1;
+  grid-row: 2;
+  justify-content: flex-start;
+}
+
+.task-assignee-summary {
+  grid-column: 2 / 4;
+  grid-row: 2;
+}
+
+.task-row-actions {
+  grid-column: 3;
+  grid-row: 1;
 }
 
 .task-row-actions {
@@ -350,6 +439,110 @@
   box-sizing: border-box;
 }
 
+.task-budget-pill {
+  display: inline-flex;
+  flex: 0 0 142px;
+  width: 142px;
+  height: var(--samiti-pill-height, 24px);
+  min-height: var(--samiti-pill-height, 24px);
+  box-sizing: border-box;
+  align-items: center;
+  justify-content: center;
+  margin-right: 6px;
+  padding: 3px 7px;
+  border: 1px solid #fca5a5;
+  border-radius: 4px;
+  background: #fef2f2;
+  color: #b91c1c;
+  font-size: 0.72rem;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.task-budget-pill-input {
+  appearance: none;
+  color: inherit;
+  font: inherit;
+  line-height: 1;
+  text-align: center;
+
+  &:focus {
+    outline: none;
+  }
+}
+
+.task-budget-pill-input::-webkit-inner-spin-button,
+.task-budget-pill-input::-webkit-outer-spin-button {
+  margin: 0;
+  appearance: none;
+}
+
+.task-budget-increase-controls {
+  display: inline-flex;
+  flex: 0 0 auto;
+  align-items: center;
+  gap: 2px;
+
+  input {
+    width: 76px;
+    height: var(--samiti-pill-height, 24px);
+    box-sizing: border-box;
+    padding: 0 5px;
+    border: 1px solid #cbd5e1;
+    border-radius: 5px;
+    background: #fff;
+    color: #1e293b;
+    font: inherit;
+    font-size: 0.68rem;
+  }
+
+  button {
+    display: inline-flex;
+    width: 22px;
+    height: 22px;
+    align-items: center;
+    justify-content: center;
+    padding: 0;
+    border: 1px solid #a7f3d0;
+    border-radius: 4px;
+    background: #ecfdf5;
+    color: #047857;
+
+    &:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+
+    mat-icon {
+      width: 14px;
+      height: 14px;
+      font-size: 14px;
+    }
+  }
+}
+
+.task-budget-edit-controls {
+  display: inline-flex;
+  flex: 0 0 auto;
+  align-items: center;
+}
+
+.task-budget-edit-controls {
+  margin-right: 6px;
+
+  input {
+    width: 82px;
+    height: 24px;
+    box-sizing: border-box;
+    padding: 0 5px;
+    border: 1px solid #fca5a5;
+    border-radius: 4px;
+    color: #1e293b;
+    font: inherit;
+    font-size: 0.7rem;
+  }
+}
+
 .child-task-indicator {
   flex: 0 0 14px;
   width: 14px;
@@ -436,15 +629,22 @@
 .task-panel-status-wrapper {
   display: flex;
   align-items: center;
+  justify-content: flex-end;
   min-width: 0;
   width: 100%;
+}
+
+.task-panel-status-wrapper .status-tag {
+  flex: 0 0 112px;
+  width: 100%;
+  min-width: 112px;
 }
 
 .status-tag {
   display: inline-flex;
   height: var(--samiti-pill-height, 24px);
   min-height: var(--samiti-pill-height, 24px);
-  width: 100%;
+  width: 112px;
   box-sizing: border-box;
   align-items: center;
   justify-content: flex-start;
@@ -1071,8 +1271,7 @@
 /* Responsive Breakpoints */
 @media (max-width: 900px) {
   .task-panel-summary {
-    grid-template-columns: minmax(0, 1fr) 105px minmax(0, 230px) 62px;
-    gap: 8px;
+    grid-template-columns: minmax(260px, 1fr) minmax(0, 230px) 62px;
   }
 }
 
@@ -1085,8 +1284,8 @@
 
 @media (max-width: 650px) {
   .task-panel-summary {
-    grid-template-columns: minmax(0, 1fr) auto minmax(0, 190px) 62px;
-    gap: 6px;
+    grid-template-columns: minmax(260px, 1fr) minmax(0, 1fr) 62px;
+    column-gap: 4px;
   }
 
   .task-panel-status {

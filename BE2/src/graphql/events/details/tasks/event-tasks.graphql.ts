@@ -1,4 +1,4 @@
-import { execute, query } from '../../../../config/db';
+import { execute, getConnection, query } from '../../../../config/db';
 import { RowDataPacket } from 'mysql2/promise';
 import { throwEventError, getLoggedInUserId } from '../voting/event-voting-core.graphql';
 import { hasPermission, PERMISSIONS } from '../../../../authorization/authorization';
@@ -19,6 +19,13 @@ export const eventTasksTypes = `
     parentTaskId: Int
     parentTaskName: String
     taskName: String!
+    budgetAmount: String!
+    budgetRequestId: Int
+    requestedBudgetAmount: String
+    budgetRequestStatus: String
+    budgetRequestedByName: String
+    canReviewBudgetRequest: Boolean!
+    canRequestBudgetIncrease: Boolean!
     status: String
     ownerUserId: Int
     ownerName: String
@@ -55,9 +62,19 @@ export const eventTasksTypes = `
     updatedAt: String!
   }
 
+  type UpdatedEventTaskBudget {
+    budgetAmount: String!
+    status: String!
+    updatedAt: String!
+    requestId: Int
+    requestStatus: String
+    requestedBudgetAmount: String
+  }
+
   input CreateEventTaskInput {
     eventId: Int!
     taskName: String!
+    budgetAmount: String = "0.00"
     parentTaskId: Int
     status: EventTaskStatus = NEW
   }
@@ -69,6 +86,13 @@ export const eventTasksTypes = `
     parentTaskId: Int
     parentTaskName: String
     taskName: String!
+    budgetAmount: String!
+    budgetRequestId: Int
+    requestedBudgetAmount: String
+    budgetRequestStatus: String
+    budgetRequestedByName: String
+    canReviewBudgetRequest: Boolean!
+    canRequestBudgetIncrease: Boolean!
     status: EventTaskStatus!
     ownerUserId: Int
     ownerName: String
@@ -93,6 +117,9 @@ export const createEventTaskMutationFields = `
   assignEventTask(taskId: Int!, ownerUserId: Int): EventTaskEntry!
   updateEventTaskStatus(taskId: Int!, status: EventTaskStatus!): EventTaskEntry!
   updateEventTaskName(taskId: Int!, taskName: String!): UpdatedEventTaskName!
+  updateEventTaskBudget(taskId: Int!, budgetAmount: String!, status: String): UpdatedEventTaskBudget!
+  requestTaskBudgetIncrease(taskId: Int!, amount: String!): UpdatedEventTaskBudget!
+  reviewTaskBudgetRequest(requestId: Int!, decision: String!): UpdatedEventTaskBudget!
   deleteEventTask(taskId: Int!): Boolean!
 `;
 
@@ -266,6 +293,21 @@ async function getTaskEditPermission(taskId: number, userId: number): Promise<bo
     hasPermission(userId, PERMISSIONS.EVENT_TASK_MANAGE_ANY, { type: 'EVENT', id: Number(task.eventId) });
 }
 
+function validateTaskBudgetAmount(value: unknown): string {
+  const amount = String(value ?? '0.00').trim();
+  if (!/^\d{1,10}(?:\.\d{1,2})?$/.test(amount)) {
+    throwEventError('BAD_REQUEST', 'budgetAmount must be a non-negative amount with up to 2 decimal places');
+  }
+  return amount;
+}
+
+function amountCents(value: unknown): number {
+  const parsed = Number(value);
+  return Number.isFinite(parsed) ? Math.round(parsed * 100) : 0;
+}
+
+const MAX_TASK_BUDGET_CENTS = 999_999_999_999;
+
 export const eventTasksResolvers = {
   Query: {
     async eventTasks(_: any, args: { id: number }, context: any) {
@@ -341,6 +383,11 @@ export const eventTasksResolvers = {
         parentTaskId: number | null;
         parentTaskName: string | null;
         taskName: string;
+        budgetAmount: string;
+        budgetRequestId: number | null;
+        requestedBudgetAmount: string | null;
+        budgetRequestStatus: string | null;
+        budgetRequestedByName: string | null;
         status: string | null;
         createdBy: number | null;
         parentOwnerUserId: number | null;
@@ -360,6 +407,11 @@ export const eventTasksResolvers = {
            parent.owner_user_id AS parentOwnerUserId,
            parent.name AS parentTaskName,
            COALESCE(NULLIF(TRIM(t.name), ''), 'Untitled Task') AS taskName,
+           CAST(t.budget_amount AS CHAR) AS budgetAmount,
+           budgetRequest.id AS budgetRequestId,
+           CAST(GREATEST(0, budgetRequest.requested_amount - t.budget_amount) AS CHAR) AS requestedBudgetAmount,
+           budgetRequest.status AS budgetRequestStatus,
+           budgetRequester.name AS budgetRequestedByName,
            t.status,
            t.owner_user_id AS ownerUserId,
            owner.name AS ownerName,
@@ -370,6 +422,9 @@ export const eventTasksResolvers = {
            DATE_FORMAT(t.updated_at, '%Y-%m-%d %H:%i:%s') AS updatedAt
          FROM tasks t
          LEFT JOIN tasks parent ON parent.id = t.parent_id
+         LEFT JOIN task_budget_requests budgetRequest
+           ON budgetRequest.task_id = t.id AND budgetRequest.status = 'PENDING'
+         LEFT JOIN users budgetRequester ON budgetRequester.id = budgetRequest.requested_by
          LEFT JOIN users owner ON owner.id = t.owner_user_id
          LEFT JOIN users assignedBy ON assignedBy.id = t.owner_assigned_by
          LEFT JOIN users creator ON creator.id = t.created_by
@@ -388,6 +443,16 @@ export const eventTasksResolvers = {
           parentTaskId: taskRow.parentTaskId === null ? null : Number(taskRow.parentTaskId),
           parentTaskName: taskRow.parentTaskName || null,
           taskName: String(taskRow.taskName || 'Untitled Task'),
+          budgetAmount: String(taskRow.budgetAmount),
+          budgetRequestId: taskRow.budgetRequestId === null ? null : Number(taskRow.budgetRequestId),
+          requestedBudgetAmount: taskRow.requestedBudgetAmount === null ? null : String(taskRow.requestedBudgetAmount),
+          budgetRequestStatus: taskRow.budgetRequestStatus || null,
+          budgetRequestedByName: taskRow.budgetRequestedByName || null,
+          canReviewBudgetRequest: Boolean(taskRow.budgetRequestId) &&
+            (Number(taskRow.createdBy) === loggedInUserId || canManageAnyTasks),
+          canRequestBudgetIncrease: Number(taskRow.ownerUserId) === loggedInUserId &&
+            Number(taskRow.createdBy) !== loggedInUserId &&
+            !canManageAnyTasks,
           status: taskRow.status ? String(taskRow.status) : null,
           ownerUserId: taskRow.ownerUserId === null ? null : Number(taskRow.ownerUserId),
           ownerName: taskRow.ownerName || null,
@@ -731,9 +796,10 @@ export const eventTasksResolvers = {
         canDelete: await getTaskDeletionPermission(taskId, loggedInUserId)
       };
     },
-    async createEventTask(_: any, args: { input?: { eventId?: number; taskName?: string; parentTaskId?: number | null; status?: string | null } }, context: any) {
+    async createEventTask(_: any, args: { input?: { eventId?: number; taskName?: string; budgetAmount?: string | null; parentTaskId?: number | null; status?: string | null } }, context: any) {
       const eventId = Number(args?.input?.eventId);
       const taskName = String(args?.input?.taskName || '').trim();
+      const budgetAmount = validateTaskBudgetAmount(args?.input?.budgetAmount);
       const parentTaskId = args?.input?.parentTaskId == null ? null : Number(args.input.parentTaskId);
       const status = String(args?.input?.status || 'NEW').trim().toUpperCase();
 
@@ -766,10 +832,11 @@ export const eventTasksResolvers = {
       }
 
       const event = eventRows[0];
+      let createdTaskId: number;
 
       if (parentTaskId !== null) {
         const parentRows = await query<any[]>(
-          `SELECT id, owner_user_id AS ownerUserId
+          `SELECT id, owner_user_id AS ownerUserId, budget_amount AS budgetAmount
            FROM tasks
            WHERE id = ? AND event_id = ?
            LIMIT 1`,
@@ -779,28 +846,64 @@ export const eventTasksResolvers = {
           throwEventError('BAD_REQUEST', 'parentTaskId must belong to the selected event');
         }
         await getTaskForAdminMutation(parentTaskId, loggedInUserId);
+        const connection = await getConnection();
+        try {
+          await connection.beginTransaction();
+          const [lockedParentRows] = await connection.query<any[]>(
+            `SELECT id, budget_amount AS budgetAmount
+             FROM tasks WHERE id = ? FOR UPDATE`,
+            [parentTaskId]
+          );
+          const lockedParent = lockedParentRows[0];
+          if (!lockedParent) throwEventError('NOT_FOUND', 'Parent task not found');
+          const [allocationRows] = await connection.query<any[]>(
+            `SELECT COALESCE(SUM(budget_amount), 0) AS allocated
+            FROM tasks WHERE parent_id = ?`,
+            [parentTaskId]
+          );
+          const remainingCents = Math.round(Number(lockedParent.budgetAmount) * 100) -
+            Math.round(Number(allocationRows[0].allocated) * 100);
+          if (Math.round(Number(budgetAmount) * 100) > remainingCents) {
+            throwEventError('BAD_REQUEST', 'Subtask budget exceeds the parent task remaining budget');
+          }
+          const [insertResult] = await connection.execute<any>(
+            `INSERT INTO tasks (
+               event_id, parent_id, name, budget_amount, owner_user_id, status,
+               created_by, updated_by, owner_assigned_by, owner_assigned_at
+             )
+             VALUES (?, ?, ?, ?, NULL, ?, ?, ?, NULL, NULL)`,
+            [eventId, parentTaskId, taskName, budgetAmount, status, loggedInUserId, loggedInUserId]
+          );
+          await connection.commit();
+          createdTaskId = Number(insertResult.insertId);
+        } catch (error) {
+          await connection.rollback();
+          throw error;
+        } finally {
+          connection.release();
+        }
       } else {
         const canCreateTopLevel = await canCreateEventTask(eventId, loggedInUserId);
         if (!canCreateTopLevel) {
           throwEventError('FORBIDDEN', 'Only a master admin, Adhyaksha, or Upadhyaksha can create event-level tasks');
         }
+        const result = await execute(
+          `INSERT INTO tasks (
+             event_id, parent_id, name, budget_amount, owner_user_id, status,
+             created_by, updated_by, owner_assigned_by, owner_assigned_at
+           )
+           VALUES (?, NULL, ?, ?, NULL, ?, ?, ?, NULL, NULL)`,
+          [
+            eventId,
+            taskName,
+            budgetAmount,
+            status,
+            loggedInUserId,
+            loggedInUserId
+          ]
+        );
+        createdTaskId = Number(result.insertId);
       }
-
-      const result = await execute(
-        `INSERT INTO tasks (
-           event_id, parent_id, name, owner_user_id, status,
-           created_by, updated_by, owner_assigned_by, owner_assigned_at
-         )
-         VALUES (?, ?, ?, NULL, ?, ?, ?, NULL, NULL)`,
-        [
-          eventId,
-          parentTaskId,
-          taskName,
-          status,
-          loggedInUserId,
-          loggedInUserId
-        ]
-      );
 
       const createdRows = await query<any[]>(
         `SELECT
@@ -809,6 +912,7 @@ export const eventTasksResolvers = {
            t.parent_id AS parentTaskId,
            parent.name AS parentTaskName,
            COALESCE(NULLIF(TRIM(t.name), ''), 'Untitled Task') AS taskName,
+           CAST(t.budget_amount AS CHAR) AS budgetAmount,
            t.status,
            t.owner_user_id AS ownerUserId,
            owner.name AS ownerName,
@@ -824,7 +928,7 @@ export const eventTasksResolvers = {
          LEFT JOIN users creator ON creator.id = t.created_by
          WHERE t.id = ?
          LIMIT 1`,
-        [result.insertId]
+        [createdTaskId]
       );
       const task = createdRows[0];
       return {
@@ -834,6 +938,13 @@ export const eventTasksResolvers = {
         parentTaskId: task.parentTaskId === null ? null : Number(task.parentTaskId),
         parentTaskName: task.parentTaskName || null,
         taskName: String(task.taskName),
+        budgetAmount: String(task.budgetAmount),
+        budgetRequestId: null,
+        requestedBudgetAmount: null,
+        budgetRequestStatus: null,
+        budgetRequestedByName: null,
+        canReviewBudgetRequest: false,
+        canRequestBudgetIncrease: false,
         status: String(task.status),
         ownerUserId: task.ownerUserId === null ? null : Number(task.ownerUserId),
         ownerName: task.ownerName || null,
@@ -847,6 +958,317 @@ export const eventTasksResolvers = {
         canAssignOwner: await getTaskAssignmentPermission(Number(task.taskId), loggedInUserId),
         canDelete: await getTaskDeletionPermission(Number(task.taskId), loggedInUserId)
       };
+    },
+    async requestTaskBudgetIncrease(_: any, args: { taskId: number; amount: string }, context: any) {
+      const taskId = Number(args?.taskId);
+      if (!Number.isInteger(taskId) || taskId <= 0) {
+        throwEventError('BAD_REQUEST', 'taskId must be a positive integer');
+      }
+      const amount = validateTaskBudgetAmount(args?.amount);
+      if (amountCents(amount) <= 0) {
+        throwEventError('BAD_REQUEST', 'Budget increase amount must be greater than zero');
+      }
+
+      const userId = await getLoggedInUserId(context);
+      const connection = await getConnection();
+      try {
+        await connection.beginTransaction();
+        const [taskRows] = await connection.query<any[]>(
+          `SELECT t.id, t.created_by AS createdBy, t.owner_user_id AS ownerUserId,
+                  t.budget_amount AS budgetAmount, t.status, t.event_id AS eventId,
+                  DATE_FORMAT(t.updated_at, '%Y-%m-%d %H:%i:%s') AS updatedAt
+           FROM tasks t WHERE t.id = ? FOR UPDATE`,
+          [taskId]
+        );
+        const task = taskRows[0];
+        if (!task) throwEventError('NOT_FOUND', 'Task not found');
+        const isMasterAdmin = await hasPermission(
+          userId,
+          PERMISSIONS.EVENT_TASK_MANAGE_ANY,
+          { type: 'EVENT', id: Number(task.eventId) }
+        );
+        if (Number(task.ownerUserId) !== userId || Number(task.createdBy) === userId || isMasterAdmin) {
+          throwEventError('FORBIDDEN', 'Only the task owner can request an increase to this task budget');
+        }
+        const targetBudgetCents = amountCents(task.budgetAmount) + amountCents(amount);
+        if (targetBudgetCents > MAX_TASK_BUDGET_CENTS) {
+          throwEventError('BAD_REQUEST', 'The requested increase exceeds the maximum task budget');
+        }
+        const targetBudget = (targetBudgetCents / 100).toFixed(2);
+
+        const [pendingRows] = await connection.query<any[]>(
+          `SELECT id FROM task_budget_requests
+           WHERE task_id = ? AND status = 'PENDING'
+           LIMIT 1 FOR UPDATE`,
+          [taskId]
+        );
+        if (pendingRows.length > 0) {
+          throwEventError('CONFLICT', 'A budget increase request is already pending approval');
+        }
+        await connection.execute(
+          `INSERT INTO task_budget_requests (task_id, requested_amount, requested_by)
+           VALUES (?, ?, ?)`,
+          [taskId, targetBudget, userId]
+        );
+        const [requestRows] = await connection.query<any[]>(
+          `SELECT id, CAST(requested_amount AS CHAR) AS requestedAmount
+           FROM task_budget_requests
+           WHERE task_id = ? AND status = 'PENDING'
+           ORDER BY created_at DESC, id DESC
+           LIMIT 1`,
+          [taskId]
+        );
+        const request = requestRows[0];
+        await connection.commit();
+        return {
+          budgetAmount: String(task.budgetAmount),
+          status: String(task.status),
+          updatedAt: String(task.updatedAt),
+          requestId: Number(request.id),
+          requestStatus: 'PENDING',
+          requestedBudgetAmount: amount
+        };
+      } catch (error) {
+        await connection.rollback();
+        throw error;
+      } finally {
+        connection.release();
+      }
+    },
+    async updateEventTaskBudget(_: any, args: { taskId: number; budgetAmount: string; status?: string | null }, context: any) {
+      const taskId = Number(args?.taskId);
+      if (!Number.isInteger(taskId) || taskId <= 0) {
+        throwEventError('BAD_REQUEST', 'taskId must be a positive integer');
+      }
+
+      const budgetAmount = validateTaskBudgetAmount(args?.budgetAmount);
+      const status = args.status == null ? null : String(args.status).trim().toUpperCase();
+      if (status !== null && !['NEW', 'IN_PROGRESS', 'COMPLETED', 'HOLD', 'WONT_FIX'].includes(status)) {
+        throwEventError('BAD_REQUEST', 'status must be NEW, IN_PROGRESS, COMPLETED, HOLD, or WONT_FIX');
+      }
+      const loggedInUserId = await getLoggedInUserId(context);
+      const connection = await getConnection();
+      try {
+        await connection.beginTransaction();
+        const [taskRows] = await connection.query<any[]>(
+          `SELECT t.id, t.parent_id AS parentTaskId, t.created_by AS createdBy,
+                  t.owner_user_id AS ownerUserId, t.budget_amount AS budgetAmount,
+                  t.event_id AS eventId
+           FROM tasks t WHERE t.id = ? FOR UPDATE`,
+          [taskId]
+        );
+        const task = taskRows[0];
+        if (!task) throwEventError('NOT_FOUND', 'Task not found');
+
+        const isMasterAdmin = await hasPermission(
+          loggedInUserId,
+          PERMISSIONS.EVENT_TASK_MANAGE_ANY,
+          { type: 'EVENT', id: Number(task.eventId) }
+        );
+        const isCreator = Number(task.createdBy) === loggedInUserId;
+        const isTaskOwner = task.ownerUserId !== null && Number(task.ownerUserId) === loggedInUserId;
+        if (!isCreator && !isTaskOwner && !isMasterAdmin) {
+          throwEventError('FORBIDDEN', 'Only the task creator, task owner, or a master admin can edit this budget');
+        }
+        if (status !== null && !isTaskOwner && !isMasterAdmin) {
+          throwEventError('FORBIDDEN', 'Only the task owner or a master admin can update its status');
+        }
+
+        const currentBudgetCents = amountCents(task.budgetAmount);
+        const requestedBudgetCents = amountCents(budgetAmount);
+        const budgetChanged = requestedBudgetCents !== currentBudgetCents;
+        if (isTaskOwner && !isCreator && !isMasterAdmin && budgetChanged) {
+          throwEventError('FORBIDDEN', 'Task owners must request additional budget using the budget increase request');
+        }
+        const [pendingRequestRows] = await connection.query<any[]>(
+          `SELECT id, requested_amount AS requestedAmount
+           FROM task_budget_requests
+           WHERE task_id = ? AND status = 'PENDING'
+           ORDER BY created_at DESC, id DESC
+           LIMIT 1 FOR UPDATE`,
+          [taskId]
+        );
+        const pendingRequest = pendingRequestRows[0] ?? null;
+        if (pendingRequest && budgetChanged && !isCreator && !isMasterAdmin) {
+          throwEventError('CONFLICT', 'A budget increase request is already pending approval');
+        }
+
+        if (task.parentTaskId !== null) {
+          const [parentRows] = await connection.query<any[]>(
+            `SELECT id, budget_amount AS budgetAmount
+             FROM tasks WHERE id = ? FOR UPDATE`,
+            [Number(task.parentTaskId)]
+          );
+          const parent = parentRows[0];
+          if (!parent) throwEventError('NOT_FOUND', 'Parent task not found');
+          const [allocationRows] = await connection.query<any[]>(
+            `SELECT COALESCE(SUM(budget_amount), 0) AS allocated
+             FROM tasks WHERE parent_id = ? AND id <> ?`,
+            [Number(task.parentTaskId), taskId]
+          );
+          const remainingCents = amountCents(parent.budgetAmount) - amountCents(allocationRows[0].allocated);
+          if (amountCents(budgetAmount) > remainingCents) {
+            throwEventError('BAD_REQUEST', 'Budget exceeds the parent task remaining budget');
+          }
+        }
+
+        const [childAllocationRows] = await connection.query<any[]>(
+          `SELECT COALESCE(SUM(budget_amount), 0) AS allocated
+           FROM tasks WHERE parent_id = ?`,
+          [taskId]
+        );
+        if (requestedBudgetCents < amountCents(childAllocationRows[0].allocated)) {
+          throwEventError('BAD_REQUEST', 'Budget cannot be lower than the amount already allocated to subtasks');
+        }
+
+        if (pendingRequest && budgetChanged) {
+          await connection.execute(
+            `UPDATE task_budget_requests
+             SET status = 'REJECTED', reviewed_by = ?, reviewed_at = CURRENT_TIMESTAMP
+             WHERE id = ? AND status = 'PENDING'`,
+            [loggedInUserId, Number(pendingRequest.id)]
+          );
+        }
+        if (status === null) {
+          await connection.execute(
+            `UPDATE tasks
+             SET budget_amount = ?, updated_by = ?
+             WHERE id = ?`,
+            [budgetAmount, loggedInUserId, taskId]
+          );
+        } else {
+          await connection.execute(
+            `UPDATE tasks
+             SET budget_amount = ?, status = ?, updated_by = ?
+             WHERE id = ?`,
+            [budgetAmount, status, loggedInUserId, taskId]
+          );
+        }
+        const [updatedRows] = await connection.query<any[]>(
+          `SELECT CAST(budget_amount AS CHAR) AS budgetAmount, status,
+                  DATE_FORMAT(updated_at, '%Y-%m-%d %H:%i:%s') AS updatedAt
+           FROM tasks WHERE id = ? LIMIT 1`,
+          [taskId]
+        );
+        const [requestRows] = await connection.query<any[]>(
+          `SELECT id, CAST(requested_amount AS CHAR) AS requestedAmount, status
+           FROM task_budget_requests
+           WHERE task_id = ? AND status = 'PENDING'
+           ORDER BY created_at DESC, id DESC
+           LIMIT 1`,
+          [taskId]
+        );
+        const activeRequest = requestRows[0] ?? null;
+        await connection.commit();
+        return {
+          budgetAmount: String(updatedRows[0].budgetAmount),
+          status: String(updatedRows[0].status),
+          updatedAt: String(updatedRows[0].updatedAt),
+          requestId: activeRequest ? Number(activeRequest.id) : null,
+          requestStatus: activeRequest ? String(activeRequest.status) : null,
+          requestedBudgetAmount: activeRequest ? String(activeRequest.requestedAmount) : null
+        };
+      } catch (error) {
+        await connection.rollback();
+        throw error;
+      } finally {
+        connection.release();
+      }
+    },
+    async reviewTaskBudgetRequest(_: any, args: { requestId: number; decision: string }, context: any) {
+      const requestId = Number(args?.requestId);
+      if (!Number.isInteger(requestId) || requestId <= 0) {
+        throwEventError('BAD_REQUEST', 'requestId must be a positive integer');
+      }
+      const decision = String(args?.decision || '').trim().toUpperCase();
+      if (!['APPROVE', 'REJECT'].includes(decision)) {
+        throwEventError('BAD_REQUEST', 'decision must be APPROVE or REJECT');
+      }
+      const loggedInUserId = await getLoggedInUserId(context);
+      const connection = await getConnection();
+      try {
+        await connection.beginTransaction();
+        const [requestRows] = await connection.query<any[]>(
+          `SELECT request.id, request.task_id AS taskId,
+                  request.requested_amount AS requestedAmount,
+                  request.status,
+                  task.parent_id AS parentTaskId, task.budget_amount AS currentBudget,
+                  task.created_by AS createdBy, parent.budget_amount AS parentBudget,
+                  task.event_id AS eventId
+           FROM task_budget_requests request
+           INNER JOIN tasks task ON task.id = request.task_id
+           LEFT JOIN tasks parent ON parent.id = task.parent_id
+           WHERE request.id = ? FOR UPDATE`,
+          [requestId]
+        );
+        const request = requestRows[0];
+        if (!request) throwEventError('NOT_FOUND', 'Budget request not found');
+        if (request.status !== 'PENDING') throwEventError('CONFLICT', 'This budget request has already been reviewed');
+        const isMasterAdmin = await hasPermission(
+          loggedInUserId,
+          PERMISSIONS.EVENT_TASK_MANAGE_ANY,
+          { type: 'EVENT', id: Number(request.eventId) }
+        );
+        if (Number(request.createdBy) !== loggedInUserId && !isMasterAdmin) {
+          throwEventError('FORBIDDEN', 'Only the task creator can review this budget request');
+        }
+        if (decision === 'APPROVE') {
+          if (request.parentTaskId !== null) {
+            const [allocationRows] = await connection.query<any[]>(
+              `SELECT COALESCE(SUM(budget_amount), 0) AS allocated
+               FROM tasks WHERE parent_id = ?`,
+              [Number(request.parentTaskId)]
+            );
+            const availableCents = amountCents(request.parentBudget) - amountCents(allocationRows[0].allocated);
+            const requestedDelta = amountCents(request.requestedAmount) - amountCents(request.currentBudget);
+            if (requestedDelta > availableCents) {
+              throwEventError('BAD_REQUEST', 'Requested budget exceeds the parent task remaining budget');
+            }
+          }
+          if (amountCents(request.requestedAmount) > MAX_TASK_BUDGET_CENTS) {
+            throwEventError('BAD_REQUEST', 'The approved increase exceeds the maximum task budget');
+          }
+          const [childAllocationRows] = await connection.query<any[]>(
+            `SELECT COALESCE(SUM(budget_amount), 0) AS allocated
+             FROM tasks WHERE parent_id = ?`,
+            [Number(request.taskId)]
+          );
+          if (amountCents(request.requestedAmount) < amountCents(childAllocationRows[0].allocated)) {
+            throwEventError('BAD_REQUEST', 'Requested budget cannot be lower than the amount already allocated to subtasks');
+          }
+          await connection.execute(
+            `UPDATE tasks SET budget_amount = ?, updated_by = ? WHERE id = ?`,
+            [request.requestedAmount, loggedInUserId, Number(request.taskId)]
+          );
+        }
+        await connection.execute(
+          `UPDATE task_budget_requests
+           SET status = ?, reviewed_by = ?, reviewed_at = CURRENT_TIMESTAMP
+           WHERE id = ? AND status = 'PENDING'`,
+          [decision === 'APPROVE' ? 'APPROVED' : 'REJECTED', loggedInUserId, requestId]
+        );
+        const [updatedRows] = await connection.query<any[]>(
+          `SELECT CAST(task.budget_amount AS CHAR) AS budgetAmount,
+                  task.status,
+                  DATE_FORMAT(task.updated_at, '%Y-%m-%d %H:%i:%s') AS updatedAt
+           FROM tasks task WHERE task.id = ?`,
+          [Number(request.taskId)]
+        );
+        await connection.commit();
+        return {
+          budgetAmount: String(updatedRows[0].budgetAmount),
+          status: String(updatedRows[0].status),
+          updatedAt: String(updatedRows[0].updatedAt),
+          requestId,
+          requestStatus: decision === 'APPROVE' ? 'APPROVED' : 'REJECTED',
+          requestedBudgetAmount: String(request.requestedAmount)
+        };
+      } catch (error) {
+        await connection.rollback();
+        throw error;
+      } finally {
+        connection.release();
+      }
     }
   }
 };

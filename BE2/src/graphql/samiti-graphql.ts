@@ -47,6 +47,7 @@ import { cancelCommitteeMembershipRequestTypes, cancelCommitteeMembershipRequest
 import { submitCommitteeMembershipRequestTypes, submitCommitteeMembershipRequestMutationFields, submitCommitteeMembershipRequestResolvers } from './committees/user-requests/submit-committee-membership-request.graphql';
 import { todoTypes, todoMutationFields, todoResolvers } from './todos/todos.graphql';
 import { taskDetailsTypes, taskDetailsQueryFields, taskDetailsResolvers } from './tasks/task-details.graphql';
+import { taskFinanceTypes, taskFinanceQueryFields, taskFinanceMutationFields, taskFinanceResolvers } from './tasks/task-finance.graphql';
 import { rolePermissionsTypes, rolePermissionsQueryFields, rolePermissionsMutationFields, rolePermissionsResolvers } from './authorization/role-permissions.graphql';
 
 // Single schema — one Query block, one Mutation block
@@ -87,6 +88,7 @@ export const typeDefs = `
   ${programsByDistanceTypes}
   ${todoTypes}
   ${taskDetailsTypes}
+  ${taskFinanceTypes}
   ${rolePermissionsTypes}
    ${eventVotingTypes}
    ${eventVoteTypes}
@@ -118,6 +120,7 @@ export const typeDefs = `
     ${committeeDetailsQueryFields}
     ${programDetailsQueryFields}
     ${taskDetailsQueryFields}
+    ${taskFinanceQueryFields}
     ${programOwnerQueryFields}
     ${programsByDistanceQueryFields}
     ${eventDetailsQueryFields}
@@ -154,6 +157,7 @@ export const typeDefs = `
     ${eventVoteMutationFields}
     ${updateEventVotingModeMutationFields}
     ${createEventTaskMutationFields}
+    ${taskFinanceMutationFields}
     ${todoMutationFields}
     ${toggleCommitteeFavouriteMutationFields}
     ${cancelCommitteeMembershipRequestMutationFields}
@@ -183,6 +187,7 @@ export const resolvers = {
     ...committeeDetailsResolvers.Query,
     ...programDetailsResolvers.Query,
     ...taskDetailsResolvers.Query,
+    ...taskFinanceResolvers.Query,
     ...programOwnerResolvers.Query,
     ...programsByDistanceResolvers.Query,
     ...eventDetailsResolvers.Query,
@@ -226,6 +231,7 @@ export const resolvers = {
     ...eventVoteResolvers.Mutation,
     ...updateEventVotingModeResolvers.Mutation,
     ...eventTasksResolvers.Mutation,
+    ...taskFinanceResolvers.Mutation,
     ...todoResolvers.Mutation,
     ...toggleCommitteeFavouriteResolvers.Mutation,
   }
