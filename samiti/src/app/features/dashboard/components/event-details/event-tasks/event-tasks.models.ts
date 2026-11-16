@@ -24,6 +24,7 @@ export interface EventTaskEntry {
   budgetRequestStatus: string | null;
   budgetRequestedByName: string | null;
   canReviewBudgetRequest: boolean;
+  canCancelBudgetRequest: boolean;
   canRequestBudgetIncrease: boolean;
   status: string | null;
   ownerUserId: number | null;
@@ -77,6 +78,7 @@ export interface TaskBudgetUpdateResult {
   requestId: number | null;
   requestStatus: string | null;
   requestedBudgetAmount: string | null;
+  canRequestBudgetIncrease?: boolean;
 }
 
 export function isValidTaskBudgetAmount(value: string | number | null | undefined): boolean {

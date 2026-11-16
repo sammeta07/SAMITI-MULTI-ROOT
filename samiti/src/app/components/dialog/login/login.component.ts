@@ -13,6 +13,7 @@ import { AuthService, AuthUserData, RememberedLoginCredentials } from '../../../
 import { NotifierService } from '../../../shared/notifier/notifier.service';
 import { MatToolbar } from '@angular/material/toolbar';
 import { LoginResponse } from './login.models';
+import { MatTooltipModule } from '@angular/material/tooltip';
 
 @Component({
   selector: 'app-login-dialog',
@@ -26,7 +27,8 @@ import { LoginResponse } from './login.models';
     FormsModule,
     MatIconModule,
     MatCheckboxModule,
-    MatToolbar
+    MatToolbar,
+    MatTooltipModule
   ],
   templateUrl: './login.component.html',
   styleUrl: './login.component.scss'

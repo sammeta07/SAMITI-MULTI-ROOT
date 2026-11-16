@@ -33,6 +33,7 @@ export class EventTasksService {
           budgetRequestStatus
           budgetRequestedByName
           canReviewBudgetRequest
+          canCancelBudgetRequest
           canRequestBudgetIncrease
           status
           ownerUserId
@@ -85,6 +86,7 @@ export class EventTasksService {
         budgetRequestStatus
         budgetRequestedByName
         canReviewBudgetRequest
+        canCancelBudgetRequest
         canRequestBudgetIncrease
         status
         ownerUserId

@@ -11,6 +11,7 @@ import { HttpErrorResponse } from '@angular/common/http';
 import { ViewUserDialogData, ViewUserDialogResponse, MemberDetailsResponse } from './view-user.models';
 import { ViewUserDialogService } from './view-user.service';
 import { MatToolbar } from '@angular/material/toolbar';
+import { MatTooltipModule } from '@angular/material/tooltip';
 
 @Component({
   selector: 'app-view-user-dialog',
@@ -24,7 +25,8 @@ import { MatToolbar } from '@angular/material/toolbar';
     MatDialogModule,
     MatFormFieldModule,
     MatInputModule,
-    MatToolbar
+    MatToolbar,
+    MatTooltipModule
   ],
   templateUrl: './view-user.component.html',
   styleUrl: './view-user.component.scss'

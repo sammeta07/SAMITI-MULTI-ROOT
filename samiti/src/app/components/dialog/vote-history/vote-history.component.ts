@@ -4,6 +4,7 @@ import { MatDialogModule, MatDialogRef, MAT_DIALOG_DATA } from '@angular/materia
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { MatToolbar } from '@angular/material/toolbar';
+import { MatTooltipModule } from '@angular/material/tooltip';
 import { EventVoteHistory } from '../../../features/dashboard/components/event-details/event-voting/event-voting.models';
 
 export interface VoteHistoryDialogData {
@@ -21,7 +22,8 @@ export interface VoteHistoryDialogData {
     MatDialogModule,
     MatButtonModule,
     MatIconModule,
-    MatToolbar
+    MatToolbar,
+    MatTooltipModule
   ],
   templateUrl: './vote-history.component.html',
   styleUrl: './vote-history.component.scss'

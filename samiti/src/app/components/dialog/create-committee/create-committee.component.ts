@@ -13,6 +13,7 @@ import { MatToolbar } from '@angular/material/toolbar';
 import { TextFormatService } from '../../../shared/services/text-format-service.service';
 import { AuthService } from '../../../core/services/auth.service';
 import { Router } from '@angular/router';
+import { MatTooltipModule } from '@angular/material/tooltip';
 
 @Component({
   selector: 'app-create-committee-dialog',
@@ -25,7 +26,8 @@ import { Router } from '@angular/router';
     MatInputModule,
     MatFormFieldModule,
     MatIconModule,
-    MatToolbar
+    MatToolbar,
+    MatTooltipModule
   ],
   templateUrl: './create-committee.component.html',
   styleUrl: './create-committee.component.scss'

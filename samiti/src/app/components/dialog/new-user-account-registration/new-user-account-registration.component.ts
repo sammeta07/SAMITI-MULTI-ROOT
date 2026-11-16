@@ -17,6 +17,7 @@ import { MatToolbar } from '@angular/material/toolbar';
 import { firstValueFrom } from 'rxjs';
 import { ImageAssetService } from '../../../core/services/image-asset.service';
 import { ImageCropperDialogComponent } from '../../../shared/components/image-cropper-dialog/image-cropper-dialog.component';
+import { MatTooltipModule } from '@angular/material/tooltip';
 
 const NEW_USER_ACCOUNT_REGISTRATION_DATE_FORMATS = {
   parse: {
@@ -71,7 +72,8 @@ class NewUserAccountRegistrationDateAdapter extends NativeDateAdapter {
     MatIconModule,
     MatRadioModule,
     MatDatepickerModule,
-    MatToolbar
+    MatToolbar,
+    MatTooltipModule
   ],
   templateUrl: './new-user-account-registration.component.html',
   styleUrl: './new-user-account-registration.component.scss'

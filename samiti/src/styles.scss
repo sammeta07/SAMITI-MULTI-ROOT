@@ -55,7 +55,7 @@ html body .mat-mdc-button-base:not(.mat-mdc-icon-button) {
 }
 
 /* Keep native and Material buttons compact across app views and overlays. */
-:root :is(button, .mat-mdc-button-base):not(.user-avatar-btn):not(.task-assignee-clear-btn):not([hidden]) {
+:root :is(button, .mat-mdc-button-base):not(.user-avatar-btn):not(.task-assignee-clear-btn):not(.drawer-close-btn):not(.confirm-dialog-close-btn):not([hidden]) {
   box-sizing: border-box;
   height: var(--samiti-action-height) !important;
   min-height: var(--samiti-action-height) !important;
@@ -73,7 +73,7 @@ html body .mat-mdc-button-base:not(.mat-mdc-icon-button) {
   [class*="button-icon"],
   [class*="btn-icon"],
   [class*="-icon"]
-):not([hidden]) {
+):not(.drawer-close-btn):not(.confirm-dialog-close-btn):not([hidden]) {
   width: var(--samiti-action-height) !important;
   min-width: var(--samiti-action-height) !important;
   max-width: var(--samiti-action-height) !important;
@@ -493,4 +493,38 @@ body.dialog-open {
   .mat-mdc-option.da-opt-row.mdc-list-item--disabled:hover {
     cursor: not-allowed !important;
   }
+}
+
+html body button.mat-mdc-icon-button:is(.drawer-close-btn, .confirm-dialog-close-btn) {
+  box-sizing: border-box !important;
+  display: inline-flex !important;
+  width: 32px !important;
+  min-width: 32px !important;
+  max-width: 32px !important;
+  height: 32px !important;
+  min-height: 32px !important;
+  max-height: 32px !important;
+  flex: 0 0 32px !important;
+  align-items: center !important;
+  justify-content: center !important;
+  padding: 4px !important;
+  border: 0 !important;
+  border-radius: 50% !important;
+  background: #f8fafc !important;
+  --mat-icon-button-container-shape: 50%;
+  --mat-icon-button-state-layer-size: 32px;
+  --mdc-icon-button-state-layer-shape: 50%;
+  clip-path: circle(50%);
+  overflow: hidden;
+
+  .mat-mdc-button-persistent-ripple,
+  .mat-mdc-button-ripple,
+  .mat-mdc-button-persistent-ripple::before {
+    border-radius: 50% !important;
+  }
+}
+
+html body button.mat-mdc-icon-button:is(.drawer-close-btn, .confirm-dialog-close-btn):hover mat-icon {
+  transform: rotate(90deg);
+  transition: transform 200ms cubic-bezier(0.4, 0, 0.2, 1);
 }

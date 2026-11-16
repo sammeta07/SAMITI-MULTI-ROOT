@@ -11,6 +11,7 @@ export interface TaskChild {
   budgetRequestStatus: string | null;
   budgetRequestedByName: string | null;
   canReviewBudgetRequest: boolean;
+  canCancelBudgetRequest: boolean;
   canRequestBudgetIncrease: boolean;
   status: string | null;
   ownerUserId: number | null;
@@ -34,6 +35,7 @@ export interface TaskDetailsPayload {
   budgetRequestStatus: string | null;
   budgetRequestedByName: string | null;
   canReviewBudgetRequest: boolean;
+  canCancelBudgetRequest: boolean;
   canRequestBudgetIncrease: boolean;
   status: string | null;
   eventId: number;
@@ -42,9 +44,11 @@ export interface TaskDetailsPayload {
   parentTaskName: string | null;
   ownerUserId: number | null;
   ownerName: string | null;
+  assignedByName: string | null;
   createdByName: string | null;
   createdAt: string;
   ownerAssignedAt: string | null;
+  updatedByName: string | null;
   updatedAt: string;
   children: TaskChild[];
   descendants: TaskChild[];

@@ -13,22 +13,9 @@
       <section class="task-header-card">
         <div class="task-header-main">
           
-          <!-- Top Row: Title, Status & Owner Controls -->
+          <!-- Top Row: Title, Owner & Budget -->
           <div class="task-header-primary">
-            @if (isEditingTask()) {
-              <input
-                class="task-header-title task-title-edit-input"
-                id="task-name"
-                [(ngModel)]="editingTaskName"
-                maxlength="255"
-                [disabled]="isSavingTaskName()"
-                aria-label="Task name"
-                (keydown.enter)="saveTaskName(taskDetails)"
-                (keydown.escape)="cancelTaskEditing()"
-              />
-            } @else {
-              <h3 class="task-header-title">{{ taskDetails.taskName | titlecase }}</h3>
-            }
+            <h3 class="task-header-title">{{ taskDetails.taskName | titlecase }}</h3>
 
             <span
               class="task-owner-pill"
@@ -40,12 +27,18 @@
             </span>
 
             <div class="task-header-budget-controls">
-              <span class="task-budget-pills task-header-budget-pills" [matTooltip]="'Budget : ' + formatTaskBudgetAmount(taskDetails.budgetAmount)">
-                <span class="task-budget-metric task-budget-remaining">
+              <span class="task-budget-pills task-header-budget-pills">
+                <span
+                  class="task-budget-metric task-budget-remaining"
+                  [matTooltip]="getTaskBudgetRemainingTooltip(taskDetails.taskId, taskDetails.budgetAmount)"
+                >
                   <span>Rem</span>
                   {{ getTaskBudgetRemainingDisplay(taskDetails.taskId, taskDetails.budgetAmount) }}
                 </span>
-                <span class="task-budget-metric task-budget-total">
+                <span
+                  class="task-budget-metric task-budget-total"
+                  [matTooltip]="'Sanctioned Amount - ' + formatTaskBudgetAmount(taskDetails.budgetAmount)"
+                >
                   <span>Tot</span>
                   {{ formatTaskBudgetAmountCompact(taskDetails.budgetAmount) }}
                 </span>
@@ -104,200 +97,56 @@
             </div>
           </div>
 
-          <!-- Bottom Row: Budget Controls & Actions -->
+          <!-- Bottom Row: Status, Request Label & Actions -->
           <div class="task-header-details-row">
-            <div class="task-header-budget-group task-header-budget-status-group">
-              @if (isEditingBudget() && taskDetails.canManage) {
-                <span class="task-status-control">
-                  <select
-                    class="task-status-pill task-status-dropdown"
-                    [ngClass]="'task-status-' + statusClass(editingBudgetStatus)"
-                    [value]="editingBudgetStatus"
-                    [disabled]="isSavingBudget()"
-                    [attr.aria-label]="'Update status for ' + taskDetails.taskName"
-                    title="Change task status"
-                    (click)="$event.stopPropagation()"
-                    (focus)="isStatusDropdownOpen.set(true)"
-                    (blur)="isStatusDropdownOpen.set(false)"
-                    (change)="editingBudgetStatus = $any($event.target).value"
-                  >
-                    @if (taskDetails.status === 'ASSIGNED') {
-                      <option value="ASSIGNED" disabled>
-                        ASSIGNED (LEGACY)
-                      </option>
-                    }
-                    @for (status of taskStatuses; track status) {
-                      <option [value]="status">
-                        {{ displayStatus(status) }}
-                      </option>
-                    }
-                  </select>
-                  <mat-icon class="task-status-dropdown-icon" aria-hidden="true">
-                    {{ isStatusDropdownOpen() ? 'expand_less' : 'expand_more' }}
-                  </mat-icon>
-                </span>
-              } @else {
-                <span class="task-status-pill task-header-status" [ngClass]="'task-status-' + statusClass(taskDetails.status)">
-                  <span class="status-dot"></span>
-                  {{ displayStatus(taskDetails.status) }}
-                </span>
-              }
-              @if (taskDetails.canEditTask || taskDetails.canManage) {
-                <button
-                  type="button"
-                  class="task-budget-header-edit-button"
-                  aria-label="Edit task budget"
-                  [title]="taskDetails.canEditTask ? 'Edit budget' : 'Edit task status'"
-                  [disabled]="isEditingBudget() || isSavingBudget()"
-                  (click)="startBudgetEditing(taskDetails)"
-                >
-                  <mat-icon>edit</mat-icon>
-                </button>
-              }
-              @if (isEditingBudget() && taskDetails.canEditTask) {
-                <div class="task-budget-edit-controls">
-                  <span>₹</span>
-                  <input
-                    type="number"
-                    min="0"
-                    step="0.01"
-                    [(ngModel)]="editingBudgetAmount"
-                    [disabled]="isSavingBudget()"
-                    aria-label="Task's own budget in rupees, excluding subtasks"
-                    (keydown.enter)="saveTaskBudget(taskDetails)"
-                    (keydown.escape)="cancelBudgetEditing()"
-                  />
-                  <button
-                    type="button"
-                    aria-label="Save task budget"
-                    title="Save budget"
-                    [disabled]="!canSaveTaskBudget(taskDetails)"
-                    (click)="saveTaskBudget(taskDetails)"
-                  >
-                    <mat-icon>{{ isSavingBudget() ? 'hourglass_top' : 'check' }}</mat-icon>
-                  </button>
-                  <button
-                    type="button"
-                    aria-label="Cancel budget edit"
-                    title="Cancel"
-                    [disabled]="isSavingBudget()"
-                    (click)="cancelBudgetEditing()"
-                  >
-                    <mat-icon>close</mat-icon>
-                  </button>
-                </div>
-              }
-            </div>
-            @if (taskDetails.canRequestBudgetIncrease && taskDetails.budgetRequestStatus !== 'PENDING') {
-              <div class="task-header-budget-group">
-                <span class="task-budget-increase-controls task-header-budget-increase">
-                  <input
-                    type="number"
-                    min="0.01"
-                    step="0.01"
-                    placeholder="Extra ₹"
-                    [(ngModel)]="budgetIncreaseAmount"
-                    [disabled]="isRequestingBudgetIncrease()"
-                    aria-label="Additional task budget amount"
-                    (keydown.enter)="requestBudgetIncrease(taskDetails); $event.preventDefault()"
-                  />
-                  <button
-                    type="button"
-                    [disabled]="isRequestingBudgetIncrease() || !canSubmitBudgetIncrease(budgetIncreaseAmount)"
-                    aria-label="Send budget increase request"
-                    title="Request additional budget"
-                    (click)="requestBudgetIncrease(taskDetails)"
-                  >
-                    <mat-icon>{{ isRequestingBudgetIncrease() ? 'hourglass_top' : 'send' }}</mat-icon>
-                  </button>
-                </span>
-              </div>
-            }
+            <span class="task-status-pill task-header-status" [ngClass]="'task-status-' + statusClass(taskDetails.status)">
+              {{ displayStatus(taskDetails.status) }}
+            </span>
             @if (taskDetails.budgetRequestStatus === 'PENDING') {
-              <div
-                class="task-header-budget-group"
-                [class.task-header-budget-sent-request]="!taskDetails.canReviewBudgetRequest"
-              >
+              @if (taskDetails.canReviewBudgetRequest) {
                 <span class="task-budget-request" title="Task budget increase request">
                   <mat-icon
                     class="task-budget-request-direction"
-                    [matTooltip]="taskDetails.canReviewBudgetRequest ? 'Received request' : 'Sent request'"
+                    matTooltip="Received request"
                     aria-hidden="true"
-                  >{{ taskDetails.canReviewBudgetRequest ? 'call_received' : 'call_made' }}</mat-icon>
+                  >call_received</mat-icon>
                   <span class="task-budget-request-label">Pending</span>
                   <span class="task-budget-request-amount">+{{ formatTaskBudgetAmount(taskDetails.requestedBudgetAmount) }}</span>
-                  @if (taskDetails.canReviewBudgetRequest && taskDetails.budgetRequestId) {
-                    <button
-                      type="button"
-                      [disabled]="reviewingTaskBudgetRequestIds.has(taskDetails.taskId)"
-                      aria-label="Approve budget request"
-                      matTooltip="Approve request"
-                      (click)="reviewTaskBudgetRequest(taskDetails, 'APPROVE')"
-                    >
-                      <mat-icon>check</mat-icon>
-                    </button>
-                    <button
-                      type="button"
-                      [disabled]="reviewingTaskBudgetRequestIds.has(taskDetails.taskId)"
-                      aria-label="Reject budget request"
-                      matTooltip="Reject request"
-                      (click)="reviewTaskBudgetRequest(taskDetails, 'REJECT')"
-                    >
-                      <mat-icon>close</mat-icon>
-                    </button>
-                  }
                 </span>
-              </div>
+              } @else {
+                <span class="task-budget-request" title="Task budget increase request">
+                  <mat-icon
+                    class="task-budget-request-direction"
+                    matTooltip="Sent request"
+                    aria-hidden="true"
+                  >call_made</mat-icon>
+                  <span class="task-budget-request-label">Pending</span>
+                  <span class="task-budget-request-amount">+{{ formatTaskBudgetAmount(taskDetails.requestedBudgetAmount) }}</span>
+                </span>
+              }
             }
-            @if (taskDetails.canEditTask) {
+            @if (canOpenTaskActions(taskDetails)) {
               <div class="task-header-actions">
-                @if (isEditingTask()) {
-                  <button
-                    mat-button
-                    class="task-header-icon-button task-save-button"
-                    type="button"
-                    aria-label="Save task name"
-                    title="Save task name"
-                    [disabled]="!canSaveTaskName(taskDetails)"
-                    (click)="saveTaskName(taskDetails)"
-                  >
-                    <mat-icon>{{ isSavingTaskName() ? 'hourglass_top' : 'check' }}</mat-icon>
-                    <span class="task-header-button-label">Save</span>
-                  </button>
-                  <button
-                    mat-button
-                    class="task-header-icon-button"
-                    type="button"
-                    aria-label="Cancel task edit"
-                    title="Cancel"
-                    [disabled]="isSavingTaskName()"
-                    (click)="cancelTaskEditing()"
-                  >
-                    <mat-icon>close</mat-icon>
-                    <span class="task-header-button-label">Cancel</span>
-                  </button>
-                } @else {
-                  <button
-                    mat-button
-                    class="task-header-icon-button task-edit-button"
-                    type="button"
-                    aria-label="Edit task"
-                    title="Edit task"
-                    [disabled]="isDeletingTask()"
-                    (click)="startTaskEditing(taskDetails)"
-                  >
-                    <mat-icon>edit</mat-icon>
-                    <span class="task-header-button-label">Edit</span>
-                  </button>
-                }
+                <button
+                  mat-button
+                  class="task-header-action-button task-edit-button"
+                  type="button"
+                  aria-label="Edit task details"
+                  title="Edit task details"
+                  [disabled]="isDeletingTask()"
+                  (click)="openTaskActionsDialog(taskDetails)"
+                >
+                  <mat-icon>edit</mat-icon>
+                  <span class="task-header-button-label">Edit</span>
+                </button>
               </div>
             }
-            @if (taskDetails.canDeleteTask && !isEditingTask()) {
+            @if (taskDetails.canDeleteTask) {
               <div class="task-header-actions">
                 <span class="task-delete-tooltip-host" [matTooltip]="getTaskDeletionTooltip(taskDetails)">
                   <button
                     mat-button
-                    class="task-header-icon-button task-delete-button"
+                    class="task-header-action-button task-delete-button"
                     type="button"
                     aria-label="Delete task"
                     [disabled]="isDeletingTask() || !!getTaskDeletionBlockReason(taskDetails)"
@@ -518,17 +367,20 @@
                         <!-- Panel Mid: Status Dropdown / Tag -->
                         <div class="task-panel-status-wrapper" (click)="$event.stopPropagation()" (keydown)="$event.stopPropagation()">
                           @if (child.budgetRequestStatus === 'PENDING') {
-                            <span class="task-budget-request">
-                              <mat-icon
-                                class="task-budget-request-direction"
-                                [matTooltip]="child.canReviewBudgetRequest ? 'Received request' : 'Sent request'"
-                                aria-hidden="true"
-                              >{{ child.canReviewBudgetRequest ? 'call_received' : 'call_made' }}</mat-icon>
-                              <span class="task-budget-request-label">Pending</span>
-                              <span class="task-budget-request-amount">+{{ formatTaskBudgetAmount(child.requestedBudgetAmount) }}</span>
+                            <div class="task-panel-budget-request-controls">
+                              <span class="task-budget-request">
+                                <mat-icon
+                                  class="task-budget-request-direction"
+                                  [matTooltip]="child.canReviewBudgetRequest ? 'Received request' : 'Sent request'"
+                                  aria-hidden="true"
+                                >{{ child.canReviewBudgetRequest ? 'call_received' : 'call_made' }}</mat-icon>
+                                <span class="task-budget-request-label">Pending</span>
+                                <span class="task-budget-request-amount">+{{ formatTaskBudgetAmount(child.requestedBudgetAmount) }}</span>
+                              </span>
                               @if (child.canReviewBudgetRequest) {
                                 <button
                                   type="button"
+                                  class="task-panel-budget-review-button task-panel-budget-approve-button"
                                   [disabled]="reviewingSubtaskBudgetRequestIds.has(child.taskId)"
                                   aria-label="Approve budget request"
                                   matTooltip="Approve request"
@@ -538,6 +390,7 @@
                                 </button>
                                 <button
                                   type="button"
+                                  class="task-panel-budget-review-button task-panel-budget-reject-button"
                                   [disabled]="reviewingSubtaskBudgetRequestIds.has(child.taskId)"
                                   aria-label="Reject budget request"
                                   matTooltip="Reject request"
@@ -546,7 +399,48 @@
                                   <mat-icon>close</mat-icon>
                                 </button>
                               }
-                            </span>
+                              @if (child.canCancelBudgetRequest) {
+                                <button
+                                  type="button"
+                                  class="task-panel-budget-review-button task-panel-budget-cancel-button"
+                                  [disabled]="cancellingSubtaskBudgetRequestIds.has(child.taskId)"
+                                  aria-label="Cancel budget request"
+                                  matTooltip="Cancel request"
+                                  (click)="cancelSubtaskBudgetRequest(child); $event.stopPropagation()"
+                                >
+                                  <mat-icon>cancel</mat-icon>
+                                </button>
+                              }
+                            </div>
+                          }
+                          @if (child.canRequestBudgetIncrease && child.budgetRequestStatus !== 'PENDING') {
+                            <div
+                              class="task-budget-increase-row"
+                              (click)="$event.stopPropagation()"
+                              (keydown)="$event.stopPropagation()"
+                            >
+                              <input
+                                type="number"
+                                min="0.01"
+                                step="0.01"
+                                placeholder="Request Money"
+                                [value]="subtaskBudgetIncreaseAmounts[child.taskId]"
+                                [disabled]="requestingSubtaskBudgetIncreaseIds.has(child.taskId)"
+                                [attr.aria-label]="'Additional budget amount for ' + child.taskName"
+                                (input)="subtaskBudgetIncreaseAmounts[child.taskId] = $any($event.target).value"
+                                (keydown.enter)="requestSubtaskBudgetIncrease(child); $event.preventDefault()"
+                                (click)="$event.stopPropagation()"
+                              />
+                              <button
+                                type="button"
+                                [disabled]="!canSubmitBudgetIncrease(subtaskBudgetIncreaseAmounts[child.taskId]) || requestingSubtaskBudgetIncreaseIds.has(child.taskId)"
+                                [attr.aria-label]="'Send budget increase request for ' + child.taskName"
+                                title="Send budget increase request"
+                                (click)="requestSubtaskBudgetIncrease(child); $event.stopPropagation()"
+                              >
+                                <mat-icon>{{ requestingSubtaskBudgetIncreaseIds.has(child.taskId) ? 'hourglass_top' : 'send' }}</mat-icon>
+                              </button>
+                            </div>
                           }
                           @if (editingSubtaskBudgetIds.has(child.taskId)) {
                             @if (child.canEditTask) {
@@ -564,24 +458,36 @@
                               (click)="$event.stopPropagation()"
                               />
                             } @else {
-                              <span class="task-budget-pills" [matTooltip]="'Budget : ' + formatTaskBudgetAmount(child.budgetAmount)">
-                                <span class="task-budget-metric task-budget-remaining">
+                              <span class="task-budget-pills">
+                                <span
+                                  class="task-budget-metric task-budget-remaining"
+                                  [matTooltip]="getTaskBudgetRemainingTooltip(child.taskId, child.budgetAmount)"
+                                >
                                   <span>Rem</span>
                                   {{ getTaskBudgetRemainingDisplay(child.taskId, child.budgetAmount) }}
                                 </span>
-                                <span class="task-budget-metric task-budget-total">
+                                <span
+                                  class="task-budget-metric task-budget-total"
+                                  [matTooltip]="'Sanctioned Amount - ' + formatTaskBudgetAmount(child.budgetAmount)"
+                                >
                                   <span>Tot</span>
                                   {{ formatTaskBudgetAmountCompact(child.budgetAmount) }}
                                 </span>
                               </span>
                             }
                           } @else {
-                            <span class="task-budget-pills" [matTooltip]="'Budget : ' + formatTaskBudgetAmount(child.budgetAmount)">
-                              <span class="task-budget-metric task-budget-remaining">
+                            <span class="task-budget-pills">
+                              <span
+                                class="task-budget-metric task-budget-remaining"
+                                [matTooltip]="getTaskBudgetRemainingTooltip(child.taskId, child.budgetAmount)"
+                              >
                                 <span>Rem</span>
                                 {{ getTaskBudgetRemainingDisplay(child.taskId, child.budgetAmount) }}
                               </span>
-                              <span class="task-budget-metric task-budget-total">
+                              <span
+                                class="task-budget-metric task-budget-total"
+                                [matTooltip]="'Sanctioned Amount - ' + formatTaskBudgetAmount(child.budgetAmount)"
+                              >
                                 <span>Tot</span>
                                 {{ formatTaskBudgetAmountCompact(child.budgetAmount) }}
                               </span>
@@ -590,10 +496,10 @@
                           @if (editingSubtaskBudgetIds.has(child.taskId) && child.canManage) {
                             <select
                               class="task-panel-status status-tag status-dropdown {{ 'tag-' + statusClass(subtaskBudgetEditStatuses[child.taskId]) }}"
-                              [value]="subtaskBudgetEditStatuses[child.taskId]"
+                              [(ngModel)]="subtaskBudgetEditStatuses[child.taskId]"
                               [disabled]="savingSubtaskBudgetIds.has(child.taskId)"
                               [attr.aria-label]="'Update status for ' + child.taskName"
-                              (change)="subtaskBudgetEditStatuses[child.taskId] = $any($event.target).value"
+                              (ngModelChange)="updateSubtaskStatus(child, $event)"
                             >
                               @if (child.status === 'ASSIGNED') {
                                 <option value="ASSIGNED" disabled>ASSIGNED (LEGACY)</option>
@@ -608,37 +514,6 @@
                             </span>
                           }
                         </div>
-
-                        @if (child.canRequestBudgetIncrease && child.budgetRequestStatus !== 'PENDING') {
-                          <div
-                            class="task-budget-increase-row"
-                            (click)="$event.stopPropagation()"
-                            (keydown)="$event.stopPropagation()"
-                          >
-                            <span>Request extra budget</span>
-                            <input
-                              type="number"
-                              min="0.01"
-                              step="0.01"
-                              placeholder="Amount (₹)"
-                              [value]="subtaskBudgetIncreaseAmounts[child.taskId]"
-                              [disabled]="requestingSubtaskBudgetIncreaseIds.has(child.taskId)"
-                              [attr.aria-label]="'Additional budget amount for ' + child.taskName"
-                              (input)="subtaskBudgetIncreaseAmounts[child.taskId] = $any($event.target).value"
-                              (keydown.enter)="requestSubtaskBudgetIncrease(child); $event.preventDefault()"
-                              (click)="$event.stopPropagation()"
-                            />
-                            <button
-                              type="button"
-                              [disabled]="!canSubmitBudgetIncrease(subtaskBudgetIncreaseAmounts[child.taskId]) || requestingSubtaskBudgetIncreaseIds.has(child.taskId)"
-                              [attr.aria-label]="'Send budget increase request for ' + child.taskName"
-                              title="Send budget increase request"
-                              (click)="requestSubtaskBudgetIncrease(child); $event.stopPropagation()"
-                            >
-                              <mat-icon>{{ requestingSubtaskBudgetIncreaseIds.has(child.taskId) ? 'hourglass_top' : 'send' }}</mat-icon>
-                            </button>
-                          </div>
-                        }
 
                         <!-- Panel Right: Assignee Read / Autocomplete Edit -->
                         <div class="task-assignee-summary" (click)="$event.stopPropagation()" (keydown)="$event.stopPropagation()">
@@ -799,7 +674,7 @@
                               <mat-icon>edit</mat-icon>
                             </button>
                           }
-                          @if (isEditingSubtaskRow(child.taskId)) {
+                          @if (isEditingSubtaskRow(child.taskId) && hasPendingSubtaskNonStatusChanges(child)) {
                             <button
                               mat-icon-button
                               type="button"

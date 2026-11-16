@@ -1,0 +1,194 @@
+<div class="drawer-layout-shell">
+  <mat-toolbar class="drawer-synchronized-header">
+    <div class="drawer-title-group">
+      <h2>{{ task.taskName | titlecase }}</h2>
+    </div>
+
+    <button mat-icon-button type="button" class="drawer-close-btn" (click)="onClose()" aria-label="Close dialog" matTooltip="Close">
+      <mat-icon>close</mat-icon>
+    </button>
+  </mat-toolbar>
+
+  <div class="dialog-body">
+    <!-- Task Information Card -->
+    <section class="task-dialog-card" aria-label="Task details">
+      <div class="section-header-row">
+        <span class="section-label-tag"><mat-icon>info</mat-icon> Task Information</span>
+        @if (!task.canManage) {
+          <span class="task-status-pill" [ngClass]="'task-status-' + statusClass(task.status)">
+            {{ displayStatus(task.status) }}
+          </span>
+        }
+      </div>
+
+      <div class="task-dialog-details-grid">
+        <div class="task-dialog-detail">
+          <span>Task ID</span>
+          <strong>#{{ task.taskId }}</strong>
+        </div>
+        <div class="task-dialog-detail">
+          <span>Parent task</span>
+          <strong>{{ task.parentTaskName || 'None' }}</strong>
+        </div>
+        <div class="task-dialog-detail">
+          <span>Created by</span>
+          <strong>{{ task.createdByName ? (task.createdByName | titlecase) : 'Unknown' }}</strong>
+        </div>
+        <div class="task-dialog-detail">
+          <span>Created at</span>
+          <strong>{{ task.createdAt | date: 'medium' }}</strong>
+        </div>
+        <div class="task-dialog-detail">
+          <span>Assigned by</span>
+          <strong>{{ task.assignedByName ? (task.assignedByName | titlecase) : 'Not assigned' }}</strong>
+        </div>
+        <div class="task-dialog-detail">
+          <span>Assigned at</span>
+          <strong>{{ task.ownerAssignedAt ? (task.ownerAssignedAt | date: 'medium') : 'Not assigned' }}</strong>
+        </div>
+        <div class="task-dialog-detail">
+          <span>Updated by</span>
+          <strong>{{ task.updatedByName ? (task.updatedByName | titlecase) : 'Unknown' }}</strong>
+        </div>
+        <div class="task-dialog-detail">
+          <span>Updated at</span>
+          <strong>{{ task.updatedAt | date: 'medium' }}</strong>
+        </div>
+      </div>
+    </section>
+
+    <!-- Edit & Management Section -->
+    @if (canOpenTaskActions()) {
+      <section class="task-dialog-card">
+        <div class="section-header-row">
+          <span class="section-label-tag"><mat-icon>tune</mat-icon> Manage & Edit</span>
+          <div class="budget-badges">
+            <span class="task-budget-metric task-budget-remaining" title="Remaining Budget">
+              <span>Remaining Budget</span> {{ formatBudget(data.remainingBudget) }}
+            </span>
+            <span class="task-budget-metric task-budget-total" title="Total Task Budget">
+              <span>Total Budget</span> {{ formatBudget(task.budgetAmount) }}
+            </span>
+          </div>
+        </div>
+
+        <div class="action-rows-stack">
+          @if (task.canEditTask) {
+            <div class="task-dialog-action-row">
+              <label for="task-dialog-name">Task name</label>
+              <div class="task-dialog-control">
+                <input id="task-dialog-name" [(ngModel)]="taskName" maxlength="255" placeholder="Task name" aria-label="Task name" [disabled]="isSavingAction()" />
+                <button mat-icon-button type="button" class="icon-action-button" [disabled]="isSavingAction() || !taskName.trim() || taskName.trim() === task.taskName" (click)="submitRename()" aria-label="Save task name" title="Save task name">
+                  <mat-icon>save</mat-icon>
+                </button>
+              </div>
+            </div>
+          }
+
+          @if (task.canAssignOwner) {
+            <div class="task-dialog-action-row">
+              <label for="task-dialog-owner">Owner</label>
+              <div class="task-dialog-control">
+                <select id="task-dialog-owner" [(ngModel)]="ownerUserId" aria-label="Task owner" [disabled]="isSavingAction()">
+                  <option value="">Unassigned</option>
+                  @for (assignee of task.taskAssignees; track assignee.userId) {
+                    <option [value]="assignee.userId">{{ assignee.name | titlecase }}</option>
+                  }
+                </select>
+                <button mat-icon-button type="button" class="icon-action-button" [disabled]="isSavingAction() || !hasOwnerChanged()" (click)="submitOwner()" aria-label="Save task owner" title="Save task owner">
+                  <mat-icon>save</mat-icon>
+                </button>
+              </div>
+            </div>
+          } @else {
+            <div class="task-dialog-action-row readonly-row">
+              <span class="task-dialog-row-label">Owner</span>
+              <strong>{{ task.ownerName || 'Unassigned' }}</strong>
+            </div>
+          }
+
+          @if (task.canManage) {
+            <div class="task-dialog-action-row">
+              <label for="task-dialog-status">Status</label>
+              <div class="task-dialog-control">
+                <select id="task-dialog-status" [(ngModel)]="status" aria-label="Task status" [disabled]="isSavingAction()">
+                  @if (!isSupportedStatus(task.status) && task.status) {
+                    <option [value]="currentStatusValue()" disabled>{{ displayStatus(task.status) }} (LEGACY)</option>
+                  }
+                  @for (taskStatus of taskStatuses; track taskStatus) {
+                    <option [value]="taskStatus">{{ displayStatus(taskStatus) }}</option>
+                  }
+                </select>
+                <button mat-icon-button type="button" class="icon-action-button" [disabled]="isSavingAction() || status === currentStatusValue()" (click)="submitStatus()" aria-label="Save task status" title="Save task status">
+                  <mat-icon>save</mat-icon>
+                </button>
+              </div>
+            </div>
+          }
+
+          @if (task.canEditTask) {
+            <div class="task-dialog-action-row">
+              <label for="task-dialog-budget">Budget (₹)</label>
+              <div class="task-dialog-control">
+                <input id="task-dialog-budget" type="number" min="0" step="0.01" [(ngModel)]="budgetAmount" placeholder="0" aria-label="Task budget in rupees" [disabled]="isSavingAction()" />
+                <button mat-icon-button type="button" class="icon-action-button" [disabled]="isSavingAction() || !canSaveBudget()" (click)="submitBudget()" aria-label="Save task budget" title="Save task budget">
+                  <mat-icon>save</mat-icon>
+                </button>
+              </div>
+            </div>
+          }
+        </div>
+
+        <!-- Pending Budget Requests Banner -->
+        @if (task.budgetRequestStatus === 'PENDING' && task.canReviewBudgetRequest && task.budgetRequestId) {
+          <div class="budget-request-banner">
+            <div class="request-banner-info">
+              <span class="task-dialog-row-label">Received Request</span>
+              <strong class="task-budget-request-amount">+{{ formatBudget(task.requestedBudgetAmount) }}</strong>
+            </div>
+            <div class="request-banner-actions">
+              <button mat-flat-button type="button" class="submit-action-btn" [disabled]="isSavingAction()" (click)="reviewBudget('APPROVE')">
+                <mat-icon>check_circle</mat-icon><span>Approve</span>
+              </button>
+              <button mat-button type="button" class="btn-reject-flat" [disabled]="isSavingAction()" (click)="reviewBudget('REJECT')">
+                <mat-icon>cancel</mat-icon><span>Reject</span>
+              </button>
+            </div>
+          </div>
+        } @else if (task.budgetRequestStatus === 'PENDING' && task.canCancelBudgetRequest && task.budgetRequestId) {
+          <div class="budget-request-banner">
+            <div class="request-banner-info">
+              <span class="task-dialog-row-label">Pending Request</span>
+              <strong class="task-budget-request-amount">+{{ formatBudget(task.requestedBudgetAmount) }}</strong>
+            </div>
+            <div class="request-banner-actions">
+              <button mat-button type="button" class="btn-reject-flat" [disabled]="isSavingAction()" (click)="cancelBudgetRequest()">
+                <mat-icon>cancel</mat-icon><span>Cancel</span>
+              </button>
+            </div>
+          </div>
+        }
+      </section>
+    }
+
+    <!-- Request Additional Budget Card -->
+    @if (task.canRequestBudgetIncrease && task.budgetRequestStatus !== 'PENDING') {
+      <section class="task-dialog-card">
+        <span class="section-label-tag"><mat-icon>request_quote</mat-icon> Request Additional Budget</span>
+        <div class="task-dialog-action-row">
+          <label for="task-dialog-request">Amount (₹)</label>
+          <div class="task-dialog-control">
+            <input id="task-dialog-request" type="number" min="0.01" step="0.01" [(ngModel)]="budgetIncreaseAmount" placeholder="0" aria-label="Additional budget amount" [disabled]="isSavingAction()" />
+            <button mat-flat-button type="button" class="submit-action-btn" [disabled]="isSavingAction() || !canSubmitBudgetRequest()" (click)="submitBudgetRequest()">
+              <mat-icon>send</mat-icon><span>Request</span>
+            </button>
+          </div>
+        </div>
+      </section>
+    }
+  </div>
+
+  <footer class="drawer-action-footer">
+    <button mat-button type="button" class="btn-cancel-flat" (click)="onClose()">Close</button>
+  </footer>
+</div>

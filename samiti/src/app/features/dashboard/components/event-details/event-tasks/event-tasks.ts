@@ -55,7 +55,7 @@ export class EventTasksComponent implements OnInit, OnDestroy {
   private currentEventId: number | null = null;
   private taskLoadRequestId = 0;
 
-  public eventData: EventTaskEntry[] | null = null;
+  private readonly eventDataState = signal<EventTaskEntry[] | null>(null);
   public taskAssignees: TaskAssignee[] = [];
   public taskAssigneeSearchText: Record<number, string> = {};
   public pendingTaskOwnerIds: Record<number, number | null> = {};
@@ -69,6 +69,7 @@ export class EventTasksComponent implements OnInit, OnDestroy {
   public readonly editingTaskBudgetIds = new Set<number>();
   public readonly savingTaskBudgetIds = new Set<number>();
   public readonly reviewingTaskBudgetRequestIds = new Set<number>();
+  public readonly cancellingTaskBudgetRequestIds = new Set<number>();
   public readonly requestingTaskBudgetIncreaseIds = new Set<number>();
   public taskBudgetEditAmounts: Record<number, string | number> = {};
   public taskBudgetIncreaseAmounts: Record<number, string | number> = {};
@@ -85,7 +86,15 @@ export class EventTasksComponent implements OnInit, OnDestroy {
   public hasLoadError = false;
 
   public get tasks(): EventTaskEntry[] {
-    return this.eventData ?? [];
+    return this.eventDataState() ?? [];
+  }
+
+  public get eventData(): EventTaskEntry[] | null {
+    return this.eventDataState();
+  }
+
+  public set eventData(value: EventTaskEntry[] | null) {
+    this.eventDataState.set(value);
   }
 
   public navigateToTask(taskId: number, event: Event): void {
@@ -317,7 +326,7 @@ export class EventTasksComponent implements OnInit, OnDestroy {
     if (this.isEditingTaskRow(task)) return;
     if (task.canManage) {
       this.taskBudgetEditAmounts[task.taskId] = task.budgetAmount;
-      this.taskStatusEditValues[task.taskId] = (task.status || 'NEW') as TaskStatus;
+      this.taskStatusEditValues[task.taskId] = this.statusValue(task.status) as TaskStatus;
       this.editingTaskBudgetIds.add(task.taskId);
       return;
     }
@@ -366,14 +375,60 @@ export class EventTasksComponent implements OnInit, OnDestroy {
     const isEditingBudget = this.editingTaskBudgetIds.has(task.taskId);
     const hasBudgetChange = isEditingBudget &&
       Number(budgetAmount).toFixed(2) !== Number(task.budgetAmount).toFixed(2);
-    const hasStatusChange = task.canManage &&
-      this.taskStatusEditValues[task.taskId] !== (task.status || 'NEW');
-    return (hasNameChange || hasOwnerChange || hasBudgetChange || hasStatusChange) &&
+    return (hasNameChange || hasOwnerChange || hasBudgetChange) &&
       !(hasNameChange && !taskName) &&
       (!isEditingBudget || isValidTaskBudgetAmount(budgetAmount)) &&
       !this.savingTaskNameIds.has(task.taskId) &&
       !this.assigningTaskIds.has(task.taskId) &&
       !this.savingTaskBudgetIds.has(task.taskId);
+  }
+
+  public hasPendingTaskNonStatusChanges(task: EventTaskEntry): boolean {
+    const taskName = String(this.taskNameEditText[task.taskId] ?? '').trim();
+    const hasNameChange = this.editingTaskNameIds.has(task.taskId) && taskName !== task.taskName;
+    const hasOwnerChange = this.hasPendingTaskOwnerChange(task);
+    const budgetAmount = String(this.taskBudgetEditAmounts[task.taskId] ?? '').trim();
+    const isEditingBudget = this.editingTaskBudgetIds.has(task.taskId);
+    const hasBudgetChange = isEditingBudget &&
+      Number(budgetAmount).toFixed(2) !== Number(task.budgetAmount).toFixed(2);
+    return hasNameChange || hasOwnerChange || hasBudgetChange;
+  }
+
+  public updateTaskStatus(task: EventTaskEntry, selectedStatus: string): void {
+    const status = this.statusValue(selectedStatus) as TaskStatus;
+    if (
+      !task.canManage ||
+      status === this.statusValue(task.status) ||
+      this.savingTaskBudgetIds.has(task.taskId)
+    ) return;
+
+    this.taskStatusEditValues[task.taskId] = status;
+    this.savingTaskBudgetIds.add(task.taskId);
+    this.taskDetailsService.updateTaskBudget(task.taskId, String(task.budgetAmount), status).subscribe({
+      next: (updatedTask) => {
+        this.savingTaskBudgetIds.delete(task.taskId);
+        this.editingTaskBudgetIds.delete(task.taskId);
+        delete this.taskBudgetEditAmounts[task.taskId];
+        delete this.taskStatusEditValues[task.taskId];
+        if (this.currentEventId === task.eventId) {
+          this.eventData = this.tasks.map((entry) => entry.taskId === task.taskId
+            ? {
+                ...entry,
+                budgetAmount: updatedTask.budgetAmount,
+                status: updatedTask.status,
+                updatedAt: updatedTask.updatedAt
+              }
+            : entry);
+          this.hierarchyTreeService.triggerHierarchyTreeRefresh();
+        }
+        this.notifier.success('Task status updated successfully.');
+      },
+      error: (error: Error) => {
+        this.savingTaskBudgetIds.delete(task.taskId);
+        this.taskStatusEditValues[task.taskId] = this.statusValue(task.status) as TaskStatus;
+        this.notifier.error(error.message || 'Failed to update task status.');
+      }
+    });
   }
 
   public hasPendingTaskOwnerChange(task: EventTaskEntry): boolean {
@@ -390,8 +445,6 @@ export class EventTasksComponent implements OnInit, OnDestroy {
     const budgetAmount = String(this.taskBudgetEditAmounts[task.taskId] ?? '').trim();
     const hasBudgetChange = this.editingTaskBudgetIds.has(task.taskId) &&
       Number(budgetAmount).toFixed(2) !== Number(task.budgetAmount).toFixed(2);
-    const hasStatusChange = task.canManage &&
-      this.taskStatusEditValues[task.taskId] !== (task.status || 'NEW');
     if (hasNameChange && !taskName) {
       this.notifier.error('Task title cannot be empty.');
       return;
@@ -474,12 +527,11 @@ export class EventTasksComponent implements OnInit, OnDestroy {
       });
     }
 
-    if (hasBudgetChange || hasStatusChange) {
+    if (hasBudgetChange) {
       this.savingTaskBudgetIds.add(task.taskId);
       this.taskDetailsService.updateTaskBudget(
         task.taskId,
-        budgetAmount,
-        hasStatusChange ? this.taskStatusEditValues[task.taskId] : undefined
+        budgetAmount
       ).subscribe({
         next: (updatedTask) => {
           this.savingTaskBudgetIds.delete(task.taskId);
@@ -497,14 +549,13 @@ export class EventTasksComponent implements OnInit, OnDestroy {
                   budgetRequestStatus: updatedTask.requestStatus,
                   budgetRequestedByName: updatedTask.requestStatus === 'PENDING' ? 'You' : null,
                   canReviewBudgetRequest: false,
+                  canCancelBudgetRequest: updatedTask.requestStatus === 'PENDING',
                   updatedAt: updatedTask.updatedAt
                 }
               : entry);
             this.notifier.success(updatedTask.requestStatus === 'PENDING'
               ? 'Budget increase request sent for approval.'
-              : hasStatusChange
-                ? 'Task budget and status updated.'
-                : 'Task budget updated.');
+              : 'Task budget updated.');
           }
         },
         error: (error: Error) => {
@@ -659,13 +710,13 @@ export class EventTasksComponent implements OnInit, OnDestroy {
   }
 
   public statusTagClass(status: string | null | undefined): string {
-    const normalized = String(status || '').toLowerCase().replace(/[^a-z0-9]+/g, '-');
+    const normalized = this.statusValue(status).toLowerCase().replace(/[^a-z0-9]+/g, '-');
     if (normalized === 'assigned') return 'tag-legacy-assigned';
     return normalized ? `tag-${normalized}` : 'tag-none';
   }
 
   public statusLabel(status: string | null | undefined): string {
-    return String(status || 'NEW').replace(/_/g, ' ');
+    return String(status || 'NEW').replace(/[_-]/g, ' ');
   }
 
   public isValidTaskBudgetAmount(value: string): boolean {
@@ -680,10 +731,23 @@ export class EventTasksComponent implements OnInit, OnDestroy {
     return formatTaskBudgetAmountCompact(value);
   }
 
-  public getTaskBudgetDisplay(task: EventTaskEntry): string {
-    const total = formatTaskBudgetAmountCompact(task.budgetAmount);
+  public getTaskBudgetRemainingDisplay(task: EventTaskEntry): string {
     const remaining = calculateTaskBudgetRemaining(task.taskId, task.budgetAmount, this.tasks);
-    return `Rem ${formatTaskBudgetAmountCompact(remaining)} / Tot ${total}`;
+    return formatTaskBudgetAmountCompact(remaining);
+  }
+
+  public getTaskBudgetRemainingTooltip(task: EventTaskEntry): string {
+    const remaining = calculateTaskBudgetRemaining(task.taskId, task.budgetAmount, this.tasks);
+    return `Remaining Amount - ${formatTaskBudgetAmount(remaining)}`;
+  }
+
+  public statusValue(status: string | null | undefined): string {
+    return String(status || 'NEW').trim().toUpperCase().replace(/[\s-]+/g, '_');
+  }
+
+  public isSupportedTaskStatus(status: string | null | undefined): boolean {
+    const normalizedStatus = this.statusValue(status);
+    return this.taskStatuses.some((taskStatus) => taskStatus === normalizedStatus);
   }
 
   public reviewTaskBudgetRequest(task: EventTaskEntry, decision: 'APPROVE' | 'REJECT'): void {
@@ -702,6 +766,8 @@ export class EventTasksComponent implements OnInit, OnDestroy {
               budgetRequestStatus: null,
               budgetRequestedByName: null,
               canReviewBudgetRequest: false,
+              canCancelBudgetRequest: false,
+              canRequestBudgetIncrease: result.canRequestBudgetIncrease ?? entry.canRequestBudgetIncrease,
               updatedAt: result.updatedAt
             }
           : entry);
@@ -710,6 +776,40 @@ export class EventTasksComponent implements OnInit, OnDestroy {
       error: (error: Error) => {
         this.reviewingTaskBudgetRequestIds.delete(task.taskId);
         this.notifier.error(error.message || 'Failed to review budget request.');
+      }
+    });
+  }
+
+  public cancelTaskBudgetRequest(task: EventTaskEntry): void {
+    const requestId = task.budgetRequestId;
+    if (
+      !requestId ||
+      !task.canCancelBudgetRequest ||
+      this.cancellingTaskBudgetRequestIds.has(task.taskId)
+    ) return;
+    this.cancellingTaskBudgetRequestIds.add(task.taskId);
+    this.taskDetailsService.cancelTaskBudgetRequest(requestId).subscribe({
+      next: (result) => {
+        this.cancellingTaskBudgetRequestIds.delete(task.taskId);
+        this.eventData = this.tasks.map((entry) => entry.taskId === task.taskId
+          ? {
+              ...entry,
+              budgetAmount: result.budgetAmount,
+              budgetRequestId: null,
+              requestedBudgetAmount: null,
+              budgetRequestStatus: null,
+              budgetRequestedByName: null,
+              canReviewBudgetRequest: false,
+              canCancelBudgetRequest: false,
+              canRequestBudgetIncrease: result.canRequestBudgetIncrease ?? entry.canRequestBudgetIncrease,
+              updatedAt: result.updatedAt
+            }
+          : entry);
+        this.notifier.success('Budget request cancelled.');
+      },
+      error: (error: Error) => {
+        this.cancellingTaskBudgetRequestIds.delete(task.taskId);
+        this.notifier.error(error.message || 'Failed to cancel budget request.');
       }
     });
   }
@@ -741,6 +841,7 @@ export class EventTasksComponent implements OnInit, OnDestroy {
               budgetRequestStatus: result.requestStatus,
               budgetRequestedByName: 'You',
               canReviewBudgetRequest: false,
+              canCancelBudgetRequest: true,
               updatedAt: result.updatedAt
             }
           : entry);

@@ -14,6 +14,7 @@ export const taskDetailsTypes = `
     budgetRequestStatus: String
     budgetRequestedByName: String
     canReviewBudgetRequest: Boolean!
+    canCancelBudgetRequest: Boolean!
     canRequestBudgetIncrease: Boolean!
     status: String
     ownerUserId: Int
@@ -48,6 +49,7 @@ export const taskDetailsTypes = `
     budgetRequestStatus: String
     budgetRequestedByName: String
     canReviewBudgetRequest: Boolean!
+    canCancelBudgetRequest: Boolean!
     canRequestBudgetIncrease: Boolean!
     status: String
     eventId: Int!
@@ -56,9 +58,11 @@ export const taskDetailsTypes = `
     parentTaskName: String
     ownerUserId: Int
     ownerName: String
+    assignedByName: String
     createdByName: String
     createdAt: String!
     ownerAssignedAt: String
+    updatedByName: String
     updatedAt: String!
     children: [TaskChild!]!
     descendants: [TaskChild!]!
@@ -97,6 +101,7 @@ export const taskDetailsResolvers = {
            CAST(GREATEST(0, budgetRequest.requested_amount - t.budget_amount) AS CHAR) AS requestedBudgetAmount,
            budgetRequest.status AS budgetRequestStatus,
            budgetRequester.name AS budgetRequestedByName,
+           budgetRequest.requested_by AS budgetRequestedBy,
            t.status,
            t.event_id AS eventId,
            e.name AS eventName,
@@ -106,7 +111,9 @@ export const taskDetailsResolvers = {
            t.owner_user_id AS ownerUserId,
            t.created_by AS createdBy,
            owner.name AS ownerName,
+           assignedBy.name AS assignedByName,
            creator.name AS createdByName,
+           updater.name AS updatedByName,
            DATE_FORMAT(t.created_at, '%Y-%m-%d %H:%i:%s') AS createdAt,
            DATE_FORMAT(t.owner_assigned_at, '%Y-%m-%d %H:%i:%s') AS ownerAssignedAt,
            DATE_FORMAT(t.updated_at, '%Y-%m-%d %H:%i:%s') AS updatedAt,
@@ -119,7 +126,9 @@ export const taskDetailsResolvers = {
            ON budgetRequest.task_id = t.id AND budgetRequest.status = 'PENDING'
          LEFT JOIN users budgetRequester ON budgetRequester.id = budgetRequest.requested_by
          LEFT JOIN users owner ON owner.id = t.owner_user_id
+         LEFT JOIN users assignedBy ON assignedBy.id = t.owner_assigned_by
          LEFT JOIN users creator ON creator.id = t.created_by
+         LEFT JOIN users updater ON updater.id = t.updated_by
          LEFT JOIN users_committees uc
            ON uc.committee_id = e.committee_id AND uc.user_id = ?
          WHERE t.id = ?
@@ -173,6 +182,7 @@ export const taskDetailsResolvers = {
            CAST(GREATEST(0, budgetRequest.requested_amount - t.budget_amount) AS CHAR) AS requestedBudgetAmount,
            budgetRequest.status AS budgetRequestStatus,
            budgetRequester.name AS budgetRequestedByName,
+           budgetRequest.requested_by AS budgetRequestedBy,
            t.status,
            t.owner_user_id AS ownerUserId,
            t.created_by AS createdBy,
@@ -199,6 +209,8 @@ export const taskDetailsResolvers = {
         return {
           canEditTask: Number(child.createdBy) === userId || isMasterAdmin,
           canManage: Number(child.ownerUserId) === userId || isMasterAdmin,
+          canCancelBudgetRequest: Boolean(child.budgetRequestId) &&
+            (Number(child.budgetRequestedBy) === userId || isMasterAdmin),
           canAssignOwner: isRootTask
             ? canAssignRootTaskOwners || Number(child.createdBy) === userId
             : isMasterAdmin || isChildParentOwner,
@@ -299,6 +311,8 @@ export const taskDetailsResolvers = {
         budgetRequestedByName: task.budgetRequestedByName || null,
         canReviewBudgetRequest: Boolean(task.budgetRequestId) &&
           (isTaskCreator || isMasterAdmin),
+        canCancelBudgetRequest: Boolean(task.budgetRequestId) &&
+          (Number(task.budgetRequestedBy) === userId || isMasterAdmin),
         canRequestBudgetIncrease: isTaskOwner && !isTaskCreator && !isMasterAdmin,
         status: task.status ? String(task.status) : null,
         eventId: Number(task.eventId),
@@ -307,9 +321,11 @@ export const taskDetailsResolvers = {
         parentTaskName: task.parentTaskName || null,
         ownerUserId: task.ownerUserId === null ? null : Number(task.ownerUserId),
         ownerName: task.ownerName || null,
+        assignedByName: task.assignedByName || null,
         createdByName: task.createdByName || null,
         createdAt: String(task.createdAt),
         ownerAssignedAt: task.ownerAssignedAt || null,
+        updatedByName: task.updatedByName || null,
         updatedAt: String(task.updatedAt),
         canEditTask: isTaskCreator || isMasterAdmin,
         canAssignOwner,

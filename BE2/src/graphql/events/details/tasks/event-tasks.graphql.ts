@@ -25,6 +25,7 @@ export const eventTasksTypes = `
     budgetRequestStatus: String
     budgetRequestedByName: String
     canReviewBudgetRequest: Boolean!
+    canCancelBudgetRequest: Boolean!
     canRequestBudgetIncrease: Boolean!
     status: String
     ownerUserId: Int
@@ -69,6 +70,7 @@ export const eventTasksTypes = `
     requestId: Int
     requestStatus: String
     requestedBudgetAmount: String
+    canRequestBudgetIncrease: Boolean
   }
 
   input CreateEventTaskInput {
@@ -92,6 +94,7 @@ export const eventTasksTypes = `
     budgetRequestStatus: String
     budgetRequestedByName: String
     canReviewBudgetRequest: Boolean!
+    canCancelBudgetRequest: Boolean!
     canRequestBudgetIncrease: Boolean!
     status: EventTaskStatus!
     ownerUserId: Int
@@ -120,6 +123,7 @@ export const createEventTaskMutationFields = `
   updateEventTaskBudget(taskId: Int!, budgetAmount: String!, status: String): UpdatedEventTaskBudget!
   requestTaskBudgetIncrease(taskId: Int!, amount: String!): UpdatedEventTaskBudget!
   reviewTaskBudgetRequest(requestId: Int!, decision: String!): UpdatedEventTaskBudget!
+  cancelTaskBudgetRequest(requestId: Int!): UpdatedEventTaskBudget!
   deleteEventTask(taskId: Int!): Boolean!
 `;
 
@@ -388,6 +392,7 @@ export const eventTasksResolvers = {
         requestedBudgetAmount: string | null;
         budgetRequestStatus: string | null;
         budgetRequestedByName: string | null;
+        budgetRequestedBy: number | null;
         status: string | null;
         createdBy: number | null;
         parentOwnerUserId: number | null;
@@ -412,6 +417,7 @@ export const eventTasksResolvers = {
            CAST(GREATEST(0, budgetRequest.requested_amount - t.budget_amount) AS CHAR) AS requestedBudgetAmount,
            budgetRequest.status AS budgetRequestStatus,
            budgetRequester.name AS budgetRequestedByName,
+           budgetRequest.requested_by AS budgetRequestedBy,
            t.status,
            t.owner_user_id AS ownerUserId,
            owner.name AS ownerName,
@@ -450,6 +456,8 @@ export const eventTasksResolvers = {
           budgetRequestedByName: taskRow.budgetRequestedByName || null,
           canReviewBudgetRequest: Boolean(taskRow.budgetRequestId) &&
             (Number(taskRow.createdBy) === loggedInUserId || canManageAnyTasks),
+          canCancelBudgetRequest: Boolean(taskRow.budgetRequestId) &&
+            (Number(taskRow.budgetRequestedBy) === loggedInUserId || canManageAnyTasks),
           canRequestBudgetIncrease: Number(taskRow.ownerUserId) === loggedInUserId &&
             Number(taskRow.createdBy) !== loggedInUserId &&
             !canManageAnyTasks,
@@ -944,6 +952,7 @@ export const eventTasksResolvers = {
         budgetRequestStatus: null,
         budgetRequestedByName: null,
         canReviewBudgetRequest: false,
+        canCancelBudgetRequest: false,
         canRequestBudgetIncrease: false,
         status: String(task.status),
         ownerUserId: task.ownerUserId === null ? null : Number(task.ownerUserId),
@@ -1262,6 +1271,69 @@ export const eventTasksResolvers = {
           requestId,
           requestStatus: decision === 'APPROVE' ? 'APPROVED' : 'REJECTED',
           requestedBudgetAmount: String(request.requestedAmount)
+        };
+      } catch (error) {
+        await connection.rollback();
+        throw error;
+      } finally {
+        connection.release();
+      }
+    },
+    async cancelTaskBudgetRequest(_: any, args: { requestId: number }, context: any) {
+      const requestId = Number(args?.requestId);
+      if (!Number.isInteger(requestId) || requestId <= 0) {
+        throwEventError('BAD_REQUEST', 'requestId must be a positive integer');
+      }
+
+      const loggedInUserId = await getLoggedInUserId(context);
+      const connection = await getConnection();
+      try {
+        await connection.beginTransaction();
+        const [requestRows] = await connection.query<any[]>(
+          `SELECT request.id, request.task_id AS taskId,
+                  request.requested_amount AS requestedAmount,
+                  request.requested_by AS requestedBy, request.status,
+                  task.budget_amount AS currentBudget, task.status AS taskStatus,
+                  task.event_id AS eventId,
+                  task.owner_user_id AS ownerUserId, task.created_by AS createdBy,
+                  DATE_FORMAT(task.updated_at, '%Y-%m-%d %H:%i:%s') AS updatedAt
+           FROM task_budget_requests request
+           INNER JOIN tasks task ON task.id = request.task_id
+           WHERE request.id = ? FOR UPDATE`,
+          [requestId]
+        );
+        const request = requestRows[0];
+        if (!request) throwEventError('NOT_FOUND', 'Budget request not found');
+        if (request.status !== 'PENDING') {
+          throwEventError('CONFLICT', 'This budget request is no longer pending');
+        }
+
+        const isMasterAdmin = await hasPermission(
+          loggedInUserId,
+          PERMISSIONS.EVENT_TASK_MANAGE_ANY,
+          { type: 'EVENT', id: Number(request.eventId) }
+        );
+        if (Number(request.requestedBy) !== loggedInUserId && !isMasterAdmin) {
+          throwEventError('FORBIDDEN', 'Only the requester or a master admin can cancel this budget request');
+        }
+
+        await connection.execute(
+          `UPDATE task_budget_requests
+           SET status = 'CANCELLED', reviewed_by = ?, reviewed_at = CURRENT_TIMESTAMP
+           WHERE id = ? AND status = 'PENDING'`,
+          [loggedInUserId, requestId]
+        );
+        await connection.commit();
+        return {
+          budgetAmount: String(request.currentBudget),
+          status: String(request.taskStatus),
+          updatedAt: String(request.updatedAt),
+          requestId,
+          requestStatus: 'CANCELLED',
+          requestedBudgetAmount: String(request.requestedAmount),
+          canRequestBudgetIncrease: Number(request.ownerUserId) === loggedInUserId &&
+            Number(request.createdBy) !== loggedInUserId &&
+            !isMasterAdmin
         };
       } catch (error) {
         await connection.rollback();

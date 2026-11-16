@@ -28,6 +28,7 @@ export class TaskDetailsService {
         budgetRequestStatus
         budgetRequestedByName
         canReviewBudgetRequest
+        canCancelBudgetRequest
         canRequestBudgetIncrease
         status
         eventId
@@ -36,9 +37,11 @@ export class TaskDetailsService {
         parentTaskName
         ownerUserId
         ownerName
+        assignedByName
         createdByName
         createdAt
         ownerAssignedAt
+        updatedByName
         canManage
         canEditTask
         canAssignOwner
@@ -54,6 +57,7 @@ export class TaskDetailsService {
           budgetRequestStatus
           budgetRequestedByName
           canReviewBudgetRequest
+          canCancelBudgetRequest
           canRequestBudgetIncrease
           status
           ownerUserId
@@ -77,6 +81,7 @@ export class TaskDetailsService {
           budgetRequestStatus
           budgetRequestedByName
           canReviewBudgetRequest
+          canCancelBudgetRequest
           canRequestBudgetIncrease
           status
           ownerUserId
@@ -302,6 +307,39 @@ export class TaskDetailsService {
         const result = response.data?.reviewTaskBudgetRequest;
         if (!result) {
           throw new Error('GraphQL response is missing reviewTaskBudgetRequest');
+        }
+        return result;
+      })
+    );
+  }
+
+  public cancelTaskBudgetRequest(requestId: number): Observable<TaskBudgetUpdateResult> {
+    const mutation = `mutation CancelTaskBudgetRequest($requestId: Int!) {
+      cancelTaskBudgetRequest(requestId: $requestId) {
+        budgetAmount
+        status
+        updatedAt
+        requestId
+        requestStatus
+        requestedBudgetAmount
+        canRequestBudgetIncrease
+      }
+    }`;
+
+    return this.http.post<GraphqlResponse<{
+      cancelTaskBudgetRequest: TaskBudgetUpdateResult;
+    }>>(
+      this.graphqlUrl,
+      { query: mutation, variables: { requestId } },
+      { withCredentials: true }
+    ).pipe(
+      map((response) => {
+        if (response.errors?.length) {
+          throw new Error(response.errors.map((error) => error.message).join('; '));
+        }
+        const result = response.data?.cancelTaskBudgetRequest;
+        if (!result) {
+          throw new Error('GraphQL response is missing cancelTaskBudgetRequest');
         }
         return result;
       })
