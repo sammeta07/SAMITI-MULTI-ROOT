@@ -1,6 +1,6 @@
 import { Component, inject, signal, OnInit, OnDestroy, QueryList, ViewChildren } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { ActivatedRoute, Router } from '@angular/router';
+import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { MatIconModule } from '@angular/material/icon';
 import { MatButtonModule } from '@angular/material/button';
 import { MatExpansionModule, MatExpansionPanel } from '@angular/material/expansion';
@@ -12,20 +12,23 @@ import { MatTooltipModule } from '@angular/material/tooltip';
 import { firstValueFrom, Subscription } from 'rxjs';
 
 import { EventTasksService } from './event-tasks.service';
-import { calculateTaskBudgetRemaining, EventTaskEntry, EventTasksPayload, formatTaskBudgetAmount, formatTaskBudgetAmountCompact, isValidTaskBudgetAmount, TaskAssignee, TASK_STATUSES, TaskStatus, taskHierarchyLevelBackground } from './event-tasks.models';
+import { calculateTaskBudgetRemaining, EventTaskEntry, EventTasksPayload, formatTaskBudgetAmount, isValidTaskBudgetAmount, TaskAssignee, TASK_STATUSES, TaskStatus, taskHierarchyLevelBackground } from './event-tasks.models';
 import { NotifierService } from '../../../../../shared/notifier/notifier.service';
 import { ConfirmDialogService } from '../../../../../components/dialog/confirm/confirm-dialog.service';
 import { ConfirmDialogData } from '../../../../../components/dialog/confirm/confirm-dialog.models';
 import { DashboardHierarchyTreeService } from '../../dashboard-hierarchy-tree/dashboard-hierarchy-tree.service';
 import { EventDetailsStateService } from '../event-details-state.service';
 import { TaskDetailsService } from '../../task-details/task-details.service';
-import { TaskFinanceComponent } from '../../task-finance/task-finance.component';
+import { TaskActionsDialogService } from '../../task-details/task-actions-dialog.service';
+import { TaskDetailsPayload } from '../../task-details/task-details.models';
+import { TaskFinanceDialogService } from '../../task-finance/task-finance-dialog.service';
 
 @Component({
   selector: 'app-event-tasks',
   standalone: true,
   imports: [
     CommonModule,
+    RouterLink,
     MatIconModule,
     MatButtonModule,
     MatExpansionModule,
@@ -33,8 +36,7 @@ import { TaskFinanceComponent } from '../../task-finance/task-finance.component'
     MatAutocompleteModule,
     MatFormFieldModule,
     MatInputModule,
-    MatTooltipModule,
-    TaskFinanceComponent
+    MatTooltipModule
   ],
   templateUrl: './event-tasks.html',
   styleUrl: './event-tasks.scss'
@@ -50,6 +52,8 @@ export class EventTasksComponent implements OnInit, OnDestroy {
   private readonly hierarchyTreeService = inject(DashboardHierarchyTreeService);
   private readonly eventDetailsState = inject(EventDetailsStateService);
   private readonly taskDetailsService = inject(TaskDetailsService);
+  private readonly taskActionsDialog = inject(TaskActionsDialogService);
+  private readonly taskFinanceDialog = inject(TaskFinanceDialogService);
 
   private parentParamsSub?: Subscription;
   private currentEventId: number | null = null;
@@ -101,6 +105,53 @@ export class EventTasksComponent implements OnInit, OnDestroy {
     event.preventDefault();
     event.stopPropagation();
     void this.router.navigate(['/dashboard', 'task', taskId]);
+  }
+
+  public canOpenTaskActions(task: EventTaskEntry): boolean {
+    return task.canEditTask || task.canAssignOwner || task.canManage || task.canRequestBudgetIncrease ||
+      task.canReviewBudgetRequest || task.canCancelBudgetRequest;
+  }
+
+  public openTaskActionsDialog(task: EventTaskEntry, event: Event): void {
+    event.stopPropagation();
+    void this.taskActionsDialog.open(task.taskId, (updatedTask) => this.updateTaskFromDialog(task, updatedTask));
+  }
+
+  private updateTaskFromDialog(originalTask: EventTaskEntry, updatedTask: TaskDetailsPayload): void {
+    if (this.currentEventId !== originalTask.eventId) return;
+    this.eventData = this.tasks.map((task) => task.taskId === updatedTask.taskId
+      ? {
+          ...task,
+          taskName: updatedTask.taskName,
+          budgetAmount: updatedTask.budgetAmount,
+          budgetRequestId: updatedTask.budgetRequestId,
+          requestedBudgetAmount: updatedTask.requestedBudgetAmount,
+          budgetRequestStatus: updatedTask.budgetRequestStatus,
+          budgetRequestedByName: updatedTask.budgetRequestedByName,
+          canReviewBudgetRequest: updatedTask.canReviewBudgetRequest,
+          canCancelBudgetRequest: updatedTask.canCancelBudgetRequest,
+          canRequestBudgetIncrease: updatedTask.canRequestBudgetIncrease,
+          status: updatedTask.status,
+          ownerUserId: updatedTask.ownerUserId,
+          ownerName: updatedTask.ownerName,
+          assignedByName: updatedTask.assignedByName,
+          createdByName: updatedTask.createdByName,
+          updatedByName: updatedTask.updatedByName,
+          createdAt: updatedTask.createdAt,
+          ownerAssignedAt: updatedTask.ownerAssignedAt,
+          updatedAt: updatedTask.updatedAt,
+          canManage: updatedTask.canManage,
+          canEditTask: updatedTask.canEditTask,
+          canAssignOwner: updatedTask.canAssignOwner,
+          canDelete: updatedTask.canDeleteTask,
+          canAccessFinance: updatedTask.canAccessFinance
+        }
+      : task);
+  }
+
+  public openTaskFinanceDialog(taskId: number, taskName: string, event: Event): void {
+    event.stopPropagation();
+    this.taskFinanceDialog.open(taskId, taskName);
   }
 
   public get flattenedTasks(): Array<{ task: EventTaskEntry; depth: number }> {
@@ -727,13 +778,9 @@ export class EventTasksComponent implements OnInit, OnDestroy {
     return formatTaskBudgetAmount(value);
   }
 
-  public formatTaskBudgetAmountCompact(value: string | number | null | undefined): string {
-    return formatTaskBudgetAmountCompact(value);
-  }
-
   public getTaskBudgetRemainingDisplay(task: EventTaskEntry): string {
     const remaining = calculateTaskBudgetRemaining(task.taskId, task.budgetAmount, this.tasks);
-    return formatTaskBudgetAmountCompact(remaining);
+    return formatTaskBudgetAmount(remaining);
   }
 
   public getTaskBudgetRemainingTooltip(task: EventTaskEntry): string {

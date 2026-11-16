@@ -89,12 +89,92 @@
             <div class="task-dialog-action-row">
               <label for="task-dialog-owner">Owner</label>
               <div class="task-dialog-control">
-                <select id="task-dialog-owner" [(ngModel)]="ownerUserId" aria-label="Task owner" [disabled]="isSavingAction()">
-                  <option value="">Unassigned</option>
-                  @for (assignee of task.taskAssignees; track assignee.userId) {
-                    <option [value]="assignee.userId">{{ assignee.name | titlecase }}</option>
-                  }
-                </select>
+                <span class="task-assignee-autocomplete-box">
+                  <mat-form-field
+                    class="task-panel-assignee-field"
+                    [class.task-assignee-unassigned]="!ownerUserId"
+                    appearance="fill"
+                    subscriptSizing="dynamic"
+                  >
+                    <span matPrefix class="da-input-icon"><mat-icon>search</mat-icon></span>
+                    @if (ownerSearchText && getSelectedOwnerAssignee(); as selectedOwner) {
+                      <span matPrefix class="task-assignee-selected-owner-avatar">
+                        @if (selectedOwner.photo) {
+                          <img [src]="selectedOwner.photo" [alt]="selectedOwner.name" />
+                        } @else {
+                          <span>{{ getInitials(selectedOwner.name) }}</span>
+                        }
+                      </span>
+                    }
+                    <input
+                      id="task-dialog-owner"
+                      type="text"
+                      matInput
+                      autocomplete="off"
+                      placeholder="Search member..."
+                      [value]="ownerSearchText"
+                      [disabled]="isSavingAction()"
+                      (input)="onOwnerSearch($any($event.target).value)"
+                      (focus)="onOwnerFocus(ownerAutocompleteTrigger)"
+                      [matAutocomplete]="ownerAutocomplete"
+                      #ownerAutocompleteTrigger="matAutocompleteTrigger"
+                      aria-label="Task owner"
+                    />
+                    @if (!isSavingAction()) {
+                      <span matSuffix class="task-assignee-input-suffix">
+                        @if (ownerSearchText) {
+                          <button
+                            class="task-assignee-clear-btn"
+                            type="button"
+                            aria-label="Clear member search"
+                            title="Clear search"
+                            (mousedown)="clearOwnerSearch(ownerAutocompleteTrigger, $event)"
+                          >
+                            <mat-icon>close</mat-icon>
+                          </button>
+                        }
+                      </span>
+                    }
+                    <mat-autocomplete
+                      #ownerAutocomplete="matAutocomplete"
+                      class="da-task-assignee-autocomplete"
+                      [displayWith]="displayOwnerName"
+                      hideSingleSelectionIndicator
+                      (closed)="onOwnerAutocompleteClosed()"
+                      (optionSelected)="onOwnerSelected($event)"
+                    >
+                      @for (assignee of getFilteredOwnerAssignees(); track assignee.userId) {
+                        <mat-option
+                          [value]="assignee.userId"
+                          [disabled]="isCurrentOwnerAssignee(assignee.userId)"
+                          class="da-opt-row"
+                          [ngClass]="getRoleColorClass(assignee.committeeRole)"
+                        >
+                          <div class="mat-auto-options">
+                            <span class="da-opt-avatar" [ngClass]="getRoleColorClass(assignee.committeeRole)">
+                              @if (assignee.photo) {
+                                <img [src]="assignee.photo" [alt]="assignee.name" class="da-opt-img" />
+                              } @else {
+                                <span class="da-opt-initials">{{ getInitials(assignee.name) }}</span>
+                              }
+                            </span>
+                            <div class="mat-auto-options-details">
+                              <span class="da-opt-name">{{ assignee.name | titlecase }}</span>
+                              <span class="da-opt-email">{{ assignee.email }}</span>
+                            </div>
+                            @if (assignee.roleIcon) {
+                              <span class="mat-auto-options-cup" [style.color]="assignee.roleColor || '#16a34a'">
+                                {{ assignee.roleIcon }}
+                              </span>
+                            }
+                          </div>
+                        </mat-option>
+                      } @empty {
+                        <mat-option disabled class="da-opt-empty">No members found</mat-option>
+                      }
+                    </mat-autocomplete>
+                  </mat-form-field>
+                </span>
                 <button mat-icon-button type="button" class="icon-action-button" [disabled]="isSavingAction() || !hasOwnerChanged()" (click)="submitOwner()" aria-label="Save task owner" title="Save task owner">
                   <mat-icon>save</mat-icon>
                 </button>

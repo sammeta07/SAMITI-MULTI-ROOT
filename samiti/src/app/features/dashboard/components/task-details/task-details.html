@@ -15,6 +15,7 @@
           
           <!-- Top Row: Title, Owner & Budget -->
           <div class="task-header-primary">
+            @let ownerDesignation = getTaskOwnerDesignation(taskDetails.ownerUserId);
             <h3 class="task-header-title">{{ taskDetails.taskName | titlecase }}</h3>
 
             <span
@@ -23,7 +24,26 @@
               [title]="(taskDetails.ownerName || 'Unassigned') | titlecase"
             >
               <span class="task-owner-label">OWNER:</span>
-              <span class="task-owner-name">{{ (taskDetails.ownerName || 'Unassigned') | titlecase }}</span>
+              @if (ownerDesignation) {
+                <span class="task-owner-avatar" [ngClass]="getRoleColorClass(ownerDesignation.committeeRole)">
+                  @if (ownerDesignation.photo) {
+                    <img [src]="ownerDesignation.photo" [alt]="taskDetails.ownerName || 'Task owner'" />
+                  } @else {
+                    <span>{{ getInitials(taskDetails.ownerName) }}</span>
+                  }
+                </span>
+              }
+              <span class="task-owner-name">{{ taskDetails.ownerName || 'Unassigned' }}</span>
+              @if (ownerDesignation?.roleIcon) {
+                <span
+                  class="task-assignee-owner-designation"
+                  [style.color]="ownerDesignation?.roleColor || '#16a34a'"
+                  [attr.aria-label]="ownerDesignation?.committeeRole"
+                  [title]="ownerDesignation?.committeeRole"
+                >
+                  {{ ownerDesignation?.roleIcon }}
+                </span>
+              }
             </span>
 
             <div class="task-header-budget-controls">
@@ -32,15 +52,13 @@
                   class="task-budget-metric task-budget-remaining"
                   [matTooltip]="getTaskBudgetRemainingTooltip(taskDetails.taskId, taskDetails.budgetAmount)"
                 >
-                  <span>Rem</span>
-                  {{ getTaskBudgetRemainingDisplay(taskDetails.taskId, taskDetails.budgetAmount) }}
+                  {{ formatTaskBudgetAmount(getTaskBudgetRemainingAmount(taskDetails.taskId, taskDetails.budgetAmount)) }}
                 </span>
                 <span
                   class="task-budget-metric task-budget-total"
                   [matTooltip]="'Sanctioned Amount - ' + formatTaskBudgetAmount(taskDetails.budgetAmount)"
                 >
-                  <span>Tot</span>
-                  {{ formatTaskBudgetAmountCompact(taskDetails.budgetAmount) }}
+                  {{ formatTaskBudgetAmount(taskDetails.budgetAmount) }}
                 </span>
               </span>
             </div>
@@ -80,8 +98,12 @@
                   <span class="task-details-popover-value">{{ (taskDetails.createdByName || 'Unknown') | titlecase }}</span>
                 </div>
                 <div class="task-details-popover-item">
-                  <span class="task-details-popover-label">Created</span>
+                  <span class="task-details-popover-label">Created at</span>
                   <span class="task-details-popover-value">{{ taskDetails.createdAt | date: 'medium' }}</span>
+                </div>
+                <div class="task-details-popover-item">
+                  <span class="task-details-popover-label">Assigned by</span>
+                  <span class="task-details-popover-value">{{ (taskDetails.assignedByName || 'Not assigned') | titlecase }}</span>
                 </div>
                 <div class="task-details-popover-item">
                   <span class="task-details-popover-label">Assigned at</span>
@@ -90,7 +112,11 @@
                   </span>
                 </div>
                 <div class="task-details-popover-item">
-                  <span class="task-details-popover-label">Last updated</span>
+                  <span class="task-details-popover-label">Updated by</span>
+                  <span class="task-details-popover-value">{{ (taskDetails.updatedByName || 'Unknown') | titlecase }}</span>
+                </div>
+                <div class="task-details-popover-item">
+                  <span class="task-details-popover-label">Updated at</span>
                   <span class="task-details-popover-value">{{ taskDetails.updatedAt | date: 'medium' }}</span>
                 </div>
               </div>
@@ -99,6 +125,17 @@
 
           <!-- Bottom Row: Status, Request Label & Actions -->
           <div class="task-header-details-row">
+            @if (taskDetails.parentTaskId) {
+              <a
+                class="task-parent-task-pill"
+                [routerLink]="['/dashboard', 'task', taskDetails.parentTaskId]"
+                [matTooltip]="(taskDetails.parentTaskName || 'Parent task') | titlecase"
+                matTooltipPosition="above"
+                [attr.aria-label]="'Open parent task ' + taskDetails.parentTaskId"
+              >
+                Parent ID #{{ taskDetails.parentTaskId }}
+              </a>
+            }
             <span class="task-status-pill task-header-status" [ngClass]="'task-status-' + statusClass(taskDetails.status)">
               {{ displayStatus(taskDetails.status) }}
             </span>
@@ -320,7 +357,6 @@
                     class="event-task-panel task-subtask-panel"
                     [expanded]="false"
                     [style.--task-level-background]="getSubtaskLevelBackground(entry.depth)"
-                    (opened)="subtaskFinance.load()"
                   >
                     <mat-expansion-panel-header>
                       <div class="task-panel-summary">
@@ -367,80 +403,15 @@
                         <!-- Panel Mid: Status Dropdown / Tag -->
                         <div class="task-panel-status-wrapper" (click)="$event.stopPropagation()" (keydown)="$event.stopPropagation()">
                           @if (child.budgetRequestStatus === 'PENDING') {
-                            <div class="task-panel-budget-request-controls">
-                              <span class="task-budget-request">
-                                <mat-icon
-                                  class="task-budget-request-direction"
-                                  [matTooltip]="child.canReviewBudgetRequest ? 'Received request' : 'Sent request'"
-                                  aria-hidden="true"
-                                >{{ child.canReviewBudgetRequest ? 'call_received' : 'call_made' }}</mat-icon>
-                                <span class="task-budget-request-label">Pending</span>
-                                <span class="task-budget-request-amount">+{{ formatTaskBudgetAmount(child.requestedBudgetAmount) }}</span>
-                              </span>
-                              @if (child.canReviewBudgetRequest) {
-                                <button
-                                  type="button"
-                                  class="task-panel-budget-review-button task-panel-budget-approve-button"
-                                  [disabled]="reviewingSubtaskBudgetRequestIds.has(child.taskId)"
-                                  aria-label="Approve budget request"
-                                  matTooltip="Approve request"
-                                  (click)="reviewSubtaskBudgetRequest(child, 'APPROVE'); $event.stopPropagation()"
-                                >
-                                  <mat-icon>check</mat-icon>
-                                </button>
-                                <button
-                                  type="button"
-                                  class="task-panel-budget-review-button task-panel-budget-reject-button"
-                                  [disabled]="reviewingSubtaskBudgetRequestIds.has(child.taskId)"
-                                  aria-label="Reject budget request"
-                                  matTooltip="Reject request"
-                                  (click)="reviewSubtaskBudgetRequest(child, 'REJECT'); $event.stopPropagation()"
-                                >
-                                  <mat-icon>close</mat-icon>
-                                </button>
-                              }
-                              @if (child.canCancelBudgetRequest) {
-                                <button
-                                  type="button"
-                                  class="task-panel-budget-review-button task-panel-budget-cancel-button"
-                                  [disabled]="cancellingSubtaskBudgetRequestIds.has(child.taskId)"
-                                  aria-label="Cancel budget request"
-                                  matTooltip="Cancel request"
-                                  (click)="cancelSubtaskBudgetRequest(child); $event.stopPropagation()"
-                                >
-                                  <mat-icon>cancel</mat-icon>
-                                </button>
-                              }
-                            </div>
-                          }
-                          @if (child.canRequestBudgetIncrease && child.budgetRequestStatus !== 'PENDING') {
-                            <div
-                              class="task-budget-increase-row"
-                              (click)="$event.stopPropagation()"
-                              (keydown)="$event.stopPropagation()"
-                            >
-                              <input
-                                type="number"
-                                min="0.01"
-                                step="0.01"
-                                placeholder="Request Money"
-                                [value]="subtaskBudgetIncreaseAmounts[child.taskId]"
-                                [disabled]="requestingSubtaskBudgetIncreaseIds.has(child.taskId)"
-                                [attr.aria-label]="'Additional budget amount for ' + child.taskName"
-                                (input)="subtaskBudgetIncreaseAmounts[child.taskId] = $any($event.target).value"
-                                (keydown.enter)="requestSubtaskBudgetIncrease(child); $event.preventDefault()"
-                                (click)="$event.stopPropagation()"
-                              />
-                              <button
-                                type="button"
-                                [disabled]="!canSubmitBudgetIncrease(subtaskBudgetIncreaseAmounts[child.taskId]) || requestingSubtaskBudgetIncreaseIds.has(child.taskId)"
-                                [attr.aria-label]="'Send budget increase request for ' + child.taskName"
-                                title="Send budget increase request"
-                                (click)="requestSubtaskBudgetIncrease(child); $event.stopPropagation()"
-                              >
-                                <mat-icon>{{ requestingSubtaskBudgetIncreaseIds.has(child.taskId) ? 'hourglass_top' : 'send' }}</mat-icon>
-                              </button>
-                            </div>
+                            <span class="task-budget-request">
+                              <mat-icon
+                                class="task-budget-request-direction"
+                                [matTooltip]="child.canReviewBudgetRequest ? 'Received request' : 'Sent request'"
+                                aria-hidden="true"
+                              >{{ child.canReviewBudgetRequest ? 'call_received' : 'call_made' }}</mat-icon>
+                              <span class="task-budget-request-label">Pending</span>
+                              <span class="task-budget-request-amount">+{{ formatTaskBudgetAmount(child.requestedBudgetAmount) }}</span>
+                            </span>
                           }
                           @if (editingSubtaskBudgetIds.has(child.taskId)) {
                             @if (child.canEditTask) {
@@ -463,15 +434,13 @@
                                   class="task-budget-metric task-budget-remaining"
                                   [matTooltip]="getTaskBudgetRemainingTooltip(child.taskId, child.budgetAmount)"
                                 >
-                                  <span>Rem</span>
                                   {{ getTaskBudgetRemainingDisplay(child.taskId, child.budgetAmount) }}
                                 </span>
                                 <span
                                   class="task-budget-metric task-budget-total"
                                   [matTooltip]="'Sanctioned Amount - ' + formatTaskBudgetAmount(child.budgetAmount)"
                                 >
-                                  <span>Tot</span>
-                                  {{ formatTaskBudgetAmountCompact(child.budgetAmount) }}
+                                  {{ formatTaskBudgetAmount(child.budgetAmount) }}
                                 </span>
                               </span>
                             }
@@ -481,15 +450,13 @@
                                 class="task-budget-metric task-budget-remaining"
                                 [matTooltip]="getTaskBudgetRemainingTooltip(child.taskId, child.budgetAmount)"
                               >
-                                <span>Rem</span>
                                 {{ getTaskBudgetRemainingDisplay(child.taskId, child.budgetAmount) }}
                               </span>
                               <span
                                 class="task-budget-metric task-budget-total"
                                 [matTooltip]="'Sanctioned Amount - ' + formatTaskBudgetAmount(child.budgetAmount)"
                               >
-                                <span>Tot</span>
-                                {{ formatTaskBudgetAmountCompact(child.budgetAmount) }}
+                                {{ formatTaskBudgetAmount(child.budgetAmount) }}
                               </span>
                             </span>
                           }
@@ -643,53 +610,32 @@
 
                         <!-- Actions -->
                         <div class="task-row-actions" (click)="$event.stopPropagation()" (keydown)="$event.stopPropagation()">
-                          @if (isEditingSubtaskRow(child.taskId)) {
-                            <span class="task-assignee-cancel-box" matTooltip="Cancel edit">
-                              <button
-                                mat-icon-button
-                                class="task-assignee-cancel-btn"
-                                type="button"
-                                aria-label="Cancel task edit"
-                                [disabled]="savingSubtaskNameIds.has(child.taskId) || assigningSubtaskIds.has(child.taskId) || savingSubtaskBudgetIds.has(child.taskId)"
-                                (mousedown)="$event.preventDefault(); $event.stopPropagation()"
-                                (click)="cancelEditSubtaskRow(child)"
-                              >
-                                <mat-icon>close</mat-icon>
-                              </button>
-                            </span>
-                          } @else if (
-                            child.canEditTask ||
-                            (child.parentTaskId !== null && child.canManage) ||
-                            (child.canAssignOwner && child.status?.toUpperCase() !== 'COMPLETED')
-                          ) {
+                          <button
+                            mat-icon-button
+                            class="task-panel-finance-icon"
+                            type="button"
+                            aria-label="View task finance"
+                            matTooltip="Task finance"
+                            (click)="openTaskFinanceDialog(child.taskId, child.taskName, $event)"
+                          >
+                            <mat-icon>account_balance_wallet</mat-icon>
+                          </button>
+                          @if (canOpenSubtaskActions(child)) {
                             <button
                               mat-icon-button
-                              class="task-assignee-edit-btn task-title-edit-button"
+                              class="task-panel-edit-icon"
                               type="button"
-                              [attr.aria-label]="child.canManage ? 'Edit task budget and status' : 'Edit task'"
-                              [matTooltip]="child.canManage ? 'Edit task budget and status' : child.canEditTask && child.canAssignOwner ? 'Edit task title, budget and assignee' : child.canEditTask ? 'Edit task title and budget' : 'Assign task owner'"
-                              [disabled]="isUpdatingOwner || savingSubtaskNameIds.has(child.taskId) || (child.status?.toUpperCase() === 'COMPLETED' && !child.canEditTask && !(child.parentTaskId !== null && child.canManage))"
-                              (click)="editSubtaskRow(child)"
+                              aria-label="Edit task"
+                              matTooltip="Edit task"
+                              (click)="openSubtaskActionsDialog(child)"
                             >
                               <mat-icon>edit</mat-icon>
                             </button>
                           }
-                          @if (isEditingSubtaskRow(child.taskId) && hasPendingSubtaskNonStatusChanges(child)) {
-                            <button
-                              mat-icon-button
-                              type="button"
-                              class="task-panel-save-icon"
-                              aria-label="Save subtask changes"
-                              matTooltip="Save task changes"
-                              [disabled]="!canSaveSubtaskEdits(child)"
-                              (mousedown)="$event.preventDefault(); $event.stopPropagation()"
-                              (click)="saveSubtaskEdits(child)"
-                            >
-                              <mat-icon>{{ savingSubtaskNameIds.has(child.taskId) || assigningSubtaskIds.has(child.taskId) || savingSubtaskBudgetIds.has(child.taskId) ? 'hourglass_top' : 'save' }}</mat-icon>
-                            </button>
-                          } @else if (child.canDelete) {
+                          @if (child.canDelete) {
                             <span
                               class="task-delete-tooltip-host"
+                              [class.task-delete-disabled]="deletingSubtaskIds.has(child.taskId) || !!getTaskDeletionBlockReason(child)"
                               [matTooltip]="getSubtaskDeletionTooltip(child)"
                               (click)="$event.stopPropagation()"
                               (keydown)="$event.stopPropagation()"
@@ -706,6 +652,67 @@
                               </button>
                             </span>
                           }
+                          <span class="task-panel-info-container">
+                            <button
+                              mat-icon-button
+                              class="task-info-button"
+                              type="button"
+                              aria-label="Show task details"
+                              [attr.aria-describedby]="'task-panel-details-popover-' + child.taskId"
+                            >
+                              <mat-icon aria-hidden="true">info</mat-icon>
+                            </button>
+                            <div
+                              [id]="'task-panel-details-popover-' + child.taskId"
+                              class="task-details-popover"
+                              role="tooltip"
+                            >
+                              <div class="task-details-popover-item">
+                                <span class="task-details-popover-label">Task ID</span>
+                                <span class="task-details-popover-value">#{{ child.taskId }}</span>
+                              </div>
+                              <div class="task-details-popover-item">
+                                <span class="task-details-popover-label">Parent task</span>
+                                @if (child.parentTaskId) {
+                                  <a
+                                    class="task-details-popover-value task-details-parent-link"
+                                    [routerLink]="['/dashboard', 'task', child.parentTaskId]"
+                                    [title]="(child.parentTaskName || 'Parent task') | titlecase"
+                                  >
+                                    #{{ child.parentTaskId }}
+                                  </a>
+                                } @else {
+                                  <span class="task-details-popover-value">None</span>
+                                }
+                              </div>
+                              <div class="task-details-popover-item">
+                                <span class="task-details-popover-label">Created by</span>
+                                <span class="task-details-popover-value">{{ (child.createdByName || 'Unknown') | titlecase }}</span>
+                              </div>
+                              <div class="task-details-popover-item">
+                                <span class="task-details-popover-label">Created at</span>
+                                <span class="task-details-popover-value">{{ child.createdAt | date: 'medium' }}</span>
+                              </div>
+                              <div class="task-details-popover-item">
+                                <span class="task-details-popover-label">Assigned by</span>
+                                <span class="task-details-popover-value">{{ (child.assignedByName || 'Not assigned') | titlecase }}</span>
+                              </div>
+                              <div class="task-details-popover-item">
+                                <span class="task-details-popover-label">Assigned at</span>
+                                <span class="task-details-popover-value">
+                                  {{ child.ownerAssignedAt ? (child.ownerAssignedAt | date: 'medium') : 'Not assigned' }}
+                                </span>
+                              </div>
+                              <div class="task-details-popover-item">
+                                <span class="task-details-popover-label">Updated by</span>
+                                <span class="task-details-popover-value">{{ (child.updatedByName || 'Unknown') | titlecase }}</span>
+                              </div>
+                              <div class="task-details-popover-item">
+                                <span class="task-details-popover-label">Updated at</span>
+                                <span class="task-details-popover-value">{{ child.updatedAt | date: 'medium' }}</span>
+                              </div>
+                            </div>
+                          </span>
                         </div>
                       </div>
                     </mat-expansion-panel-header>
@@ -767,8 +774,6 @@
                       </div>
 
                     </div>
-
-                    <app-task-finance #subtaskFinance [taskId]="child.taskId" />
 
                     <!-- Recursive Subtasks Tree -->
                     @if (getSubtaskChildren(child.taskId).length > 0) {

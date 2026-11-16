@@ -32,6 +32,7 @@ export const eventTasksTypes = `
     ownerName: String
     assignedByName: String
     createdByName: String
+    updatedByName: String
     createdAt: String!
     ownerAssignedAt: String
     updatedAt: String!
@@ -39,6 +40,7 @@ export const eventTasksTypes = `
     canEditTask: Boolean!
     canAssignOwner: Boolean!
     canDelete: Boolean!
+    canAccessFinance: Boolean
   }
 
   type EventTaskAssignee {
@@ -351,6 +353,22 @@ export const eventTasksResolvers = {
         PERMISSIONS.EVENT_TASK_MANAGE_ANY,
         { type: 'EVENT', id: eventId }
       );
+      const cashierRows = await query<Array<RowDataPacket & { isCashier: number }>>(
+        `SELECT EXISTS (
+           SELECT 1
+           FROM users_events ue
+           INNER JOIN events_roles_master erm ON erm.role_id = ue.role_id
+           WHERE ue.event_id = ?
+             AND ue.user_id = ?
+             AND (
+               UPPER(REPLACE(REPLACE(TRIM(erm.role_name), ' ', '_'), '-', '_')) IN ('TREASURER', 'CASHIER', 'KOSHADHYAKSHA') OR
+               UPPER(REPLACE(REPLACE(TRIM(erm.english_name), ' ', '_'), '-', '_')) IN ('TREASURER', 'CASHIER', 'KOSHADHYAKSHA') OR
+               UPPER(REPLACE(REPLACE(TRIM(erm.hindi_name), ' ', '_'), '-', '_')) IN ('TREASURER', 'CASHIER', 'KOSHADHYAKSHA')
+             )
+         ) AS isCashier`,
+        [eventId, loggedInUserId]
+      );
+      const isEventCashier = Number(cashierRows[0]?.isCashier) === 1;
       const committeeMembership = await query<any[]>(
         `SELECT committee_role
          FROM users_committees
@@ -400,6 +418,7 @@ export const eventTasksResolvers = {
         ownerName: string | null;
         assignedByName: string | null;
         createdByName: string | null;
+        updatedByName: string | null;
         createdAt: string;
         ownerAssignedAt: string | null;
         updatedAt: string;
@@ -423,6 +442,7 @@ export const eventTasksResolvers = {
            owner.name AS ownerName,
            assignedBy.name AS assignedByName,
            creator.name AS createdByName,
+           updater.name AS updatedByName,
            DATE_FORMAT(t.created_at, '%Y-%m-%d %H:%i:%s') AS createdAt,
            DATE_FORMAT(t.owner_assigned_at, '%Y-%m-%d %H:%i:%s') AS ownerAssignedAt,
            DATE_FORMAT(t.updated_at, '%Y-%m-%d %H:%i:%s') AS updatedAt
@@ -434,6 +454,7 @@ export const eventTasksResolvers = {
          LEFT JOIN users owner ON owner.id = t.owner_user_id
          LEFT JOIN users assignedBy ON assignedBy.id = t.owner_assigned_by
          LEFT JOIN users creator ON creator.id = t.created_by
+         LEFT JOIN users updater ON updater.id = t.updated_by
          WHERE t.event_id = ?
          ORDER BY t.created_at ASC, t.id ASC`,
         [eventId]
@@ -466,6 +487,7 @@ export const eventTasksResolvers = {
           ownerName: taskRow.ownerName || null,
           assignedByName: taskRow.assignedByName || null,
           createdByName: taskRow.createdByName || null,
+          updatedByName: taskRow.updatedByName || null,
           createdAt: String(taskRow.createdAt),
           ownerAssignedAt: taskRow.ownerAssignedAt || null,
           updatedAt: String(taskRow.updatedAt),
@@ -476,7 +498,8 @@ export const eventTasksResolvers = {
             : canManageAnyTasks || Number(taskRow.parentOwnerUserId) === loggedInUserId,
           canDelete: canManageAnyTasks ||
             Number(taskRow.createdBy) === loggedInUserId ||
-            (!isRootTask && Number(taskRow.parentOwnerUserId) === loggedInUserId)
+            (!isRootTask && Number(taskRow.parentOwnerUserId) === loggedInUserId),
+          canAccessFinance: Number(taskRow.ownerUserId) === loggedInUserId || isEventCashier
           };
         }),
         canCreateTasks: canAssignRootTasks,

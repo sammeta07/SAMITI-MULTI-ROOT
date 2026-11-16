@@ -4,6 +4,7 @@ import { TaskAssignee } from '../event-details/event-tasks/event-tasks.models';
 export interface TaskChild {
   taskId: number;
   parentTaskId: number | null;
+  parentTaskName?: string | null;
   taskName: string;
   budgetAmount: string;
   budgetRequestId: number | null;
@@ -20,10 +21,13 @@ export interface TaskChild {
   createdByName: string | null;
   createdAt: string | null;
   ownerAssignedAt: string | null;
+  updatedByName?: string | null;
+  updatedAt?: string | null;
   canManage: boolean;
   canEditTask: boolean;
   canAssignOwner: boolean;
   canDelete: boolean;
+  canAccessFinance?: boolean;
 }
 
 export interface TaskDetailsPayload {
@@ -62,4 +66,5 @@ export interface TaskDetailsPayload {
   canCreateTasks: boolean;
   canManageTodos: boolean;
   canToggleTodos: boolean;
+  canAccessFinance: boolean;
 }

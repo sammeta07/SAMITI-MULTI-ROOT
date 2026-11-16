@@ -7,6 +7,7 @@ export const taskDetailsTypes = `
   type TaskChild {
     taskId: Int!
     parentTaskId: Int
+    parentTaskName: String
     taskName: String!
     budgetAmount: String!
     budgetRequestId: Int
@@ -23,10 +24,13 @@ export const taskDetailsTypes = `
     createdByName: String
     createdAt: String
     ownerAssignedAt: String
+    updatedByName: String
+    updatedAt: String
     canManage: Boolean!
     canEditTask: Boolean!
     canAssignOwner: Boolean!
     canDelete: Boolean!
+    canAccessFinance: Boolean!
   }
 
   type TaskDetailsAssignee {
@@ -76,6 +80,7 @@ export const taskDetailsTypes = `
     canCreateTasks: Boolean!
     canManageTodos: Boolean!
     canToggleTodos: Boolean!
+    canAccessFinance: Boolean!
   }
 `;
 
@@ -153,6 +158,23 @@ export const taskDetailsResolvers = {
       if (!hasCommitteeAccess && !isTaskOwner && !isTaskCreator && !isParentTaskOwner) {
         throwEventError('FORBIDDEN', 'You are not allowed to access this task');
       }
+      const cashierRows = await query<any[]>(
+        `SELECT EXISTS (
+           SELECT 1
+           FROM users_events ue
+           INNER JOIN events_roles_master erm ON erm.role_id = ue.role_id
+           WHERE ue.event_id = ?
+             AND ue.user_id = ?
+             AND (
+               UPPER(REPLACE(REPLACE(TRIM(erm.role_name), ' ', '_'), '-', '_')) IN ('TREASURER', 'CASHIER', 'KOSHADHYAKSHA') OR
+               UPPER(REPLACE(REPLACE(TRIM(erm.english_name), ' ', '_'), '-', '_')) IN ('TREASURER', 'CASHIER', 'KOSHADHYAKSHA') OR
+               UPPER(REPLACE(REPLACE(TRIM(erm.hindi_name), ' ', '_'), '-', '_')) IN ('TREASURER', 'CASHIER', 'KOSHADHYAKSHA')
+             )
+         ) AS isCashier`,
+        [Number(task.eventId), userId]
+      );
+      const isCashier = Number(cashierRows[0]?.isCashier) === 1;
+      const canAccessFinance = isTaskOwner || isCashier;
       const isMasterAdmin = await hasPermission(
         userId,
         PERMISSIONS.EVENT_TASK_MANAGE_ANY,
@@ -175,6 +197,7 @@ export const taskDetailsResolvers = {
         `SELECT
            t.id AS taskId,
            t.parent_id AS parentTaskId,
+           parent.name AS parentTaskName,
            parent.owner_user_id AS parentOwnerUserId,
            t.name AS taskName,
            CAST(t.budget_amount AS CHAR) AS budgetAmount,
@@ -189,8 +212,10 @@ export const taskDetailsResolvers = {
            owner.name AS ownerName,
            assignedBy.name AS assignedByName,
            creator.name AS createdByName,
+           updater.name AS updatedByName,
            DATE_FORMAT(t.created_at, '%Y-%m-%d %H:%i:%s') AS createdAt,
-           DATE_FORMAT(t.owner_assigned_at, '%Y-%m-%d %H:%i:%s') AS ownerAssignedAt
+           DATE_FORMAT(t.owner_assigned_at, '%Y-%m-%d %H:%i:%s') AS ownerAssignedAt,
+           DATE_FORMAT(t.updated_at, '%Y-%m-%d %H:%i:%s') AS updatedAt
          FROM tasks t
          LEFT JOIN tasks parent ON parent.id = t.parent_id
          LEFT JOIN task_budget_requests budgetRequest
@@ -199,6 +224,7 @@ export const taskDetailsResolvers = {
          LEFT JOIN users owner ON owner.id = t.owner_user_id
          LEFT JOIN users assignedBy ON assignedBy.id = t.owner_assigned_by
          LEFT JOIN users creator ON creator.id = t.created_by
+         LEFT JOIN users updater ON updater.id = t.updated_by
          WHERE t.event_id = ?
          ORDER BY t.created_at ASC, t.id ASC`,
         [Number(task.eventId)]
@@ -330,9 +356,11 @@ export const taskDetailsResolvers = {
         canEditTask: isTaskCreator || isMasterAdmin,
         canAssignOwner,
         canDeleteTask: isMasterAdmin || isTaskCreator || (task.parentTaskId !== null && isParentTaskOwner),
+        canAccessFinance,
         children: children.map((child) => ({
           taskId: Number(child.taskId),
           parentTaskId: Number(taskId),
+          parentTaskName: child.parentTaskName || null,
           taskName: String(child.taskName || 'Untitled Task'),
           budgetAmount: String(child.budgetAmount),
           budgetRequestId: child.budgetRequestId === null ? null : Number(child.budgetRequestId),
@@ -346,11 +374,15 @@ export const taskDetailsResolvers = {
           createdByName: child.createdByName || null,
           createdAt: child.createdAt ? String(child.createdAt) : null,
           ownerAssignedAt: child.ownerAssignedAt || null,
+          updatedByName: child.updatedByName || null,
+          updatedAt: child.updatedAt ? String(child.updatedAt) : null,
+          canAccessFinance: Number(child.ownerUserId) === userId || isCashier,
           ...mapChildPermissions(child)
         })),
         descendants: descendants.map((descendant) => ({
           taskId: Number(descendant.taskId),
           parentTaskId: descendant.parentTaskId === null ? null : Number(descendant.parentTaskId),
+          parentTaskName: descendant.parentTaskName || null,
           taskName: String(descendant.taskName || 'Untitled Task'),
           budgetAmount: String(descendant.budgetAmount),
           budgetRequestId: descendant.budgetRequestId === null ? null : Number(descendant.budgetRequestId),
@@ -364,6 +396,9 @@ export const taskDetailsResolvers = {
           createdByName: descendant.createdByName || null,
           createdAt: descendant.createdAt ? String(descendant.createdAt) : null,
           ownerAssignedAt: descendant.ownerAssignedAt || null,
+          updatedByName: descendant.updatedByName || null,
+          updatedAt: descendant.updatedAt ? String(descendant.updatedAt) : null,
+          canAccessFinance: Number(descendant.ownerUserId) === userId || isCashier,
           ...mapChildPermissions(descendant)
         })),
         taskAssignees: taskAssignees.map((assignee) => ({

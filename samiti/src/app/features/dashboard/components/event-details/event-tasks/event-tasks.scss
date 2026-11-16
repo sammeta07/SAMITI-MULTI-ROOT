@@ -91,9 +91,15 @@
   display: inline-flex;
   flex: 0 0 auto;
   align-items: center;
-  gap: 2px;
+  gap: 5px;
+  height: 28px;
+  box-sizing: border-box;
+  padding: 0 8px;
+  border: 1px solid #fcd34d;
+  border-radius: 6px;
+  background: #fffbeb;
   color: #92400e;
-  font-size: 0.72rem;
+  font-size: 0.68rem;
   font-weight: 700;
   white-space: nowrap;
 
@@ -280,6 +286,7 @@
 
 :host ::ng-deep .event-task-panel .mat-expansion-panel-body {
   padding: 0 12px 10px 12px !important;
+  overflow-y: scroll;
 }
 
 :host ::ng-deep .event-task-panel .mat-expansion-panel-header .mat-expansion-indicator {
@@ -308,7 +315,7 @@
   min-width: 0;
   min-height: 58px;
   align-items: center;
-  grid-template-columns: minmax(0, 1fr) 62px;
+  grid-template-columns: minmax(0, 1fr) max-content;
   grid-template-rows: 28px 28px;
   gap: 6px;
   row-gap: 2px;
@@ -342,14 +349,60 @@
 
 .task-row-actions {
   display: flex;
-  min-width: 62px;
+  min-width: max-content;
   align-items: center;
   justify-content: flex-end;
   gap: 6px;
 }
 
+.task-panel-info-container {
+  position: relative;
+  display: inline-flex;
+  flex: 0 0 auto;
+}
+
+.task-panel-edit-icon {
+  --mat-icon-button-container-shape: 6px;
+  --mdc-icon-button-state-layer-shape: 6px;
+  display: inline-flex !important;
+  width: 28px !important;
+  height: 28px !important;
+  min-width: 28px !important;
+  justify-self: end;
+  align-items: center !important;
+  justify-content: center !important;
+  padding: 0 !important;
+  border: 1px solid #cbd5e1 !important;
+  border-radius: 6px !important;
+  background: #fff !important;
+  color: #334155 !important;
+  transition: background-color 0.15s ease, border-color 0.15s ease, color 0.15s ease;
+
+  mat-icon {
+    width: 16px !important;
+    height: 16px !important;
+    font-size: 16px !important;
+    line-height: 16px !important;
+  }
+
+  &:hover:not(:disabled) {
+    background: #eff6ff !important;
+    border-color: #93c5fd !important;
+    color: #2563eb !important;
+  }
+
+  &:focus-visible {
+    outline: 2px solid #2563eb;
+    outline-offset: 2px;
+  }
+}
+
 .task-delete-tooltip-host {
   display: inline-flex;
+
+  &.task-delete-disabled {
+    cursor: not-allowed;
+  }
 
   button:disabled {
     pointer-events: none;
@@ -653,10 +706,10 @@
 
 .task-budget-metric {
   display: inline-flex;
-  width: 68px;
+  width: auto;
   height: 28px;
   box-sizing: border-box;
-  flex: 0 0 68px;
+  flex: 0 0 auto;
   align-items: center;
   justify-content: center;
   gap: 4px;
@@ -781,6 +834,7 @@
 .task-assignee-value-layout {
   justify-content: stretch;
 }
+
 
 .task-panel-status-wrapper .status-tag {
   flex: 0 0 112px;
@@ -1419,7 +1473,7 @@
 /* Responsive Breakpoints */
 @media (max-width: 900px) {
   .task-panel-summary {
-    grid-template-columns: minmax(0, 1fr) 62px;
+    grid-template-columns: minmax(0, 1fr) max-content;
   }
 }
 
@@ -1432,7 +1486,7 @@
 
 @media (max-width: 650px) {
   .task-panel-summary {
-    grid-template-columns: minmax(0, 1fr) 62px;
+    grid-template-columns: minmax(0, 1fr) max-content;
     grid-template-rows: 28px auto;
     column-gap: 4px;
   }

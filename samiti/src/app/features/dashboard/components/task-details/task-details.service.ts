@@ -46,10 +46,12 @@ export class TaskDetailsService {
         canEditTask
         canAssignOwner
         canDeleteTask
+        canAccessFinance
         updatedAt
         children {
           taskId
           parentTaskId
+          parentTaskName
           taskName
           budgetAmount
           budgetRequestId
@@ -66,14 +68,18 @@ export class TaskDetailsService {
           createdByName
           createdAt
           ownerAssignedAt
+          updatedByName
+          updatedAt
           canManage
           canEditTask
           canAssignOwner
           canDelete
+          canAccessFinance
         }
         descendants {
           taskId
           parentTaskId
+          parentTaskName
           taskName
           budgetAmount
           budgetRequestId
@@ -90,10 +96,13 @@ export class TaskDetailsService {
           createdByName
           createdAt
           ownerAssignedAt
+          updatedByName
+          updatedAt
           canManage
           canEditTask
           canAssignOwner
           canDelete
+          canAccessFinance
         }
         taskAssignees {
           userId

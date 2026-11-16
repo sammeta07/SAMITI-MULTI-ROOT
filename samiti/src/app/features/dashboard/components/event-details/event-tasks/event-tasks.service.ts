@@ -40,6 +40,7 @@ export class EventTasksService {
           ownerName
           assignedByName
           createdByName
+          updatedByName
           createdAt
           ownerAssignedAt
           updatedAt
@@ -47,6 +48,7 @@ export class EventTasksService {
           canEditTask
           canAssignOwner
           canDelete
+          canAccessFinance
         }
         canCreateTasks
         taskAssignees {

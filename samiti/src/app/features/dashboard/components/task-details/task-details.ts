@@ -12,7 +12,6 @@ import { MatAutocompleteModule, MatAutocompleteSelectedEvent, MatAutocompleteTri
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
 import { MatTooltipModule } from '@angular/material/tooltip';
-import { MatDialog, MatDialogModule } from '@angular/material/dialog';
 import { firstValueFrom, finalize } from 'rxjs';
 import { LoadingStateService } from '../../../../shared/services/loading-state.service';
 import { NotifierService } from '../../../../shared/notifier/notifier.service';
@@ -21,13 +20,14 @@ import { ConfirmDialogData } from '../../../../components/dialog/confirm/confirm
 import { TodoItem } from '../../models/todo.models';
 import { TodoChecklistComponent } from '../todo-checklist/todo-checklist.component';
 import { DashboardHierarchyTreeService } from '../dashboard-hierarchy-tree/dashboard-hierarchy-tree.service';
-import { calculateTaskBudgetRemaining, formatTaskBudgetAmount, formatTaskBudgetAmountCompact, isValidTaskBudgetAmount, TASK_STATUSES, TaskAssignee, TaskStatus, taskHierarchyLevelBackground } from '../event-details/event-tasks/event-tasks.models';
+import { calculateTaskBudgetRemaining, formatTaskBudgetAmount, isValidTaskBudgetAmount, TASK_STATUSES, TaskAssignee, TaskStatus, taskHierarchyLevelBackground } from '../event-details/event-tasks/event-tasks.models';
 import { EventTasksService } from '../event-details/event-tasks/event-tasks.service';
 import { EventDetailsStateService } from '../event-details/event-details-state.service';
 import { TaskChild, TaskDetailsPayload } from './task-details.models';
 import { TaskDetailsService } from './task-details.service';
 import { TaskFinanceComponent } from '../task-finance/task-finance.component';
-import { TaskActionsDialogComponent, TaskActionsDialogResult, TaskActionsDialogUpdate } from './task-actions-dialog.component';
+import { TaskFinanceDialogService } from '../task-finance/task-finance-dialog.service';
+import { TaskActionsDialogService } from './task-actions-dialog.service';
 
 @Component({
   selector: 'app-task-details',
@@ -45,7 +45,6 @@ import { TaskActionsDialogComponent, TaskActionsDialogResult, TaskActionsDialogU
     MatFormFieldModule,
     MatInputModule,
     MatTooltipModule,
-    MatDialogModule,
     TodoChecklistComponent,
     TaskFinanceComponent
   ],
@@ -61,7 +60,8 @@ export class TaskDetailsComponent implements OnInit {
   private readonly notifier = inject(NotifierService);
   private readonly loadingState = inject(LoadingStateService);
   private readonly confirmDialog = inject(ConfirmDialogService);
-  private readonly dialog = inject(MatDialog);
+  private readonly taskActionsDialog = inject(TaskActionsDialogService);
+  private readonly taskFinanceDialog = inject(TaskFinanceDialogService);
   private readonly hierarchyTreeService = inject(DashboardHierarchyTreeService);
   private readonly eventTasksService = inject(EventTasksService);
   private readonly eventDetailsState = inject(EventDetailsStateService);
@@ -255,77 +255,63 @@ export class TaskDetailsComponent implements OnInit {
   }
 
   public openTaskActionsDialog(task: TaskDetailsPayload): void {
-    document.body.classList.add('dialog-open');
-    const dialogRef = this.dialog.open(TaskActionsDialogComponent, {
-      position: { right: '0', top: '0' },
-      height: '100%',
-      width: '50%',
-      autoFocus: true,
-      disableClose: true,
-      hasBackdrop: true,
-      panelClass: 'slide-in-dialog',
-      data: {
-        task,
-        remainingBudget: calculateTaskBudgetRemaining(
-          task.taskId,
-          task.budgetAmount,
-          task.descendants
-        ),
-        onAction: (result: TaskActionsDialogResult) => this.handleTaskActionsDialogAction(task, result)
-      }
-    });
-
-    dialogRef.afterClosed().subscribe(() => {
-      document.body.classList.remove('dialog-open');
-    });
+    void this.taskActionsDialog.open(task.taskId, (updatedTask) => this.updateTaskFromDialog(updatedTask));
   }
 
-  private async handleTaskActionsDialogAction(
-    task: TaskDetailsPayload,
-    result: TaskActionsDialogResult
-  ): Promise<TaskActionsDialogUpdate | null> {
-    const currentTask = this.task();
-    if (!currentTask || currentTask.taskId !== task.taskId) return null;
+  public canOpenSubtaskActions(task: TaskChild): boolean {
+    return task.canEditTask || task.canAssignOwner || task.canManage || task.canRequestBudgetIncrease ||
+      task.canReviewBudgetRequest || task.canCancelBudgetRequest;
+  }
 
-    let succeeded = false;
-    switch (result.action) {
-      case 'rename':
-        this.editingTaskName = result.taskName;
-        succeeded = await this.saveTaskName(currentTask);
-        break;
-      case 'assign-owner':
-        succeeded = await this.assignTaskOwner(currentTask, result.ownerUserId);
-        break;
-      case 'update-budget':
-        this.editingBudgetAmount = result.budgetAmount;
-        this.editingBudgetStatus = this.statusValue(currentTask.status) as TaskStatus;
-        succeeded = await this.saveTaskBudget(currentTask);
-        break;
-      case 'update-status':
-        succeeded = await this.updateTaskStatus(currentTask, result.status);
-        break;
-      case 'request-budget':
-        this.budgetIncreaseAmount = result.amount;
-        succeeded = await this.requestBudgetIncrease(currentTask);
-        break;
-      case 'review-budget':
-        succeeded = await this.reviewTaskBudgetRequest(currentTask, result.decision);
-        break;
-      case 'cancel-budget-request':
-        succeeded = await this.cancelTaskBudgetRequest(currentTask);
-        break;
-    }
+  public openSubtaskActionsDialog(task: TaskChild): void {
+    void this.taskActionsDialog.open(task.taskId, (updatedTask) => this.updateTaskFromDialog(updatedTask));
+  }
 
-    const updatedTask = this.task();
-    if (!succeeded || !updatedTask || updatedTask.taskId !== task.taskId) return null;
-    return {
-      task: updatedTask,
-      remainingBudget: calculateTaskBudgetRemaining(
-        updatedTask.taskId,
-        updatedTask.budgetAmount,
-        updatedTask.descendants
-      )
-    };
+  public openTaskFinanceDialog(taskId: number, taskName: string, event: Event): void {
+    event.stopPropagation();
+    this.taskFinanceDialog.open(taskId, taskName);
+  }
+
+  private updateTaskFromDialog(updatedTask: TaskDetailsPayload): void {
+    this.task.update((current) => {
+      if (!current) return current;
+      if (current.taskId === updatedTask.taskId) return updatedTask;
+
+      const updateChild = (child: TaskChild): TaskChild => child.taskId === updatedTask.taskId
+        ? {
+            ...child,
+            taskName: updatedTask.taskName,
+            budgetAmount: updatedTask.budgetAmount,
+            budgetRequestId: updatedTask.budgetRequestId,
+            requestedBudgetAmount: updatedTask.requestedBudgetAmount,
+            budgetRequestStatus: updatedTask.budgetRequestStatus,
+            budgetRequestedByName: updatedTask.budgetRequestedByName,
+            canReviewBudgetRequest: updatedTask.canReviewBudgetRequest,
+            canCancelBudgetRequest: updatedTask.canCancelBudgetRequest,
+            canRequestBudgetIncrease: updatedTask.canRequestBudgetIncrease,
+            status: updatedTask.status,
+            ownerUserId: updatedTask.ownerUserId,
+            ownerName: updatedTask.ownerName,
+            assignedByName: updatedTask.assignedByName,
+            createdByName: updatedTask.createdByName,
+            createdAt: updatedTask.createdAt,
+            ownerAssignedAt: updatedTask.ownerAssignedAt,
+            updatedByName: updatedTask.updatedByName,
+            updatedAt: updatedTask.updatedAt,
+            canAccessFinance: updatedTask.canAccessFinance,
+            canManage: updatedTask.canManage,
+            canEditTask: updatedTask.canEditTask,
+            canAssignOwner: updatedTask.canAssignOwner,
+            canDelete: updatedTask.canDeleteTask
+          }
+        : child;
+
+      return {
+        ...current,
+        children: current.children.map(updateChild),
+        descendants: current.descendants.map(updateChild)
+      };
+    });
   }
 
   public async assignTaskOwner(task: TaskDetailsPayload, ownerUserId: number | null): Promise<boolean> {
@@ -450,17 +436,16 @@ export class TaskDetailsComponent implements OnInit {
     return formatTaskBudgetAmount(value);
   }
 
-  public formatTaskBudgetAmountCompact(value: string | number | null | undefined): string {
-    return formatTaskBudgetAmountCompact(value);
+  public getTaskBudgetRemainingDisplay(taskId: number, budgetAmount: string | number): string {
+    return formatTaskBudgetAmount(this.getTaskBudgetRemainingAmount(taskId, budgetAmount));
   }
 
-  public getTaskBudgetRemainingDisplay(taskId: number, budgetAmount: string | number): string {
-    const remaining = calculateTaskBudgetRemaining(
+  public getTaskBudgetRemainingAmount(taskId: number, budgetAmount: string | number): number {
+    return calculateTaskBudgetRemaining(
       taskId,
       budgetAmount,
       this.task()?.descendants ?? []
     );
-    return formatTaskBudgetAmountCompact(remaining);
   }
 
   public getTaskBudgetRemainingTooltip(taskId: number, budgetAmount: string | number): string {
@@ -948,6 +933,11 @@ export class TaskDetailsComponent implements OnInit {
       ? this.pendingSubtaskOwnerIds[taskId]
       : child.ownerUserId;
     if (ownerUserId === null || ownerUserId === undefined) return null;
+    return this.task()?.taskAssignees.find((assignee) => Number(assignee.userId) === Number(ownerUserId)) ?? null;
+  }
+
+  public getTaskOwnerDesignation(ownerUserId: number | null): TaskAssignee | null {
+    if (ownerUserId === null) return null;
     return this.task()?.taskAssignees.find((assignee) => Number(assignee.userId) === Number(ownerUserId)) ?? null;
   }
 

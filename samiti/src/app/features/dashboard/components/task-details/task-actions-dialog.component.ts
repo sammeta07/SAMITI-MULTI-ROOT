@@ -6,7 +6,10 @@ import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { MatToolbarModule } from '@angular/material/toolbar';
 import { MatTooltipModule } from '@angular/material/tooltip';
-import { isValidTaskBudgetAmount, TaskStatus, TASK_STATUSES } from '../event-details/event-tasks/event-tasks.models';
+import { MatAutocompleteModule, MatAutocompleteSelectedEvent, MatAutocompleteTrigger } from '@angular/material/autocomplete';
+import { MatFormFieldModule } from '@angular/material/form-field';
+import { MatInputModule } from '@angular/material/input';
+import { isValidTaskBudgetAmount, TaskAssignee, TaskStatus, TASK_STATUSES } from '../event-details/event-tasks/event-tasks.models';
 import { TaskDetailsPayload } from './task-details.models';
 
 export interface TaskActionsDialogData {
@@ -32,7 +35,18 @@ export type TaskActionsDialogResult =
 @Component({
   selector: 'app-task-actions-dialog',
   standalone: true,
-  imports: [CommonModule, FormsModule, MatDialogModule, MatButtonModule, MatIconModule, MatToolbarModule, MatTooltipModule],
+  imports: [
+    CommonModule,
+    FormsModule,
+    MatDialogModule,
+    MatButtonModule,
+    MatIconModule,
+    MatToolbarModule,
+    MatTooltipModule,
+    MatAutocompleteModule,
+    MatFormFieldModule,
+    MatInputModule
+  ],
   templateUrl: './task-actions-dialog.component.html',
   styleUrl: './task-actions-dialog.component.scss'
 })
@@ -44,6 +58,7 @@ export class TaskActionsDialogComponent {
   public readonly isSavingAction = signal(false);
   public taskName = this.task.taskName;
   public ownerUserId = this.task.ownerUserId === null ? '' : String(this.task.ownerUserId);
+  public ownerSearchText = this.task.ownerName || 'Unassigned';
   public budgetAmount: string | number = this.normalizeBudgetInput(this.task.budgetAmount);
   public budgetIncreaseAmount: string | number = '';
   public status = this.currentStatusValue();
@@ -95,6 +110,91 @@ export class TaskActionsDialogComponent {
   public hasOwnerChanged(): boolean {
     const selectedOwnerId = this.ownerUserId ? Number(this.ownerUserId) : null;
     return selectedOwnerId !== this.task.ownerUserId;
+  }
+
+  public getFilteredOwnerAssignees(): TaskAssignee[] {
+    const search = this.ownerSearchText.trim().toLowerCase();
+    return this.task.taskAssignees
+      .filter((assignee) =>
+        !search ||
+        (assignee.name || '').toLowerCase().includes(search) ||
+        (assignee.email || '').toLowerCase().includes(search)
+      )
+      .sort((a, b) =>
+        Number(this.task.ownerUserId !== null && Number(b.userId) === Number(this.task.ownerUserId)) -
+          Number(this.task.ownerUserId !== null && Number(a.userId) === Number(this.task.ownerUserId)) ||
+        Number(b.isWinner) - Number(a.isWinner) ||
+        (a.name || '').localeCompare(b.name || '')
+      );
+  }
+
+  public readonly displayOwnerName = (value: string | number | null): string => {
+    if (value === null || value === undefined) return '';
+    if (value === '') return 'Unassigned';
+    if (typeof value === 'string' && !/^\d+$/.test(value)) return value;
+    const assignee = this.task.taskAssignees.find((member) => Number(member.userId) === Number(value));
+    return assignee?.name || String(value);
+  };
+
+  public onOwnerSearch(value: string): void {
+    this.ownerSearchText = value;
+  }
+
+  public onOwnerFocus(trigger: MatAutocompleteTrigger): void {
+    this.ownerSearchText = '';
+    trigger.openPanel();
+  }
+
+  public onOwnerAutocompleteClosed(): void {
+    const selectedOwnerId = this.ownerUserId ? Number(this.ownerUserId) : null;
+    if (selectedOwnerId === null) {
+      this.ownerSearchText = 'Unassigned';
+      return;
+    }
+    const selectedOwner = this.task.taskAssignees.find((member) => Number(member.userId) === selectedOwnerId);
+    this.ownerSearchText = selectedOwner?.name || '';
+  }
+
+  public onOwnerSelected(event: MatAutocompleteSelectedEvent): void {
+    const selectedValue = event.option.value;
+    this.ownerUserId = selectedValue === '' ? '' : String(selectedValue);
+    this.ownerSearchText = selectedValue === ''
+      ? 'Unassigned'
+      : this.task.taskAssignees.find((member) => Number(member.userId) === Number(selectedValue))?.name || '';
+  }
+
+  public isCurrentOwnerAssignee(userId: number): boolean {
+    return this.task.ownerUserId !== null && Number(this.task.ownerUserId) === Number(userId);
+  }
+
+  public getSelectedOwnerAssignee(): TaskAssignee | undefined {
+    if (!this.ownerUserId) return undefined;
+    return this.task.taskAssignees.find((member) => Number(member.userId) === Number(this.ownerUserId));
+  }
+
+  public clearOwnerSearch(
+    trigger: MatAutocompleteTrigger,
+    event: MouseEvent
+  ): void {
+    event.preventDefault();
+    event.stopPropagation();
+    this.ownerSearchText = '';
+    trigger.openPanel();
+  }
+
+  public getRoleColorClass(role?: string | null): string {
+    switch ((role || '').toUpperCase()) {
+      case 'COMMITTEE_MASTER_ADMIN': return 'role-master';
+      case 'COMMITTEE_ADMIN': return 'role-admin';
+      case 'COMMITTEE_MEMBER': return 'role-member';
+      default: return 'role-default';
+    }
+  }
+
+  public getInitials(name: string | null | undefined): string {
+    const parts = (name || '').trim().split(/\s+/).filter(Boolean);
+    if (parts.length > 1) return `${parts[0][0]}${parts[1][0]}`.toUpperCase();
+    return (parts[0] || '').slice(0, 2).toUpperCase();
   }
 
   public submitBudget(): void {
@@ -169,6 +269,7 @@ export class TaskActionsDialogComponent {
       this.data.remainingBudget = update.remainingBudget;
       this.taskName = this.task.taskName;
       this.ownerUserId = this.task.ownerUserId === null ? '' : String(this.task.ownerUserId);
+      this.ownerSearchText = this.task.ownerName || 'Unassigned';
       this.budgetAmount = this.normalizeBudgetInput(this.task.budgetAmount);
       this.budgetIncreaseAmount = '';
       this.status = this.currentStatusValue();

@@ -31,6 +31,7 @@ export interface EventTaskEntry {
   ownerName: string | null;
   assignedByName: string | null;
   createdByName: string | null;
+  updatedByName?: string | null;
   createdAt: string;
   ownerAssignedAt: string | null;
   updatedAt: string;
@@ -38,6 +39,7 @@ export interface EventTaskEntry {
   canEditTask: boolean;
   canAssignOwner: boolean;
   canDelete: boolean;
+  canAccessFinance?: boolean;
 }
 
 export interface EventTasksPayload {
@@ -87,29 +89,10 @@ export function isValidTaskBudgetAmount(value: string | number | null | undefine
 
 export function formatTaskBudgetAmount(value: string | number | null | undefined): string {
   const amount = Number(value ?? 0);
-  return `₹${(Number.isFinite(amount) ? amount : 0).toLocaleString('en-IN', {
+  return `₹ ${(Number.isFinite(amount) ? amount : 0).toLocaleString('en-IN', {
     minimumFractionDigits: 2,
     maximumFractionDigits: 2
   })}`;
-}
-
-export function formatTaskBudgetAmountCompact(value: string | number | null | undefined): string {
-  const amount = Number(value ?? 0);
-  if (!Number.isFinite(amount) || amount === 0) return '₹0';
-
-  const scales: Array<{ threshold: number; suffix: string }> = [
-    { threshold: 10_000_000, suffix: 'Cr' },
-    { threshold: 100_000, suffix: 'L' },
-    { threshold: 1_000, suffix: 'k' }
-  ];
-  const scale = scales.find(({ threshold }) => Math.abs(amount) >= threshold);
-  if (!scale) return formatTaskBudgetAmount(amount);
-
-  const scaledAmount = amount / scale.threshold;
-  const formattedAmount = Number.isInteger(scaledAmount)
-    ? String(scaledAmount)
-    : scaledAmount.toFixed(1).replace(/\.0$/, '');
-  return `₹${formattedAmount}${scale.suffix}`;
 }
 
 export function calculateTaskBudgetRemaining(
