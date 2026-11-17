@@ -68,6 +68,7 @@ export interface TaskFinancePayload {
 
 export function hasPendingFinanceAction(finance: TaskFinancePayload): boolean {
   if (finance.transactions.some((transaction) => transaction.canConfirmReceipt)) return true;
+  if (finance.canReviewBudgetRequest) return true;
   if (!finance.canApprove) return false;
   if (finance.requests.some((request) => request.status === 'PENDING')) return true;
   if (finance.transactions.some((transaction) =>

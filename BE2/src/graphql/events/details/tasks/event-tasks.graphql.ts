@@ -507,6 +507,8 @@ export const eventTasksResolvers = {
           const isRootTask = taskRow.parentTaskId === null;
           const taskOwnerUserId = taskRow.ownerUserId === null ? null : Number(taskRow.ownerUserId);
           const taskId = Number(taskRow.taskId);
+          const canReviewBudgetRequest = Boolean(taskRow.budgetRequestId) &&
+            (Number(taskRow.createdBy) === loggedInUserId || canManageAnyTasks);
           return {
           id: Number(taskRow.taskId),
           taskId: Number(taskRow.taskId),
@@ -519,8 +521,7 @@ export const eventTasksResolvers = {
           requestedBudgetAmount: taskRow.requestedBudgetAmount === null ? null : String(taskRow.requestedBudgetAmount),
           budgetRequestStatus: taskRow.budgetRequestStatus || null,
           budgetRequestedByName: taskRow.budgetRequestedByName || null,
-          canReviewBudgetRequest: Boolean(taskRow.budgetRequestId) &&
-            (Number(taskRow.createdBy) === loggedInUserId || canManageAnyTasks),
+          canReviewBudgetRequest,
           canCancelBudgetRequest: Boolean(taskRow.budgetRequestId) &&
             (Number(taskRow.budgetRequestedBy) === loggedInUserId || canManageAnyTasks),
           canRequestBudgetIncrease: Number(taskRow.ownerUserId) === loggedInUserId &&
@@ -548,7 +549,7 @@ export const eventTasksResolvers = {
             isEventCashier &&
             taskOwnerUserId !== loggedInUserId &&
             financeActionTaskIds.has(taskId)
-          ) || receiptTaskIds.has(taskId)
+          ) || receiptTaskIds.has(taskId) || canReviewBudgetRequest
           };
         }),
         canCreateTasks: canAssignRootTasks,

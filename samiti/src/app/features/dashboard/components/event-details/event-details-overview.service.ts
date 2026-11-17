@@ -67,6 +67,7 @@ export class EventDetailsOverviewService {
         programsCount
         tasksCount
         parentTasksCount
+        hasFinanceAction
         type
         startDate
         endDate

@@ -1116,6 +1116,10 @@
   margin-top: 6px;
 }
 
+.task-child-expansion-list {
+  margin-right: -12px;
+}
+
 .event-task-panel,
 .task-subtask-panel {
   overflow: hidden;
@@ -1161,6 +1165,21 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
+}
+
+:host ::ng-deep .task-subtask-panel .mat-expansion-panel-header[aria-disabled="true"] .mat-content.mat-content-hide-toggle,
+:host ::ng-deep .event-task-panel .mat-expansion-panel-header[aria-disabled="true"] .mat-content.mat-content-hide-toggle {
+  margin-right: 0 !important;
+}
+
+:host ::ng-deep .task-subtask-panel .mat-expansion-panel-header[aria-disabled="true"]::after,
+:host ::ng-deep .event-task-panel .mat-expansion-panel-header[aria-disabled="true"]::after {
+  content: "";
+  flex: 0 0 8px;
+  width: 8px;
+  height: 24px;
+  margin-left: 6px;
+  visibility: hidden;
 }
 
 :host ::ng-deep .task-subtask-panel .mat-expansion-panel-header,
@@ -1529,8 +1548,9 @@
 }
 
 .task-panel-status-wrapper .task-budget-pills .task-budget-metric {
-  width: auto;
-  flex: 0 0 auto;
+  width: 120px;
+  min-width: 120px;
+  flex: 0 0 120px;
   padding-right: 8px;
   padding-left: 8px;
   box-sizing: border-box;
@@ -1538,6 +1558,14 @@
 
 .task-panel-status-wrapper > .task-budget-pills {
   margin-left: auto;
+}
+
+.task-panel-status-wrapper:has(> .task-budget-request) > .task-budget-request {
+  margin-left: auto;
+}
+
+.task-panel-status-wrapper:has(> .task-budget-request) > .task-budget-pills {
+  margin-left: 0;
 }
 
 .task-panel-budget-request-controls {
@@ -1669,7 +1697,9 @@
   display: flex;
   align-items: center;
   justify-content: flex-end;
-  width: 100%;
+  width: 220px;
+  max-width: 100%;
+  justify-self: end;
   min-width: 0;
   height: 28px;
   white-space: nowrap;
@@ -1691,9 +1721,12 @@
 
 .task-assignee-owner {
   display: flex;
-  flex: 1 1 auto;
+  width: 220px;
+  min-width: 220px;
+  max-width: 220px;
+  flex: 0 0 220px;
   height: 28px;
-  min-width: 0;
+  min-height: 28px;
   box-sizing: border-box;
   align-items: center;
   gap: 5px;

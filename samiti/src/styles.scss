@@ -643,6 +643,7 @@ html body button.mat-mdc-icon-button:is(.drawer-close-btn, .confirm-dialog-close
 .task-panel-finance-icon {
   --mat-icon-button-container-shape: 6px;
   --mdc-icon-button-state-layer-shape: 6px;
+  position: relative;
   display: inline-flex !important;
   width: 28px !important;
   height: 28px !important;
@@ -662,6 +663,12 @@ html body button.mat-mdc-icon-button:is(.drawer-close-btn, .confirm-dialog-close
     line-height: 16px !important;
   }
 
+  > mat-icon {
+    display: block;
+    flex: 0 0 16px;
+    margin: 0 !important;
+  }
+
   &:hover,
   &:focus-visible {
     border-color: #34d399 !important;
@@ -675,25 +682,49 @@ html body button.mat-mdc-icon-button:is(.drawer-close-btn, .confirm-dialog-close
   border-color: #ef4444 !important;
   background: #fff1f2 !important;
   color: #b91c1c !important;
+}
 
-  &::after {
-    position: absolute;
-    top: 0;
-    right: -5px;
-    display: flex;
-    width: 14px;
-    height: 14px;
-    align-items: center;
-    justify-content: center;
-    border: 1px solid #fff;
-    border-radius: 50%;
-    background: #dc2626;
-    color: #fff;
-    content: '!';
-    font-size: 10px;
-    font-weight: 800;
-    line-height: 1;
+.task-panel-finance-action-indicator,
+.task-finance-action-indicator,
+.tf-ack-required-icon {
+  display: inline-flex !important;
+  width: 19px !important;
+  height: 19px !important;
+  align-items: center;
+  justify-content: center;
+  box-sizing: border-box;
+  border: 1px solid #dc2626 !important;
+  border-radius: 50%;
+  background: #ffffff !important;
+  color: #dc2626 !important;
+  font-size: 16px !important;
+  line-height: 16px !important;
+}
+
+.task-panel-finance-action-indicator {
+  flex: 0 0 19px;
+  cursor: help;
+
+  mat-icon {
+    width: 16px !important;
+    height: 16px !important;
+    font-size: 16px !important;
+    line-height: 16px !important;
   }
+}
+
+.task-finance-action-indicator {
+  flex: 0 0 19px;
+  margin-left: 2px;
+  cursor: help;
+}
+
+.tf-ack-required-icon {
+  justify-self: center;
+}
+
+.samiti-nav-tabs > .mat-mdc-tab-header .mat-mdc-tab.mdc-tab--active .task-finance-action-indicator {
+  color: #dc2626 !important;
 }
 
 .task-finance-dialog-panel .mat-mdc-dialog-surface {

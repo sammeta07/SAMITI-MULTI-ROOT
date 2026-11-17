@@ -251,6 +251,10 @@
   margin-top: 6px;
 }
 
+.task-child-expansion-list {
+  margin-right: -12px;
+}
+
 .event-task-panel {
   overflow: hidden;
   border: 1px solid var(--task-level-background, #e2e8f0);
@@ -286,7 +290,6 @@
 
 :host ::ng-deep .event-task-panel .mat-expansion-panel-body {
   padding: 0 12px 10px 12px !important;
-  overflow-y: scroll;
 }
 
 :host ::ng-deep .event-task-panel .mat-expansion-panel-header .mat-expansion-indicator {
@@ -294,6 +297,19 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
+}
+
+:host ::ng-deep .event-task-panel .mat-expansion-panel-header[aria-disabled="true"] .mat-content.mat-content-hide-toggle {
+  margin-right: 0 !important;
+}
+
+:host ::ng-deep .event-task-panel .mat-expansion-panel-header[aria-disabled="true"]::after {
+  content: "";
+  flex: 0 0 8px;
+  width: 8px;
+  height: 24px;
+  margin-left: 6px;
+  visibility: hidden;
 }
 
 :host ::ng-deep .event-task-panel .mat-expansion-panel-header {
@@ -337,9 +353,9 @@
 }
 
 .task-assignee-summary {
-  flex: 0 0 328px;
+  flex: 0 0 220px;
   min-width: 0;
-  width: 328px;
+  width: 220px;
 }
 
 .task-row-actions {
@@ -704,6 +720,14 @@
   margin-left: auto;
 }
 
+.task-panel-status-wrapper:has(> .task-budget-request) > .task-budget-request {
+  margin-left: auto;
+}
+
+.task-panel-status-wrapper:has(> .task-budget-request) > .task-budget-pills {
+  margin-left: 0;
+}
+
 .task-budget-metric {
   display: inline-flex;
   width: auto;
@@ -725,6 +749,12 @@
   font-size: 0.58rem;
   font-weight: 700;
   text-transform: uppercase;
+}
+
+.task-panel-status-wrapper .task-budget-pills .task-budget-metric {
+  width: 120px;
+  min-width: 120px;
+  flex: 0 0 120px;
 }
 
 .task-budget-remaining {
@@ -896,7 +926,8 @@
   display: flex;
   align-items: center;
   justify-content: flex-end;
-  width: 100%;
+  width: 220px;
+  max-width: 100%;
   min-width: 0;
   height: 28px;
   white-space: nowrap;
@@ -918,9 +949,12 @@
 
 .task-assignee-owner {
   display: flex;
-  flex: 1 1 auto;
+  width: 220px;
+  min-width: 220px;
+  max-width: 220px;
+  flex: 0 0 220px;
   height: 28px;
-  min-width: 0;
+  min-height: 28px;
   box-sizing: border-box;
   align-items: center;
   gap: 5px;

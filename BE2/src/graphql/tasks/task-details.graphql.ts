@@ -341,6 +341,8 @@ export const taskDetailsResolvers = {
         { type: 'EVENT', id: Number(task.eventId) }
       ) || isTaskOwner;
       const canCreateSubtasks = isMasterAdmin || isTaskOwner;
+      const canReviewBudgetRequest = Boolean(task.budgetRequestId) &&
+        (isTaskCreator || isMasterAdmin);
       return {
         taskId: Number(task.taskId),
         taskName: String(task.taskName || 'Untitled Task'),
@@ -349,8 +351,7 @@ export const taskDetailsResolvers = {
         requestedBudgetAmount: task.requestedBudgetAmount === null ? null : String(task.requestedBudgetAmount),
         budgetRequestStatus: task.budgetRequestStatus || null,
         budgetRequestedByName: task.budgetRequestedByName || null,
-        canReviewBudgetRequest: Boolean(task.budgetRequestId) &&
-          (isTaskCreator || isMasterAdmin),
+        canReviewBudgetRequest,
         canCancelBudgetRequest: Boolean(task.budgetRequestId) &&
           (Number(task.budgetRequestedBy) === userId || isMasterAdmin),
         canRequestBudgetIncrease: isTaskOwner && !isTaskCreator && !isMasterAdmin,
@@ -373,7 +374,7 @@ export const taskDetailsResolvers = {
         canAccessFinance,
         needsFinanceAction: (
           isCashier && !isTaskOwner && financeActionTaskIds.has(taskId)
-        ) || receiptTaskIds.has(taskId),
+        ) || receiptTaskIds.has(taskId) || canReviewBudgetRequest,
         children: children.map((child) => ({
           taskId: Number(child.taskId),
           parentTaskId: Number(taskId),
@@ -398,7 +399,10 @@ export const taskDetailsResolvers = {
             isCashier &&
             Number(child.ownerUserId) !== userId &&
             financeActionTaskIds.has(Number(child.taskId))
-          ) || receiptTaskIds.has(Number(child.taskId)),
+          ) || receiptTaskIds.has(Number(child.taskId)) || (
+            Boolean(child.budgetRequestId) &&
+            (Number(child.createdBy) === userId || isMasterAdmin)
+          ),
           ...mapChildPermissions(child)
         })),
         descendants: descendants.map((descendant) => ({
@@ -425,7 +429,10 @@ export const taskDetailsResolvers = {
             isCashier &&
             Number(descendant.ownerUserId) !== userId &&
             financeActionTaskIds.has(Number(descendant.taskId))
-          ) || receiptTaskIds.has(Number(descendant.taskId)),
+          ) || receiptTaskIds.has(Number(descendant.taskId)) || (
+            Boolean(descendant.budgetRequestId) &&
+            (Number(descendant.createdBy) === userId || isMasterAdmin)
+          ),
           ...mapChildPermissions(descendant)
         })),
         taskAssignees: taskAssignees.map((assignee) => ({

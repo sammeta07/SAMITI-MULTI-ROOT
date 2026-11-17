@@ -217,44 +217,231 @@
 /* Tabs */
 .tf-ledger-section {
   display: flex;
+  flex: 1 1 auto;
   flex-direction: column;
   gap: 5px;
+  min-height: 0;
 }
 
-.tf-tabs-bar {
+.tf-request-accordion {
   display: flex;
-  align-items: center;
-  gap: 2px;
-  border-bottom: 1px solid #e2e8f0;
+  flex-direction: column;
+  gap: 5px;
+  background: transparent;
 }
 
-.tf-tab {
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
-  padding: 4px 9px;
-  border: 0;
-  border-bottom: 2px solid transparent;
-  background: transparent;
-  font-size: 0.74rem;
-  font-weight: 600;
-  color: #64748b;
-  cursor: pointer;
-  margin-bottom: -1px;
+.tf-request-panel {
+  border: 1px solid #e2e8f0;
+  border-radius: 6px !important;
+  box-shadow: none !important;
 
-  &:hover { color: #0f172a; }
-  &.active {
-    color: var(--primary-color, #2563eb);
-    border-bottom-color: var(--primary-color, #2563eb);
+  &:nth-child(odd) {
+    background-color: #eff6ff;
+  }
+
+  &:nth-child(even) {
+    background-color: #fefce8;
+  }
+
+  ::ng-deep .mat-expansion-panel-header {
+    height: auto !important;
+    min-height: 58px;
+    padding: 8px 12px;
+  }
+
+  ::ng-deep .mat-expansion-panel-header.mat-expanded {
+    height: auto !important;
+  }
+
+  ::ng-deep .mat-expansion-panel-header-title {
+    flex: 1 1 40%;
+    min-width: 0;
+    margin-right: 10px;
+  }
+
+  ::ng-deep .mat-expansion-panel-header-description {
+    flex: 1 1 60%;
+    min-width: 0;
+    justify-content: flex-end;
+    margin-right: 8px;
+    color: inherit;
+  }
+
+  ::ng-deep .mat-expansion-panel-body {
+    padding: 4px 12px 12px;
   }
 }
 
-.tf-count {
-  padding: 0 5px;
-  border-radius: 999px;
-  background: #f1f5f9;
-  font-size: 0.64rem;
+.tf-request-header-title {
+  display: grid;
+  grid-template-columns: 100px minmax(0, 1fr);
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  min-width: 0;
+}
+
+.tf-request-header-title .cell-type {
+  width: 100px;
+  min-width: 0;
+}
+
+.tf-request-details {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  width: 100%;
+
+  .tf-request-impact-label {
+    color: #64748b;
+    font-size: 0.6rem;
+    line-height: 1.1;
+  }
+
+  .cell-desc {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+}
+
+.tf-request-header-summary {
+  display: grid;
+  align-items: center;
+  justify-content: end;
+  grid-template-columns: 110px 64px 80px 170px 64px 20px;
+  grid-template-areas: "total issued remaining dispatch status acknowledgement";
+  gap: 8px;
+  width: 100%;
+  white-space: nowrap;
+}
+
+.tf-request-metric-total { grid-area: total; }
+.tf-request-metric-issued { grid-area: issued; }
+.tf-request-metric-remaining { grid-area: remaining; }
+.tf-request-header-status { grid-area: status; justify-self: end; }
+.tf-ack-required-icon {
+  grid-area: acknowledgement;
+  justify-self: center;
+}
+
+.tf-request-metric-sub {
+  color: #64748b !important;
+  font-size: 0.56rem !important;
+  white-space: nowrap;
+}
+
+.tf-request-other-summary .tab-badge {
+  grid-area: status;
+  justify-self: end;
+}
+
+.tf-ack-required-placeholder {
+  grid-area: acknowledgement;
+  width: 19px;
+  height: 19px;
+  visibility: hidden;
+}
+
+.tf-request-header-dispatch {
+  display: inline-flex;
+  box-sizing: border-box;
+  grid-area: dispatch;
+  flex: none;
+  align-items: center;
+  gap: 4px;
+  width: 170px;
+  min-height: 30px;
+  padding-left: 8px;
+  border-left: 1px solid #e2e8f0;
+
+  .tf-inline-amt,
+  .tf-btn {
+    height: 30px;
+  }
+}
+
+.tf-request-header-dispatch-placeholder {
+  visibility: hidden;
+}
+
+.tf-request-metric-placeholder {
+  visibility: hidden;
+}
+
+.tf-request-metric {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  width: 100%;
+  min-width: 0;
+
+  small {
+    color: #64748b;
+    font-size: 0.6rem;
+    line-height: 1.1;
+  }
+
+  strong {
+    color: #0f172a;
+    font-size: 0.7rem;
+  }
+}
+
+.tf-request-actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 5px;
+  margin-bottom: 8px;
+}
+
+.tf-no-dispatches {
+  padding: 8px;
+}
+
+.tf-history-tabs {
+  display: flex;
+  flex: 1 1 auto;
+  flex-direction: column;
+  min-height: 0;
+  overflow: hidden;
+
+  ::ng-deep .mat-mdc-tab-body-wrapper {
+    flex: 1 1 auto;
+    min-height: 0;
+    overflow: hidden;
+  }
+
+  ::ng-deep .mat-mdc-tab-body-content {
+    height: 100%;
+    overflow: auto;
+  }
+}
+
+.tab-leading-icon {
+  width: 0.8rem !important;
+  height: 0.8rem !important;
+  color: #64748b;
+  font-size: 0.8rem !important;
+}
+
+.tab-name-text {
+  padding: 0 4px;
+}
+
+.tab-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 18px;
+  height: 18px;
+  padding: 1px 6px;
+  border-radius: 6px;
+  background: #e2e8f0;
   color: #475569;
+  font-size: 0.68rem;
+  font-weight: 700;
 }
 
 .tf-auth-tag {
@@ -448,7 +635,8 @@
 .tf-status-pill {
   box-sizing: border-box;
   justify-content: center;
-  width: 54px;
+  width: 64px;
+  height: 30px;
 }
 
 .badge-success { background: #dcfce7; color: #15803d; }
@@ -527,9 +715,55 @@
   to { transform: rotate(360deg); }
 }
 
+@media (max-width: 1024px) {
+  .tf-request-header-summary {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    grid-template-areas:
+      "total issued status"
+      "remaining dispatch dispatch"
+      ". . acknowledgement";
+  }
+
+  .tf-request-header-dispatch {
+    width: 100%;
+  }
+}
+
 @media (max-width: 640px) {
   .tf-tool-group {
     width: 100%;
     input { flex: 1; width: auto; }
+  }
+
+  .tf-request-panel {
+    ::ng-deep .mat-expansion-panel-header {
+      padding: 8px;
+    }
+
+    ::ng-deep .mat-expansion-panel-header .mat-content {
+      flex-wrap: wrap;
+      align-items: flex-start;
+    }
+
+    ::ng-deep .mat-expansion-panel-header-title,
+    ::ng-deep .mat-expansion-panel-header-description {
+      flex-basis: 100%;
+      margin-right: 0;
+    }
+  }
+
+  .tf-request-header-title {
+    flex-wrap: wrap;
+    gap: 5px;
+  }
+
+  .tf-request-header-summary {
+    justify-content: flex-start;
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+
+  .tf-request-actions {
+    flex-wrap: wrap;
   }
 }

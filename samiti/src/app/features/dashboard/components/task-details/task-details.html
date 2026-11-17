@@ -353,14 +353,11 @@
                   @let childSubtasks = getSubtaskChildren(child.taskId);
                   @let hasChildSubtasks = childSubtasks.length > 0;
                   @let ownerDesignation = getSubtaskOwnerDesignation(child.taskId);
-                  @let isUpdatingOwner = assigningSubtaskIds.has(child.taskId);
-                  @let isEditingOwner = isEditingSubtaskAssignee(child.taskId);
 
                   <mat-expansion-panel
                     class="event-task-panel task-subtask-panel"
                     [expanded]="false"
                     [disabled]="!hasChildSubtasks"
-                    [hideToggle]="!hasChildSubtasks"
                     [style.--task-level-background]="getSubtaskLevelBackground(entry.depth)"
                   >
                     <mat-expansion-panel-header>
@@ -488,145 +485,49 @@
                           }
                         </div>
 
-                        <!-- Panel Right: Assignee Read / Autocomplete Edit -->
+                        <!-- Panel Right: Assignee -->
                         <div class="task-assignee-summary" (click)="$event.stopPropagation()" (keydown)="$event.stopPropagation()">
-                          @if (child.canAssignOwner && isEditingOwner) {
-                            <div class="task-assignee-edit-layout">
-                              <span class="task-assignee-autocomplete-box">
-                                <mat-form-field
-                                  class="task-panel-assignee-field"
-                                  [class.task-assignee-unassigned]="isSubtaskAssigneeUnassigned(child.taskId, child.ownerUserId)"
-                                  appearance="fill"
-                                  subscriptSizing="dynamic"
-                                >
-                                  <span matPrefix class="da-input-icon"><mat-icon>search</mat-icon></span>
-                                  @if (!isSubtaskAssigneeSearchCleared(child.taskId) && ownerDesignation) {
-                                    <span matPrefix class="task-assignee-selected-owner-avatar">
-                                      @if (ownerDesignation.photo) {
-                                        <img [src]="ownerDesignation.photo" [alt]="getSubtaskAssigneeDisplay(child.taskId, child.ownerName) || 'Task owner'" />
-                                      } @else {
-                                        <span>{{ getInitials(getSubtaskAssigneeDisplay(child.taskId, child.ownerName)) }}</span>
-                                      }
-                                    </span>
-                                  }
-                                  <input
-                                    type="text"
-                                    matInput
-                                    autocomplete="off"
-                                    placeholder="Search member..."
-                                    [value]="getSubtaskAssigneeDisplay(child.taskId, child.ownerName)"
-                                    [disabled]="isUpdatingOwner"
-                                    (input)="onSubtaskAssigneeSearch(child.taskId, $any($event.target).value)"
-                                    (focus)="onSubtaskAssigneeFocus(child.taskId, subtaskAssigneeTrigger)"
-                                    [matAutocomplete]="subtaskAssigneeAutocomplete"
-                                    #subtaskAssigneeTrigger="matAutocompleteTrigger"
-                                    [attr.aria-label]="'Assign ' + child.taskName"
-                                  />
-                                  @if (isUpdatingOwner) {
-                                    <span matSuffix class="task-assignee-saving">
-                                      <mat-progress-spinner mode="indeterminate" diameter="13" strokeWidth="2"></mat-progress-spinner>
-                                      <span>Saving...</span>
-                                    </span>
+                          <div class="task-assignee-value-layout">
+                            <span
+                              class="task-assignee-owner"
+                              [class.task-assignee-owner-unassigned]="!child.ownerUserId"
+                            >
+                              @if (ownerDesignation) {
+                                <span class="task-assignee-owner-avatar">
+                                  @if (ownerDesignation.photo) {
+                                    <img [src]="ownerDesignation.photo" [alt]="child.ownerName || 'Task owner'" />
                                   } @else {
-                                    <span matSuffix class="task-assignee-input-suffix">
-                                      @if (hasSubtaskAssigneeSearch(child.taskId)) {
-                                        <button
-                                          class="task-assignee-clear-btn"
-                                          type="button"
-                                          aria-label="Clear member search"
-                                          title="Clear search"
-                                          (mousedown)="clearSubtaskAssigneeSearch(child.taskId, subtaskAssigneeTrigger, $event)"
-                                        >
-                                          <mat-icon>close</mat-icon>
-                                        </button>
-                                      }
-                                    </span>
+                                    <span>{{ getInitials(child.ownerName) }}</span>
                                   }
-                                  <mat-autocomplete
-                                    #subtaskAssigneeAutocomplete="matAutocomplete"
-                                    class="da-task-assignee-autocomplete"
-                                    [displayWith]="displaySubtaskAssigneeName"
-                                    hideSingleSelectionIndicator
-                                    (closed)="onSubtaskAssigneeAutocompleteClosed(child.taskId, child.ownerName)"
-                                    (optionSelected)="onSubtaskAssigneeChange(child.taskId, child.ownerName, $event)"
-                                  >
-                                    @for (member of getFilteredSubtaskAssignees(child.taskId, child.ownerUserId); track member.userId) {
-                                      <mat-option
-                                        [value]="member.userId"
-                                        [disabled]="isCurrentSubtaskAssignee(child.taskId, member.userId)"
-                                        class="da-opt-row"
-                                        [ngClass]="getRoleColorClass(member.committeeRole)"
-                                      >
-                                        <div class="mat-auto-options">
-                                          <span class="da-opt-avatar" [ngClass]="getRoleColorClass(member.committeeRole)">
-                                            @if (member.photo) {
-                                              <img [src]="member.photo" [alt]="member.name" class="da-opt-img" />
-                                            } @else {
-                                              <span class="da-opt-initials">{{ getInitials(member.name) }}</span>
-                                            }
-                                          </span>
-                                          <div class="mat-auto-options-details">
-                                            <span class="da-opt-name">{{ member.name | titlecase }}</span>
-                                            <span class="da-opt-email">{{ member.email }}</span>
-                                          </div>
-                                          @if (member.roleIcon) {
-                                            <span class="mat-auto-options-cup" [style.color]="member.roleColor || '#16a34a'">
-                                              {{ member.roleIcon }}
-                                            </span>
-                                          }
-                                        </div>
-                                      </mat-option>
-                                    } @empty {
-                                      <mat-option disabled class="da-opt-empty">No members found</mat-option>
-                                    }
-                                  </mat-autocomplete>
-                                </mat-form-field>
-                              </span>
-                            </div>
-                          } @else {
-                            <div class="task-assignee-value-layout">
-                              <span
-                                class="task-assignee-owner"
-                                [class.task-assignee-owner-unassigned]="!child.ownerUserId"
-                              >
-                                @if (ownerDesignation) {
-                                  <span class="task-assignee-owner-avatar">
-                                    @if (ownerDesignation.photo) {
-                                      <img [src]="ownerDesignation.photo" [alt]="child.ownerName || 'Task owner'" />
-                                    } @else {
-                                      <span>{{ getInitials(child.ownerName) }}</span>
-                                    }
-                                  </span>
-                                }
-                                <span class="task-assignee-owner-name">{{ (child.ownerName || 'Unassigned') | titlecase }}</span>
-                                @if (ownerDesignation?.roleIcon) {
-                                  <span
-                                    class="task-assignee-owner-designation"
-                                    [style.color]="ownerDesignation?.roleColor || '#16a34a'"
-                                    [attr.aria-label]="ownerDesignation?.committeeRole"
-                                    [title]="ownerDesignation?.committeeRole"
-                                  >
-                                    {{ ownerDesignation?.roleIcon }}
-                                  </span>
-                                }
-                              </span>
-                            </div>
-                          }
+                                </span>
+                              }
+                              <span class="task-assignee-owner-name">{{ (child.ownerName || 'Unassigned') | titlecase }}</span>
+                              @if (ownerDesignation?.roleIcon) {
+                                <span
+                                  class="task-assignee-owner-designation"
+                                  [style.color]="ownerDesignation?.roleColor || '#16a34a'"
+                                  [attr.aria-label]="ownerDesignation?.committeeRole"
+                                  [title]="ownerDesignation?.committeeRole"
+                                >
+                                  {{ ownerDesignation?.roleIcon }}
+                                </span>
+                              }
+                            </span>
+                          </div>
                         </div>
 
                         <!-- Actions -->
                         <div class="task-row-actions" (click)="$event.stopPropagation()" (keydown)="$event.stopPropagation()">
-                          @if (canOpenSubtaskActions(child)) {
-                            <button
-                              mat-icon-button
-                              class="task-panel-edit-icon"
-                              type="button"
-                              aria-label="Edit task"
-                              matTooltip="Edit task"
-                              (click)="openSubtaskActionsDialog(child)"
+                          @if (child.needsFinanceAction === true) {
+                            <span
+                              class="task-panel-finance-action-indicator"
+                              role="img"
+                              aria-label="Action required"
+                              matTooltip="Action required"
+                              matTooltipPosition="above"
                             >
-                              <mat-icon>edit</mat-icon>
-                            </button>
+                              <mat-icon aria-hidden="true">priority_high</mat-icon>
+                            </span>
                           }
                           @if (child.canDelete) {
                             <span
@@ -648,13 +549,25 @@
                               </button>
                             </span>
                           }
+                          @if (canOpenSubtaskActions(child)) {
+                            <button
+                              mat-icon-button
+                              class="task-panel-edit-icon"
+                              type="button"
+                              aria-label="Edit task"
+                              matTooltip="Edit task"
+                              (click)="openSubtaskActionsDialog(child)"
+                            >
+                              <mat-icon>edit</mat-icon>
+                            </button>
+                          }
                           <button
                             mat-icon-button
                             class="task-panel-finance-icon"
                             [class.task-panel-finance-action-required]="child.needsFinanceAction"
                             type="button"
-                            [attr.aria-label]="child.needsFinanceAction ? 'Finance action required — view task finance' : 'View task finance'"
-                            [matTooltip]="child.needsFinanceAction ? 'Finance action required' : 'Task finance'"
+                            [attr.aria-label]="child.needsFinanceAction ? 'Action required — view task finance' : 'View task finance'"
+                            [matTooltip]="child.needsFinanceAction ? 'Action required' : 'Task finance'"
                             (click)="openTaskFinanceDialog(child.taskId, child.taskName, child.ownerName, $event)"
                           >
                             <mat-icon>account_balance_wallet</mat-icon>
@@ -726,7 +639,7 @@
 
                     <!-- Recursive Subtasks Tree -->
                     @if (hasChildSubtasks) {
-                      <mat-accordion class="task-expansion-list" [multi]="true">
+                      <mat-accordion class="task-expansion-list task-child-expansion-list" [multi]="true">
                         @for (nestedChild of childSubtasks; track nestedChild.taskId) {
                           <ng-container
                             [ngTemplateOutlet]="subtaskPanelTemplate"
@@ -763,6 +676,14 @@
             <ng-template mat-tab-label>
               <mat-icon class="tab-leading-icon">payments</mat-icon>
               <span class="tab-name-text">Finance</span>
+              @if (taskDetails.needsFinanceAction === true) {
+                <mat-icon
+                  class="task-finance-action-indicator"
+                  matTooltip="Action required"
+                  matTooltipPosition="above"
+                  aria-label="Action required"
+                >priority_high</mat-icon>
+              }
             </ng-template>
             <ng-template matTabContent>
               <app-task-finance [taskId]="taskDetails.taskId" [loadOnInit]="true" />

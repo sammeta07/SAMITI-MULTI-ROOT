@@ -2,6 +2,8 @@ import { query } from '../../../../config/db';
 import { RowDataPacket } from 'mysql2/promise';
 import { hasEventsDisplayNameColumn } from '../event-display-name-support';
 import { throwEventError, getLoggedInUserId } from '../voting/event-voting-core.graphql';
+import { hasPermission, PERMISSIONS } from '../../../../authorization/authorization';
+import { getFinanceActionTaskIds, getPendingReceiptTaskIds } from '../../../tasks/task-finance.graphql';
 
 export const eventDetailsHeaderTypes = `
   type EventDetailsHeader {
@@ -17,6 +19,7 @@ export const eventDetailsHeaderTypes = `
     programsCount: Int!
     tasksCount: Int!
     parentTasksCount: Int!
+    hasFinanceAction: Boolean!
     type: String
     startDate: String
     endDate: String
@@ -136,6 +139,60 @@ export const eventDetailsHeaderResolvers = {
         throwEventError('FORBIDDEN', 'You are not allowed to access this event');
       }
 
+      const [cashierRows, canManageAnyTasks, taskActionRows] = await Promise.all([
+        query<Array<RowDataPacket & { isCashier: number }>>(
+          `SELECT EXISTS (
+             SELECT 1
+             FROM users_events ue
+             INNER JOIN events_roles_master erm ON erm.role_id = ue.role_id
+             WHERE ue.event_id = ?
+               AND ue.user_id = ?
+               AND (
+                 UPPER(REPLACE(REPLACE(TRIM(erm.role_name), ' ', '_'), '-', '_')) IN ('TREASURER', 'CASHIER', 'KOSHADHYAKSHA') OR
+                 UPPER(REPLACE(REPLACE(TRIM(erm.english_name), ' ', '_'), '-', '_')) IN ('TREASURER', 'CASHIER', 'KOSHADHYAKSHA') OR
+                 UPPER(REPLACE(REPLACE(TRIM(erm.hindi_name), ' ', '_'), '-', '_')) IN ('TREASURER', 'CASHIER', 'KOSHADHYAKSHA')
+               )
+           ) AS isCashier`,
+          [eventId, loggedInUserId]
+        ),
+        hasPermission(
+          loggedInUserId,
+          PERMISSIONS.EVENT_TASK_MANAGE_ANY,
+          { type: 'EVENT', id: eventId }
+        ),
+        query<Array<RowDataPacket & {
+          taskId: number;
+          ownerUserId: number | null;
+          createdBy: number | null;
+          budgetRequestId: number | null;
+        }>>(
+          `SELECT t.id AS taskId,
+                  t.owner_user_id AS ownerUserId,
+                  t.created_by AS createdBy,
+                  budgetRequest.id AS budgetRequestId
+           FROM tasks t
+           LEFT JOIN task_budget_requests budgetRequest
+             ON budgetRequest.task_id = t.id AND budgetRequest.status = 'PENDING'
+           WHERE t.event_id = ?`,
+          [eventId]
+        )
+      ]);
+      const isEventCashier = Number(cashierRows[0]?.isCashier) === 1;
+      const taskIds = taskActionRows.map((task) => Number(task.taskId));
+      const [financeActionTaskIds, receiptTaskIds] = await Promise.all([
+        isEventCashier ? getFinanceActionTaskIds(taskIds) : Promise.resolve(new Set<number>()),
+        getPendingReceiptTaskIds(taskIds, loggedInUserId)
+      ]);
+      const hasFinanceAction = taskActionRows.some((task) => {
+        const taskId = Number(task.taskId);
+        const needsCashierAction = isEventCashier &&
+          Number(task.ownerUserId) !== loggedInUserId &&
+          financeActionTaskIds.has(taskId);
+        const needsBudgetReview = Boolean(task.budgetRequestId) &&
+          (Number(task.createdBy) === loggedInUserId || canManageAnyTasks);
+        return needsCashierAction || receiptTaskIds.has(taskId) || needsBudgetReview;
+      });
+
       return {
         id: Number(event.id),
         eventId: Number(event.eventId),
@@ -155,7 +212,8 @@ export const eventDetailsHeaderResolvers = {
         latitude: event.latitude ? Number(event.latitude) : null,
         longitude: event.longitude ? Number(event.longitude) : null,
         myDesignation: myDesignation,
-        committeeRole
+        committeeRole,
+        hasFinanceAction
       };
     }
   }

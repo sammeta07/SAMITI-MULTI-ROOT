@@ -1,6 +1,9 @@
 import { CommonModule } from '@angular/common';
 import { Component, inject, Input, OnInit, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
+import { MatExpansionModule } from '@angular/material/expansion';
+import { MatIconModule } from '@angular/material/icon';
+import { MatTabsModule } from '@angular/material/tabs';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { finalize, Observable } from 'rxjs';
 import { NotifierService } from '../../../../shared/notifier/notifier.service';
@@ -17,7 +20,7 @@ import { TaskFinanceService } from './task-finance.service';
 @Component({
   selector: 'app-task-finance',
   standalone: true,
-  imports: [CommonModule, FormsModule, MatTooltipModule, WholeRupeeDirective],
+  imports: [CommonModule, FormsModule, MatExpansionModule, MatIconModule, MatTabsModule, MatTooltipModule, WholeRupeeDirective],
   templateUrl: './task-finance.component.html',
   styleUrl: './task-finance.component.scss'
 })
@@ -32,7 +35,6 @@ export class TaskFinanceComponent implements OnInit {
   public readonly payload = signal<TaskFinancePayload | null>(null);
   public readonly isLoading = signal(false);
   public readonly isSaving = signal(false);
-  public readonly activeHistoryTab = signal<'REQUESTS' | 'TRANSACTIONS'>('REQUESTS');
 
   public readonly approvalAmounts: Record<number, string | number | null> = {};
   public readonly dispatchAmounts: Record<number, string | number | null> = {};
@@ -117,13 +119,33 @@ export class TaskFinanceComponent implements OnInit {
       && Number(amount) <= remaining;
   }
 
-  public getRequestPayments(
+  public getRequestTransactions(
     request: TaskFinanceRequest,
     transactions: TaskFinanceTransaction[]
   ): TaskFinanceTransaction[] {
-    return transactions.filter((transaction) =>
-      transaction.requestId === request.id && transaction.transactionType === 'ADVANCE_ISSUED'
-    );
+    return transactions
+      .filter((transaction) => transaction.requestId === request.id)
+      .sort((left, right) =>
+        left.createdAt.localeCompare(right.createdAt) || left.id - right.id
+      );
+  }
+
+  public hasPendingReceiptConfirmation(transactions: TaskFinanceTransaction[]): boolean {
+    return transactions.some((transaction) => transaction.canConfirmReceipt);
+  }
+
+  public getOtherTransactions(
+    requests: TaskFinanceRequest[],
+    transactions: TaskFinanceTransaction[]
+  ): TaskFinanceTransaction[] {
+    return transactions
+      .filter((transaction) =>
+        transaction.requestId === null
+        || !requests.some((request) => request.id === transaction.requestId)
+      )
+      .sort((left, right) =>
+        left.createdAt.localeCompare(right.createdAt) || left.id - right.id
+      );
   }
 
   public getRequestForTransaction(
@@ -133,6 +155,19 @@ export class TaskFinanceComponent implements OnInit {
     return transaction.requestId === null
       ? undefined
       : requests.find((request) => request.id === transaction.requestId);
+  }
+
+  public getRequestImpact(request: TaskFinanceRequest): string {
+    const match = /^Approved task budget increase to\s+([\d,.]+)$/i.exec(request.reason);
+    if (request.requestType === 'TOP_UP' && match) {
+      const newBudget = Number(match[1].replace(/,/g, ''));
+      const increase = Number(request.requestedAmount);
+      if (Number.isFinite(newBudget) && Number.isFinite(increase)) {
+        return `₹${this.money(newBudget - increase)} → ₹${this.money(newBudget)}`;
+      }
+    }
+
+    return `₹0 → ₹${this.money(request.approvedAmount ?? request.requestedAmount)}`;
   }
 
   public confirmReceipt(transaction: TaskFinanceTransaction): void {
