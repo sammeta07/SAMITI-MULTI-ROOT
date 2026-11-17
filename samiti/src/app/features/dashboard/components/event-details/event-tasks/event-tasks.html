@@ -369,7 +369,7 @@
                     type="button"
                     [attr.aria-label]="task.needsFinanceAction ? 'Finance action required — view task finance' : 'View task finance'"
                     [matTooltip]="task.needsFinanceAction ? 'Finance action required' : 'Task finance'"
-                    (click)="openTaskFinanceDialog(task.taskId, task.taskName, $event)"
+                    (click)="openTaskFinanceDialog(task.taskId, task.taskName, task.ownerName, $event)"
                   >
                     <mat-icon>account_balance_wallet</mat-icon>
                   </button>

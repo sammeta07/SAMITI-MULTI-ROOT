@@ -9,6 +9,7 @@ import { TaskFinanceComponent } from './task-finance.component';
 export interface TaskFinanceDialogData {
   taskId: number;
   taskName: string;
+  ownerName: string | null;
 }
 
 @Component({
@@ -21,6 +22,7 @@ export interface TaskFinanceDialogData {
         <div class="drawer-title-group">
           <div class="drawer-title-copy">
             <h2>{{ data.taskName | titlecase }}</h2>
+            <p class="drawer-owner-subtitle">Owner: {{ data.ownerName ? (data.ownerName | titlecase) : 'Unassigned' }}</p>
           </div>
         </div>
         <button mat-icon-button type="button" class="drawer-close-btn" aria-label="Close dialog" (click)="close()">
@@ -68,18 +70,41 @@ export interface TaskFinanceDialogData {
 
     .drawer-title-group {
       display: flex;
+      flex: 1 1 auto;
       min-width: 0;
       align-items: center;
       gap: 8px;
     }
 
     .drawer-title-group h2 {
+      overflow: hidden;
       margin: 0;
       color: #0f172a;
       font-size: 1.05rem;
       font-weight: 700;
       letter-spacing: -0.2px;
       line-height: 1;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .drawer-title-copy {
+      display: flex;
+      flex: 1 1 auto;
+      min-width: 0;
+      flex-direction: column;
+      gap: 4px;
+      overflow: hidden;
+    }
+
+    .drawer-owner-subtitle {
+      overflow: hidden;
+      margin: 0;
+      color: #64748b;
+      font-size: 0.75rem;
+      line-height: 1;
+      text-overflow: ellipsis;
+      white-space: nowrap;
     }
 
     .drawer-close-btn {

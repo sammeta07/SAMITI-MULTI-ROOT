@@ -127,16 +127,7 @@
                 placeholder="₹ Amt"
                 required
               />
-              <input
-                type="text"
-                maxlength="1000"
-                name="returnDescription"
-                [(ngModel)]="returnDescription"
-                placeholder="Return note..."
-                aria-label="Unused advance return note"
-                required
-              />
-              <button type="submit" class="tf-btn tf-btn-primary" [disabled]="isSaving()">Submit</button>
+              <button type="submit" class="tf-btn tf-btn-primary" [disabled]="isSaving() || !canSubmitAdvanceReturn()">Submit</button>
             </form>
           }
         </section>
@@ -173,6 +164,7 @@
                 <tbody>
                   @for (request of finance.requests; track request.id) {
                     @let remAdvance = remainingRequestAmount(request, 'ADVANCE_ISSUED', 'approvedAmount');
+                    @let issuedAdvance = issuedRequestAmount(request);
                     @let isReadyToPay = isRequestPayable(request) && remAdvance > 0;
                     @let isPaid = isRequestPayable(request) && remAdvance === 0;
 
@@ -236,6 +228,9 @@
                         @if (request.approvedAmount && request.approvedAmount !== request.requestedAmount) {
                           <div class="cell-sub">Req: ₹{{ money(request.requestedAmount) }}</div>
                         }
+                        @if (isRequestPayable(request)) {
+                          <div class="cell-sub">Issued: ₹{{ money(issuedAdvance.toFixed(2)) }} · Remaining: ₹{{ money(remAdvance.toFixed(2)) }}</div>
+                        }
                       </td>
 
                       @if (finance.canApprove) {
@@ -250,9 +245,28 @@
                               <button type="button" class="tf-btn tf-btn-danger" [disabled]="isSaving()" (click)="reviewRequest(request, 'REJECT')">Reject</button>
                             </div>
                           } @else if (isReadyToPay) {
-                            <button type="button" class="tf-btn tf-btn-primary" [disabled]="isSaving()" (click)="issueAdvance(request)">
-                              Issue Cash
-                            </button>
+                            <div class="tf-btn-group">
+                              <div class="tf-inline-amt">
+                                <span>₹</span>
+                                <input
+                                  type="number"
+                                  min="0.01"
+                                  [max]="remAdvance"
+                                  step="0.01"
+                                  [name]="'dispatch-' + request.id"
+                                  [(ngModel)]="dispatchAmounts[request.id]"
+                                  [disabled]="isSaving()"
+                                  [attr.aria-label]="'Amount to dispatch for request #' + request.id"
+                                  title="Amount to dispatch"
+                                />
+                              </div>
+                              <button
+                                type="button"
+                                class="tf-btn tf-btn-primary"
+                                [disabled]="isSaving() || !canDispatchAdvance(request, remAdvance)"
+                                (click)="issueAdvance(request)"
+                              >Dispatch</button>
+                            </div>
                           } @else {
                             <span class="cell-settled">—</span>
                           }

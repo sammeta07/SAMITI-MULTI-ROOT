@@ -7,7 +7,7 @@ import { TaskFinanceDialogComponent } from './task-finance-dialog.component';
 export class TaskFinanceDialogService {
   private readonly dialog = inject(MatDialog);
 
-  public open(taskId: number, taskName: string): Observable<void> {
+  public open(taskId: number, taskName: string, ownerName: string | null | undefined): Observable<void> {
     document.body.classList.add('dialog-open');
     const dialogRef = this.dialog.open(TaskFinanceDialogComponent, {
       position: { right: '0', top: '0' },
@@ -17,7 +17,7 @@ export class TaskFinanceDialogService {
       autoFocus: true,
       disableClose: true,
       hasBackdrop: true,
-      data: { taskId, taskName },
+      data: { taskId, taskName, ownerName: ownerName ?? null },
       panelClass: ['slide-in-dialog', 'task-finance-dialog-panel']
     });
     const closed = dialogRef.afterClosed();

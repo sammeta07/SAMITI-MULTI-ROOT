@@ -151,10 +151,10 @@ export class EventTasksComponent implements OnInit, OnDestroy {
       : task);
   }
 
-  public openTaskFinanceDialog(taskId: number, taskName: string, event: Event): void {
+  public openTaskFinanceDialog(taskId: number, taskName: string, ownerName: string | null | undefined, event: Event): void {
     event.stopPropagation();
     const eventId = this.currentEventId;
-    this.taskFinanceDialog.open(taskId, taskName).subscribe(() => {
+    this.taskFinanceDialog.open(taskId, taskName, ownerName).subscribe(() => {
       if (eventId === null || eventId !== this.currentEventId) return;
       this.taskFinanceService.getTaskFinance(taskId).subscribe({
         next: (finance) => {

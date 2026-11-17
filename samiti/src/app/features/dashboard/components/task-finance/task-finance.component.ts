@@ -33,8 +33,8 @@ export class TaskFinanceComponent implements OnInit {
   public readonly activeHistoryTab = signal<'REQUESTS' | 'TRANSACTIONS'>('REQUESTS');
 
   public readonly approvalAmounts: Record<number, string> = {};
+  public readonly dispatchAmounts: Record<number, string> = {};
   public returnAmount = '';
-  public returnDescription = '';
   public taskBudgetAmount = '';
   public budgetIncreaseAmount = '';
 
@@ -61,14 +61,20 @@ export class TaskFinanceComponent implements OnInit {
       });
   }
 
+  public canSubmitAdvanceReturn(): boolean {
+    const amount = String(this.returnAmount ?? '').trim();
+    return !!this.payload()?.canRequest
+      && isValidTaskBudgetAmount(amount)
+      && Number(amount) > 0;
+  }
+
   public submitAdvanceReturn(): void {
-    if (!this.payload()?.canRequest || !this.returnAmount || !this.returnDescription.trim()) return;
+    if (!this.canSubmitAdvanceReturn()) return;
     this.runAction(
-      this.service.recordTransaction(this.taskId, 'ADVANCE_RETURN', this.returnAmount, this.returnDescription),
+      this.service.recordTransaction(this.taskId, 'ADVANCE_RETURN', this.returnAmount),
       'Cash return submitted for confirmation.'
     );
     this.returnAmount = '';
-    this.returnDescription = '';
   }
 
   public reviewRequest(request: TaskFinanceRequest, decision: 'APPROVE' | 'REJECT'): void {
@@ -82,18 +88,29 @@ export class TaskFinanceComponent implements OnInit {
   }
 
   public issueAdvance(request: TaskFinanceRequest): void {
-    const amount = this.remainingRequestAmount(request, 'ADVANCE_ISSUED', 'approvedAmount');
-    if (amount <= 0) return;
+    const amount = String(this.dispatchAmounts[request.id] ?? '').trim();
+    const remaining = this.remainingRequestAmount(request, 'ADVANCE_ISSUED', 'approvedAmount');
+    if (!this.canDispatchAdvance(request, remaining)) return;
     this.runAction(
       this.service.recordTransaction(
         this.taskId,
         'ADVANCE_ISSUED',
-        amount.toFixed(2),
+        amount,
         `Advance payment for request #${request.id}`,
         request.id
       ),
-      'Advance payment recorded.'
+      'Advance payment recorded.',
+      () => delete this.dispatchAmounts[request.id]
     );
+  }
+
+  public canDispatchAdvance(request: TaskFinanceRequest, remaining: number): boolean {
+    const amount = String(this.dispatchAmounts[request.id] ?? '').trim();
+    return !!this.payload()?.canApprove
+      && this.isRequestPayable(request)
+      && isValidTaskBudgetAmount(amount)
+      && Number(amount) > 0
+      && Number(amount) <= remaining;
   }
 
   public getRequestPayments(
@@ -187,6 +204,11 @@ export class TaskFinanceComponent implements OnInit {
     return Math.max(0, cap - settled);
   }
 
+  public issuedRequestAmount(request: TaskFinanceRequest): number {
+    const approved = Number(request.approvedAmount || 0);
+    return Math.max(0, approved - this.remainingRequestAmount(request, 'ADVANCE_ISSUED', 'approvedAmount'));
+  }
+
   public money(value: string | null | undefined): string {
     return Number(value || 0).toLocaleString('en-IN', {
       minimumFractionDigits: 2,
@@ -217,7 +239,7 @@ export class TaskFinanceComponent implements OnInit {
     }
   }
 
-  private runAction<T>(request: Observable<T>, successMessage: string): void {
+  private runAction<T>(request: Observable<T>, successMessage: string, onSuccess?: () => void): void {
     if (this.isSaving()) return;
     let succeeded = false;
     this.isSaving.set(true);
@@ -227,6 +249,7 @@ export class TaskFinanceComponent implements OnInit {
     })).subscribe({
       next: () => {
         succeeded = true;
+        onSuccess?.();
         this.notifier.success(successMessage);
       },
       error: (error: Error) => this.notifier.error(error.message || 'Could not save task finance changes.')

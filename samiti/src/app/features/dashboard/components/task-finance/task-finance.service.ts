@@ -66,7 +66,7 @@ export class TaskFinanceService {
     taskId: number,
     transactionType: TaskFinanceTransactionType,
     amount: string,
-    description: string,
+    description?: string,
     requestId?: number
   ): Observable<TaskFinanceTransaction> {
     const mutation = `mutation RecordTaskFinanceTransaction($input: TaskFinanceTransactionInput!) {
@@ -77,7 +77,13 @@ export class TaskFinanceService {
       }
     }`;
     return this.request<{ recordTaskFinanceTransaction: TaskFinanceTransaction }>(mutation, {
-      input: { taskId, transactionType, amount: String(amount), description, requestId }
+      input: {
+        taskId,
+        transactionType,
+        amount: String(amount),
+        ...(description !== undefined ? { description } : {}),
+        requestId
+      }
     }).pipe(map((response) => response.recordTaskFinanceTransaction));
   }
 

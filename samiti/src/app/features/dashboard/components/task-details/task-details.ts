@@ -270,10 +270,10 @@ export class TaskDetailsComponent implements OnInit {
     void this.taskActionsDialog.open(task.taskId, (updatedTask) => this.updateTaskFromDialog(updatedTask));
   }
 
-  public openTaskFinanceDialog(taskId: number, taskName: string, event: Event): void {
+  public openTaskFinanceDialog(taskId: number, taskName: string, ownerName: string | null | undefined, event: Event): void {
     event.stopPropagation();
     const rootTaskId = this.task()?.taskId;
-    this.taskFinanceDialog.open(taskId, taskName).subscribe(() => {
+    this.taskFinanceDialog.open(taskId, taskName, ownerName).subscribe(() => {
       if (rootTaskId === undefined || this.task()?.taskId !== rootTaskId) return;
       this.taskFinanceService.getTaskFinance(taskId).subscribe({
         next: (finance) => {

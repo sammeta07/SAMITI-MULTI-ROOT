@@ -138,7 +138,7 @@ export const taskFinanceTypes = `
     taskId: Int!
     transactionType: TaskFinanceTransactionType!
     amount: String!
-    description: String!
+    description: String
     requestId: Int
   }
 
@@ -494,7 +494,7 @@ export const taskFinanceResolvers = {
       return loadRequest(requestId);
     },
 
-    async recordTaskFinanceTransaction(_: unknown, args: { input: { taskId: number; transactionType: TransactionType; amount: string; description: string; requestId?: number | null } }, context: unknown) {
+    async recordTaskFinanceTransaction(_: unknown, args: { input: { taskId: number; transactionType: TransactionType; amount: string; description?: string | null; requestId?: number | null } }, context: unknown) {
       const userId = await getLoggedInUserId(context);
       const taskId = Number(args.input?.taskId);
       const access = await getFinanceAccess(taskId, userId);
@@ -504,7 +504,9 @@ export const taskFinanceResolvers = {
         throwEventError('BAD_REQUEST', 'Record task spending as a checklist item expense');
       }
       const { amount, cents } = parseAmount(args.input.amount);
-      const description = cleanText(args.input.description, 'Description');
+      const description = transactionType === 'ADVANCE_RETURN'
+        ? 'Advance cash return'
+        : cleanText(args.input.description, 'Description');
       const requestId = args.input.requestId ? Number(args.input.requestId) : null;
       const cashierOnly = transactionType === 'ADVANCE_ISSUED';
       if (cashierOnly ? !access.isCashier : !access.isOwner) {
