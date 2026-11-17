@@ -140,8 +140,9 @@
                       class="todo-expense-input"
                       type="number"
                       min="0"
-                      max="9999999999.99"
-                      step="0.01"
+                      max="9999999999"
+                      step="1"
+                      appWholeRupee
                       [(ngModel)]="editExpenseAmount"
                       [ngModelOptions]="{ standalone: true }"
                       [disabled]="pendingIds.has(item.id)"
@@ -207,12 +208,13 @@
                 class="todo-amount-input"
                 type="number"
                 min="0"
-                max="9999999999.99"
-                step="0.01"
+                max="9999999999"
+                step="1"
+                appWholeRupee
                 name="todoExpenseAmount"
                 [(ngModel)]="newExpenseAmount"
                 aria-label="Checklist expense amount"
-                placeholder="₹ 0.00"
+                placeholder="₹ 0"
               />
             }
             @if (newTitle.length > 0) {
@@ -278,8 +280,9 @@
                       class="todo-expense-input"
                       type="number"
                       min="0"
-                      max="9999999999.99"
-                      step="0.01"
+                      max="9999999999"
+                      step="1"
+                      appWholeRupee
                       [(ngModel)]="editExpenseAmount"
                       [ngModelOptions]="{ standalone: true }"
                       [disabled]="pendingIds.has(item.id)"
@@ -449,12 +452,13 @@
           class="todo-amount-input"
           type="number"
           min="0"
-          max="9999999999.99"
-          step="0.01"
+          max="9999999999"
+          step="1"
+          appWholeRupee
           name="todoExpenseAmount"
           [(ngModel)]="newExpenseAmount"
           aria-label="Checklist expense amount"
-          placeholder="₹ 0.00"
+          placeholder="₹ 0"
         />
       }
       @if (newTitle.length > 0) {

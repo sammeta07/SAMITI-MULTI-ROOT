@@ -162,25 +162,24 @@ export const taskFinanceMutationFields = `
 
 function parseAmount(value: unknown): { amount: string; cents: bigint } {
   const raw = String(value ?? '').trim();
-  if (!/^(?:0|[1-9]\d{0,9})(?:\.\d{1,2})?$/.test(raw)) {
-    throwEventError('BAD_REQUEST', 'Amount must be a positive number with up to 2 decimal places');
+  if (!/^(?:0|[1-9]\d{0,9})$/.test(raw)) {
+    throwEventError('BAD_REQUEST', 'Amount must be a positive whole number of rupees');
   }
-  const [whole, fraction = ''] = raw.split('.');
-  const cents = BigInt(whole) * 100n + BigInt(fraction.padEnd(2, '0'));
+  const cents = BigInt(raw) * 100n;
   if (cents <= 0n) throwEventError('BAD_REQUEST', 'Amount must be greater than zero');
-  return { amount: `${whole}.${fraction.padEnd(2, '0')}`, cents };
+  return { amount: raw, cents };
 }
 
 function decimalCents(value: unknown): bigint {
-  const raw = String(value ?? '0.00');
+  const raw = String(value ?? '0');
   const [whole, fraction = ''] = raw.split('.');
   return BigInt(whole || '0') * 100n + BigInt(fraction.padEnd(2, '0').slice(0, 2));
 }
 
-function centsDecimal(value: bigint): string {
-  const sign = value < 0n ? '-' : '';
+function centsToWholeRupees(value: bigint): string {
   const absolute = value < 0n ? -value : value;
-  return `${sign}${absolute / 100n}.${String(absolute % 100n).padStart(2, '0')}`;
+  const rounded = (absolute + 50n) / 100n;
+  return String(value < 0n ? -rounded : rounded);
 }
 
 function cleanText(value: unknown, field: string, maximum = 1000): string {
@@ -405,15 +404,15 @@ async function loadFinance(taskId: number, userId: number): Promise<any> {
     requests,
     transactions: financeTransactions,
     summary: {
-      sanctionedBudget: centsDecimal(sanctionedBudget),
-      checklistExpenses: centsDecimal(checklistExpenses),
-      subtaskSpent: centsDecimal(allocatedChildBudgets),
-      remainingBudget: centsDecimal(sanctionedBudget - allocatedChildBudgets),
-      advanceIssued: centsDecimal(advanceIssued),
-      advanceSpent: centsDecimal(advanceSpent),
-      returnPending: centsDecimal(returnPending),
-      returnConfirmed: centsDecimal(returnConfirmed),
-      advanceBalance: centsDecimal(advanceIssued - advanceSpent - returnPending - returnConfirmed)
+      sanctionedBudget: centsToWholeRupees(sanctionedBudget),
+      checklistExpenses: centsToWholeRupees(checklistExpenses),
+      subtaskSpent: centsToWholeRupees(allocatedChildBudgets),
+      remainingBudget: centsToWholeRupees(sanctionedBudget - allocatedChildBudgets),
+      advanceIssued: centsToWholeRupees(advanceIssued),
+      advanceSpent: centsToWholeRupees(advanceSpent),
+      returnPending: centsToWholeRupees(returnPending),
+      returnConfirmed: centsToWholeRupees(returnConfirmed),
+      advanceBalance: centsToWholeRupees(advanceIssued - advanceSpent - returnPending - returnConfirmed)
     },
     budgetAmount: String(taskBudget.sanctionedBudget),
     budgetRequestId,

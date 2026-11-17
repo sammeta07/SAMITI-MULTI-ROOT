@@ -314,7 +314,8 @@
                         <input
                           type="number"
                           min="0"
-                          step="0.01"
+                          step="1"
+                          appWholeRupee
                           [(ngModel)]="newSubtaskBudget"
                           [disabled]="isSavingSubtask"
                           aria-label="Subtask budget in rupees"
@@ -423,7 +424,8 @@
                               class="task-budget-pill task-budget-pill-input"
                               type="number"
                               min="0"
-                              step="0.01"
+                              step="1"
+                              appWholeRupee
                               [value]="subtaskBudgetEditAmounts[child.taskId]"
                               [disabled]="savingSubtaskBudgetIds.has(child.taskId)"
                               [attr.aria-label]="'Edit budget for ' + child.taskName"

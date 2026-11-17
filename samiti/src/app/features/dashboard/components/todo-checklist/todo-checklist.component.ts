@@ -8,6 +8,7 @@ import { MatTableModule } from '@angular/material/table';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { ConfirmDialogData } from '../../../../components/dialog/confirm/confirm-dialog.models';
 import { ConfirmDialogService } from '../../../../components/dialog/confirm/confirm-dialog.service';
+import { WholeRupeeDirective } from '../../../../shared/directives/whole-rupee.directive';
 import { NotifierService } from '../../../../shared/notifier/notifier.service';
 import { TodoAssignee, TodoItem, TodoParentType, TodoStatus } from '../../models/todo.models';
 import { TodoChecklistService } from '../../services/todo-checklist.service';
@@ -15,7 +16,7 @@ import { TodoChecklistService } from '../../services/todo-checklist.service';
 @Component({
   selector: 'app-todo-checklist',
   standalone: true,
-  imports: [CommonModule, FormsModule, MatCheckboxModule, MatExpansionModule, MatIconModule, MatTableModule, MatTooltipModule],
+  imports: [CommonModule, FormsModule, MatCheckboxModule, MatExpansionModule, MatIconModule, MatTableModule, MatTooltipModule, WholeRupeeDirective],
   host: {
     '[class.todo-checklist-table-view]': 'tableView'
   },
@@ -40,12 +41,12 @@ export class TodoChecklistComponent {
   @Output() readonly itemAdded = new EventEmitter<void>();
 
   public newTitle = '';
-  public newExpenseAmount = '0.00';
+  public newExpenseAmount = '0';
   public isAdding = false;
   public readonly pendingIds = new Set<number>();
   public editingId: number | null = null;
   public editTitle = '';
-  public editExpenseAmount = '0.00';
+  public editExpenseAmount = '0';
   public editCompleted = false;
   public editStatus: TodoStatus = 'PENDING';
   public statusDropdownOpen = false;
@@ -67,7 +68,7 @@ export class TodoChecklistComponent {
     if (!this.canManage || this.pendingIds.has(item.id)) return;
     this.editingId = item.id;
     this.editTitle = this.toSentenceCase(item.title);
-    this.editExpenseAmount = item.expenseAmount || '0.00';
+    this.editExpenseAmount = String(Math.round(Number(item.expenseAmount || 0)));
     this.editCompleted = item.isCompleted;
     this.editStatus = item.status;
   }
@@ -83,7 +84,7 @@ export class TodoChecklistComponent {
   public cancelEditing(): void {
     this.editingId = null;
     this.editTitle = '';
-    this.editExpenseAmount = '0.00';
+    this.editExpenseAmount = '0';
     this.editCompleted = false;
     this.editStatus = 'PENDING';
     this.statusDropdownOpen = false;
@@ -154,13 +155,13 @@ export class TodoChecklistComponent {
     }
 
     this.isAdding = true;
-    const expenseAmount = this.parentType === 'TASK' ? this.normalizeExpenseAmount(this.newExpenseAmount) : '0.00';
+    const expenseAmount = this.parentType === 'TASK' ? this.normalizeExpenseAmount(this.newExpenseAmount) : '0';
     this.service.create(this.parentType, this.parentId, title, expenseAmount).subscribe({
       next: (item) => {
         this.items = [...this.items, item];
         this.itemsChange.emit(this.items);
         this.newTitle = '';
-        this.newExpenseAmount = '0.00';
+        this.newExpenseAmount = '0';
         this.isAdding = false;
         this.itemAdded.emit();
       },
@@ -172,17 +173,16 @@ export class TodoChecklistComponent {
   }
 
   public formatExpenseAmount(value: string): string {
-    return Number(value || 0).toFixed(2);
+    return String(Math.round(Number(value || 0)));
   }
 
   private isValidExpenseAmount(value: string): boolean {
     const amount = String(value ?? '').trim();
-    return /^(?:0|[1-9]\d{0,9})(?:\.\d{1,2})?$/.test(amount) &&
-      Number(amount) <= 9_999_999_999.99;
+    return /^(?:0|[1-9]\d{0,9})$/.test(amount);
   }
 
   private normalizeExpenseAmount(value: string): string {
-    return Number(value).toFixed(2);
+    return String(Math.round(Number(value)));
   }
 
   public setStatus(item: TodoItem, event: Event): void {

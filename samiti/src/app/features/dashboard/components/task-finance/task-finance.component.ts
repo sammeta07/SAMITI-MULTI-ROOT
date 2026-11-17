@@ -1,8 +1,10 @@
 import { CommonModule } from '@angular/common';
 import { Component, inject, Input, OnInit, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
+import { MatTooltipModule } from '@angular/material/tooltip';
 import { finalize, Observable } from 'rxjs';
 import { NotifierService } from '../../../../shared/notifier/notifier.service';
+import { WholeRupeeDirective } from '../../../../shared/directives/whole-rupee.directive';
 import { isValidTaskBudgetAmount } from '../event-details/event-tasks/event-tasks.models';
 import { TaskDetailsService } from '../task-details/task-details.service';
 import {
@@ -15,7 +17,7 @@ import { TaskFinanceService } from './task-finance.service';
 @Component({
   selector: 'app-task-finance',
   standalone: true,
-  imports: [CommonModule, FormsModule],
+  imports: [CommonModule, FormsModule, MatTooltipModule, WholeRupeeDirective],
   templateUrl: './task-finance.component.html',
   styleUrl: './task-finance.component.scss'
 })
@@ -32,11 +34,11 @@ export class TaskFinanceComponent implements OnInit {
   public readonly isSaving = signal(false);
   public readonly activeHistoryTab = signal<'REQUESTS' | 'TRANSACTIONS'>('REQUESTS');
 
-  public readonly approvalAmounts: Record<number, string> = {};
-  public readonly dispatchAmounts: Record<number, string> = {};
-  public returnAmount = '';
-  public taskBudgetAmount = '';
-  public budgetIncreaseAmount = '';
+  public readonly approvalAmounts: Record<number, string | number | null> = {};
+  public readonly dispatchAmounts: Record<number, string | number | null> = {};
+  public returnAmount: string | number | null = '';
+  public taskBudgetAmount: string | number | null = '';
+  public budgetIncreaseAmount: string | number | null = '';
 
   public ngOnInit(): void {
     if (this.loadOnInit) this.load();
@@ -70,16 +72,18 @@ export class TaskFinanceComponent implements OnInit {
 
   public submitAdvanceReturn(): void {
     if (!this.canSubmitAdvanceReturn()) return;
+    const amount = String(this.returnAmount ?? '').trim();
     this.runAction(
-      this.service.recordTransaction(this.taskId, 'ADVANCE_RETURN', this.returnAmount),
+      this.service.recordTransaction(this.taskId, 'ADVANCE_RETURN', amount),
       'Cash return submitted for confirmation.'
     );
     this.returnAmount = '';
   }
 
   public reviewRequest(request: TaskFinanceRequest, decision: 'APPROVE' | 'REJECT'): void {
+    const enteredAmount = String(this.approvalAmounts[request.id] ?? '').trim();
     const approvedAmount = decision === 'APPROVE'
-      ? this.approvalAmounts[request.id] || request.requestedAmount
+      ? enteredAmount || request.requestedAmount
       : undefined;
     this.runAction(
       this.service.reviewRequest(request.id, decision, approvedAmount),
@@ -141,23 +145,45 @@ export class TaskFinanceComponent implements OnInit {
 
   public canSaveTaskBudget(): boolean {
     const current = this.payload();
-    const amount = this.taskBudgetAmount.trim();
+    const amount = String(this.taskBudgetAmount ?? '').trim();
     return !!current?.canEditBudget
       && isValidTaskBudgetAmount(amount)
-      && Number(amount).toFixed(2) !== Number(current.budgetAmount).toFixed(2);
+      && Number(amount) > Number(current.budgetAmount);
+  }
+
+  public taskBudgetSaveTooltip(): string {
+    return this.isSaving()
+      ? 'Budget is being saved.'
+      : 'Enter an amount greater than the current sanctioned budget to enable Save.';
+  }
+
+  public resetTaskBudgetOnBlur(event: FocusEvent): void {
+    const nextTarget = event.relatedTarget;
+    if (nextTarget instanceof HTMLElement && nextTarget.id === 'finance-task-budget-save') return;
+    this.resetTaskBudgetToSanctionedAmount();
+  }
+
+  public resetTaskBudgetAfterSubmitButtonBlur(): void {
+    this.resetTaskBudgetToSanctionedAmount();
   }
 
   public saveTaskBudget(): void {
     if (!this.canSaveTaskBudget()) return;
+    const amount = String(this.taskBudgetAmount ?? '').trim();
     this.runAction(
-      this.taskDetailsService.updateTaskBudget(this.taskId, this.taskBudgetAmount.trim()),
+      this.taskDetailsService.updateTaskBudget(this.taskId, amount),
       'Task budget updated.'
     );
   }
 
+  private resetTaskBudgetToSanctionedAmount(): void {
+    if (this.isSaving()) return;
+    this.taskBudgetAmount = this.payload()?.budgetAmount ?? '';
+  }
+
   public canRequestBudgetIncrease(): boolean {
     const current = this.payload();
-    const amount = this.budgetIncreaseAmount.trim();
+    const amount = String(this.budgetIncreaseAmount ?? '').trim();
     return !!current?.canRequestBudgetIncrease
       && current.budgetRequestStatus !== 'PENDING'
       && isValidTaskBudgetAmount(amount)
@@ -166,8 +192,9 @@ export class TaskFinanceComponent implements OnInit {
 
   public requestBudgetIncrease(): void {
     if (!this.canRequestBudgetIncrease()) return;
+    const amount = String(this.budgetIncreaseAmount ?? '').trim();
     this.runAction(
-      this.taskDetailsService.requestTaskBudgetIncrease(this.taskId, this.budgetIncreaseAmount.trim()),
+      this.taskDetailsService.requestTaskBudgetIncrease(this.taskId, amount),
       'Budget increase request sent for approval.'
     );
     this.budgetIncreaseAmount = '';
@@ -209,10 +236,9 @@ export class TaskFinanceComponent implements OnInit {
     return Math.max(0, approved - this.remainingRequestAmount(request, 'ADVANCE_ISSUED', 'approvedAmount'));
   }
 
-  public money(value: string | null | undefined): string {
-    return Number(value || 0).toLocaleString('en-IN', {
-      minimumFractionDigits: 2,
-      maximumFractionDigits: 2
+  public money(value: string | number | null | undefined): string {
+    return Math.round(Number(value || 0)).toLocaleString('en-IN', {
+      maximumFractionDigits: 0
     });
   }
 

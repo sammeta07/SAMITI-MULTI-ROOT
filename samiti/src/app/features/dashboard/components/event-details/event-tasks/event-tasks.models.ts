@@ -85,14 +85,13 @@ export interface TaskBudgetUpdateResult {
 }
 
 export function isValidTaskBudgetAmount(value: string | number | null | undefined): boolean {
-  return /^\d{1,10}(?:\.\d{1,2})?$/.test(String(value ?? '').trim());
+  return /^\d{1,10}$/.test(String(value ?? '').trim());
 }
 
 export function formatTaskBudgetAmount(value: string | number | null | undefined): string {
   const amount = Number(value ?? 0);
   return `₹ ${(Number.isFinite(amount) ? amount : 0).toLocaleString('en-IN', {
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 2
+    maximumFractionDigits: 0
   })}`;
 }
 

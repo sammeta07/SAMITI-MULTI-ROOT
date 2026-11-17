@@ -1,5 +1,5 @@
 export function formatProgramPriceValue(price: number): string {
-  return Number.isInteger(price) ? String(price) : price.toFixed(2).replace(/\.?0+$/, '');
+  return String(Math.round(price));
 }
 
 export function formatProgramPriceLabel(price: number | null | undefined): string {

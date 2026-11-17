@@ -81,7 +81,7 @@ export const eventTasksTypes = `
   input CreateEventTaskInput {
     eventId: Int!
     taskName: String!
-    budgetAmount: String = "0.00"
+    budgetAmount: String = "0"
     parentTaskId: Int
     status: EventTaskStatus = NEW
   }
@@ -303,9 +303,9 @@ async function getTaskEditPermission(taskId: number, userId: number): Promise<bo
 }
 
 function validateTaskBudgetAmount(value: unknown): string {
-  const amount = String(value ?? '0.00').trim();
-  if (!/^\d{1,10}(?:\.\d{1,2})?$/.test(amount)) {
-    throwEventError('BAD_REQUEST', 'budgetAmount must be a non-negative amount with up to 2 decimal places');
+  const amount = String(value ?? '0').trim();
+  if (!/^\d{1,10}$/.test(amount)) {
+    throwEventError('BAD_REQUEST', 'budgetAmount must be a non-negative whole number of rupees');
   }
   return amount;
 }
@@ -315,7 +315,7 @@ function amountCents(value: unknown): number {
   return Number.isFinite(parsed) ? Math.round(parsed * 100) : 0;
 }
 
-const MAX_TASK_BUDGET_CENTS = 999_999_999_999;
+const MAX_TASK_BUDGET_CENTS = 999_999_999_900;
 
 async function insertSanctionedBudgetFinanceRequest(
   connection: PoolConnection,
@@ -1063,7 +1063,7 @@ export const eventTasksResolvers = {
         if (targetBudgetCents > MAX_TASK_BUDGET_CENTS) {
           throwEventError('BAD_REQUEST', 'The requested increase exceeds the maximum task budget');
         }
-        const targetBudget = (targetBudgetCents / 100).toFixed(2);
+        const targetBudget = String(targetBudgetCents / 100);
 
         const [pendingRows] = await connection.query<any[]>(
           `SELECT id FROM task_budget_requests
@@ -1202,8 +1202,8 @@ export const eventTasksResolvers = {
           await insertSanctionedBudgetFinanceRequest(connection, {
             taskId,
             requestType: 'TOP_UP',
-            amount: ((requestedBudgetCents - currentBudgetCents) / 100).toFixed(2),
-            reason: `Sanctioned task budget increased from ${Number(task.budgetAmount).toFixed(2)} to ${budgetAmount}`,
+            amount: String((requestedBudgetCents - currentBudgetCents) / 100),
+            reason: `Sanctioned task budget increased from ${task.budgetAmount} to ${budgetAmount}`,
             requestedBy: loggedInUserId,
             reviewedBy: loggedInUserId
           });
@@ -1325,8 +1325,8 @@ export const eventTasksResolvers = {
             await insertSanctionedBudgetFinanceRequest(connection, {
               taskId: Number(request.taskId),
               requestType: 'TOP_UP',
-              amount: (approvedIncreaseCents / 100).toFixed(2),
-              reason: `Approved task budget increase to ${Number(request.requestedAmount).toFixed(2)}`,
+              amount: String(approvedIncreaseCents / 100),
+              reason: `Approved task budget increase to ${request.requestedAmount}`,
               requestedBy: Number(request.requestedBy),
               reviewedBy: loggedInUserId,
               sourceBudgetRequestId: requestId

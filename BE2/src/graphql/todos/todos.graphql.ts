@@ -39,7 +39,7 @@ export const todoTypes = `
     parentType: TodoParentType!
     parentId: Int!
     title: String!
-    expenseAmount: String = "0.00"
+    expenseAmount: String = "0"
   }
 `;
 
@@ -177,11 +177,10 @@ async function getTodoItem(todoId: number) {
 
 function validateTodoExpenseAmount(value: unknown): string {
   const amount = String(value ?? '0').trim();
-  if (!/^(?:0|[1-9]\d{0,9})(?:\.\d{1,2})?$/.test(amount)) {
-    throwEventError('BAD_REQUEST', 'expenseAmount must be a non-negative amount with up to 2 decimal places');
+  if (!/^(?:0|[1-9]\d{0,9})$/.test(amount)) {
+    throwEventError('BAD_REQUEST', 'expenseAmount must be a non-negative whole number of rupees');
   }
-  const [whole, fraction = ''] = amount.split('.');
-  return `${whole}.${fraction.padEnd(2, '0')}`;
+  return amount;
 }
 
 export const todoResolvers = {

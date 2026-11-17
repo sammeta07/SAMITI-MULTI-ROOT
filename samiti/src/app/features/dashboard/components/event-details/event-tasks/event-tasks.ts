@@ -10,6 +10,7 @@ import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { firstValueFrom, Subscription } from 'rxjs';
+import { WholeRupeeDirective } from '../../../../../shared/directives/whole-rupee.directive';
 
 import { EventTasksService } from './event-tasks.service';
 import { calculateTaskBudgetRemaining, EventTaskEntry, EventTasksPayload, formatTaskBudgetAmount, isValidTaskBudgetAmount, TaskAssignee, TASK_STATUSES, TaskStatus, taskHierarchyLevelBackground } from './event-tasks.models';
@@ -38,7 +39,8 @@ import { TaskFinanceDialogService } from '../../task-finance/task-finance-dialog
     MatAutocompleteModule,
     MatFormFieldModule,
     MatInputModule,
-    MatTooltipModule
+    MatTooltipModule,
+    WholeRupeeDirective
   ],
   templateUrl: './event-tasks.html',
   styleUrl: './event-tasks.scss'
@@ -88,7 +90,7 @@ export class EventTasksComponent implements OnInit, OnDestroy {
   public isCreatingTask = false;
   public isSavingTask = false;
   public newTaskName = '';
-  public newTaskBudget = '0.00';
+  public newTaskBudget = '0';
   public isLoading = true;
   public hasLoadError = false;
 
@@ -447,7 +449,7 @@ export class EventTasksComponent implements OnInit, OnDestroy {
     const budgetAmount = String(this.taskBudgetEditAmounts[task.taskId] ?? '').trim();
     const isEditingBudget = this.editingTaskBudgetIds.has(task.taskId);
     const hasBudgetChange = isEditingBudget &&
-      Number(budgetAmount).toFixed(2) !== Number(task.budgetAmount).toFixed(2);
+      Number(budgetAmount) !== Number(task.budgetAmount);
     return (hasNameChange || hasOwnerChange || hasBudgetChange) &&
       !(hasNameChange && !taskName) &&
       (!isEditingBudget || isValidTaskBudgetAmount(budgetAmount)) &&
@@ -463,7 +465,7 @@ export class EventTasksComponent implements OnInit, OnDestroy {
     const budgetAmount = String(this.taskBudgetEditAmounts[task.taskId] ?? '').trim();
     const isEditingBudget = this.editingTaskBudgetIds.has(task.taskId);
     const hasBudgetChange = isEditingBudget &&
-      Number(budgetAmount).toFixed(2) !== Number(task.budgetAmount).toFixed(2);
+      Number(budgetAmount) !== Number(task.budgetAmount);
     return hasNameChange || hasOwnerChange || hasBudgetChange;
   }
 
@@ -517,7 +519,7 @@ export class EventTasksComponent implements OnInit, OnDestroy {
     const hasOwnerChange = this.hasPendingTaskOwnerChange(task);
     const budgetAmount = String(this.taskBudgetEditAmounts[task.taskId] ?? '').trim();
     const hasBudgetChange = this.editingTaskBudgetIds.has(task.taskId) &&
-      Number(budgetAmount).toFixed(2) !== Number(task.budgetAmount).toFixed(2);
+      Number(budgetAmount) !== Number(task.budgetAmount);
     if (hasNameChange && !taskName) {
       this.notifier.error('Task title cannot be empty.');
       return;
@@ -929,7 +931,7 @@ export class EventTasksComponent implements OnInit, OnDestroy {
       return;
     }
     this.newTaskName = '';
-    this.newTaskBudget = '0.00';
+    this.newTaskBudget = '0';
     this.isCreatingTask = true;
   }
 
@@ -937,7 +939,7 @@ export class EventTasksComponent implements OnInit, OnDestroy {
     if (this.isSavingTask) return;
     this.isCreatingTask = false;
     this.newTaskName = '';
-    this.newTaskBudget = '0.00';
+    this.newTaskBudget = '0';
   }
 
   public onSaveTask(): void {
@@ -958,7 +960,7 @@ export class EventTasksComponent implements OnInit, OnDestroy {
           this.eventData = [...this.tasks, task];
           this.isCreatingTask = false;
           this.newTaskName = '';
-          this.newTaskBudget = '0.00';
+          this.newTaskBudget = '0';
           this.eventDetailsState.incrementTaskCounts(true);
         }
         this.isSavingTask = false;

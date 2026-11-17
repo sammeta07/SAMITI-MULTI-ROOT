@@ -198,8 +198,11 @@ export const updateProgramResolvers = {
       const hasPriceUpdate = input.price !== undefined && input.price !== null;
       const price = hasPriceUpdate ? Number(input.price) : null;
 
-      if (hasPriceUpdate && (!Number.isFinite(price) || (price as number) < 0)) {
-        throwProgramError('BAD_REQUEST', 'price must be a non-negative number');
+      if (
+        hasPriceUpdate &&
+        (!Number.isSafeInteger(price) || (price as number) < 0 || (price as number) > 9_999_999_999)
+      ) {
+        throwProgramError('BAD_REQUEST', 'price must be a non-negative whole number of rupees');
       }
 
       if (!Number.isInteger(programId) || programId <= 0) {

@@ -67,12 +67,20 @@
                 id="finance-task-budget"
                 type="number"
                 min="0"
-                step="0.01"
+                step="1"
+                appWholeRupee
                 name="taskBudgetAmount"
                 [(ngModel)]="taskBudgetAmount"
                 [disabled]="isSaving()"
+                (blur)="resetTaskBudgetOnBlur($event)"
               />
-              <button type="submit" class="tf-btn tf-btn-primary" [disabled]="isSaving() || !canSaveTaskBudget()">Save</button>
+              <span
+                class="tf-btn-tooltip-host"
+                [matTooltip]="taskBudgetSaveTooltip()"
+                [matTooltipDisabled]="!isSaving() && canSaveTaskBudget()"
+              >
+                <button id="finance-task-budget-save" type="submit" class="tf-btn tf-btn-primary" [disabled]="isSaving() || !canSaveTaskBudget()" (blur)="resetTaskBudgetAfterSubmitButtonBlur()">Save</button>
+              </span>
             </form>
           }
 
@@ -81,9 +89,6 @@
               <div class="tf-alert-info">
                 <strong>+₹{{ money(finance.requestedBudgetAmount) }}</strong>
                 <span>budget increase requested</span>
-                @if (finance.budgetRequestedByName) {
-                  <span class="tf-muted">by {{ finance.budgetRequestedByName | titlecase }}</span>
-                }
               </div>
               <div class="tf-btn-group">
                 @if (finance.canReviewBudgetRequest) {
@@ -102,8 +107,9 @@
               <input
                 id="finance-budget-increase"
                 type="number"
-                min="0.01"
-                step="0.01"
+                min="1"
+                step="1"
+                appWholeRupee
                 name="budgetIncreaseAmount"
                 [(ngModel)]="budgetIncreaseAmount"
                 placeholder="Amount"
@@ -115,16 +121,17 @@
 
           @if (finance.canRequest) {
             <form class="tf-tool-group tf-tool-grow" (ngSubmit)="submitAdvanceReturn()">
-              <label for="finance-return-amount">Return</label>
+              <label for="finance-return-amount">Return (₹)</label>
               <input
                 id="finance-return-amount"
                 class="tf-inp-sm"
                 type="number"
-                min="0.01"
-                step="0.01"
+                min="1"
+                step="1"
+                appWholeRupee
                 name="returnAmount"
                 [(ngModel)]="returnAmount"
-                placeholder="₹ Amt"
+                placeholder="Amount"
                 required
               />
               <button type="submit" class="tf-btn tf-btn-primary" [disabled]="isSaving() || !canSubmitAdvanceReturn()">Submit</button>
@@ -229,7 +236,7 @@
                           <div class="cell-sub">Req: ₹{{ money(request.requestedAmount) }}</div>
                         }
                         @if (isRequestPayable(request)) {
-                          <div class="cell-sub">Issued: ₹{{ money(issuedAdvance.toFixed(2)) }} · Remaining: ₹{{ money(remAdvance.toFixed(2)) }}</div>
+                          <div class="cell-sub">Issued: ₹{{ money(issuedAdvance) }} · Remaining: ₹{{ money(remAdvance) }}</div>
                         }
                       </td>
 
@@ -239,7 +246,7 @@
                             <div class="tf-btn-group">
                               <div class="tf-inline-amt">
                                 <span>₹</span>
-                                <input type="number" min="0.01" [max]="request.requestedAmount" step="0.01" [name]="'approval-' + request.id" [(ngModel)]="approvalAmounts[request.id]" title="Approve Amount" />
+                                <input type="number" min="1" [max]="request.requestedAmount" step="1" appWholeRupee [name]="'approval-' + request.id" [(ngModel)]="approvalAmounts[request.id]" title="Approve Amount" />
                               </div>
                               <button type="button" class="tf-btn tf-btn-success" [disabled]="isSaving()" (click)="reviewRequest(request, 'APPROVE')">Approve</button>
                               <button type="button" class="tf-btn tf-btn-danger" [disabled]="isSaving()" (click)="reviewRequest(request, 'REJECT')">Reject</button>
@@ -250,9 +257,10 @@
                                 <span>₹</span>
                                 <input
                                   type="number"
-                                  min="0.01"
+                                  min="1"
                                   [max]="remAdvance"
-                                  step="0.01"
+                                  step="1"
+                                  appWholeRupee
                                   [name]="'dispatch-' + request.id"
                                   [(ngModel)]="dispatchAmounts[request.id]"
                                   [disabled]="isSaving()"

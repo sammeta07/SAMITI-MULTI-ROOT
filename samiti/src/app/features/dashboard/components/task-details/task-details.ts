@@ -14,6 +14,7 @@ import { MatInputModule } from '@angular/material/input';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { firstValueFrom, finalize } from 'rxjs';
 import { LoadingStateService } from '../../../../shared/services/loading-state.service';
+import { WholeRupeeDirective } from '../../../../shared/directives/whole-rupee.directive';
 import { NotifierService } from '../../../../shared/notifier/notifier.service';
 import { ConfirmDialogService } from '../../../../components/dialog/confirm/confirm-dialog.service';
 import { ConfirmDialogData } from '../../../../components/dialog/confirm/confirm-dialog.models';
@@ -47,6 +48,7 @@ import { TaskActionsDialogService } from './task-actions-dialog.service';
     MatFormFieldModule,
     MatInputModule,
     MatTooltipModule,
+    WholeRupeeDirective,
     TodoChecklistComponent,
     TaskFinanceComponent
   ],
@@ -82,9 +84,9 @@ export class TaskDetailsComponent implements OnInit {
   public isCreatingSubtask = false;
   public isSavingSubtask = false;
   public newSubtaskName = '';
-  public newSubtaskBudget: string | number = '0.00';
+  public newSubtaskBudget: string | number = '0';
   public editingTaskName = '';
-  public editingBudgetAmount: string | number = '0.00';
+  public editingBudgetAmount: string | number = '0';
   public budgetIncreaseAmount: string | number = '';
   public readonly isRequestingBudgetIncrease = signal(false);
   public editingBudgetStatus: TaskStatus = 'NEW';
@@ -160,7 +162,7 @@ export class TaskDetailsComponent implements OnInit {
   public onCreateSubtask(task: TaskDetailsPayload): void {
     if (!task.canCreateTasks || this.isCreatingSubtask || this.isSavingSubtask) return;
     this.newSubtaskName = '';
-    this.newSubtaskBudget = '0.00';
+    this.newSubtaskBudget = '0';
     this.isCreatingSubtask = true;
   }
 
@@ -168,7 +170,7 @@ export class TaskDetailsComponent implements OnInit {
     if (this.isSavingSubtask) return;
     this.isCreatingSubtask = false;
     this.newSubtaskName = '';
-    this.newSubtaskBudget = '0.00';
+    this.newSubtaskBudget = '0';
   }
 
   public async onSaveSubtask(task: TaskDetailsPayload): Promise<void> {
@@ -243,7 +245,7 @@ export class TaskDetailsComponent implements OnInit {
       this.hierarchyTreeService.triggerHierarchyTreeRefresh();
       this.isCreatingSubtask = false;
       this.newSubtaskName = '';
-      this.newSubtaskBudget = '0.00';
+      this.newSubtaskBudget = '0';
       this.notifier.success(`Subtask "${child.taskName}" created.`);
     } catch (error) {
       this.notifier.error(
@@ -700,7 +702,7 @@ export class TaskDetailsComponent implements OnInit {
     return (task.canEditTask || task.canManage) &&
       !this.isSavingBudget() &&
       isValidTaskBudgetAmount(amount) &&
-      (Number(amount).toFixed(2) !== Number(task.budgetAmount).toFixed(2) ||
+      (Number(amount) !== Number(task.budgetAmount) ||
         (task.canManage && this.editingBudgetStatus !== this.statusValue(task.status)));
   }
 
@@ -1076,7 +1078,7 @@ export class TaskDetailsComponent implements OnInit {
     const budgetAmount = String(this.subtaskBudgetEditAmounts[child.taskId] ?? '').trim();
     const isEditingBudget = this.editingSubtaskBudgetIds.has(child.taskId);
     const hasBudgetChange = isEditingBudget &&
-      Number(budgetAmount).toFixed(2) !== Number(child.budgetAmount).toFixed(2);
+      Number(budgetAmount) !== Number(child.budgetAmount);
     return hasNameChange || hasOwnerChange || hasBudgetChange;
   }
 
@@ -1142,7 +1144,7 @@ export class TaskDetailsComponent implements OnInit {
     const hasOwnerChange = this.hasPendingSubtaskOwnerChange(child);
     const budgetAmount = String(this.subtaskBudgetEditAmounts[child.taskId] ?? '').trim();
     const hasBudgetChange = this.editingSubtaskBudgetIds.has(child.taskId) &&
-      Number(budgetAmount).toFixed(2) !== Number(child.budgetAmount).toFixed(2);
+      Number(budgetAmount) !== Number(child.budgetAmount);
     const hasStatusChange = child.canManage &&
       this.subtaskBudgetEditStatuses[child.taskId] !== this.statusValue(child.status);
     if (hasNameChange && !taskName) {

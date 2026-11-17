@@ -15,6 +15,7 @@ import { CreateProgramService } from './create-program.service';
 import { NotifierService } from '../../../shared/notifier/notifier.service';
 import { HeaderService } from '../../header/header.service';
 import { TextFormatService } from '../../../shared/services/text-format-service.service';
+import { WholeRupeeDirective } from '../../../shared/directives/whole-rupee.directive';
 
 @Component({
   selector: 'app-create-program-dialog',
@@ -33,6 +34,7 @@ import { TextFormatService } from '../../../shared/services/text-format-service.
     MatIconModule,
     MatToolbar,
     MatTooltipModule,
+    WholeRupeeDirective,
   ],
   templateUrl: './create-program.component.html',
   styleUrl: './create-program.component.scss'
@@ -129,8 +131,8 @@ export class CreateProgramDialogComponent implements OnInit {
 
     const injectedPrice = Number(this.injectedData?.price);
     if (this.injectedData?.price !== undefined && this.injectedData?.price !== null && !Number.isNaN(injectedPrice)) {
-      this.price = injectedPrice;
-      this.originalPrice.set(injectedPrice);
+      this.price = Math.round(injectedPrice);
+      this.originalPrice.set(this.price);
       this.hasInjectedPrice = true;
     }
 
@@ -169,6 +171,10 @@ export class CreateProgramDialogComponent implements OnInit {
     }
 
     if (this.latitude == null || this.longitude == null) {
+      return false;
+    }
+
+    if (!Number.isSafeInteger(this.price) || this.price < 0 || this.price > 9_999_999_999) {
       return false;
     }
 
