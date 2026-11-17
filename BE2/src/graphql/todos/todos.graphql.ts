@@ -17,6 +17,7 @@ export const todoTypes = `
   type TodoItem {
     id: Int!
     title: String!
+    expenseAmount: String!
     status: TodoStatus!
     isCompleted: Boolean!
     assignedUserId: Int
@@ -38,13 +39,14 @@ export const todoTypes = `
     parentType: TodoParentType!
     parentId: Int!
     title: String!
+    expenseAmount: String = "0.00"
   }
 `;
 
 export const todoMutationFields = `
   createTodo(input: CreateTodoInput!): TodoItem!
-  updateTodo(todoId: Int!, title: String!, isCompleted: Boolean!): TodoItem!
-  updateTodoDetails(todoId: Int!, title: String!, status: TodoStatus!): TodoItem!
+  updateTodo(todoId: Int!, title: String!, isCompleted: Boolean!, expenseAmount: String): TodoItem!
+  updateTodoDetails(todoId: Int!, title: String!, status: TodoStatus!, expenseAmount: String): TodoItem!
   setTodoStatus(todoId: Int!, status: TodoStatus!): TodoItem!
   assignTodo(todoId: Int!, ownerUserId: Int): TodoItem!
   deleteTodo(todoId: Int!): Boolean!
@@ -134,6 +136,7 @@ async function getTodoItem(todoId: number) {
     `SELECT
        todo.id,
        todo.title,
+       CAST(todo.expense_amount AS CHAR) AS expenseAmount,
        todo.status,
        todo.is_completed AS isCompleted,
        todo.assigned_user_id AS assignedUserId,
@@ -158,6 +161,7 @@ async function getTodoItem(todoId: number) {
   return {
     id: Number(row.id),
     title: String(row.title),
+    expenseAmount: String(row.expenseAmount),
     status: String(row.status),
     isCompleted: Boolean(Number(row.isCompleted)),
     assignedUserId: row.assignedUserId === null ? null : Number(row.assignedUserId),
@@ -171,12 +175,22 @@ async function getTodoItem(todoId: number) {
   };
 }
 
+function validateTodoExpenseAmount(value: unknown): string {
+  const amount = String(value ?? '0').trim();
+  if (!/^(?:0|[1-9]\d{0,9})(?:\.\d{1,2})?$/.test(amount)) {
+    throwEventError('BAD_REQUEST', 'expenseAmount must be a non-negative amount with up to 2 decimal places');
+  }
+  const [whole, fraction = ''] = amount.split('.');
+  return `${whole}.${fraction.padEnd(2, '0')}`;
+}
+
 export const todoResolvers = {
   Mutation: {
-    async createTodo(_: any, args: { input?: { parentType?: ParentType; parentId?: number; title?: string } }, context: any) {
+    async createTodo(_: any, args: { input?: { parentType?: ParentType; parentId?: number; title?: string; expenseAmount?: string | null } }, context: any) {
       const parentType = args?.input?.parentType;
       const parentId = Number(args?.input?.parentId);
       const title = String(args?.input?.title || '').trim();
+      const expenseAmount = validateTodoExpenseAmount(args?.input?.expenseAmount);
 
       if (parentType !== 'TASK' && parentType !== 'PROGRAM') {
         throwEventError('BAD_REQUEST', 'parentType must be TASK or PROGRAM');
@@ -196,19 +210,20 @@ export const todoResolvers = {
 
       const parentColumn = parentType === 'TASK' ? 'task_id' : 'program_id';
       const result = await execute(
-        `INSERT INTO todos (${parentColumn}, title, created_by, updated_by)
-         VALUES (?, ?, ?, ?)`,
-        [parentId, title, userId, userId]
+        `INSERT INTO todos (${parentColumn}, title, expense_amount, created_by, updated_by)
+         VALUES (?, ?, ?, ?, ?)`,
+        [parentId, title, expenseAmount, userId, userId]
       );
       return getTodoItem(result.insertId);
     },
 
-    async updateTodo(_: any, args: { todoId?: number; title?: string; isCompleted?: boolean }, context: any) {
+    async updateTodo(_: any, args: { todoId?: number; title?: string; isCompleted?: boolean; expenseAmount?: string | null }, context: any) {
       const todoId = Number(args?.todoId);
       const title = String(args?.title || '').trim();
       if (!Number.isInteger(todoId) || todoId <= 0 || !title || title.length > 255 || typeof args?.isCompleted !== 'boolean') {
         throwEventError('BAD_REQUEST', 'todoId, a title containing 1 to 255 characters, and isCompleted are required');
       }
+      const expenseAmount = args.expenseAmount == null ? null : validateTodoExpenseAmount(args.expenseAmount);
 
       const userId = await getLoggedInUserId(context);
       const parent = await getTodoParent(todoId);
@@ -220,16 +235,17 @@ export const todoResolvers = {
       await execute(
         `UPDATE todos
          SET title = ?,
+             expense_amount = COALESCE(?, expense_amount),
              status = CASE WHEN is_completed <> ? THEN ? ELSE status END,
              is_completed = ?,
              updated_by = ?
          WHERE id = ?`,
-        [title, args.isCompleted ? 1 : 0, args.isCompleted ? 'COMPLETED' : 'PENDING', args.isCompleted ? 1 : 0, userId, todoId]
+        [title, expenseAmount, args.isCompleted ? 1 : 0, args.isCompleted ? 'COMPLETED' : 'PENDING', args.isCompleted ? 1 : 0, userId, todoId]
       );
       return getTodoItem(todoId);
     },
 
-    async updateTodoDetails(_: any, args: { todoId?: number; title?: string; status?: string }, context: any) {
+    async updateTodoDetails(_: any, args: { todoId?: number; title?: string; status?: string; expenseAmount?: string | null }, context: any) {
       const todoId = Number(args?.todoId);
       const title = String(args?.title || '').trim();
       const status = String(args?.status || '').toUpperCase();
@@ -237,6 +253,7 @@ export const todoResolvers = {
         !['PENDING', 'IN_PROGRESS', 'COMPLETED'].includes(status)) {
         throwEventError('BAD_REQUEST', 'todoId, a valid title, and a valid status are required');
       }
+      const expenseAmount = args.expenseAmount == null ? null : validateTodoExpenseAmount(args.expenseAmount);
 
       const userId = await getLoggedInUserId(context);
       const parent = await getTodoParent(todoId);
@@ -247,9 +264,9 @@ export const todoResolvers = {
 
       await execute(
         `UPDATE todos
-         SET title = ?, status = ?, is_completed = ?, updated_by = ?
+         SET title = ?, expense_amount = COALESCE(?, expense_amount), status = ?, is_completed = ?, updated_by = ?
          WHERE id = ?`,
-        [title, status, status === 'COMPLETED' ? 1 : 0, userId, todoId]
+        [title, expenseAmount, status, status === 'COMPLETED' ? 1 : 0, userId, todoId]
       );
       return getTodoItem(todoId);
     },

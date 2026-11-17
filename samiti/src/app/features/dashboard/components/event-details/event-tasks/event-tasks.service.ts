@@ -49,6 +49,7 @@ export class EventTasksService {
           canAssignOwner
           canDelete
           canAccessFinance
+          needsFinanceAction
         }
         canCreateTasks
         taskAssignees {

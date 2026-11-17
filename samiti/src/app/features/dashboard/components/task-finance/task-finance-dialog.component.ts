@@ -19,10 +19,8 @@ export interface TaskFinanceDialogData {
     <section class="drawer-layout-shell">
       <mat-toolbar class="drawer-synchronized-header">
         <div class="drawer-title-group">
-          <mat-icon class="mode-indicator-icon">account_balance_wallet</mat-icon>
           <div class="drawer-title-copy">
-            <h2>Task Finance</h2>
-            <p>{{ data.taskName }} · #{{ data.taskId }}</p>
+            <h2>{{ data.taskName | titlecase }}</h2>
           </div>
         </div>
         <button mat-icon-button type="button" class="drawer-close-btn" aria-label="Close dialog" (click)="close()">
@@ -75,34 +73,13 @@ export interface TaskFinanceDialogData {
       gap: 8px;
     }
 
-    .mode-indicator-icon {
-      flex: 0 0 auto;
-      width: 1.35rem;
-      height: 1.35rem;
-      color: #f97316;
-      font-size: 1.35rem;
-    }
-
-    .drawer-title-group h2,
-    .drawer-title-group p {
-      margin: 0;
-    }
-
     .drawer-title-group h2 {
+      margin: 0;
       color: #0f172a;
       font-size: 1.05rem;
       font-weight: 700;
       letter-spacing: -0.2px;
       line-height: 1;
-    }
-
-    .drawer-title-group p {
-      overflow: hidden;
-      margin-top: 3px;
-      color: #64748b;
-      font-size: 0.75rem;
-      text-overflow: ellipsis;
-      white-space: nowrap;
     }
 
     .drawer-close-btn {

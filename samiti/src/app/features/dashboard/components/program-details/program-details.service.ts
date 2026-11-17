@@ -52,6 +52,7 @@ export class ProgramDetailsService {
         todos {
           id
           title
+          expenseAmount
           status
           isCompleted
           assignedUserId

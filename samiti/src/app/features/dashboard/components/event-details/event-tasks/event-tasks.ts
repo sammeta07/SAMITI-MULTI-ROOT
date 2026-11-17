@@ -21,6 +21,8 @@ import { EventDetailsStateService } from '../event-details-state.service';
 import { TaskDetailsService } from '../../task-details/task-details.service';
 import { TaskActionsDialogService } from '../../task-details/task-actions-dialog.service';
 import { TaskDetailsPayload } from '../../task-details/task-details.models';
+import { hasPendingTreasuryAction } from '../../task-finance/task-finance.models';
+import { TaskFinanceService } from '../../task-finance/task-finance.service';
 import { TaskFinanceDialogService } from '../../task-finance/task-finance-dialog.service';
 
 @Component({
@@ -53,6 +55,7 @@ export class EventTasksComponent implements OnInit, OnDestroy {
   private readonly eventDetailsState = inject(EventDetailsStateService);
   private readonly taskDetailsService = inject(TaskDetailsService);
   private readonly taskActionsDialog = inject(TaskActionsDialogService);
+  private readonly taskFinanceService = inject(TaskFinanceService);
   private readonly taskFinanceDialog = inject(TaskFinanceDialogService);
 
   private parentParamsSub?: Subscription;
@@ -151,7 +154,25 @@ export class EventTasksComponent implements OnInit, OnDestroy {
 
   public openTaskFinanceDialog(taskId: number, taskName: string, event: Event): void {
     event.stopPropagation();
-    this.taskFinanceDialog.open(taskId, taskName);
+    const eventId = this.currentEventId;
+    this.taskFinanceDialog.open(taskId, taskName).subscribe(() => {
+      if (eventId === null || eventId !== this.currentEventId) return;
+      this.taskFinanceService.getTaskFinance(taskId).subscribe({
+        next: (finance) => {
+          if (eventId !== this.currentEventId) return;
+          const needsFinanceAction = hasPendingTreasuryAction(finance);
+          this.eventData = this.tasks.map((task) => task.taskId === taskId
+            ? { ...task, needsFinanceAction }
+            : task);
+        },
+        error: (error) => {
+          if (eventId !== this.currentEventId) return;
+          this.notifier.error(
+            error?.error?.errors?.[0]?.message || error?.message || 'Failed to refresh task finance status.'
+          );
+        }
+      });
+    });
   }
 
   public get flattenedTasks(): Array<{ task: EventTaskEntry; depth: number }> {
@@ -282,7 +303,9 @@ export class EventTasksComponent implements OnInit, OnDestroy {
   }
 
   public expandAllTasks(): void {
-    this.taskPanels.forEach((panel) => panel.open());
+    this.taskPanels.forEach((panel) => {
+      if (!panel.disabled) panel.open();
+    });
   }
 
   public collapseAllTasks(): void {
@@ -999,4 +1022,5 @@ export class EventTasksComponent implements OnInit, OnDestroy {
       }
     });
   }
+
 }

@@ -2,7 +2,6 @@ import { RowDataPacket } from 'mysql2/promise';
 import { getConnection, query } from '../../config/db';
 import { getLoggedInUserId, throwEventError } from '../events/details/voting/event-voting-core.graphql';
 
-const requestTypes = ['ADVANCE', 'TOP_UP', 'REIMBURSEMENT'] as const;
 const transactionTypes = [
   'ADVANCE_ISSUED',
   'ADVANCE_EXPENSE',
@@ -11,8 +10,44 @@ const transactionTypes = [
   'REIMBURSEMENT_PAID'
 ] as const;
 
-type RequestType = typeof requestTypes[number];
 type TransactionType = typeof transactionTypes[number];
+
+export async function getFinanceActionTaskIds(taskIds: number[]): Promise<Set<number>> {
+  const ids = [...new Set(taskIds.filter((taskId) => Number.isInteger(taskId) && taskId > 0))];
+  if (ids.length === 0) return new Set<number>();
+
+  const placeholders = ids.map(() => '?').join(', ');
+  const rows = await query<Array<RowDataPacket & { taskId: number }>>(
+    `SELECT taskId FROM (
+       SELECT task_id AS taskId
+       FROM task_finance_requests
+       WHERE task_id IN (${placeholders}) AND status = 'PENDING'
+       UNION
+       SELECT task_id AS taskId
+       FROM task_finance_transactions
+       WHERE task_id IN (${placeholders})
+         AND transaction_type = 'ADVANCE_RETURN' AND status = 'PENDING'
+       UNION
+       SELECT request.task_id AS taskId
+       FROM task_finance_requests request
+       LEFT JOIN task_finance_transactions payment
+         ON payment.request_id = request.id
+         AND (
+           (request.request_type IN ('ADVANCE', 'TOP_UP')
+             AND payment.transaction_type = 'ADVANCE_ISSUED' AND payment.status = 'CONFIRMED')
+           OR
+           (request.request_type = 'REIMBURSEMENT'
+             AND payment.transaction_type = 'REIMBURSEMENT_PAID' AND payment.status = 'PAID')
+         )
+       WHERE request.task_id IN (${placeholders})
+         AND request.status IN ('APPROVED', 'PARTIALLY_APPROVED')
+       GROUP BY request.id, request.task_id, request.approved_amount
+       HAVING COALESCE(request.approved_amount, 0) > COALESCE(SUM(payment.amount), 0)
+     ) financeActions`,
+    [...ids, ...ids, ...ids]
+  );
+  return new Set(rows.map((row) => Number(row.taskId)));
+}
 
 export const taskFinanceTypes = `
   enum TaskFinanceRequestType { ADVANCE TOP_UP REIMBURSEMENT }
@@ -48,6 +83,9 @@ export const taskFinanceTypes = `
   }
 
   type TaskFinanceSummary {
+    sanctionedBudget: String!
+    checklistExpenses: String!
+    budgetRemaining: String!
     advanceIssued: String!
     advanceSpent: String!
     personalSpent: String!
@@ -64,13 +102,6 @@ export const taskFinanceTypes = `
     summary: TaskFinanceSummary!
     canRequest: Boolean!
     canApprove: Boolean!
-  }
-
-  input TaskFinanceRequestInput {
-    taskId: Int!
-    requestType: TaskFinanceRequestType!
-    amount: String!
-    reason: String!
   }
 
   input TaskFinanceReviewInput {
@@ -100,7 +131,6 @@ export const taskFinanceQueryFields = `
 `;
 
 export const taskFinanceMutationFields = `
-  createTaskFinanceRequest(input: TaskFinanceRequestInput!): TaskFinanceRequest!
   createTaskPersonalExpense(input: TaskFinanceTransactionInput!): TaskFinancePayload!
   reviewTaskFinanceRequest(input: TaskFinanceReviewInput!): TaskFinanceRequest!
   recordTaskFinanceTransaction(input: TaskFinanceTransactionInput!): TaskFinanceTransaction!
@@ -138,7 +168,7 @@ function cleanText(value: unknown, field: string, maximum = 1000): string {
   return text;
 }
 
-async function getFinanceAccess(taskId: number, userId: number): Promise<{
+async function getFinanceAccess(taskId: number, userId: number, allowReadOnly = false): Promise<{
   taskId: number;
   eventId: number;
   ownerUserId: number | null;
@@ -170,7 +200,9 @@ async function getFinanceAccess(taskId: number, userId: number): Promise<{
   );
   const isOwner = Number(task.ownerUserId) === userId;
   const isCashier = Number(cashierRows[0]?.isCashier) === 1;
-  if (!isOwner && !isCashier) throwEventError('FORBIDDEN', 'Only the task owner or assigned event treasurer can access task finances');
+  if (!allowReadOnly && !isOwner && !isCashier) {
+    throwEventError('FORBIDDEN', 'Only the task owner or assigned event treasurer can perform task finance actions');
+  }
   return {
     taskId: Number(task.taskId),
     eventId: Number(task.eventId),
@@ -231,8 +263,8 @@ async function loadTransaction(transactionId: number): Promise<any> {
 }
 
 async function loadFinance(taskId: number, userId: number): Promise<any> {
-  const access = await getFinanceAccess(taskId, userId);
-  const [requests, transactions, aggregates] = await Promise.all([
+  const access = await getFinanceAccess(taskId, userId, true);
+  const [requests, transactions, aggregates, taskRows, todoExpenseRows] = await Promise.all([
     query<any[]>(
       `SELECT r.id, r.request_type AS requestType, CAST(r.requested_amount AS CHAR) AS requestedAmount,
               CAST(r.approved_amount AS CHAR) AS approvedAmount, r.reason, r.status,
@@ -267,6 +299,23 @@ async function loadFinance(taskId: number, userId: number): Promise<any> {
          COALESCE(SUM(CASE WHEN transaction_type = 'REIMBURSEMENT_PAID' AND status = 'PAID' THEN amount ELSE 0 END), 0) AS reimbursementPaid
        FROM task_finance_transactions WHERE task_id = ?`,
       [taskId]
+    ),
+    query<any[]>(
+      `SELECT CAST(budget_amount AS CHAR) AS sanctionedBudget
+       FROM tasks WHERE id = ? LIMIT 1`,
+      [taskId]
+    ),
+    query<any[]>(
+      `WITH RECURSIVE task_tree (id) AS (
+         SELECT id FROM tasks WHERE id = ?
+         UNION ALL
+         SELECT child.id FROM tasks child
+         INNER JOIN task_tree parent ON child.parent_id = parent.id
+       )
+       SELECT CAST(COALESCE(SUM(todo.expense_amount), 0) AS CHAR) AS checklistExpenses
+       FROM todos todo
+       INNER JOIN task_tree ON task_tree.id = todo.task_id`,
+      [taskId]
     )
   ]);
   const aggregate = aggregates[0] ?? {};
@@ -276,6 +325,8 @@ async function loadFinance(taskId: number, userId: number): Promise<any> {
   const returnConfirmed = decimalCents(aggregate.returnConfirmed);
   const personalSpent = decimalCents(aggregate.personalSpent);
   const reimbursementPaid = decimalCents(aggregate.reimbursementPaid);
+  const sanctionedBudget = decimalCents(taskRows[0]?.sanctionedBudget);
+  const checklistExpenses = decimalCents(todoExpenseRows[0]?.checklistExpenses);
   const approvedReimbursementRows = await query<any[]>(
     `SELECT COALESCE(SUM(approved_amount), 0) AS total
      FROM task_finance_requests WHERE task_id = ? AND request_type = 'REIMBURSEMENT'
@@ -287,6 +338,9 @@ async function loadFinance(taskId: number, userId: number): Promise<any> {
     requests,
     transactions,
     summary: {
+      sanctionedBudget: centsDecimal(sanctionedBudget),
+      checklistExpenses: centsDecimal(checklistExpenses),
+      budgetRemaining: centsDecimal(sanctionedBudget - checklistExpenses),
       advanceIssued: centsDecimal(advanceIssued),
       advanceSpent: centsDecimal(advanceSpent),
       personalSpent: centsDecimal(personalSpent),
@@ -309,61 +363,6 @@ export const taskFinanceResolvers = {
     }
   },
   Mutation: {
-    async createTaskFinanceRequest(_: unknown, args: { input: { taskId: number; requestType: RequestType; amount: string; reason: string } }, context: unknown) {
-      const userId = await getLoggedInUserId(context);
-      const taskId = Number(args.input?.taskId);
-      const access = await getFinanceAccess(taskId, userId);
-      if (!access.isOwner) throwEventError('FORBIDDEN', 'Only the task owner can request funds');
-      const requestType = String(args.input.requestType).toUpperCase() as RequestType;
-      if (!['ADVANCE', 'TOP_UP'].includes(requestType)) throwEventError('BAD_REQUEST', 'Use a personal expense claim for reimbursements');
-      const { amount } = parseAmount(args.input.amount);
-      const reason = cleanText(args.input.reason, 'Reason');
-      const connection = await getConnection();
-      let requestId: number;
-      try {
-        await connection.beginTransaction();
-        await connection.query('SELECT id FROM tasks WHERE id = ? FOR UPDATE', [taskId]);
-        const [pending] = await connection.query<any[]>(
-          `SELECT id FROM task_finance_requests
-           WHERE task_id = ? AND request_type IN ('ADVANCE', 'TOP_UP') AND status = 'PENDING'
-           LIMIT 1 FOR UPDATE`,
-          [taskId]
-        );
-        if (pending.length) throwEventError('CONFLICT', 'Resolve the current pending advance request first');
-        if (requestType === 'ADVANCE') {
-          const [existing] = await connection.query<any[]>(
-            `SELECT id FROM task_finance_requests
-             WHERE task_id = ? AND request_type = 'ADVANCE' AND status <> 'REJECTED'
-             LIMIT 1`,
-            [taskId]
-          );
-          if (existing.length) throwEventError('CONFLICT', 'Use an additional advance request for more funds');
-        } else {
-          const [existingAdvance] = await connection.query<any[]>(
-            `SELECT id FROM task_finance_requests
-             WHERE task_id = ? AND request_type = 'ADVANCE'
-               AND status IN ('APPROVED', 'PARTIALLY_APPROVED', 'PAID')
-             LIMIT 1`,
-            [taskId]
-          );
-          if (!existingAdvance.length) throwEventError('CONFLICT', 'Request an initial advance before requesting additional funds');
-        }
-        const [result] = await connection.execute<any>(
-          `INSERT INTO task_finance_requests (task_id, request_type, requested_amount, reason, requested_by)
-           VALUES (?, ?, ?, ?, ?)`,
-          [taskId, requestType, amount, reason, userId]
-        );
-        requestId = Number(result.insertId);
-        await connection.commit();
-      } catch (error) {
-        await connection.rollback();
-        throw error;
-      } finally {
-        connection.release();
-      }
-      return loadRequest(requestId!);
-    },
-
     async createTaskPersonalExpense(_: unknown, args: { input: { taskId: number; amount: string; description: string } }, context: unknown) {
       const userId = await getLoggedInUserId(context);
       const taskId = Number(args.input?.taskId);
@@ -464,6 +463,9 @@ export const taskFinanceResolvers = {
       const transactionType = String(args.input.transactionType).toUpperCase() as TransactionType;
       if (!transactionTypes.includes(transactionType)) throwEventError('BAD_REQUEST', 'Invalid finance transaction type');
       if (transactionType === 'PERSONAL_EXPENSE') throwEventError('BAD_REQUEST', 'Use the personal expense claim action');
+      if (transactionType === 'ADVANCE_EXPENSE') {
+        throwEventError('BAD_REQUEST', 'Record task spending as a checklist item expense');
+      }
       const { amount, cents } = parseAmount(args.input.amount);
       const description = cleanText(args.input.description, 'Description');
       const requestId = args.input.requestId ? Number(args.input.requestId) : null;
@@ -484,7 +486,7 @@ export const taskFinanceResolvers = {
       try {
         await connection.beginTransaction();
         await connection.query('SELECT id FROM tasks WHERE id = ? FOR UPDATE', [taskId]);
-        if (transactionType === 'ADVANCE_EXPENSE' || transactionType === 'ADVANCE_RETURN') {
+        if (transactionType === 'ADVANCE_RETURN') {
           const [rows] = await connection.query<any[]>(
             `SELECT
                COALESCE(SUM(CASE WHEN transaction_type = 'ADVANCE_ISSUED' AND status = 'CONFIRMED' THEN amount ELSE 0 END), 0) AS issued,
@@ -535,8 +537,7 @@ export const taskFinanceResolvers = {
           }
         }
         const status = transactionType === 'ADVANCE_RETURN' ? 'PENDING'
-          : transactionType === 'ADVANCE_EXPENSE' ? 'CONFIRMED'
-            : transactionType === 'ADVANCE_ISSUED' ? 'CONFIRMED' : 'PAID';
+          : transactionType === 'ADVANCE_ISSUED' ? 'CONFIRMED' : 'PAID';
         const [result] = await connection.execute<any>(
           `INSERT INTO task_finance_transactions
              (task_id, request_id, transaction_type, amount, description, status, created_by, confirmed_by, confirmed_at)

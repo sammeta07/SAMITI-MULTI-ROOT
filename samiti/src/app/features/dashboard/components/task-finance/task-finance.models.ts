@@ -36,6 +36,9 @@ export interface TaskFinanceTransaction {
 }
 
 export interface TaskFinanceSummary {
+  sanctionedBudget: string;
+  checklistExpenses: string;
+  budgetRemaining: string;
   advanceIssued: string;
   advanceSpent: string;
   personalSpent: string;
@@ -52,4 +55,27 @@ export interface TaskFinancePayload {
   summary: TaskFinanceSummary;
   canRequest: boolean;
   canApprove: boolean;
+}
+
+export function hasPendingTreasuryAction(finance: TaskFinancePayload): boolean {
+  if (!finance.canApprove) return false;
+  if (finance.requests.some((request) => request.status === 'PENDING')) return true;
+  if (finance.transactions.some((transaction) =>
+    transaction.transactionType === 'ADVANCE_RETURN' && transaction.status === 'PENDING'
+  )) return true;
+
+  return finance.requests.some((request) => {
+    if (request.status !== 'APPROVED' && request.status !== 'PARTIALLY_APPROVED') return false;
+
+    const transactionType = request.requestType === 'REIMBURSEMENT'
+      ? 'REIMBURSEMENT_PAID'
+      : 'ADVANCE_ISSUED';
+    const paidAmount = finance.transactions
+      .filter((transaction) =>
+        transaction.requestId === request.id && transaction.transactionType === transactionType
+      )
+      .reduce((sum, transaction) => sum + Number(transaction.amount), 0);
+
+    return Number(request.approvedAmount || 0) > paidAmount;
+  });
 }

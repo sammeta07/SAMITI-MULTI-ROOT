@@ -28,6 +28,7 @@ export interface TaskChild {
   canAssignOwner: boolean;
   canDelete: boolean;
   canAccessFinance?: boolean;
+  needsFinanceAction?: boolean;
 }
 
 export interface TaskDetailsPayload {
@@ -67,4 +68,5 @@ export interface TaskDetailsPayload {
   canManageTodos: boolean;
   canToggleTodos: boolean;
   canAccessFinance: boolean;
+  needsFinanceAction?: boolean;
 }

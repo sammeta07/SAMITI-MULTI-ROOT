@@ -349,6 +349,8 @@
 
                 <ng-template #subtaskPanelTemplate let-entry>
                   @let child = entry.task;
+                  @let childSubtasks = getSubtaskChildren(child.taskId);
+                  @let hasChildSubtasks = childSubtasks.length > 0;
                   @let ownerDesignation = getSubtaskOwnerDesignation(child.taskId);
                   @let isUpdatingOwner = assigningSubtaskIds.has(child.taskId);
                   @let isEditingOwner = isEditingSubtaskAssignee(child.taskId);
@@ -356,6 +358,8 @@
                   <mat-expansion-panel
                     class="event-task-panel task-subtask-panel"
                     [expanded]="false"
+                    [disabled]="!hasChildSubtasks"
+                    [hideToggle]="!hasChildSubtasks"
                     [style.--task-level-background]="getSubtaskLevelBackground(entry.depth)"
                   >
                     <mat-expansion-panel-header>
@@ -610,16 +614,6 @@
 
                         <!-- Actions -->
                         <div class="task-row-actions" (click)="$event.stopPropagation()" (keydown)="$event.stopPropagation()">
-                          <button
-                            mat-icon-button
-                            class="task-panel-finance-icon"
-                            type="button"
-                            aria-label="View task finance"
-                            matTooltip="Task finance"
-                            (click)="openTaskFinanceDialog(child.taskId, child.taskName, $event)"
-                          >
-                            <mat-icon>account_balance_wallet</mat-icon>
-                          </button>
                           @if (canOpenSubtaskActions(child)) {
                             <button
                               mat-icon-button
@@ -652,6 +646,17 @@
                               </button>
                             </span>
                           }
+                          <button
+                            mat-icon-button
+                            class="task-panel-finance-icon"
+                            [class.task-panel-finance-action-required]="child.needsFinanceAction"
+                            type="button"
+                            [attr.aria-label]="child.needsFinanceAction ? 'Treasury action required — view task finance' : 'View task finance'"
+                            [matTooltip]="child.needsFinanceAction ? 'Treasury action required' : 'Task finance'"
+                            (click)="openTaskFinanceDialog(child.taskId, child.taskName, $event)"
+                          >
+                            <mat-icon>account_balance_wallet</mat-icon>
+                          </button>
                           <span class="task-panel-info-container">
                             <button
                               mat-icon-button
@@ -717,68 +722,10 @@
                       </div>
                     </mat-expansion-panel-header>
 
-                    <div class="task-details-grid">
-                      <!-- 1. Task ID -->
-                      <div class="task-outline-field">
-                        <span class="outline-label">Task ID</span>
-                        <div class="outline-content">
-                          <mat-icon class="outline-icon">tag</mat-icon>
-                          <span class="outline-value id-badge">#{{ child.taskId }}</span>
-                        </div>
-                      </div>
-
-                      <!-- 2. Created By -->
-                      <div class="task-outline-field">
-                        <span class="outline-label">Created By</span>
-                        <div class="outline-content">
-                          <mat-icon class="outline-icon">person</mat-icon>
-                          <span class="outline-value" [title]="child.createdByName">{{ (child.createdByName || 'Unknown') | titlecase }}</span>
-                        </div>
-                      </div>
-
-                      <!-- 3. Created At -->
-                      <div class="task-outline-field">
-                        <span class="outline-label">Created At</span>
-                        <div class="outline-content">
-                          <mat-icon class="outline-icon">calendar_today</mat-icon>
-                          <span class="outline-value" [title]="child.createdAt | date: 'dd-MMM-yyyy, hh:mm a'">
-                            {{ child.createdAt | date: 'dd-MMM-yy, hh:mm a' }}
-                          </span>
-                        </div>
-                      </div>
-
-                      <!-- 4. Assigned By -->
-                      <div class="task-outline-field">
-                        <span class="outline-label">Assigned By</span>
-                        <div class="outline-content">
-                          <mat-icon class="outline-icon">person_add</mat-icon>
-                          <span class="outline-value" [title]="child.assignedByName">{{ (child.assignedByName || 'Not assigned') | titlecase }}</span>
-                        </div>
-                      </div>
-
-                      <!-- 5. Assigned At -->
-                      <div class="task-outline-field">
-                        <span class="outline-label">Assigned At</span>
-                        <div class="outline-content">
-                          <mat-icon class="outline-icon">assignment_ind</mat-icon>
-                          <span class="outline-value">
-                            @if (child.ownerAssignedAt) {
-                              <span [title]="child.ownerAssignedAt | date: 'dd-MMM-yyyy, hh:mm a'">
-                                {{ child.ownerAssignedAt | date: 'dd-MMM-yy, hh:mm a' }}
-                              </span>
-                            } @else {
-                              <span class="muted-text">Not assigned</span>
-                            }
-                          </span>
-                        </div>
-                      </div>
-
-                    </div>
-
                     <!-- Recursive Subtasks Tree -->
-                    @if (getSubtaskChildren(child.taskId).length > 0) {
+                    @if (hasChildSubtasks) {
                       <mat-accordion class="task-expansion-list" [multi]="true">
-                        @for (nestedChild of getSubtaskChildren(child.taskId); track nestedChild.taskId) {
+                        @for (nestedChild of childSubtasks; track nestedChild.taskId) {
                           <ng-container
                             [ngTemplateOutlet]="subtaskPanelTemplate"
                             [ngTemplateOutletContext]="{ $implicit: { task: nestedChild, depth: entry.depth + 1 } }"

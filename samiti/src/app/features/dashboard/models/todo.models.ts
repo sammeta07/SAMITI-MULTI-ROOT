@@ -4,6 +4,7 @@ export type TodoStatus = 'PENDING' | 'IN_PROGRESS' | 'COMPLETED';
 export interface TodoItem {
   id: number;
   title: string;
+  expenseAmount: string;
   status: TodoStatus;
   isCompleted: boolean;
   assignedUserId: number | null;

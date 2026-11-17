@@ -6,8 +6,7 @@ import { NotifierService } from '../../../../shared/notifier/notifier.service';
 import {
   TaskFinancePayload,
   TaskFinanceRequest,
-  TaskFinanceTransaction,
-  TaskFinanceTransactionType
+  TaskFinanceTransaction
 } from './task-finance.models';
 import { TaskFinanceService } from './task-finance.service';
 
@@ -28,13 +27,11 @@ export class TaskFinanceComponent implements OnInit {
   public readonly payload = signal<TaskFinancePayload | null>(null);
   public readonly isLoading = signal(false);
   public readonly isSaving = signal(false);
+  public readonly activeHistoryTab = signal<'REQUESTS' | 'TRANSACTIONS'>('REQUESTS');
+
   public readonly approvalAmounts: Record<number, string> = {};
-  public requestAmount = '';
-  public requestReason = '';
   public expenseAmount = '';
   public expenseDescription = '';
-  public advanceExpenseAmount = '';
-  public advanceExpenseDescription = '';
   public returnAmount = '';
   public returnDescription = '';
 
@@ -60,22 +57,6 @@ export class TaskFinanceComponent implements OnInit {
       });
   }
 
-  public submitAdvanceRequest(): void {
-    const payload = this.payload();
-    if (!payload?.canRequest || !this.requestAmount || !this.requestReason.trim()) return;
-    const hasApprovedAdvance = payload.requests.some((request) =>
-      request.requestType === 'ADVANCE' &&
-      ['APPROVED', 'PARTIALLY_APPROVED', 'PAID'].includes(request.status)
-    );
-    const requestType = hasApprovedAdvance ? 'TOP_UP' : 'ADVANCE';
-    this.runAction(
-      this.service.createRequest(this.taskId, requestType, this.requestAmount, this.requestReason),
-      requestType === 'ADVANCE' ? 'Advance request submitted.' : 'Additional advance request submitted.'
-    );
-    this.requestAmount = '';
-    this.requestReason = '';
-  }
-
   public submitPersonalExpense(): void {
     if (!this.payload()?.canRequest || !this.expenseAmount || !this.expenseDescription.trim()) return;
     this.runAction(
@@ -86,22 +67,14 @@ export class TaskFinanceComponent implements OnInit {
     this.expenseDescription = '';
   }
 
-  public submitTransaction(type: 'ADVANCE_EXPENSE' | 'ADVANCE_RETURN'): void {
-    const isReturn = type === 'ADVANCE_RETURN';
-    const amount = isReturn ? this.returnAmount : this.advanceExpenseAmount;
-    const description = isReturn ? this.returnDescription : this.advanceExpenseDescription;
-    if (!this.payload()?.canRequest || !amount || !description.trim()) return;
+  public submitAdvanceReturn(): void {
+    if (!this.payload()?.canRequest || !this.returnAmount || !this.returnDescription.trim()) return;
     this.runAction(
-      this.service.recordTransaction(this.taskId, type, amount, description),
-      isReturn ? 'Cash return submitted for confirmation.' : 'Advance expense recorded.'
+      this.service.recordTransaction(this.taskId, 'ADVANCE_RETURN', this.returnAmount, this.returnDescription),
+      'Cash return submitted for confirmation.'
     );
-    if (isReturn) {
-      this.returnAmount = '';
-      this.returnDescription = '';
-    } else {
-      this.advanceExpenseAmount = '';
-      this.advanceExpenseDescription = '';
-    }
+    this.returnAmount = '';
+    this.returnDescription = '';
   }
 
   public reviewRequest(request: TaskFinanceRequest, decision: 'APPROVE' | 'REJECT'): void {
@@ -165,11 +138,34 @@ export class TaskFinanceComponent implements OnInit {
   }
 
   public money(value: string | null | undefined): string {
-    return Number(value || 0).toFixed(2);
+    return Number(value || 0).toLocaleString('en-IN', {
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2
+    });
   }
 
   public isRequestPayable(request: TaskFinanceRequest): boolean {
     return request.status === 'APPROVED' || request.status === 'PARTIALLY_APPROVED';
+  }
+
+  public formatLabel(raw: string): string {
+    return raw.replace(/_/g, ' ').toLowerCase().replace(/\b\w/g, (c) => c.toUpperCase());
+  }
+
+  public getStatusClass(status: string): string {
+    switch (status) {
+      case 'APPROVED':
+      case 'CONFIRMED':
+      case 'PAID':
+        return 'badge-success';
+      case 'PENDING':
+      case 'PARTIALLY_APPROVED':
+        return 'badge-warning';
+      case 'REJECTED':
+        return 'badge-danger';
+      default:
+        return 'badge-neutral';
+    }
   }
 
   private runAction<T>(request: Observable<T>, successMessage: string): void {

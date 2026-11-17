@@ -40,18 +40,22 @@ export class TodoChecklistComponent {
   @Output() readonly itemAdded = new EventEmitter<void>();
 
   public newTitle = '';
+  public newExpenseAmount = '0.00';
   public isAdding = false;
   public readonly pendingIds = new Set<number>();
   public editingId: number | null = null;
   public editTitle = '';
+  public editExpenseAmount = '0.00';
   public editCompleted = false;
   public editStatus: TodoStatus = 'PENDING';
   public statusDropdownOpen = false;
 
   public get tableColumns(): string[] {
-    return this.canManage || this.canToggle
-      ? ['number', 'title', 'status', 'actions']
-      : ['number', 'title', 'status'];
+    const columns = ['number', 'title'];
+    if (this.parentType === 'TASK') columns.push('expense');
+    columns.push('status');
+    if (this.canManage || this.canToggle) columns.push('actions');
+    return columns;
   }
 
   public toggleCompleted(item: TodoItem, event: MatCheckboxChange): void {
@@ -63,6 +67,7 @@ export class TodoChecklistComponent {
     if (!this.canManage || this.pendingIds.has(item.id)) return;
     this.editingId = item.id;
     this.editTitle = this.toSentenceCase(item.title);
+    this.editExpenseAmount = item.expenseAmount || '0.00';
     this.editCompleted = item.isCompleted;
     this.editStatus = item.status;
   }
@@ -78,6 +83,7 @@ export class TodoChecklistComponent {
   public cancelEditing(): void {
     this.editingId = null;
     this.editTitle = '';
+    this.editExpenseAmount = '0.00';
     this.editCompleted = false;
     this.editStatus = 'PENDING';
     this.statusDropdownOpen = false;
@@ -86,13 +92,18 @@ export class TodoChecklistComponent {
   public saveExpansionChanges(item: TodoItem): void {
     const title = this.toSentenceCase(this.editTitle);
     if (!this.canManage || this.editingId !== item.id || !title || title.length > 255 || this.pendingIds.has(item.id)) return;
-    if (title === item.title && this.editStatus === item.status) {
+    if (this.parentType === 'TASK' && !this.isValidExpenseAmount(this.editExpenseAmount)) {
+      this.notifier.error('Enter a valid non-negative checklist expense amount.');
+      return;
+    }
+    const expenseAmount = this.parentType === 'TASK' ? this.normalizeExpenseAmount(this.editExpenseAmount) : item.expenseAmount;
+    if (title === item.title && this.editStatus === item.status && expenseAmount === item.expenseAmount) {
       this.cancelEditing();
       return;
     }
 
     this.pendingIds.add(item.id);
-    this.service.updateTodoDetails(item.id, title, this.editStatus).subscribe({
+    this.service.updateTodoDetails(item.id, title, this.editStatus, expenseAmount).subscribe({
       next: (updated) => {
         this.items = this.items.map((entry) => (entry.id === updated.id ? updated : entry));
         this.itemsChange.emit(this.items);
@@ -109,13 +120,18 @@ export class TodoChecklistComponent {
   public saveChanges(item: TodoItem): void {
     const title = this.toSentenceCase(this.editTitle);
     if (!this.canManage || this.editingId !== item.id || !title || title.length > 255 || this.pendingIds.has(item.id)) return;
-    if (title === item.title && this.editCompleted === item.isCompleted) {
+    if (this.parentType === 'TASK' && !this.isValidExpenseAmount(this.editExpenseAmount)) {
+      this.notifier.error('Enter a valid non-negative checklist expense amount.');
+      return;
+    }
+    const expenseAmount = this.parentType === 'TASK' ? this.normalizeExpenseAmount(this.editExpenseAmount) : item.expenseAmount;
+    if (title === item.title && this.editCompleted === item.isCompleted && expenseAmount === item.expenseAmount) {
       this.cancelEditing();
       return;
     }
 
     this.pendingIds.add(item.id);
-    this.service.updateTodo(item.id, title, this.editCompleted).subscribe({
+    this.service.updateTodo(item.id, title, this.editCompleted, expenseAmount).subscribe({
       next: (updated) => {
         this.items = this.items.map((entry) => (entry.id === updated.id ? updated : entry));
         this.itemsChange.emit(this.items);
@@ -132,13 +148,19 @@ export class TodoChecklistComponent {
   public add(value = this.newTitle): void {
     const title = this.toSentenceCase(value);
     if (!title || title.length > 255 || this.isAdding) return;
+    if (this.parentType === 'TASK' && !this.isValidExpenseAmount(this.newExpenseAmount)) {
+      this.notifier.error('Enter a valid non-negative checklist expense amount.');
+      return;
+    }
 
     this.isAdding = true;
-    this.service.create(this.parentType, this.parentId, title).subscribe({
+    const expenseAmount = this.parentType === 'TASK' ? this.normalizeExpenseAmount(this.newExpenseAmount) : '0.00';
+    this.service.create(this.parentType, this.parentId, title, expenseAmount).subscribe({
       next: (item) => {
         this.items = [...this.items, item];
         this.itemsChange.emit(this.items);
         this.newTitle = '';
+        this.newExpenseAmount = '0.00';
         this.isAdding = false;
         this.itemAdded.emit();
       },
@@ -147,6 +169,20 @@ export class TodoChecklistComponent {
         this.notifier.error(error?.error?.errors?.[0]?.message || error?.message || 'Failed to add checklist item.');
       }
     });
+  }
+
+  public formatExpenseAmount(value: string): string {
+    return Number(value || 0).toFixed(2);
+  }
+
+  private isValidExpenseAmount(value: string): boolean {
+    const amount = String(value ?? '').trim();
+    return /^(?:0|[1-9]\d{0,9})(?:\.\d{1,2})?$/.test(amount) &&
+      Number(amount) <= 9_999_999_999.99;
+  }
+
+  private normalizeExpenseAmount(value: string): string {
+    return Number(value).toFixed(2);
   }
 
   public setStatus(item: TodoItem, event: Event): void {

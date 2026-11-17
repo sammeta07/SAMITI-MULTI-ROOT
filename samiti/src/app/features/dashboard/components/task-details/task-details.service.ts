@@ -47,6 +47,7 @@ export class TaskDetailsService {
         canAssignOwner
         canDeleteTask
         canAccessFinance
+        needsFinanceAction
         updatedAt
         children {
           taskId
@@ -75,6 +76,7 @@ export class TaskDetailsService {
           canAssignOwner
           canDelete
           canAccessFinance
+          needsFinanceAction
         }
         descendants {
           taskId
@@ -103,6 +105,7 @@ export class TaskDetailsService {
           canAssignOwner
           canDelete
           canAccessFinance
+          needsFinanceAction
         }
         taskAssignees {
           userId
@@ -117,6 +120,7 @@ export class TaskDetailsService {
         todos {
           id
           title
+          expenseAmount
           status
           isCompleted
           assignedUserId

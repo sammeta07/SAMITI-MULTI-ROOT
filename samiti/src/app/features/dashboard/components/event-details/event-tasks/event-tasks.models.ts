@@ -40,6 +40,7 @@ export interface EventTaskEntry {
   canAssignOwner: boolean;
   canDelete: boolean;
   canAccessFinance?: boolean;
+  needsFinanceAction?: boolean;
 }
 
 export interface EventTasksPayload {

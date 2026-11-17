@@ -333,6 +333,11 @@ body {
   }
 }
 
+.cdk-overlay-pane.task-finance-dialog-panel {
+  width: 100% !important;
+  max-width: 1000px !important;
+}
+
 .cdk-overlay-backdrop.confirm-dialog-backdrop {
   z-index: 2600 !important;
   background: rgba(0, 0, 0, 0.55) !important;
@@ -665,6 +670,32 @@ html body button.mat-mdc-icon-button:is(.drawer-close-btn, .confirm-dialog-close
   }
 }
 
+.task-panel-finance-icon.task-panel-finance-action-required {
+  position: relative;
+  border-color: #ef4444 !important;
+  background: #fff1f2 !important;
+  color: #b91c1c !important;
+
+  &::after {
+    position: absolute;
+    top: 0;
+    right: -5px;
+    display: flex;
+    width: 14px;
+    height: 14px;
+    align-items: center;
+    justify-content: center;
+    border: 1px solid #fff;
+    border-radius: 50%;
+    background: #dc2626;
+    color: #fff;
+    content: '!';
+    font-size: 10px;
+    font-weight: 800;
+    line-height: 1;
+  }
+}
+
 .task-finance-dialog-panel .mat-mdc-dialog-surface {
   overflow: hidden;
   padding: 0;
@@ -677,5 +708,12 @@ html body button.mat-mdc-icon-button:is(.drawer-close-btn, .confirm-dialog-close
 .event-task-panel:has(.task-panel-info-container:focus-within) {
   position: relative;
   z-index: 20;
+  overflow: visible !important;
+}
+
+.task-subtask-panel:has(.task-panel-info-container:hover) .mat-expansion-panel-header .mat-content,
+.task-subtask-panel:has(.task-panel-info-container:focus-within) .mat-expansion-panel-header .mat-content,
+.event-task-panel:has(.task-panel-info-container:hover) .mat-expansion-panel-header .mat-content,
+.event-task-panel:has(.task-panel-info-container:focus-within) .mat-expansion-panel-header .mat-content {
   overflow: visible !important;
 }

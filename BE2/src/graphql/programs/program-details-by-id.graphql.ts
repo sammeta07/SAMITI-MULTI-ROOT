@@ -251,6 +251,7 @@ export const programDetailsResolvers = {
         `SELECT
            todo.id,
            todo.title,
+           CAST(todo.expense_amount AS CHAR) AS expenseAmount,
            todo.status,
            todo.is_completed AS isCompleted,
            todo.assigned_user_id AS assignedUserId,
@@ -310,6 +311,7 @@ export const programDetailsResolvers = {
         todos: todoRows.map((todo) => ({
           id: Number(todo.id),
           title: String(todo.title),
+          expenseAmount: String(todo.expenseAmount),
           status: String(todo.status),
           isCompleted: Boolean(Number(todo.isCompleted)),
           assignedUserId: todo.assignedUserId === null ? null : Number(todo.assignedUserId),

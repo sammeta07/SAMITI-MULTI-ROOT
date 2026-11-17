@@ -26,6 +26,8 @@ import { EventDetailsStateService } from '../event-details/event-details-state.s
 import { TaskChild, TaskDetailsPayload } from './task-details.models';
 import { TaskDetailsService } from './task-details.service';
 import { TaskFinanceComponent } from '../task-finance/task-finance.component';
+import { hasPendingTreasuryAction } from '../task-finance/task-finance.models';
+import { TaskFinanceService } from '../task-finance/task-finance.service';
 import { TaskFinanceDialogService } from '../task-finance/task-finance-dialog.service';
 import { TaskActionsDialogService } from './task-actions-dialog.service';
 
@@ -61,6 +63,7 @@ export class TaskDetailsComponent implements OnInit {
   private readonly loadingState = inject(LoadingStateService);
   private readonly confirmDialog = inject(ConfirmDialogService);
   private readonly taskActionsDialog = inject(TaskActionsDialogService);
+  private readonly taskFinanceService = inject(TaskFinanceService);
   private readonly taskFinanceDialog = inject(TaskFinanceDialogService);
   private readonly hierarchyTreeService = inject(DashboardHierarchyTreeService);
   private readonly eventTasksService = inject(EventTasksService);
@@ -145,7 +148,9 @@ export class TaskDetailsComponent implements OnInit {
   }
 
   public expandAllSubtasks(): void {
-    this.subtaskPanels.forEach((panel) => panel.open());
+    this.subtaskPanels.forEach((panel) => {
+      if (!panel.disabled) panel.open();
+    });
   }
 
   public collapseAllSubtasks(): void {
@@ -269,7 +274,33 @@ export class TaskDetailsComponent implements OnInit {
 
   public openTaskFinanceDialog(taskId: number, taskName: string, event: Event): void {
     event.stopPropagation();
-    this.taskFinanceDialog.open(taskId, taskName);
+    const rootTaskId = this.task()?.taskId;
+    this.taskFinanceDialog.open(taskId, taskName).subscribe(() => {
+      if (rootTaskId === undefined || this.task()?.taskId !== rootTaskId) return;
+      this.taskFinanceService.getTaskFinance(taskId).subscribe({
+        next: (finance) => {
+          if (this.task()?.taskId !== rootTaskId) return;
+          const needsFinanceAction = hasPendingTreasuryAction(finance);
+          this.task.update((current) => current && current.taskId === rootTaskId
+            ? {
+                ...current,
+                children: current.children.map((child) =>
+                  child.taskId === taskId ? { ...child, needsFinanceAction } : child
+                ),
+                descendants: (current.descendants ?? []).map((descendant) =>
+                  descendant.taskId === taskId ? { ...descendant, needsFinanceAction } : descendant
+                )
+              }
+            : current);
+        },
+        error: (error) => {
+          if (this.task()?.taskId !== rootTaskId) return;
+          this.notifier.error(
+            error?.error?.errors?.[0]?.message || error?.message || 'Failed to refresh task finance status.'
+          );
+        }
+      });
+    });
   }
 
   private updateTaskFromDialog(updatedTask: TaskDetailsPayload): void {

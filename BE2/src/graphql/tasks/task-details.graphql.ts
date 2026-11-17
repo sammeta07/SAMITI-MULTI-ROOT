@@ -2,6 +2,7 @@ import { query } from '../../config/db';
 import { getLoggedInUserId, throwEventError } from '../events/details/voting/event-voting-core.graphql';
 import { getTodoAssignees } from '../todos/todos.graphql';
 import { hasPermission, PERMISSIONS } from '../../authorization/authorization';
+import { getFinanceActionTaskIds } from './task-finance.graphql';
 
 export const taskDetailsTypes = `
   type TaskChild {
@@ -31,6 +32,7 @@ export const taskDetailsTypes = `
     canAssignOwner: Boolean!
     canDelete: Boolean!
     canAccessFinance: Boolean!
+    needsFinanceAction: Boolean!
   }
 
   type TaskDetailsAssignee {
@@ -81,6 +83,7 @@ export const taskDetailsTypes = `
     canManageTodos: Boolean!
     canToggleTodos: Boolean!
     canAccessFinance: Boolean!
+    needsFinanceAction: Boolean!
   }
 `;
 
@@ -272,11 +275,18 @@ export const taskDetailsResolvers = {
         pendingDescendants.push(...(childrenByParentId.get(descendantId) ?? []));
       }
       const children = childrenByParentId.get(taskId) ?? [];
+      const financeActionTaskIds = isCashier
+        ? await getFinanceActionTaskIds([
+            taskId,
+            ...descendants.map((descendant) => Number(descendant.taskId))
+          ])
+        : new Set<number>();
 
       const todos = await query<any[]>(
         `SELECT
            todo.id,
            todo.title,
+           CAST(todo.expense_amount AS CHAR) AS expenseAmount,
            todo.status,
            todo.is_completed AS isCompleted,
            todo.assigned_user_id AS assignedUserId,
@@ -357,6 +367,7 @@ export const taskDetailsResolvers = {
         canAssignOwner,
         canDeleteTask: isMasterAdmin || isTaskCreator || (task.parentTaskId !== null && isParentTaskOwner),
         canAccessFinance,
+        needsFinanceAction: isCashier && !isTaskOwner && financeActionTaskIds.has(taskId),
         children: children.map((child) => ({
           taskId: Number(child.taskId),
           parentTaskId: Number(taskId),
@@ -377,6 +388,9 @@ export const taskDetailsResolvers = {
           updatedByName: child.updatedByName || null,
           updatedAt: child.updatedAt ? String(child.updatedAt) : null,
           canAccessFinance: Number(child.ownerUserId) === userId || isCashier,
+          needsFinanceAction: isCashier &&
+            Number(child.ownerUserId) !== userId &&
+            financeActionTaskIds.has(Number(child.taskId)),
           ...mapChildPermissions(child)
         })),
         descendants: descendants.map((descendant) => ({
@@ -399,6 +413,9 @@ export const taskDetailsResolvers = {
           updatedByName: descendant.updatedByName || null,
           updatedAt: descendant.updatedAt ? String(descendant.updatedAt) : null,
           canAccessFinance: Number(descendant.ownerUserId) === userId || isCashier,
+          needsFinanceAction: isCashier &&
+            Number(descendant.ownerUserId) !== userId &&
+            financeActionTaskIds.has(Number(descendant.taskId)),
           ...mapChildPermissions(descendant)
         })),
         taskAssignees: taskAssignees.map((assignee) => ({
@@ -414,6 +431,7 @@ export const taskDetailsResolvers = {
         todos: todos.map((todo) => ({
           id: Number(todo.id),
           title: String(todo.title),
+          expenseAmount: String(todo.expenseAmount),
           status: String(todo.status),
           isCompleted: Boolean(Number(todo.isCompleted)),
           assignedUserId: todo.assignedUserId === null ? null : Number(todo.assignedUserId),

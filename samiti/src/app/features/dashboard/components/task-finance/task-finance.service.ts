@@ -31,6 +31,7 @@ export class TaskFinanceService {
           createdByName confirmedByName createdAt confirmedAt
         }
         summary {
+          sanctionedBudget checklistExpenses budgetRemaining
           advanceIssued advanceSpent personalSpent returnPending returnConfirmed
           reimbursementPaid advanceBalance reimbursementDue
         }
@@ -40,18 +41,6 @@ export class TaskFinanceService {
 
     return this.request<{ taskFinance: TaskFinancePayload }>(query, { taskId })
       .pipe(map((response) => response.taskFinance));
-  }
-
-  public createRequest(taskId: number, requestType: 'ADVANCE' | 'TOP_UP', amount: string, reason: string): Observable<TaskFinanceRequest> {
-    const mutation = `mutation CreateTaskFinanceRequest($input: TaskFinanceRequestInput!) {
-      createTaskFinanceRequest(input: $input) {
-        id requestType requestedAmount approvedAmount reason status
-        requestedByName reviewedByName reviewNote createdAt reviewedAt
-      }
-    }`;
-    return this.request<{ createTaskFinanceRequest: TaskFinanceRequest }>(mutation, {
-      input: { taskId, requestType, amount: String(amount), reason }
-    }).pipe(map((response) => response.createTaskFinanceRequest));
   }
 
   public createPersonalExpense(taskId: number, amount: string, description: string): Observable<TaskFinancePayload> {
@@ -66,6 +55,7 @@ export class TaskFinanceService {
           createdByName confirmedByName createdAt confirmedAt
         }
         summary {
+          sanctionedBudget checklistExpenses budgetRemaining
           advanceIssued advanceSpent personalSpent returnPending returnConfirmed
           reimbursementPaid advanceBalance reimbursementDue
         }

@@ -47,20 +47,26 @@ npm run dev
 
 ## Migrations
 
-Run all SQL migrations in `src/migrations`:
+`run-migration.ts` runs one migration file per invocation. Set `MIGRATION_FILE` to select it; if unset, the runner executes only `000-safe-consolidated-schema.sql`.
 
-```bash
+For the task finance and checklist expense schema, first verify that the database already has the task/Todo schema from migrations `069`, `077`, and `079`, then run migration `082`:
+
+```powershell
+$env:MIGRATION_FILE = "082-task-finance-budget-and-todo-expenses.sql"
 npm run migrate
+Remove-Item Env:\MIGRATION_FILE
 ```
 
-If a legacy events foreign-key mismatch needs cleanup, run:
+Do not run migration `082` before its prerequisite tables exist.
 
+To run another migration, set `MIGRATION_FILE` to that migration's filename before invoking `npm run migrate`.
+
+If a legacy events foreign-key mismatch needs cleanup, run:
 ```bash
 npm run migrate:fix
 ```
 
 Notes:
-- Migrations run in sorted filename order, so `012-add-event-display-name.sql` will be picked up automatically.
 - If `display_name` migration is not applied yet, backend code now falls back to `LEFT(name, 20)` for compact event labels.
 - After running migrations, restart the backend if it is already running.
 
