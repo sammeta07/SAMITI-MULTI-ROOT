@@ -21,7 +21,7 @@ import { EventDetailsStateService } from '../event-details-state.service';
 import { TaskDetailsService } from '../../task-details/task-details.service';
 import { TaskActionsDialogService } from '../../task-details/task-actions-dialog.service';
 import { TaskDetailsPayload } from '../../task-details/task-details.models';
-import { hasPendingTreasuryAction } from '../../task-finance/task-finance.models';
+import { hasPendingFinanceAction } from '../../task-finance/task-finance.models';
 import { TaskFinanceService } from '../../task-finance/task-finance.service';
 import { TaskFinanceDialogService } from '../../task-finance/task-finance-dialog.service';
 
@@ -111,8 +111,7 @@ export class EventTasksComponent implements OnInit, OnDestroy {
   }
 
   public canOpenTaskActions(task: EventTaskEntry): boolean {
-    return task.canEditTask || task.canAssignOwner || task.canManage || task.canRequestBudgetIncrease ||
-      task.canReviewBudgetRequest || task.canCancelBudgetRequest;
+    return task.canEditTask || task.canAssignOwner || task.canManage;
   }
 
   public openTaskActionsDialog(task: EventTaskEntry, event: Event): void {
@@ -160,7 +159,7 @@ export class EventTasksComponent implements OnInit, OnDestroy {
       this.taskFinanceService.getTaskFinance(taskId).subscribe({
         next: (finance) => {
           if (eventId !== this.currentEventId) return;
-          const needsFinanceAction = hasPendingTreasuryAction(finance);
+          const needsFinanceAction = hasPendingFinanceAction(finance);
           this.eventData = this.tasks.map((task) => task.taskId === taskId
             ? { ...task, needsFinanceAction }
             : task);

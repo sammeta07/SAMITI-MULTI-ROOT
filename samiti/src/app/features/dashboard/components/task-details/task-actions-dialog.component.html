@@ -62,14 +62,6 @@
       <section class="task-dialog-card">
         <div class="section-header-row">
           <span class="section-label-tag"><mat-icon>tune</mat-icon> Manage & Edit</span>
-          <div class="budget-badges">
-            <span class="task-budget-metric task-budget-remaining" title="Remaining Budget">
-              <span>Remaining Budget</span> {{ formatBudget(data.remainingBudget) }}
-            </span>
-            <span class="task-budget-metric task-budget-total" title="Total Task Budget">
-              <span>Total Budget</span> {{ formatBudget(task.budgetAmount) }}
-            </span>
-          </div>
         </div>
 
         <div class="action-rows-stack">
@@ -206,66 +198,10 @@
             </div>
           }
 
-          @if (task.canEditTask) {
-            <div class="task-dialog-action-row">
-              <label for="task-dialog-budget">Budget (₹)</label>
-              <div class="task-dialog-control">
-                <input id="task-dialog-budget" type="number" min="0" step="0.01" [(ngModel)]="budgetAmount" placeholder="0" aria-label="Task budget in rupees" [disabled]="isSavingAction()" />
-                <button mat-icon-button type="button" class="icon-action-button" [disabled]="isSavingAction() || !canSaveBudget()" (click)="submitBudget()" aria-label="Save task budget" title="Save task budget">
-                  <mat-icon>save</mat-icon>
-                </button>
-              </div>
-            </div>
-          }
-        </div>
-
-        <!-- Pending Budget Requests Banner -->
-        @if (task.budgetRequestStatus === 'PENDING' && task.canReviewBudgetRequest && task.budgetRequestId) {
-          <div class="budget-request-banner">
-            <div class="request-banner-info">
-              <span class="task-dialog-row-label">Received Request</span>
-              <strong class="task-budget-request-amount">+{{ formatBudget(task.requestedBudgetAmount) }}</strong>
-            </div>
-            <div class="request-banner-actions">
-              <button mat-flat-button type="button" class="submit-action-btn" [disabled]="isSavingAction()" (click)="reviewBudget('APPROVE')">
-                <mat-icon>check_circle</mat-icon><span>Approve</span>
-              </button>
-              <button mat-button type="button" class="btn-reject-flat" [disabled]="isSavingAction()" (click)="reviewBudget('REJECT')">
-                <mat-icon>cancel</mat-icon><span>Reject</span>
-              </button>
-            </div>
-          </div>
-        } @else if (task.budgetRequestStatus === 'PENDING' && task.canCancelBudgetRequest && task.budgetRequestId) {
-          <div class="budget-request-banner">
-            <div class="request-banner-info">
-              <span class="task-dialog-row-label">Pending Request</span>
-              <strong class="task-budget-request-amount">+{{ formatBudget(task.requestedBudgetAmount) }}</strong>
-            </div>
-            <div class="request-banner-actions">
-              <button mat-button type="button" class="btn-reject-flat" [disabled]="isSavingAction()" (click)="cancelBudgetRequest()">
-                <mat-icon>cancel</mat-icon><span>Cancel</span>
-              </button>
-            </div>
-          </div>
-        }
-      </section>
-    }
-
-    <!-- Request Additional Budget Card -->
-    @if (task.canRequestBudgetIncrease && task.budgetRequestStatus !== 'PENDING') {
-      <section class="task-dialog-card">
-        <span class="section-label-tag"><mat-icon>request_quote</mat-icon> Request Additional Budget</span>
-        <div class="task-dialog-action-row">
-          <label for="task-dialog-request">Amount (₹)</label>
-          <div class="task-dialog-control">
-            <input id="task-dialog-request" type="number" min="0.01" step="0.01" [(ngModel)]="budgetIncreaseAmount" placeholder="0" aria-label="Additional budget amount" [disabled]="isSavingAction()" />
-            <button mat-flat-button type="button" class="submit-action-btn" [disabled]="isSavingAction() || !canSubmitBudgetRequest()" (click)="submitBudgetRequest()">
-              <mat-icon>send</mat-icon><span>Request</span>
-            </button>
-          </div>
         </div>
       </section>
     }
+
   </div>
 
   <footer class="drawer-action-footer">

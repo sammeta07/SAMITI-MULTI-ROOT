@@ -1,13 +1,12 @@
 import { RowDataPacket } from 'mysql2/promise';
 import { getConnection, query } from '../../config/db';
+import { hasPermission, PERMISSIONS } from '../../authorization/authorization';
 import { getLoggedInUserId, throwEventError } from '../events/details/voting/event-voting-core.graphql';
 
 const transactionTypes = [
   'ADVANCE_ISSUED',
   'ADVANCE_EXPENSE',
-  'PERSONAL_EXPENSE',
-  'ADVANCE_RETURN',
-  'REIMBURSEMENT_PAID'
+  'ADVANCE_RETURN'
 ] as const;
 
 type TransactionType = typeof transactionTypes[number];
@@ -21,7 +20,8 @@ export async function getFinanceActionTaskIds(taskIds: number[]): Promise<Set<nu
     `SELECT taskId FROM (
        SELECT task_id AS taskId
        FROM task_finance_requests
-       WHERE task_id IN (${placeholders}) AND status = 'PENDING'
+       WHERE task_id IN (${placeholders})
+         AND request_type IN ('ADVANCE', 'TOP_UP') AND status = 'PENDING'
        UNION
        SELECT task_id AS taskId
        FROM task_finance_transactions
@@ -32,14 +32,9 @@ export async function getFinanceActionTaskIds(taskIds: number[]): Promise<Set<nu
        FROM task_finance_requests request
        LEFT JOIN task_finance_transactions payment
          ON payment.request_id = request.id
-         AND (
-           (request.request_type IN ('ADVANCE', 'TOP_UP')
-             AND payment.transaction_type = 'ADVANCE_ISSUED' AND payment.status = 'CONFIRMED')
-           OR
-           (request.request_type = 'REIMBURSEMENT'
-             AND payment.transaction_type = 'REIMBURSEMENT_PAID' AND payment.status = 'PAID')
-         )
+         AND payment.transaction_type = 'ADVANCE_ISSUED' AND payment.status = 'CONFIRMED'
        WHERE request.task_id IN (${placeholders})
+         AND request.request_type IN ('ADVANCE', 'TOP_UP')
          AND request.status IN ('APPROVED', 'PARTIALLY_APPROVED')
        GROUP BY request.id, request.task_id, request.approved_amount
        HAVING COALESCE(request.approved_amount, 0) > COALESCE(SUM(payment.amount), 0)
@@ -49,11 +44,28 @@ export async function getFinanceActionTaskIds(taskIds: number[]): Promise<Set<nu
   return new Set(rows.map((row) => Number(row.taskId)));
 }
 
+export async function getPendingReceiptTaskIds(taskIds: number[], userId: number): Promise<Set<number>> {
+  const ids = [...new Set(taskIds.filter((taskId) => Number.isInteger(taskId) && taskId > 0))];
+  if (ids.length === 0) return new Set<number>();
+
+  const placeholders = ids.map(() => '?').join(', ');
+  const rows = await query<Array<RowDataPacket & { taskId: number }>>(
+    `SELECT DISTINCT task_id AS taskId
+     FROM task_finance_transactions
+     WHERE task_id IN (${placeholders})
+       AND recipient_user_id = ?
+       AND received_at IS NULL
+       AND transaction_type = 'ADVANCE_ISSUED' AND status = 'CONFIRMED'`,
+    [...ids, userId]
+  );
+  return new Set(rows.map((row) => Number(row.taskId)));
+}
+
 export const taskFinanceTypes = `
-  enum TaskFinanceRequestType { ADVANCE TOP_UP REIMBURSEMENT }
-  enum TaskFinanceRequestStatus { PENDING APPROVED PARTIALLY_APPROVED REJECTED PAID }
-  enum TaskFinanceTransactionType { ADVANCE_ISSUED ADVANCE_EXPENSE PERSONAL_EXPENSE ADVANCE_RETURN REIMBURSEMENT_PAID }
-  enum TaskFinanceTransactionStatus { RECORDED PENDING CONFIRMED REJECTED PAID }
+  enum TaskFinanceRequestType { ADVANCE TOP_UP }
+  enum TaskFinanceRequestStatus { PENDING APPROVED PARTIALLY_APPROVED REJECTED }
+  enum TaskFinanceTransactionType { ADVANCE_ISSUED ADVANCE_EXPENSE ADVANCE_RETURN }
+  enum TaskFinanceTransactionStatus { RECORDED PENDING CONFIRMED REJECTED }
 
   type TaskFinanceRequest {
     id: Int!
@@ -80,26 +92,37 @@ export const taskFinanceTypes = `
     confirmedByName: String
     createdAt: String!
     confirmedAt: String
+    recipientName: String
+    receivedByName: String
+    receivedAt: String
+    canConfirmReceipt: Boolean!
   }
 
   type TaskFinanceSummary {
     sanctionedBudget: String!
     checklistExpenses: String!
-    budgetRemaining: String!
+    subtaskSpent: String!
+    remainingBudget: String!
     advanceIssued: String!
     advanceSpent: String!
-    personalSpent: String!
     returnPending: String!
     returnConfirmed: String!
-    reimbursementPaid: String!
     advanceBalance: String!
-    reimbursementDue: String!
   }
 
   type TaskFinancePayload {
     requests: [TaskFinanceRequest!]!
     transactions: [TaskFinanceTransaction!]!
     summary: TaskFinanceSummary!
+    budgetAmount: String!
+    budgetRequestId: Int
+    requestedBudgetAmount: String
+    budgetRequestStatus: String
+    budgetRequestedByName: String
+    canEditBudget: Boolean!
+    canRequestBudgetIncrease: Boolean!
+    canReviewBudgetRequest: Boolean!
+    canCancelBudgetRequest: Boolean!
     canRequest: Boolean!
     canApprove: Boolean!
   }
@@ -131,9 +154,9 @@ export const taskFinanceQueryFields = `
 `;
 
 export const taskFinanceMutationFields = `
-  createTaskPersonalExpense(input: TaskFinanceTransactionInput!): TaskFinancePayload!
   reviewTaskFinanceRequest(input: TaskFinanceReviewInput!): TaskFinanceRequest!
   recordTaskFinanceTransaction(input: TaskFinanceTransactionInput!): TaskFinanceTransaction!
+  confirmTaskFinanceReceipt(transactionId: Int!): TaskFinanceTransaction!
   reviewTaskFinanceReturn(input: TaskFinanceReturnReviewInput!): TaskFinanceTransaction!
 `;
 
@@ -246,25 +269,38 @@ async function loadRequest(requestId: number): Promise<any> {
   return rows[0];
 }
 
-async function loadTransaction(transactionId: number): Promise<any> {
+async function loadTransaction(transactionId: number, userId: number): Promise<any> {
   const rows = await query<any[]>(
     `SELECT t.id, t.request_id AS requestId, t.transaction_type AS transactionType,
             CAST(t.amount AS CHAR) AS amount, t.description, t.status,
             creator.name AS createdByName, confirmer.name AS confirmedByName,
             DATE_FORMAT(t.created_at, '%Y-%m-%d %H:%i:%s') AS createdAt,
-            DATE_FORMAT(t.confirmed_at, '%Y-%m-%d %H:%i:%s') AS confirmedAt
+            DATE_FORMAT(t.confirmed_at, '%Y-%m-%d %H:%i:%s') AS confirmedAt,
+            recipient.name AS recipientName, receiver.name AS receivedByName,
+            DATE_FORMAT(t.received_at, '%Y-%m-%d %H:%i:%s') AS receivedAt,
+            t.recipient_user_id AS recipientUserId
      FROM task_finance_transactions t
      INNER JOIN users creator ON creator.id = t.created_by
      LEFT JOIN users confirmer ON confirmer.id = t.confirmed_by
+     LEFT JOIN users recipient ON recipient.id = t.recipient_user_id
+     LEFT JOIN users receiver ON receiver.id = t.received_by
      WHERE t.id = ?`,
     [transactionId]
   );
-  return rows[0];
+  const transaction = rows[0];
+  if (!transaction) return transaction;
+  const isPayment = transaction.transactionType === 'ADVANCE_ISSUED';
+  return {
+    ...transaction,
+    canConfirmReceipt: isPayment
+      && transaction.receivedAt === null
+      && Number(transaction.recipientUserId) === userId
+  };
 }
 
 async function loadFinance(taskId: number, userId: number): Promise<any> {
   const access = await getFinanceAccess(taskId, userId, true);
-  const [requests, transactions, aggregates, taskRows, todoExpenseRows] = await Promise.all([
+  const [requests, transactions, aggregates, taskRows, todoExpenseRows, childBudgetRows] = await Promise.all([
     query<any[]>(
       `SELECT r.id, r.request_type AS requestType, CAST(r.requested_amount AS CHAR) AS requestedAmount,
               CAST(r.approved_amount AS CHAR) AS approvedAmount, r.reason, r.status,
@@ -274,7 +310,8 @@ async function loadFinance(taskId: number, userId: number): Promise<any> {
        FROM task_finance_requests r
        INNER JOIN users requester ON requester.id = r.requested_by
        LEFT JOIN users reviewer ON reviewer.id = r.reviewed_by
-       WHERE r.task_id = ? ORDER BY r.created_at DESC, r.id DESC`,
+       WHERE r.task_id = ? AND r.request_type IN ('ADVANCE', 'TOP_UP')
+       ORDER BY r.created_at DESC, r.id DESC`,
       [taskId]
     ),
     query<any[]>(
@@ -282,27 +319,42 @@ async function loadFinance(taskId: number, userId: number): Promise<any> {
               CAST(t.amount AS CHAR) AS amount, t.description, t.status,
               creator.name AS createdByName, confirmer.name AS confirmedByName,
               DATE_FORMAT(t.created_at, '%Y-%m-%d %H:%i:%s') AS createdAt,
-              DATE_FORMAT(t.confirmed_at, '%Y-%m-%d %H:%i:%s') AS confirmedAt
+              DATE_FORMAT(t.confirmed_at, '%Y-%m-%d %H:%i:%s') AS confirmedAt,
+              recipient.name AS recipientName, receiver.name AS receivedByName,
+              DATE_FORMAT(t.received_at, '%Y-%m-%d %H:%i:%s') AS receivedAt,
+              t.recipient_user_id AS recipientUserId
        FROM task_finance_transactions t
        INNER JOIN users creator ON creator.id = t.created_by
        LEFT JOIN users confirmer ON confirmer.id = t.confirmed_by
-       WHERE t.task_id = ? ORDER BY t.created_at DESC, t.id DESC`,
+       LEFT JOIN users recipient ON recipient.id = t.recipient_user_id
+       LEFT JOIN users receiver ON receiver.id = t.received_by
+       WHERE t.task_id = ?
+         AND t.transaction_type IN ('ADVANCE_ISSUED', 'ADVANCE_EXPENSE', 'ADVANCE_RETURN')
+       ORDER BY t.created_at DESC, t.id DESC`,
       [taskId]
     ),
     query<any[]>(
       `SELECT
          COALESCE(SUM(CASE WHEN transaction_type = 'ADVANCE_ISSUED' AND status = 'CONFIRMED' THEN amount ELSE 0 END), 0) AS advanceIssued,
          COALESCE(SUM(CASE WHEN transaction_type = 'ADVANCE_EXPENSE' AND status = 'CONFIRMED' THEN amount ELSE 0 END), 0) AS advanceSpent,
-         COALESCE(SUM(CASE WHEN transaction_type = 'PERSONAL_EXPENSE' THEN amount ELSE 0 END), 0) AS personalSpent,
          COALESCE(SUM(CASE WHEN transaction_type = 'ADVANCE_RETURN' AND status = 'PENDING' THEN amount ELSE 0 END), 0) AS returnPending,
-         COALESCE(SUM(CASE WHEN transaction_type = 'ADVANCE_RETURN' AND status = 'CONFIRMED' THEN amount ELSE 0 END), 0) AS returnConfirmed,
-         COALESCE(SUM(CASE WHEN transaction_type = 'REIMBURSEMENT_PAID' AND status = 'PAID' THEN amount ELSE 0 END), 0) AS reimbursementPaid
+         COALESCE(SUM(CASE WHEN transaction_type = 'ADVANCE_RETURN' AND status = 'CONFIRMED' THEN amount ELSE 0 END), 0) AS returnConfirmed
        FROM task_finance_transactions WHERE task_id = ?`,
       [taskId]
     ),
     query<any[]>(
-      `SELECT CAST(budget_amount AS CHAR) AS sanctionedBudget
-       FROM tasks WHERE id = ? LIMIT 1`,
+      `SELECT CAST(task.budget_amount AS CHAR) AS sanctionedBudget,
+              task.created_by AS createdBy,
+              budgetRequest.id AS budgetRequestId,
+              CAST(GREATEST(0, budgetRequest.requested_amount - task.budget_amount) AS CHAR) AS requestedBudgetAmount,
+              budgetRequest.status AS budgetRequestStatus,
+              budgetRequest.requested_by AS budgetRequestedBy,
+              requester.name AS budgetRequestedByName
+       FROM tasks task
+       LEFT JOIN task_budget_requests budgetRequest
+         ON budgetRequest.task_id = task.id AND budgetRequest.status = 'PENDING'
+       LEFT JOIN users requester ON requester.id = budgetRequest.requested_by
+       WHERE task.id = ? LIMIT 1`,
       [taskId]
     ),
     query<any[]>(
@@ -316,40 +368,66 @@ async function loadFinance(taskId: number, userId: number): Promise<any> {
        FROM todos todo
        INNER JOIN task_tree ON task_tree.id = todo.task_id`,
       [taskId]
+    ),
+    query<any[]>(
+      `SELECT CAST(COALESCE(SUM(budget_amount), 0) AS CHAR) AS allocatedChildBudgets
+       FROM tasks WHERE parent_id = ?`,
+      [taskId]
     )
   ]);
+  const financeTransactions = transactions.map((transaction) => {
+    const isPayment = transaction.transactionType === 'ADVANCE_ISSUED';
+    const { recipientUserId, ...visibleTransaction } = transaction;
+    const canConfirmReceipt = isPayment
+      && transaction.receivedAt === null
+      && Number(recipientUserId) === userId;
+    return { ...visibleTransaction, canConfirmReceipt };
+  });
   const aggregate = aggregates[0] ?? {};
   const advanceIssued = decimalCents(aggregate.advanceIssued);
   const advanceSpent = decimalCents(aggregate.advanceSpent);
   const returnPending = decimalCents(aggregate.returnPending);
   const returnConfirmed = decimalCents(aggregate.returnConfirmed);
-  const personalSpent = decimalCents(aggregate.personalSpent);
-  const reimbursementPaid = decimalCents(aggregate.reimbursementPaid);
-  const sanctionedBudget = decimalCents(taskRows[0]?.sanctionedBudget);
+  const taskBudget = taskRows[0] ?? {};
+  const sanctionedBudget = decimalCents(taskBudget.sanctionedBudget);
   const checklistExpenses = decimalCents(todoExpenseRows[0]?.checklistExpenses);
-  const approvedReimbursementRows = await query<any[]>(
-    `SELECT COALESCE(SUM(approved_amount), 0) AS total
-     FROM task_finance_requests WHERE task_id = ? AND request_type = 'REIMBURSEMENT'
-       AND status IN ('APPROVED', 'PARTIALLY_APPROVED', 'PAID')`,
-    [taskId]
+  const allocatedChildBudgets = decimalCents(childBudgetRows[0]?.allocatedChildBudgets);
+  const isMasterAdmin = await hasPermission(
+    userId,
+    PERMISSIONS.EVENT_TASK_MANAGE_ANY,
+    { type: 'EVENT', id: access.eventId }
   );
-  const approvedReimbursement = decimalCents(approvedReimbursementRows[0]?.total);
+  const canEditBudget = Number(taskBudget.createdBy) === userId || isMasterAdmin;
+  const budgetRequestId = taskBudget.budgetRequestId === null
+    ? null
+    : Number(taskBudget.budgetRequestId);
   return {
     requests,
-    transactions,
+    transactions: financeTransactions,
     summary: {
       sanctionedBudget: centsDecimal(sanctionedBudget),
       checklistExpenses: centsDecimal(checklistExpenses),
-      budgetRemaining: centsDecimal(sanctionedBudget - checklistExpenses),
+      subtaskSpent: centsDecimal(allocatedChildBudgets),
+      remainingBudget: centsDecimal(sanctionedBudget - allocatedChildBudgets),
       advanceIssued: centsDecimal(advanceIssued),
       advanceSpent: centsDecimal(advanceSpent),
-      personalSpent: centsDecimal(personalSpent),
       returnPending: centsDecimal(returnPending),
       returnConfirmed: centsDecimal(returnConfirmed),
-      reimbursementPaid: centsDecimal(reimbursementPaid),
-      advanceBalance: centsDecimal(advanceIssued - advanceSpent - returnPending - returnConfirmed),
-      reimbursementDue: centsDecimal(approvedReimbursement - reimbursementPaid)
+      advanceBalance: centsDecimal(advanceIssued - advanceSpent - returnPending - returnConfirmed)
     },
+    budgetAmount: String(taskBudget.sanctionedBudget),
+    budgetRequestId,
+    requestedBudgetAmount: taskBudget.requestedBudgetAmount === null
+      ? null
+      : String(taskBudget.requestedBudgetAmount),
+    budgetRequestStatus: taskBudget.budgetRequestStatus || null,
+    budgetRequestedByName: taskBudget.budgetRequestedByName || null,
+    canEditBudget,
+    canRequestBudgetIncrease: access.isOwner && !canEditBudget,
+    canReviewBudgetRequest: budgetRequestId !== null && canEditBudget,
+    canCancelBudgetRequest: budgetRequestId !== null && (
+      Number(taskBudget.budgetRequestedBy) === userId || isMasterAdmin
+    ),
     canRequest: access.isOwner,
     canApprove: access.isCashier && !access.isOwner
   };
@@ -363,38 +441,6 @@ export const taskFinanceResolvers = {
     }
   },
   Mutation: {
-    async createTaskPersonalExpense(_: unknown, args: { input: { taskId: number; amount: string; description: string } }, context: unknown) {
-      const userId = await getLoggedInUserId(context);
-      const taskId = Number(args.input?.taskId);
-      const access = await getFinanceAccess(taskId, userId);
-      if (!access.isOwner) throwEventError('FORBIDDEN', 'Only the task owner can record a personal expense');
-      const { amount } = parseAmount(args.input.amount);
-      const description = cleanText(args.input.description, 'Expense description');
-      const connection = await getConnection();
-      try {
-        await connection.beginTransaction();
-        const [expense] = await connection.execute<any>(
-          `INSERT INTO task_finance_transactions
-             (task_id, transaction_type, amount, description, status, created_by)
-           VALUES (?, 'PERSONAL_EXPENSE', ?, ?, 'PENDING', ?)`,
-          [taskId, amount, description, userId]
-        );
-        await connection.execute(
-          `INSERT INTO task_finance_requests
-             (task_id, request_type, requested_amount, reason, status, requested_by, source_transaction_id)
-           VALUES (?, 'REIMBURSEMENT', ?, ?, 'PENDING', ?, ?)`,
-          [taskId, amount, description, userId, Number(expense.insertId)]
-        );
-        await connection.commit();
-      } catch (error) {
-        await connection.rollback();
-        throw error;
-      } finally {
-        connection.release();
-      }
-      return loadFinance(taskId, userId);
-    },
-
     async reviewTaskFinanceRequest(_: unknown, args: { input: { requestId: number; decision: string; approvedAmount?: string | null; note?: string | null } }, context: unknown) {
       const userId = await getLoggedInUserId(context);
       const requestId = Number(args.input?.requestId);
@@ -409,12 +455,15 @@ export const taskFinanceResolvers = {
         await connection.beginTransaction();
         const [rows] = await connection.query<any[]>(
           `SELECT id, task_id AS taskId, request_type AS requestType,
-                  CAST(requested_amount AS CHAR) AS requestedAmount, source_transaction_id AS sourceTransactionId, status
+                  CAST(requested_amount AS CHAR) AS requestedAmount, status
            FROM task_finance_requests WHERE id = ? FOR UPDATE`,
           [requestId]
         );
         const request = rows[0];
         if (!request) throwEventError('NOT_FOUND', 'Finance request not found');
+        if (request.requestType !== 'ADVANCE' && request.requestType !== 'TOP_UP') {
+          throwEventError('NOT_FOUND', 'Finance request not found');
+        }
         if (request.status !== 'PENDING') throwEventError('CONFLICT', 'This finance request has already been reviewed');
         let approvedAmount: string | null = null;
         let nextStatus = 'REJECTED';
@@ -435,17 +484,6 @@ export const taskFinanceResolvers = {
         if (requestUpdate.affectedRows !== 1) {
           throwEventError('CONFLICT', 'This finance request has already been reviewed');
         }
-        if (request.requestType === 'REIMBURSEMENT' && request.sourceTransactionId) {
-          const [expenseUpdate] = await connection.execute<any>(
-            `UPDATE task_finance_transactions
-             SET status = ?, confirmed_by = ?, confirmed_at = CURRENT_TIMESTAMP
-             WHERE id = ? AND status = 'PENDING'`,
-            [decision === 'APPROVE' ? 'CONFIRMED' : 'REJECTED', userId, request.sourceTransactionId]
-          );
-          if (expenseUpdate.affectedRows !== 1) {
-            throwEventError('CONFLICT', 'This personal expense has already been reviewed');
-          }
-        }
         await connection.commit();
       } catch (error) {
         await connection.rollback();
@@ -462,27 +500,25 @@ export const taskFinanceResolvers = {
       const access = await getFinanceAccess(taskId, userId);
       const transactionType = String(args.input.transactionType).toUpperCase() as TransactionType;
       if (!transactionTypes.includes(transactionType)) throwEventError('BAD_REQUEST', 'Invalid finance transaction type');
-      if (transactionType === 'PERSONAL_EXPENSE') throwEventError('BAD_REQUEST', 'Use the personal expense claim action');
       if (transactionType === 'ADVANCE_EXPENSE') {
         throwEventError('BAD_REQUEST', 'Record task spending as a checklist item expense');
       }
       const { amount, cents } = parseAmount(args.input.amount);
       const description = cleanText(args.input.description, 'Description');
       const requestId = args.input.requestId ? Number(args.input.requestId) : null;
-      const cashierOnly = transactionType === 'ADVANCE_ISSUED' || transactionType === 'REIMBURSEMENT_PAID';
+      const cashierOnly = transactionType === 'ADVANCE_ISSUED';
       if (cashierOnly ? !access.isCashier : !access.isOwner) {
         throwEventError('FORBIDDEN', cashierOnly ? 'Only the assigned event treasurer can record this payment' : 'Only the task owner can record this transaction');
       }
-      if (transactionType === 'ADVANCE_RETURN' && !requestId) {
-        // Return receipts do not belong to an advance request.
-      } else if (transactionType !== 'ADVANCE_ISSUED' && transactionType !== 'REIMBURSEMENT_PAID' && requestId) {
+      if (transactionType === 'ADVANCE_RETURN' && requestId) {
         throwEventError('BAD_REQUEST', 'This transaction type cannot reference a finance request');
       }
-      if ((transactionType === 'ADVANCE_ISSUED' || transactionType === 'REIMBURSEMENT_PAID') && !requestId) {
+      if (transactionType === 'ADVANCE_ISSUED' && !requestId) {
         throwEventError('BAD_REQUEST', 'A reviewed request is required for this payment');
       }
       const connection = await getConnection();
       let transactionId: number;
+      let recipientUserId: number | null = null;
       try {
         await connection.beginTransaction();
         await connection.query('SELECT id FROM tasks WHERE id = ? FOR UPDATE', [taskId]);
@@ -500,14 +536,21 @@ export const taskFinanceResolvers = {
         }
         if (transactionType === 'ADVANCE_ISSUED') {
           const [rows] = await connection.query<any[]>(
-            `SELECT status, CAST(approved_amount AS CHAR) AS approvedAmount
-             FROM task_finance_requests WHERE id = ? AND task_id = ? FOR UPDATE`,
+            `SELECT request.status, CAST(request.approved_amount AS CHAR) AS approvedAmount,
+                    task.owner_user_id AS recipientUserId
+             FROM task_finance_requests request
+             INNER JOIN tasks task ON task.id = request.task_id
+             WHERE request.id = ? AND request.task_id = ? FOR UPDATE`,
             [requestId, taskId]
           );
           const request = rows[0];
           if (!request || !['APPROVED', 'PARTIALLY_APPROVED'].includes(request.status)) {
             throwEventError('CONFLICT', 'Only an approved advance request can be issued');
           }
+          if (request.recipientUserId === null) {
+            throwEventError('CONFLICT', 'Assign a task owner before recording an advance payment');
+          }
+          recipientUserId = Number(request.recipientUserId);
           const [issuedRows] = await connection.query<any[]>(
             `SELECT COALESCE(SUM(amount), 0) AS issued FROM task_finance_transactions
              WHERE request_id = ? AND transaction_type = 'ADVANCE_ISSUED' AND status = 'CONFIRMED'`,
@@ -517,48 +560,15 @@ export const taskFinanceResolvers = {
             throwEventError('BAD_REQUEST', 'Payment exceeds the remaining approved amount');
           }
         }
-        if (transactionType === 'REIMBURSEMENT_PAID') {
-          const [rows] = await connection.query<any[]>(
-            `SELECT status, task_id AS taskId, CAST(approved_amount AS CHAR) AS approvedAmount
-             FROM task_finance_requests WHERE id = ? AND task_id = ? AND request_type = 'REIMBURSEMENT' FOR UPDATE`,
-            [requestId, taskId]
-          );
-          const request = rows[0];
-          if (!request || !['APPROVED', 'PARTIALLY_APPROVED', 'PAID'].includes(request.status)) {
-            throwEventError('CONFLICT', 'Only an approved reimbursement can be paid');
-          }
-          const [paidRows] = await connection.query<any[]>(
-            `SELECT COALESCE(SUM(amount), 0) AS paid FROM task_finance_transactions
-             WHERE request_id = ? AND transaction_type = 'REIMBURSEMENT_PAID' AND status = 'PAID'`,
-            [requestId]
-          );
-          if (cents > decimalCents(request.approvedAmount) - decimalCents(paidRows[0].paid)) {
-            throwEventError('BAD_REQUEST', 'Payment exceeds the remaining approved reimbursement');
-          }
-        }
         const status = transactionType === 'ADVANCE_RETURN' ? 'PENDING'
-          : transactionType === 'ADVANCE_ISSUED' ? 'CONFIRMED' : 'PAID';
+          : 'CONFIRMED';
         const [result] = await connection.execute<any>(
           `INSERT INTO task_finance_transactions
-             (task_id, request_id, transaction_type, amount, description, status, created_by, confirmed_by, confirmed_at)
-           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ${status === 'PENDING' ? 'NULL' : 'CURRENT_TIMESTAMP'})`,
-          [taskId, requestId, transactionType, amount, description, status, userId, status === 'PENDING' ? null : userId]
+             (task_id, request_id, recipient_user_id, transaction_type, amount, description, status, created_by, confirmed_by, confirmed_at)
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ${status === 'PENDING' ? 'NULL' : 'CURRENT_TIMESTAMP'})`,
+          [taskId, requestId, recipientUserId, transactionType, amount, description, status, userId, status === 'PENDING' ? null : userId]
         );
         transactionId = Number(result.insertId);
-        if (transactionType === 'REIMBURSEMENT_PAID') {
-          const [paidRows] = await connection.query<any[]>(
-            `SELECT COALESCE(SUM(amount), 0) AS paid FROM task_finance_transactions
-             WHERE request_id = ? AND transaction_type = 'REIMBURSEMENT_PAID' AND status = 'PAID'`,
-            [requestId]
-          );
-          const [requestRows] = await connection.query<any[]>(
-            `SELECT CAST(approved_amount AS CHAR) AS approvedAmount FROM task_finance_requests WHERE id = ?`,
-            [requestId]
-          );
-          if (decimalCents(paidRows[0].paid) >= decimalCents(requestRows[0].approvedAmount)) {
-            await connection.execute(`UPDATE task_finance_requests SET status = 'PAID' WHERE id = ?`, [requestId]);
-          }
-        }
         await connection.commit();
       } catch (error) {
         await connection.rollback();
@@ -566,7 +576,50 @@ export const taskFinanceResolvers = {
       } finally {
         connection.release();
       }
-      return loadTransaction(transactionId!);
+      return loadTransaction(transactionId!, userId);
+    },
+
+    async confirmTaskFinanceReceipt(_: unknown, args: { transactionId: number }, context: unknown) {
+      const userId = await getLoggedInUserId(context);
+      const transactionId = Number(args.transactionId);
+      if (!Number.isInteger(transactionId) || transactionId <= 0) {
+        throwEventError('BAD_REQUEST', 'transactionId must be a positive integer');
+      }
+
+      const connection = await getConnection();
+      try {
+        await connection.beginTransaction();
+        const [rows] = await connection.query<any[]>(
+          `SELECT transaction_type AS transactionType, status, recipient_user_id AS recipientUserId, received_at AS receivedAt
+           FROM task_finance_transactions WHERE id = ? FOR UPDATE`,
+          [transactionId]
+        );
+        const transaction = rows[0];
+        if (!transaction) throwEventError('NOT_FOUND', 'Finance transaction not found');
+        if (Number(transaction.recipientUserId) !== userId) {
+          throwEventError('FORBIDDEN', 'Only the payment recipient can confirm receipt');
+        }
+        if (transaction.transactionType !== 'ADVANCE_ISSUED' || transaction.status !== 'CONFIRMED') {
+          throwEventError('CONFLICT', 'This transaction is not an available payment');
+        }
+        if (transaction.receivedAt !== null) {
+          throwEventError('CONFLICT', 'Receipt has already been confirmed');
+        }
+        const [update] = await connection.execute<any>(
+          `UPDATE task_finance_transactions
+           SET received_by = ?, received_at = CURRENT_TIMESTAMP
+           WHERE id = ? AND recipient_user_id = ? AND received_at IS NULL`,
+          [userId, transactionId, userId]
+        );
+        if (update.affectedRows !== 1) throwEventError('CONFLICT', 'Receipt has already been confirmed');
+        await connection.commit();
+      } catch (error) {
+        await connection.rollback();
+        throw error;
+      } finally {
+        connection.release();
+      }
+      return loadTransaction(transactionId, userId);
     },
 
     async reviewTaskFinanceReturn(_: unknown, args: { input: { transactionId: number; decision: string } }, context: unknown) {
@@ -599,7 +652,7 @@ export const taskFinanceResolvers = {
       } finally {
         connection.release();
       }
-      return loadTransaction(transactionId);
+      return loadTransaction(transactionId, userId);
     }
   }
 };

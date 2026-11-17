@@ -3,7 +3,7 @@ import { RowDataPacket } from 'mysql2/promise';
 import type { PoolConnection } from 'mysql2/promise';
 import { throwEventError, getLoggedInUserId } from '../voting/event-voting-core.graphql';
 import { hasPermission, PERMISSIONS } from '../../../../authorization/authorization';
-import { getFinanceActionTaskIds } from '../../../tasks/task-finance.graphql';
+import { getFinanceActionTaskIds, getPendingReceiptTaskIds } from '../../../tasks/task-finance.graphql';
 
 export const eventTasksTypes = `
   enum EventTaskStatus {
@@ -497,10 +497,16 @@ export const eventTasksResolvers = {
       const financeActionTaskIds = isEventCashier
         ? await getFinanceActionTaskIds(taskRows.map((taskRow) => Number(taskRow.taskId)))
         : new Set<number>();
+      const receiptTaskIds = await getPendingReceiptTaskIds(
+        taskRows.map((taskRow) => Number(taskRow.taskId)),
+        loggedInUserId
+      );
 
       return {
         entries: taskRows.map((taskRow) => {
           const isRootTask = taskRow.parentTaskId === null;
+          const taskOwnerUserId = taskRow.ownerUserId === null ? null : Number(taskRow.ownerUserId);
+          const taskId = Number(taskRow.taskId);
           return {
           id: Number(taskRow.taskId),
           taskId: Number(taskRow.taskId),
@@ -538,9 +544,11 @@ export const eventTasksResolvers = {
             Number(taskRow.createdBy) === loggedInUserId ||
             (!isRootTask && Number(taskRow.parentOwnerUserId) === loggedInUserId),
           canAccessFinance: Number(taskRow.ownerUserId) === loggedInUserId || isEventCashier,
-          needsFinanceAction: isEventCashier &&
-            Number(taskRow.ownerUserId) !== loggedInUserId &&
-            financeActionTaskIds.has(Number(taskRow.taskId))
+          needsFinanceAction: (
+            isEventCashier &&
+            taskOwnerUserId !== loggedInUserId &&
+            financeActionTaskIds.has(taskId)
+          ) || receiptTaskIds.has(taskId)
           };
         }),
         canCreateTasks: canAssignRootTasks,

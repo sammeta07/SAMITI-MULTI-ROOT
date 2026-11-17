@@ -9,28 +9,22 @@ import { MatTooltipModule } from '@angular/material/tooltip';
 import { MatAutocompleteModule, MatAutocompleteSelectedEvent, MatAutocompleteTrigger } from '@angular/material/autocomplete';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
-import { isValidTaskBudgetAmount, TaskAssignee, TaskStatus, TASK_STATUSES } from '../event-details/event-tasks/event-tasks.models';
+import { TaskAssignee, TaskStatus, TASK_STATUSES } from '../event-details/event-tasks/event-tasks.models';
 import { TaskDetailsPayload } from './task-details.models';
 
 export interface TaskActionsDialogData {
   task: TaskDetailsPayload;
-  remainingBudget: number;
   onAction: (result: TaskActionsDialogResult) => Promise<TaskActionsDialogUpdate | null>;
 }
 
 export interface TaskActionsDialogUpdate {
   task: TaskDetailsPayload;
-  remainingBudget: number;
 }
 
 export type TaskActionsDialogResult =
   | { action: 'rename'; taskName: string }
   | { action: 'assign-owner'; ownerUserId: number | null }
-  | { action: 'update-budget'; budgetAmount: string }
-  | { action: 'update-status'; status: TaskStatus }
-  | { action: 'request-budget'; amount: string }
-  | { action: 'review-budget'; decision: 'APPROVE' | 'REJECT' }
-  | { action: 'cancel-budget-request' };
+  | { action: 'update-status'; status: TaskStatus };
 
 @Component({
   selector: 'app-task-actions-dialog',
@@ -59,19 +53,7 @@ export class TaskActionsDialogComponent {
   public taskName = this.task.taskName;
   public ownerUserId = this.task.ownerUserId === null ? '' : String(this.task.ownerUserId);
   public ownerSearchText = this.task.ownerName || 'Unassigned';
-  public budgetAmount: string | number = this.normalizeBudgetInput(this.task.budgetAmount);
-  public budgetIncreaseAmount: string | number = '';
   public status = this.currentStatusValue();
-
-  public formatBudget(amount: string | number | null): string {
-    const value = Number(amount ?? 0);
-    return `₹${(Number.isFinite(value) ? value : 0).toLocaleString('en-IN', { maximumFractionDigits: 0 })}`;
-  }
-
-  public normalizeBudgetInput(amount: string | number): string | number {
-    const value = Number(amount);
-    return Number.isFinite(value) && Number.isInteger(value) ? String(value) : amount;
-  }
 
   public statusClass(status: string | null): string {
     const normalized = String(status || 'NEW').trim().toUpperCase().replace(/[\s-]+/g, '_');
@@ -89,8 +71,7 @@ export class TaskActionsDialogComponent {
   }
 
   public canOpenTaskActions(): boolean {
-    return this.task.canEditTask || this.task.canAssignOwner || this.task.canManage || this.task.canRequestBudgetIncrease ||
-      this.task.canReviewBudgetRequest || this.task.canCancelBudgetRequest;
+    return this.task.canEditTask || this.task.canAssignOwner || this.task.canManage;
   }
 
   public submitRename(): void {
@@ -197,46 +178,9 @@ export class TaskActionsDialogComponent {
     return (parts[0] || '').slice(0, 2).toUpperCase();
   }
 
-  public submitBudget(): void {
-    const amount = String(this.budgetAmount).trim();
-    if (!this.canSaveBudget()) return;
-    void this.runAction({ action: 'update-budget', budgetAmount: amount });
-  }
-
-  public canSaveBudget(): boolean {
-    const amount = String(this.budgetAmount).trim();
-    return this.task.canEditTask &&
-      isValidTaskBudgetAmount(amount) &&
-      Number(amount).toFixed(2) !== Number(this.task.budgetAmount).toFixed(2);
-  }
-
   public submitStatus(): void {
     if (!this.task.canManage || !this.isSupportedStatus(this.status) || this.status === this.currentStatusValue()) return;
     void this.runAction({ action: 'update-status', status: this.status as TaskStatus });
-  }
-
-  public submitBudgetRequest(): void {
-    const amount = String(this.budgetIncreaseAmount).trim();
-    if (!this.canSubmitBudgetRequest()) return;
-    void this.runAction({ action: 'request-budget', amount });
-  }
-
-  public canSubmitBudgetRequest(): boolean {
-    const amount = String(this.budgetIncreaseAmount).trim();
-    return this.task.canRequestBudgetIncrease &&
-      this.task.budgetRequestStatus !== 'PENDING' &&
-    isValidTaskBudgetAmount(amount) &&
-      Number(amount) > 0;
-  }
-
-  public reviewBudget(decision: 'APPROVE' | 'REJECT'): void {
-    if (!this.task.canReviewBudgetRequest || !this.task.budgetRequestId) return;
-    void this.runAction({ action: 'review-budget', decision });
-  }
-
-  public cancelBudgetRequest(): void {
-    if (!this.task.canCancelBudgetRequest || !this.task.budgetRequestId) return;
-    void this.runAction({ action: 'cancel-budget-request' });
   }
 
   public displayStatus(status: string | null): string {
@@ -258,20 +202,12 @@ export class TaskActionsDialogComponent {
     this.isSavingAction.set(true);
     try {
       const update = await this.data.onAction(result);
-      if (!update) {
-        if (result.action === 'update-budget') {
-          this.budgetAmount = this.normalizeBudgetInput(this.task.budgetAmount);
-        }
-        return;
-      }
+      if (!update) return;
 
       Object.assign(this.task, update.task);
-      this.data.remainingBudget = update.remainingBudget;
       this.taskName = this.task.taskName;
       this.ownerUserId = this.task.ownerUserId === null ? '' : String(this.task.ownerUserId);
       this.ownerSearchText = this.task.ownerName || 'Unassigned';
-      this.budgetAmount = this.normalizeBudgetInput(this.task.budgetAmount);
-      this.budgetIncreaseAmount = '';
       this.status = this.currentStatusValue();
     } finally {
       this.isSavingAction.set(false);

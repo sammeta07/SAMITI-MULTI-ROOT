@@ -2,7 +2,7 @@ import { query } from '../../config/db';
 import { getLoggedInUserId, throwEventError } from '../events/details/voting/event-voting-core.graphql';
 import { getTodoAssignees } from '../todos/todos.graphql';
 import { hasPermission, PERMISSIONS } from '../../authorization/authorization';
-import { getFinanceActionTaskIds } from './task-finance.graphql';
+import { getFinanceActionTaskIds, getPendingReceiptTaskIds } from './task-finance.graphql';
 
 export const taskDetailsTypes = `
   type TaskChild {
@@ -281,6 +281,10 @@ export const taskDetailsResolvers = {
             ...descendants.map((descendant) => Number(descendant.taskId))
           ])
         : new Set<number>();
+      const receiptTaskIds = await getPendingReceiptTaskIds([
+        taskId,
+        ...descendants.map((descendant) => Number(descendant.taskId))
+      ], userId);
 
       const todos = await query<any[]>(
         `SELECT
@@ -367,7 +371,9 @@ export const taskDetailsResolvers = {
         canAssignOwner,
         canDeleteTask: isMasterAdmin || isTaskCreator || (task.parentTaskId !== null && isParentTaskOwner),
         canAccessFinance,
-        needsFinanceAction: isCashier && !isTaskOwner && financeActionTaskIds.has(taskId),
+        needsFinanceAction: (
+          isCashier && !isTaskOwner && financeActionTaskIds.has(taskId)
+        ) || receiptTaskIds.has(taskId),
         children: children.map((child) => ({
           taskId: Number(child.taskId),
           parentTaskId: Number(taskId),
@@ -388,9 +394,11 @@ export const taskDetailsResolvers = {
           updatedByName: child.updatedByName || null,
           updatedAt: child.updatedAt ? String(child.updatedAt) : null,
           canAccessFinance: Number(child.ownerUserId) === userId || isCashier,
-          needsFinanceAction: isCashier &&
+          needsFinanceAction: (
+            isCashier &&
             Number(child.ownerUserId) !== userId &&
-            financeActionTaskIds.has(Number(child.taskId)),
+            financeActionTaskIds.has(Number(child.taskId))
+          ) || receiptTaskIds.has(Number(child.taskId)),
           ...mapChildPermissions(child)
         })),
         descendants: descendants.map((descendant) => ({
@@ -413,9 +421,11 @@ export const taskDetailsResolvers = {
           updatedByName: descendant.updatedByName || null,
           updatedAt: descendant.updatedAt ? String(descendant.updatedAt) : null,
           canAccessFinance: Number(descendant.ownerUserId) === userId || isCashier,
-          needsFinanceAction: isCashier &&
+          needsFinanceAction: (
+            isCashier &&
             Number(descendant.ownerUserId) !== userId &&
-            financeActionTaskIds.has(Number(descendant.taskId)),
+            financeActionTaskIds.has(Number(descendant.taskId))
+          ) || receiptTaskIds.has(Number(descendant.taskId)),
           ...mapChildPermissions(descendant)
         })),
         taskAssignees: taskAssignees.map((assignee) => ({

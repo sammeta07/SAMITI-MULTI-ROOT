@@ -3,12 +3,17 @@
   <header class="tf-header">
     <div class="tf-header-left">
       <h3>Task Finance</h3>
-      <span class="tf-subtitle">Budget, advances, reimbursements &amp; cash ledger</span>
+      <span class="tf-subtitle">Budget, advances &amp; cash ledger</span>
     </div>
-    <button type="button" class="tf-btn tf-btn-ghost" [disabled]="isLoading() || isSaving()" (click)="load()">
-      <span class="tf-icon" [class.spinning]="isLoading()">↻</span>
-      {{ isLoading() ? 'Syncing...' : 'Refresh' }}
-    </button>
+    <div class="tf-header-right">
+      @if (payload()?.canApprove) {
+        <span class="tf-auth-tag">Treasurer Mode</span>
+      }
+      <button type="button" class="tf-btn tf-btn-ghost" [disabled]="isLoading() || isSaving()" (click)="load()">
+        <span class="tf-icon" [class.spinning]="isLoading()">↻</span>
+        {{ isLoading() ? 'Syncing' : 'Refresh' }}
+      </button>
+    </div>
   </header>
 
   @if (isLoading() && !payload()) {
@@ -16,135 +21,225 @@
   } @else if (payload(); as finance) {
     <div class="tf-body">
 
-      <!-- 1. COMPACT KPI SUMMARY CARDS (Read-Only) -->
-      <div class="tf-kpi-groups">
+      <!-- 1. COMPACT KPI SUMMARY CARDS -->
+      <div class="tf-kpi-grid">
         <div class="tf-kpi-card">
-          <div class="tf-kpi-title">Budget</div>
-          <div class="tf-kpi-row"><span>Sanctioned</span><strong class="tf-num">₹{{ money(finance.summary.sanctionedBudget) }}</strong></div>
-          <div class="tf-kpi-row"><span>Checklist Spent</span><strong class="tf-num">₹{{ money(finance.summary.checklistExpenses) }}</strong></div>
-          <div class="tf-kpi-row tf-kpi-total"><span>Remaining</span><strong class="tf-num text-primary">₹{{ money(finance.summary.budgetRemaining) }}</strong></div>
+          <div class="tf-kpi-head">
+            <span>Budget</span>
+            <strong class="tf-num text-primary">Rem: ₹{{ money(finance.summary.remainingBudget) }}</strong>
+          </div>
+          <div class="tf-kpi-metrics">
+            <div><span>Sanctioned</span><strong class="tf-num">₹{{ money(finance.summary.sanctionedBudget) }}</strong></div>
+            <div><span>Checklist</span><strong class="tf-num">₹{{ money(finance.summary.checklistExpenses) }}</strong></div>
+            <div><span>Subtask</span><strong class="tf-num">₹{{ money(finance.summary.subtaskSpent) }}</strong></div>
+          </div>
         </div>
 
         <div class="tf-kpi-card">
-          <div class="tf-kpi-title">Advance Cash</div>
-          <div class="tf-kpi-row"><span>Issued</span><strong class="tf-num">₹{{ money(finance.summary.advanceIssued) }}</strong></div>
-          <div class="tf-kpi-row"><span>Recorded Spent</span><strong class="tf-num">₹{{ money(finance.summary.advanceSpent) }}</strong></div>
-          <div class="tf-kpi-row tf-kpi-total"><span>In-Hand Balance</span><strong class="tf-num">₹{{ money(finance.summary.advanceBalance) }}</strong></div>
+          <div class="tf-kpi-head">
+            <span>Advance Cash</span>
+            <strong class="tf-num">In-Hand: ₹{{ money(finance.summary.advanceBalance) }}</strong>
+          </div>
+          <div class="tf-kpi-metrics">
+            <div><span>Issued</span><strong class="tf-num">₹{{ money(finance.summary.advanceIssued) }}</strong></div>
+            <div><span>Spent</span><strong class="tf-num">₹{{ money(finance.summary.advanceSpent) }}</strong></div>
+          </div>
         </div>
 
         <div class="tf-kpi-card">
-          <div class="tf-kpi-title">Claims &amp; Returns</div>
-          <div class="tf-kpi-row"><span>Personal Spent</span><strong class="tf-num">₹{{ money(finance.summary.personalSpent) }}</strong></div>
-          <div class="tf-kpi-row"><span>Reimb. Due / Paid</span><strong class="tf-num">₹{{ money(finance.summary.reimbursementDue) }} / ₹{{ money(finance.summary.reimbursementPaid) }}</strong></div>
-          <div class="tf-kpi-row"><span>Returns Pend. / Recv.</span><strong class="tf-num">₹{{ money(finance.summary.returnPending) }} / ₹{{ money(finance.summary.returnConfirmed) }}</strong></div>
+          <div class="tf-kpi-head">
+            <span>Cash Returns</span>
+          </div>
+          <div class="tf-kpi-metrics">
+            <div><span>Pending</span><strong class="tf-num text-warn">₹{{ money(finance.summary.returnPending) }}</strong></div>
+            <div><span>Confirmed</span><strong class="tf-num text-ok">₹{{ money(finance.summary.returnConfirmed) }}</strong></div>
+          </div>
         </div>
       </div>
 
-      <!-- 2. COMPACT REQUESTER FORMS (Only if canRequest is true) -->
-      @if (finance.canRequest) {
-        <div class="tf-forms-strip">
-          <form class="tf-mini-form" (ngSubmit)="submitPersonalExpense()">
-            <span class="tf-form-badge">Claim Expense</span>
-            <input type="number" class="tf-inp-amt" min="0.01" step="0.01" placeholder="₹ Amount" name="expenseAmount" [(ngModel)]="expenseAmount" required />
-            <input type="text" class="tf-inp-desc" maxlength="1000" placeholder="Personal expense details..." name="expenseDescription" [(ngModel)]="expenseDescription" required />
-            <button type="submit" class="tf-btn tf-btn-primary" [disabled]="isSaving()">Claim</button>
-          </form>
+      <!-- 2. COMPACT BUDGET & RETURN TOOLBAR -->
+      @if (finance.canEditBudget || finance.canRequestBudgetIncrease || finance.canRequest || finance.budgetRequestStatus === 'PENDING') {
+        <section class="tf-toolbar">
+          @if (finance.canEditBudget) {
+            <form class="tf-tool-group" (ngSubmit)="saveTaskBudget()">
+              <label for="finance-task-budget">Budget (₹)</label>
+              <input
+                id="finance-task-budget"
+                type="number"
+                min="0"
+                step="0.01"
+                name="taskBudgetAmount"
+                [(ngModel)]="taskBudgetAmount"
+                [disabled]="isSaving()"
+              />
+              <button type="submit" class="tf-btn tf-btn-primary" [disabled]="isSaving() || !canSaveTaskBudget()">Save</button>
+            </form>
+          }
 
-          <form class="tf-mini-form" (ngSubmit)="submitAdvanceReturn()">
-            <span class="tf-form-badge">Return Cash</span>
-            <input type="number" class="tf-inp-amt" min="0.01" step="0.01" placeholder="₹ Amount" name="returnAmount" [(ngModel)]="returnAmount" required />
-            <input type="text" class="tf-inp-desc" maxlength="1000" placeholder="Unused advance return note..." name="returnDescription" [(ngModel)]="returnDescription" required />
-            <button type="submit" class="tf-btn tf-btn-primary" [disabled]="isSaving()">Return</button>
-          </form>
-        </div>
+          @if (finance.budgetRequestStatus === 'PENDING' && finance.budgetRequestId) {
+            <div class="tf-alert-bar">
+              <div class="tf-alert-info">
+                <strong>+₹{{ money(finance.requestedBudgetAmount) }}</strong>
+                <span>budget increase requested</span>
+                @if (finance.budgetRequestedByName) {
+                  <span class="tf-muted">by {{ finance.budgetRequestedByName | titlecase }}</span>
+                }
+              </div>
+              <div class="tf-btn-group">
+                @if (finance.canReviewBudgetRequest) {
+                  <button type="button" class="tf-btn tf-btn-success" [disabled]="isSaving()" (click)="reviewBudgetRequest('APPROVE')">Approve</button>
+                  <button type="button" class="tf-btn tf-btn-danger" [disabled]="isSaving()" (click)="reviewBudgetRequest('REJECT')">Reject</button>
+                } @else if (finance.canCancelBudgetRequest) {
+                  <button type="button" class="tf-btn tf-btn-danger" [disabled]="isSaving()" (click)="cancelBudgetRequest()">Cancel</button>
+                } @else {
+                  <span class="tf-muted">Awaiting review</span>
+                }
+              </div>
+            </div>
+          } @else if (finance.canRequestBudgetIncrease) {
+            <form class="tf-tool-group" (ngSubmit)="requestBudgetIncrease()">
+              <label for="finance-budget-increase">Add Budget (₹)</label>
+              <input
+                id="finance-budget-increase"
+                type="number"
+                min="0.01"
+                step="0.01"
+                name="budgetIncreaseAmount"
+                [(ngModel)]="budgetIncreaseAmount"
+                placeholder="Amount"
+                [disabled]="isSaving()"
+              />
+              <button type="submit" class="tf-btn tf-btn-primary" [disabled]="isSaving() || !canRequestBudgetIncrease()">Request</button>
+            </form>
+          }
+
+          @if (finance.canRequest) {
+            <form class="tf-tool-group tf-tool-grow" (ngSubmit)="submitAdvanceReturn()">
+              <label for="finance-return-amount">Return</label>
+              <input
+                id="finance-return-amount"
+                class="tf-inp-sm"
+                type="number"
+                min="0.01"
+                step="0.01"
+                name="returnAmount"
+                [(ngModel)]="returnAmount"
+                placeholder="₹ Amt"
+                required
+              />
+              <input
+                type="text"
+                maxlength="1000"
+                name="returnDescription"
+                [(ngModel)]="returnDescription"
+                placeholder="Return note..."
+                aria-label="Unused advance return note"
+                required
+              />
+              <button type="submit" class="tf-btn tf-btn-primary" [disabled]="isSaving()">Submit</button>
+            </form>
+          }
+        </section>
       }
 
       <!-- 3. TABULAR LEDGER SECTION -->
       <section class="tf-ledger-section">
         <div class="tf-tabs-bar">
-          <div class="tf-tabs">
-            <button type="button" class="tf-tab" [class.active]="activeHistoryTab() === 'REQUESTS'" (click)="activeHistoryTab.set('REQUESTS')">
-              Approved <span class="tf-count">{{ finance.requests.length }}</span>
-            </button>
-            <button type="button" class="tf-tab" [class.active]="activeHistoryTab() === 'TRANSACTIONS'" (click)="activeHistoryTab.set('TRANSACTIONS')">
-              Cash &amp; Expense Ledger <span class="tf-count">{{ finance.transactions.length }}</span>
-            </button>
-          </div>
-          @if (finance.canApprove) {
-            <span class="tf-auth-tag">Treasurer Mode</span>
-          }
+          <button type="button" class="tf-tab" [class.active]="activeHistoryTab() === 'REQUESTS'" (click)="activeHistoryTab.set('REQUESTS')">
+            Requests <span class="tf-count">{{ finance.requests.length }}</span>
+          </button>
+          <button type="button" class="tf-tab" [class.active]="activeHistoryTab() === 'TRANSACTIONS'" (click)="activeHistoryTab.set('TRANSACTIONS')">
+            Cash &amp; Expense Ledger <span class="tf-count">{{ finance.transactions.length }}</span>
+          </button>
         </div>
 
-        <!-- TAB 1: APPROVED TABLE -->
+        <!-- TAB 1: REQUESTS TABLE -->
         @if (activeHistoryTab() === 'REQUESTS') {
           <div class="tf-table-wrap">
             @if (finance.requests.length > 0) {
               <table class="tf-table">
                 <thead>
                   <tr>
-                    <th class="col-type">Request</th>
-                    <th class="col-desc">Details &amp; Requested By</th>
-                    <th class="col-status">Status</th>
-                    <th class="col-amount">Amount</th>
+                    <th class="col-tight">Request</th>
+                    <th>Details &amp; By</th>
+                    <th class="col-tight">Status</th>
+                    <th>Receipt Confirmation</th>
+                    <th class="col-right">Amount</th>
                     @if (finance.canApprove) {
-                      <th class="col-action">Action</th>
+                      <th class="col-right">Action</th>
                     }
                   </tr>
                 </thead>
                 <tbody>
                   @for (request of finance.requests; track request.id) {
-                    @let remAdvance = (request.requestType === 'ADVANCE' || request.requestType === 'TOP_UP')
-                      ? remainingRequestAmount(request, 'ADVANCE_ISSUED', 'approvedAmount') : 0;
-                    @let remReimb = request.requestType === 'REIMBURSEMENT'
-                      ? remainingRequestAmount(request, 'REIMBURSEMENT_PAID', 'approvedAmount') : 0;
-                    @let isReadyToPay = isRequestPayable(request) && (remAdvance > 0 || remReimb > 0);
-                    @let isPaid = isRequestPayable(request) && remAdvance === 0 && remReimb === 0;
+                    @let remAdvance = remainingRequestAmount(request, 'ADVANCE_ISSUED', 'approvedAmount');
+                    @let isReadyToPay = isRequestPayable(request) && remAdvance > 0;
+                    @let isPaid = isRequestPayable(request) && remAdvance === 0;
 
                     <tr [class.tr-highlight]="finance.canApprove && (request.status === 'PENDING' || isReadyToPay)">
-                      <!-- Col 1: ID + Type -->
-                      <td class="col-type">
+                      <td class="col-tight">
                         <div class="cell-type">
                           <span class="tf-id">#{{ request.id }}</span>
                           <strong>{{ formatLabel(request.requestType) }}</strong>
                         </div>
                       </td>
 
-                      <!-- Col 2: Reason + User -->
-                      <td class="col-desc">
+                      <td>
                         <div class="cell-desc">{{ request.reason }}</div>
                         @if (request.requestedByName) {
                           <div class="cell-sub">{{ request.requestedByName | titlecase }}</div>
                         }
                       </td>
 
-                      <!-- Col 3: Status Badges -->
-                      <td class="col-status">
-                        <div class="cell-badges">
-                          @if (isPaid) {
-                            <span class="tf-badge tf-payment-status badge-success">Paid</span>
-                          } @else if (isReadyToPay) {
-                            <span class="tf-badge tf-payment-status badge-warning">Pending</span>
-                          } @else {
-                            <span
-                              class="tf-badge"
-                              [class.tf-payment-status]="request.status === 'PENDING' || request.status === 'PAID'"
-                              [ngClass]="getStatusClass(request.status)"
-                            >{{ formatLabel(request.status) }}</span>
-                          }
-                        </div>
+                      <td class="col-tight">
+                        @if (isPaid) {
+                          <span class="tf-badge tf-status-pill badge-success">Paid</span>
+                        } @else if (isReadyToPay) {
+                          <span class="tf-badge tf-status-pill badge-warning">Pending</span>
+                        } @else {
+                          <span
+                            class="tf-badge"
+                            [class.tf-status-pill]="request.status === 'PENDING'"
+                            [ngClass]="getStatusClass(request.status)"
+                          >{{ formatLabel(request.status) }}</span>
+                        }
                       </td>
 
-                      <!-- Col 4: Amount (Aligned Column) -->
-                      <td class="col-amount">
-                        <strong class="tf-num cell-amt-main">₹{{ money(request.approvedAmount || request.requestedAmount) }}</strong>
+                      <td class="col-receipt">
+                        @for (payment of getRequestPayments(request, finance.transactions); track payment.id) {
+                          <div class="cell-receipt">
+                            @if (payment.receivedAt) {
+                              <span class="receipt-confirmed">
+                                ✓ {{ payment.receivedByName ? (payment.receivedByName | titlecase) : 'Receiver' }} · {{ payment.receivedAt | date: 'dd MMM, h:mm a' }}
+                              </span>
+                            } @else if (payment.canConfirmReceipt) {
+                              <button
+                                type="button"
+                                class="tf-btn tf-btn-success tf-btn-xs"
+                                [disabled]="isSaving()"
+                                (click)="confirmReceipt(payment)"
+                                [attr.aria-label]="'Confirm receipt of ₹' + money(payment.amount)"
+                              >Confirm Receipt</button>
+                            } @else if (payment.recipientName) {
+                              <span class="receipt-pending">Awaiting {{ payment.recipientName | titlecase }}</span>
+                            } @else {
+                              <span class="receipt-untracked">Untracked</span>
+                            }
+                          </div>
+                        } @empty {
+                          <span class="cell-settled">—</span>
+                        }
+                      </td>
+
+                      <td class="col-right">
+                        <strong class="tf-num cell-amt">₹{{ money(request.approvedAmount || request.requestedAmount) }}</strong>
                         @if (request.approvedAmount && request.approvedAmount !== request.requestedAmount) {
                           <div class="cell-sub">Req: ₹{{ money(request.requestedAmount) }}</div>
                         }
                       </td>
 
-                      <!-- Col 5: Treasurer Action Column -->
                       @if (finance.canApprove) {
-                        <td class="col-action">
+                        <td class="col-right">
                           @if (request.status === 'PENDING') {
                             <div class="tf-btn-group">
                               <div class="tf-inline-amt">
@@ -154,13 +249,9 @@
                               <button type="button" class="tf-btn tf-btn-success" [disabled]="isSaving()" (click)="reviewRequest(request, 'APPROVE')">Approve</button>
                               <button type="button" class="tf-btn tf-btn-danger" [disabled]="isSaving()" (click)="reviewRequest(request, 'REJECT')">Reject</button>
                             </div>
-                          } @else if (isRequestPayable(request) && remAdvance > 0) {
+                          } @else if (isReadyToPay) {
                             <button type="button" class="tf-btn tf-btn-primary" [disabled]="isSaving()" (click)="issueAdvance(request)">
-                              Record Cash Issued
-                            </button>
-                          } @else if (isRequestPayable(request) && remReimb > 0) {
-                            <button type="button" class="tf-btn tf-btn-primary" [disabled]="isSaving()" (click)="payReimbursement(request)">
-                              Record Payment
+                              Issue Cash
                             </button>
                           } @else {
                             <span class="cell-settled">—</span>
@@ -184,51 +275,60 @@
               <table class="tf-table">
                 <thead>
                   <tr>
-                    <th class="col-type">Entry Type</th>
-                    <th class="col-desc">Description &amp; Logged By</th>
-                    <th class="col-status">Status</th>
-                    <th class="col-amount">Amount</th>
-                    @if (finance.canApprove) {
-                      <th class="col-action">Action</th>
-                    }
+                    <th>Description</th>
+                    <th>Recorded</th>
+                    <th>Requested</th>
+                    <th>Approved</th>
+                    <th>Dispatched To</th>
+                    <th>Receipt</th>
+                    <th class="col-right">Amount</th>
                   </tr>
                 </thead>
                 <tbody>
                   @for (transaction of finance.transactions; track transaction.id) {
-                    @let canConfirmReturn = finance.canApprove && transaction.transactionType === 'ADVANCE_RETURN' && transaction.status === 'PENDING';
-
-                    <tr [class.tr-highlight]="canConfirmReturn">
-                      <td class="col-type">
-                        <strong>{{ formatLabel(transaction.transactionType) }}</strong>
-                      </td>
-
-                      <td class="col-desc">
+                    @let request = getRequestForTransaction(transaction, finance.requests);
+                    <tr>
+                      <td>
                         <div class="cell-desc">{{ transaction.description }}</div>
-                        <div class="cell-sub">{{ transaction.createdByName }} · {{ transaction.createdAt | date: 'dd MMM, h:mm a' }}</div>
                       </td>
-
-                      <td class="col-status">
-                        <span class="tf-badge" [ngClass]="getStatusClass(transaction.status)">
-                          {{ transaction.status === 'CONFIRMED' ? 'Confirmed' : formatLabel(transaction.status) }}
-                        </span>
+                      <td class="col-meta">
+                        <span class="meta-val">{{ transaction.createdByName }}</span>
+                        <small>{{ transaction.createdAt | date: 'dd MMM yy, h:mm a' }}</small>
                       </td>
-
-                      <td class="col-amount">
-                        <strong class="tf-num cell-amt-main">₹{{ money(transaction.amount) }}</strong>
+                      <td class="col-meta">
+                        @if (request) {
+                          <span class="meta-val">{{ request.requestedByName | titlecase }}</span>
+                          <small>{{ request.createdAt | date: 'dd MMM yy, h:mm a' }}</small>
+                        } @else {
+                          <span class="cell-settled">—</span>
+                        }
                       </td>
-
-                      @if (finance.canApprove) {
-                        <td class="col-action">
-                          @if (canConfirmReturn) {
-                            <div class="tf-btn-group">
-                              <button type="button" class="tf-btn tf-btn-success" [disabled]="isSaving()" (click)="reviewReturn(transaction, 'CONFIRM')">Confirm</button>
-                              <button type="button" class="tf-btn tf-btn-danger" [disabled]="isSaving()" (click)="reviewReturn(transaction, 'REJECT')">Reject</button>
-                            </div>
-                          } @else {
-                            <span class="cell-settled">—</span>
-                          }
-                        </td>
-                      }
+                      <td class="col-meta">
+                        @if (request?.reviewedByName && request?.reviewedAt) {
+                          <span class="meta-val">{{ request?.reviewedByName | titlecase }}</span>
+                          <small>{{ request?.reviewedAt | date: 'dd MMM yy, h:mm a' }}</small>
+                        } @else {
+                          <span class="cell-settled">—</span>
+                        }
+                      </td>
+                      <td class="col-meta">
+                        @if (transaction.recipientName) {
+                          <span class="meta-val">{{ transaction.recipientName | titlecase }}</span>
+                        } @else {
+                          <span class="cell-settled">—</span>
+                        }
+                      </td>
+                      <td class="col-meta">
+                        @if (transaction.receivedByName && transaction.receivedAt) {
+                          <span class="meta-val text-ok">{{ transaction.receivedByName | titlecase }}</span>
+                          <small>{{ transaction.receivedAt | date: 'dd MMM yy, h:mm a' }}</small>
+                        } @else {
+                          <span class="cell-settled">—</span>
+                        }
+                      </td>
+                      <td class="col-right">
+                        <strong class="tf-num cell-amt">₹{{ money(transaction.amount) }}</strong>
+                      </td>
                     </tr>
                   }
                 </tbody>

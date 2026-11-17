@@ -1,12 +1,10 @@
-export type TaskFinanceRequestType = 'ADVANCE' | 'TOP_UP' | 'REIMBURSEMENT';
-export type TaskFinanceRequestStatus = 'PENDING' | 'APPROVED' | 'PARTIALLY_APPROVED' | 'REJECTED' | 'PAID';
+export type TaskFinanceRequestType = 'ADVANCE' | 'TOP_UP';
+export type TaskFinanceRequestStatus = 'PENDING' | 'APPROVED' | 'PARTIALLY_APPROVED' | 'REJECTED';
 export type TaskFinanceTransactionType =
   | 'ADVANCE_ISSUED'
   | 'ADVANCE_EXPENSE'
-  | 'PERSONAL_EXPENSE'
-  | 'ADVANCE_RETURN'
-  | 'REIMBURSEMENT_PAID';
-export type TaskFinanceTransactionStatus = 'RECORDED' | 'PENDING' | 'CONFIRMED' | 'REJECTED' | 'PAID';
+  | 'ADVANCE_RETURN';
+export type TaskFinanceTransactionStatus = 'RECORDED' | 'PENDING' | 'CONFIRMED' | 'REJECTED';
 
 export interface TaskFinanceRequest {
   id: number;
@@ -33,31 +31,43 @@ export interface TaskFinanceTransaction {
   confirmedByName: string | null;
   createdAt: string;
   confirmedAt: string | null;
+  recipientName: string | null;
+  receivedByName: string | null;
+  receivedAt: string | null;
+  canConfirmReceipt: boolean;
 }
 
 export interface TaskFinanceSummary {
   sanctionedBudget: string;
   checklistExpenses: string;
-  budgetRemaining: string;
+  subtaskSpent: string;
+  remainingBudget: string;
   advanceIssued: string;
   advanceSpent: string;
-  personalSpent: string;
   returnPending: string;
   returnConfirmed: string;
-  reimbursementPaid: string;
   advanceBalance: string;
-  reimbursementDue: string;
 }
 
 export interface TaskFinancePayload {
   requests: TaskFinanceRequest[];
   transactions: TaskFinanceTransaction[];
   summary: TaskFinanceSummary;
+  budgetAmount: string;
+  budgetRequestId: number | null;
+  requestedBudgetAmount: string | null;
+  budgetRequestStatus: string | null;
+  budgetRequestedByName: string | null;
+  canEditBudget: boolean;
+  canRequestBudgetIncrease: boolean;
+  canReviewBudgetRequest: boolean;
+  canCancelBudgetRequest: boolean;
   canRequest: boolean;
   canApprove: boolean;
 }
 
-export function hasPendingTreasuryAction(finance: TaskFinancePayload): boolean {
+export function hasPendingFinanceAction(finance: TaskFinancePayload): boolean {
+  if (finance.transactions.some((transaction) => transaction.canConfirmReceipt)) return true;
   if (!finance.canApprove) return false;
   if (finance.requests.some((request) => request.status === 'PENDING')) return true;
   if (finance.transactions.some((transaction) =>
@@ -67,12 +77,9 @@ export function hasPendingTreasuryAction(finance: TaskFinancePayload): boolean {
   return finance.requests.some((request) => {
     if (request.status !== 'APPROVED' && request.status !== 'PARTIALLY_APPROVED') return false;
 
-    const transactionType = request.requestType === 'REIMBURSEMENT'
-      ? 'REIMBURSEMENT_PAID'
-      : 'ADVANCE_ISSUED';
     const paidAmount = finance.transactions
       .filter((transaction) =>
-        transaction.requestId === request.id && transaction.transactionType === transactionType
+        transaction.requestId === request.id && transaction.transactionType === 'ADVANCE_ISSUED'
       )
       .reduce((sum, transaction) => sum + Number(transaction.amount), 0);
 

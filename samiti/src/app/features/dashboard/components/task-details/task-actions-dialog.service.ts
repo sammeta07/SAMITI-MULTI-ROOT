@@ -2,7 +2,7 @@ import { inject, Injectable } from '@angular/core';
 import { MatDialog } from '@angular/material/dialog';
 import { firstValueFrom } from 'rxjs';
 import { NotifierService } from '../../../../shared/notifier/notifier.service';
-import { calculateTaskBudgetRemaining, TaskStatus } from '../event-details/event-tasks/event-tasks.models';
+import { TaskStatus } from '../event-details/event-tasks/event-tasks.models';
 import { EventTasksService } from '../event-details/event-tasks/event-tasks.service';
 import { DashboardHierarchyTreeService } from '../dashboard-hierarchy-tree/dashboard-hierarchy-tree.service';
 import { TaskActionsDialogComponent, TaskActionsDialogResult, TaskActionsDialogUpdate } from './task-actions-dialog.component';
@@ -36,7 +36,6 @@ export class TaskActionsDialogService {
         panelClass: 'slide-in-dialog',
         data: {
           task,
-          remainingBudget: calculateTaskBudgetRemaining(task.taskId, task.budgetAmount, task.descendants),
           onAction: (result: TaskActionsDialogResult) => this.handleAction(task, result, onUpdated)
         }
       });
@@ -50,8 +49,7 @@ export class TaskActionsDialogService {
   }
 
   private canOpenTaskActions(task: TaskDetailsPayload): boolean {
-    return task.canEditTask || task.canAssignOwner || task.canManage || task.canRequestBudgetIncrease ||
-      task.canReviewBudgetRequest || task.canCancelBudgetRequest;
+    return task.canEditTask || task.canAssignOwner || task.canManage;
   }
 
   private async handleAction(
@@ -71,11 +69,6 @@ export class TaskActionsDialogService {
           await firstValueFrom(this.eventTasksService.assignEventTask(task.taskId, result.ownerUserId));
           this.notifier.success('Task owner updated successfully.');
           break;
-        case 'update-budget':
-          if (!task.canEditTask) return null;
-          await firstValueFrom(this.taskDetailsService.updateTaskBudget(task.taskId, result.budgetAmount));
-          this.notifier.success('Task budget updated successfully.');
-          break;
         case 'update-status':
           if (
             !task.canManage ||
@@ -84,34 +77,12 @@ export class TaskActionsDialogService {
           await firstValueFrom(this.taskDetailsService.updateTaskStatus(task.taskId, result.status as TaskStatus));
           this.notifier.success('Task status updated successfully.');
           break;
-        case 'request-budget':
-          if (!task.canRequestBudgetIncrease) return null;
-          await firstValueFrom(this.taskDetailsService.requestTaskBudgetIncrease(task.taskId, result.amount));
-          this.notifier.success('Budget increase request sent for approval.');
-          break;
-        case 'review-budget':
-          if (!task.canReviewBudgetRequest || !task.budgetRequestId) return null;
-          await firstValueFrom(this.taskDetailsService.reviewTaskBudgetRequest(task.budgetRequestId, result.decision));
-          this.notifier.success(result.decision === 'APPROVE' ? 'Budget request approved.' : 'Budget request rejected.');
-          break;
-        case 'cancel-budget-request':
-          if (!task.canCancelBudgetRequest || !task.budgetRequestId) return null;
-          await firstValueFrom(this.taskDetailsService.cancelTaskBudgetRequest(task.budgetRequestId));
-          this.notifier.success('Budget request cancelled.');
-          break;
       }
 
       const updatedTask = await firstValueFrom(this.taskDetailsService.getTaskDetails(String(task.taskId)));
       this.hierarchyTreeService.triggerHierarchyTreeRefresh();
       onUpdated?.(updatedTask);
-      return {
-        task: updatedTask,
-        remainingBudget: calculateTaskBudgetRemaining(
-          updatedTask.taskId,
-          updatedTask.budgetAmount,
-          updatedTask.descendants
-        )
-      };
+      return { task: updatedTask };
     } catch (error) {
       this.notifier.error(error instanceof Error ? error.message : 'Failed to update task.');
       return null;

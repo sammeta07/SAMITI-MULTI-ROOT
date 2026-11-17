@@ -26,7 +26,7 @@ import { EventDetailsStateService } from '../event-details/event-details-state.s
 import { TaskChild, TaskDetailsPayload } from './task-details.models';
 import { TaskDetailsService } from './task-details.service';
 import { TaskFinanceComponent } from '../task-finance/task-finance.component';
-import { hasPendingTreasuryAction } from '../task-finance/task-finance.models';
+import { hasPendingFinanceAction } from '../task-finance/task-finance.models';
 import { TaskFinanceService } from '../task-finance/task-finance.service';
 import { TaskFinanceDialogService } from '../task-finance/task-finance-dialog.service';
 import { TaskActionsDialogService } from './task-actions-dialog.service';
@@ -255,8 +255,7 @@ export class TaskDetailsComponent implements OnInit {
   }
 
   public canOpenTaskActions(task: TaskDetailsPayload): boolean {
-    return task.canEditTask || task.canAssignOwner || task.canManage || task.canRequestBudgetIncrease ||
-      task.canReviewBudgetRequest || task.canCancelBudgetRequest;
+    return task.canEditTask || task.canAssignOwner || task.canManage;
   }
 
   public openTaskActionsDialog(task: TaskDetailsPayload): void {
@@ -264,8 +263,7 @@ export class TaskDetailsComponent implements OnInit {
   }
 
   public canOpenSubtaskActions(task: TaskChild): boolean {
-    return task.canEditTask || task.canAssignOwner || task.canManage || task.canRequestBudgetIncrease ||
-      task.canReviewBudgetRequest || task.canCancelBudgetRequest;
+    return task.canEditTask || task.canAssignOwner || task.canManage;
   }
 
   public openSubtaskActionsDialog(task: TaskChild): void {
@@ -280,7 +278,7 @@ export class TaskDetailsComponent implements OnInit {
       this.taskFinanceService.getTaskFinance(taskId).subscribe({
         next: (finance) => {
           if (this.task()?.taskId !== rootTaskId) return;
-          const needsFinanceAction = hasPendingTreasuryAction(finance);
+          const needsFinanceAction = hasPendingFinanceAction(finance);
           this.task.update((current) => current && current.taskId === rootTaskId
             ? {
                 ...current,

@@ -29,42 +29,20 @@ export class TaskFinanceService {
         transactions {
           id requestId transactionType amount description status
           createdByName confirmedByName createdAt confirmedAt
+          recipientName receivedByName receivedAt canConfirmReceipt
         }
         summary {
-          sanctionedBudget checklistExpenses budgetRemaining
-          advanceIssued advanceSpent personalSpent returnPending returnConfirmed
-          reimbursementPaid advanceBalance reimbursementDue
+          sanctionedBudget checklistExpenses subtaskSpent remainingBudget
+          advanceIssued advanceSpent returnPending returnConfirmed advanceBalance
         }
+        budgetAmount budgetRequestId requestedBudgetAmount budgetRequestStatus budgetRequestedByName
+        canEditBudget canRequestBudgetIncrease canReviewBudgetRequest canCancelBudgetRequest
         canRequest canApprove
       }
     }`;
 
     return this.request<{ taskFinance: TaskFinancePayload }>(query, { taskId })
       .pipe(map((response) => response.taskFinance));
-  }
-
-  public createPersonalExpense(taskId: number, amount: string, description: string): Observable<TaskFinancePayload> {
-    const mutation = `mutation CreateTaskPersonalExpense($input: TaskFinanceTransactionInput!) {
-      createTaskPersonalExpense(input: $input) {
-        requests {
-          id requestType requestedAmount approvedAmount reason status
-          requestedByName reviewedByName reviewNote createdAt reviewedAt
-        }
-        transactions {
-          id requestId transactionType amount description status
-          createdByName confirmedByName createdAt confirmedAt
-        }
-        summary {
-          sanctionedBudget checklistExpenses budgetRemaining
-          advanceIssued advanceSpent personalSpent returnPending returnConfirmed
-          reimbursementPaid advanceBalance reimbursementDue
-        }
-        canRequest canApprove
-      }
-    }`;
-    return this.request<{ createTaskPersonalExpense: TaskFinancePayload }>(mutation, {
-      input: { taskId, transactionType: 'PERSONAL_EXPENSE', amount: String(amount), description }
-    }).pipe(map((response) => response.createTaskPersonalExpense));
   }
 
   public reviewRequest(requestId: number, decision: 'APPROVE' | 'REJECT', approvedAmount?: string, note?: string): Observable<TaskFinanceRequest> {
@@ -95,6 +73,7 @@ export class TaskFinanceService {
       recordTaskFinanceTransaction(input: $input) {
         id requestId transactionType amount description status
         createdByName confirmedByName createdAt confirmedAt
+        recipientName receivedByName receivedAt canConfirmReceipt
       }
     }`;
     return this.request<{ recordTaskFinanceTransaction: TaskFinanceTransaction }>(mutation, {
@@ -102,16 +81,16 @@ export class TaskFinanceService {
     }).pipe(map((response) => response.recordTaskFinanceTransaction));
   }
 
-  public reviewReturn(transactionId: number, decision: 'CONFIRM' | 'REJECT', note?: string): Observable<TaskFinanceTransaction> {
-    const mutation = `mutation ReviewTaskFinanceReturn($input: TaskFinanceReturnReviewInput!) {
-      reviewTaskFinanceReturn(input: $input) {
+  public confirmReceipt(transactionId: number): Observable<TaskFinanceTransaction> {
+    const mutation = `mutation ConfirmTaskFinanceReceipt($transactionId: Int!) {
+      confirmTaskFinanceReceipt(transactionId: $transactionId) {
         id requestId transactionType amount description status
         createdByName confirmedByName createdAt confirmedAt
+        recipientName receivedByName receivedAt canConfirmReceipt
       }
     }`;
-    return this.request<{ reviewTaskFinanceReturn: TaskFinanceTransaction }>(mutation, {
-      input: { transactionId, decision, note }
-    }).pipe(map((response) => response.reviewTaskFinanceReturn));
+    return this.request<{ confirmTaskFinanceReceipt: TaskFinanceTransaction }>(mutation, { transactionId })
+      .pipe(map((response) => response.confirmTaskFinanceReceipt));
   }
 
   private request<T>(query: string, variables: Record<string, unknown>): Observable<T> {

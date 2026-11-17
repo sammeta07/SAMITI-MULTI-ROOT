@@ -367,8 +367,8 @@
                     class="task-panel-finance-icon"
                     [class.task-panel-finance-action-required]="task.needsFinanceAction"
                     type="button"
-                    [attr.aria-label]="task.needsFinanceAction ? 'Treasury action required — view task finance' : 'View task finance'"
-                    [matTooltip]="task.needsFinanceAction ? 'Treasury action required' : 'Task finance'"
+                    [attr.aria-label]="task.needsFinanceAction ? 'Finance action required — view task finance' : 'View task finance'"
+                    [matTooltip]="task.needsFinanceAction ? 'Finance action required' : 'Task finance'"
                     (click)="openTaskFinanceDialog(task.taskId, task.taskName, $event)"
                   >
                     <mat-icon>account_balance_wallet</mat-icon>
