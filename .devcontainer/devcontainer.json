@@ -1,6 +1,10 @@
 {
   "name": "samiti-multi-root",
   "image": "mcr.microsoft.com/devcontainers/typescript-node:1-22-bookworm",
+  "features": {
+    "ghcr.io/devcontainers/features/git:1": {},
+    "ghcr.io/devcontainers/features/github-cli:1": {}
+  },
   "shutdownAction": "stopContainer",
   "workspaceFolder": "/workspaces/${localWorkspaceFolderBasename}",
   "forwardPorts": [3000, 4200],
@@ -14,15 +18,14 @@
       "onAutoForward": "openPreview"
     }
   },
-  "postCreateCommand": "bash .devcontainer/setup-workspace.sh",
+  "postCreateCommand": "if [ -f .devcontainer/setup-workspace.sh ]; then bash .devcontainer/setup-workspace.sh; fi",
   "customizations": {
     "vscode": {
       "extensions": [
         "Angular.ng-template",
         "ms-vscode.vscode-typescript-next",
         "dbaeumer.vscode-eslint",
-        "esbenp.prettier-vscode",
-        "ms-azuretools.vscode-docker"
+        "esbenp.prettier-vscode"
       ],
       "settings": {
         "terminal.integrated.defaultProfile.linux": "bash"
