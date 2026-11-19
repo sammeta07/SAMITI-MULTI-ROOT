@@ -37,6 +37,7 @@ export interface TaskBudgetRequest {
   id: number;
   taskId: number;
   taskName: string;
+  taskOwnerName: string | null;
   requestedAmount: string;
   budgetBeforeRequest: string;
   requestedIncrease: string;

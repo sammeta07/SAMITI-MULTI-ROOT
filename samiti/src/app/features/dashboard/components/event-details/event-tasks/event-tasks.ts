@@ -13,7 +13,7 @@ import { firstValueFrom, Subscription } from 'rxjs';
 import { WholeRupeeDirective } from '../../../../../shared/directives/whole-rupee.directive';
 
 import { EventTasksService } from './event-tasks.service';
-import { calculateTaskBudgetRemaining, EventTaskEntry, EventTasksPayload, formatTaskBudgetAmount, isValidTaskBudgetAmount, TaskAssignee, TASK_STATUSES, TaskStatus, taskHierarchyLevelBackground } from './event-tasks.models';
+import { calculateTaskBudgetRemaining, EventTaskEntry, EventTasksPayload, formatIssuedAndSanctionedTaskBudget, formatTaskBudgetAmount, isValidTaskBudgetAmount, TaskAssignee, TASK_STATUSES, TaskStatus, taskHierarchyLevelBackground } from './event-tasks.models';
 import { NotifierService } from '../../../../../shared/notifier/notifier.service';
 import { ConfirmDialogService } from '../../../../../components/dialog/confirm/confirm-dialog.service';
 import { ConfirmDialogData } from '../../../../../components/dialog/confirm/confirm-dialog.models';
@@ -163,8 +163,11 @@ export class EventTasksComponent implements OnInit, OnDestroy {
         next: (finance) => {
           if (eventId !== this.currentEventId) return;
           const needsFinanceAction = hasPendingFinanceAction(finance);
+          const issuedAmount = finance.transactions
+            .filter((transaction) => transaction.transactionType === 'ADVANCE_ISSUED' && transaction.status === 'CONFIRMED')
+            .reduce((total, transaction) => total + Number(transaction.amount), 0);
           this.eventData = this.tasks.map((task) => task.taskId === taskId
-            ? { ...task, needsFinanceAction }
+            ? { ...task, needsFinanceAction, issuedAmount: String(issuedAmount) }
             : task);
         },
         error: (error) => {
@@ -801,6 +804,13 @@ export class EventTasksComponent implements OnInit, OnDestroy {
 
   public formatTaskBudgetAmount(value: string | number | null | undefined): string {
     return formatTaskBudgetAmount(value);
+  }
+
+  public formatIssuedAndSanctionedTaskBudget(
+    issuedAmount: string | number | null | undefined,
+    sanctionedAmount: string | number | null | undefined
+  ): string {
+    return formatIssuedAndSanctionedTaskBudget(issuedAmount, sanctionedAmount);
   }
 
   public getTaskBudgetRemainingDisplay(task: EventTaskEntry): string {

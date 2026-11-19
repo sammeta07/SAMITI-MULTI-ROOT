@@ -177,8 +177,12 @@
   .tf-inp-sm { width: 86px; }
 }
 
-.tf-tool-grow {
-  flex: 1 1 210px;
+.tf-tool-return {
+  margin-left: auto;
+}
+
+.tf-pending-budget-request {
+  flex-wrap: wrap;
 }
 
 /* Tabs & Scroll Area */
@@ -367,6 +371,16 @@
   gap: 8px;
 }
 
+.tf-grid-thead.with-budget-review,
+.tf-row-grid.with-budget-review {
+  grid-template-columns: 36px minmax(200px, 2.2fr) 92px 84px 86px minmax(110px, 0.7fr) 72px;
+}
+
+.tf-grid-thead.without-finance-action,
+.tf-row-grid.without-finance-action {
+  grid-template-columns: 36px minmax(200px, 2.5fr) 92px 84px 86px;
+}
+
 .tf-grid-thead {
   padding: 5px 8px;
   background: #f8fafc;
@@ -426,6 +440,25 @@
   min-width: 0;
 }
 
+.tf-task-title-stack {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 2px;
+  width: 100%;
+  min-width: 0;
+}
+
+.tf-assignee-name {
+  overflow: hidden;
+  color: #64748b;
+  font-size: 0.62rem;
+  font-weight: 500;
+  line-height: 1.2;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 .tf-title-line {
   display: flex;
   align-items: center;
@@ -481,6 +514,52 @@
     text-transform: uppercase;
     letter-spacing: 0.03em;
   }
+}
+
+.tf-col-budget-review {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  gap: 3px;
+  align-items: flex-end;
+}
+
+.tf-budget-review-amount {
+  color: #b45309;
+  font-size: 0.68rem;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.tf-col-budget-actions {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 3px;
+}
+
+.tf-budget-review-row {
+  display: flex;
+  flex-wrap: nowrap;
+  align-items: center;
+  gap: 4px;
+  white-space: nowrap;
+}
+
+.tf-budget-review-row .tf-budget-review-action {
+  display: inline-flex;
+  flex: 0 0 24px;
+  width: 24px;
+  min-width: 24px;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+}
+
+.tf-budget-review-row .tf-budget-review-action mat-icon {
+  width: 14px;
+  height: 14px;
+  font-size: 14px;
 }
 
 .tf-dispatch-box {
@@ -784,6 +863,14 @@
   .tf-row-grid {
     grid-template-columns: auto 1fr auto;
     gap: 6px;
+  }
+
+  .tf-row-grid.with-budget-review {
+    grid-template-columns: auto 1fr auto;
+  }
+
+  .tf-row-grid.without-finance-action {
+    grid-template-columns: auto 1fr auto;
   }
 
   .tf-col-num {

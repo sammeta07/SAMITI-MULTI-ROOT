@@ -179,17 +179,19 @@
               </div>
             }
             <div class="task-header-actions">
-              <button
-                mat-icon-button
-                class="task-panel-finance-icon"
-                [class.task-panel-finance-action-required]="taskDetails.needsFinanceAction"
-                type="button"
-                [attr.aria-label]="taskDetails.needsFinanceAction ? 'Action required — view task finance' : 'No action required — view task finance'"
-                [matTooltip]="taskDetails.needsFinanceAction ? 'Action required' : 'No action required'"
-                (click)="openTaskFinanceDialog(taskDetails.taskId, taskDetails.taskName, taskDetails.ownerName, $event)"
-              >
-                <mat-icon>currency_rupee</mat-icon>
-              </button>
+              @if (taskDetails.canAccessFinance) {
+                <button
+                  mat-icon-button
+                  class="task-panel-finance-icon"
+                  [class.task-panel-finance-action-required]="taskDetails.needsFinanceAction"
+                  type="button"
+                  [attr.aria-label]="taskDetails.needsFinanceAction ? 'Action required — view task finance' : 'No action required — view task finance'"
+                  [matTooltip]="taskDetails.needsFinanceAction ? 'Action required' : 'No action required'"
+                  (click)="openTaskFinanceDialog(taskDetails.taskId, taskDetails.taskName, taskDetails.ownerName, $event)"
+                >
+                  <mat-icon>currency_rupee</mat-icon>
+                </button>
+              }
             </div>
             @if (taskDetails.canDeleteTask) {
               <div class="task-header-actions">
@@ -537,17 +539,19 @@
                               <mat-icon>edit</mat-icon>
                             </button>
                           }
-                          <button
-                            mat-icon-button
-                            class="task-panel-finance-icon"
-                            [class.task-panel-finance-action-required]="child.needsFinanceAction"
-                            type="button"
-                            [attr.aria-label]="child.needsFinanceAction ? 'Action required — view task finance' : 'No action required — view task finance'"
-                            [matTooltip]="child.needsFinanceAction ? 'Action required' : 'No action required'"
-                            (click)="openTaskFinanceDialog(child.taskId, child.taskName, child.ownerName, $event)"
-                          >
-                            <mat-icon>currency_rupee</mat-icon>
-                          </button>
+                          @if (child.canAccessFinance) {
+                            <button
+                              mat-icon-button
+                              class="task-panel-finance-icon"
+                              [class.task-panel-finance-action-required]="child.needsFinanceAction"
+                              type="button"
+                              [attr.aria-label]="child.needsFinanceAction ? 'Action required — view task finance' : 'No action required — view task finance'"
+                              [matTooltip]="child.needsFinanceAction ? 'Action required' : 'No action required'"
+                              (click)="openTaskFinanceDialog(child.taskId, child.taskName, child.ownerName, $event)"
+                            >
+                              <mat-icon>currency_rupee</mat-icon>
+                            </button>
+                          }
                           <span class="task-panel-info-container">
                             <button
                               mat-icon-button

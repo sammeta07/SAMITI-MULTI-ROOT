@@ -11,6 +11,7 @@ import {
 import {
   getAuthorityFinanceActionTaskIds,
   getFinanceActionTaskIds,
+  getFinanceParticipantTaskIds,
   getPendingReceiptTaskIds,
   getPendingSubtaskTransferTaskIds
 } from '../../../tasks/task-finance.graphql';
@@ -32,6 +33,7 @@ export const eventTasksTypes = `
     parentTaskName: String
     taskName: String!
     budgetAmount: String!
+    issuedAmount: String!
     budgetRequestId: Int
     requestedBudgetAmount: String
     budgetRequestStatus: String
@@ -448,6 +450,7 @@ export const eventTasksResolvers = {
         parentTaskName: string | null;
         taskName: string;
         budgetAmount: string;
+        issuedAmount: string;
         budgetRequestId: number | null;
         requestedBudgetAmount: string | null;
         budgetRequestStatus: string | null;
@@ -475,6 +478,7 @@ export const eventTasksResolvers = {
            parent.name AS parentTaskName,
            COALESCE(NULLIF(TRIM(t.name), ''), 'Untitled Task') AS taskName,
            CAST(t.budget_amount AS CHAR) AS budgetAmount,
+           CAST(COALESCE(taskIssued.issuedAmount, 0) AS CHAR) AS issuedAmount,
            budgetRequest.id AS budgetRequestId,
            CAST(GREATEST(0, budgetRequest.requested_amount - t.budget_amount) AS CHAR) AS requestedBudgetAmount,
            budgetRequest.status AS budgetRequestStatus,
@@ -494,6 +498,15 @@ export const eventTasksResolvers = {
          LEFT JOIN tasks parent ON parent.id = t.parent_id
          LEFT JOIN task_budget_requests budgetRequest
            ON budgetRequest.task_id = t.id AND budgetRequest.status = 'PENDING'
+         LEFT JOIN (
+           SELECT transaction.task_id, SUM(transaction.amount) AS issuedAmount
+           FROM task_finance_transactions transaction
+           INNER JOIN tasks financeTask ON financeTask.id = transaction.task_id
+           WHERE financeTask.event_id = ?
+             AND transaction.transaction_type = 'ADVANCE_ISSUED'
+             AND transaction.status = 'CONFIRMED'
+           GROUP BY transaction.task_id
+         ) taskIssued ON taskIssued.task_id = t.id
          LEFT JOIN users budgetRequester ON budgetRequester.id = budgetRequest.requested_by
          LEFT JOIN users owner ON owner.id = t.owner_user_id
          LEFT JOIN users assignedBy ON assignedBy.id = t.owner_assigned_by
@@ -501,11 +514,15 @@ export const eventTasksResolvers = {
          LEFT JOIN users updater ON updater.id = t.updated_by
          WHERE t.event_id = ?
          ORDER BY t.created_at ASC, t.id ASC`,
-        [eventId]
+        [eventId, eventId]
       );
       const financeActionTaskIds = isEventCashier
         ? await getFinanceActionTaskIds(taskRows.map((taskRow) => Number(taskRow.taskId)))
         : new Set<number>();
+      const financeParticipantTaskIds = await getFinanceParticipantTaskIds(
+        taskRows.map((taskRow) => Number(taskRow.taskId)),
+        loggedInUserId
+      );
       const authorityFinanceActionTaskIds = isBudgetAuthority
         ? await getAuthorityFinanceActionTaskIds(taskRows.map((taskRow) => Number(taskRow.taskId)))
         : new Set<number>();
@@ -536,6 +553,7 @@ export const eventTasksResolvers = {
           parentTaskName: taskRow.parentTaskName || null,
           taskName: String(taskRow.taskName || 'Untitled Task'),
           budgetAmount: String(taskRow.budgetAmount),
+          issuedAmount: String(taskRow.issuedAmount),
           budgetRequestId: taskRow.budgetRequestId === null ? null : Number(taskRow.budgetRequestId),
           requestedBudgetAmount: taskRow.requestedBudgetAmount === null ? null : String(taskRow.requestedBudgetAmount),
           budgetRequestStatus: taskRow.budgetRequestStatus || null,
@@ -567,7 +585,13 @@ export const eventTasksResolvers = {
           canDelete: canManageAnyTasks ||
             canAssignRootTasks ||
             (!isRootTask && Number(taskRow.parentOwnerUserId) === loggedInUserId),
-          canAccessFinance: Number(taskRow.ownerUserId) === loggedInUserId || isEventCashier || isBudgetAuthority,
+          canAccessFinance: Number(taskRow.ownerUserId) === loggedInUserId ||
+            Number(taskRow.createdBy) === loggedInUserId ||
+            isEventCashier ||
+            isBudgetAuthority ||
+            canAssignRootTasks ||
+            canManageAnyTasks ||
+            financeParticipantTaskIds.has(taskId),
           needsFinanceAction: (
             isEventCashier &&
             taskOwnerUserId !== loggedInUserId &&

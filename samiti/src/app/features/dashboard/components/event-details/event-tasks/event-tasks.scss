@@ -764,6 +764,9 @@
 }
 
 .task-budget-total {
+  width: 180px;
+  min-width: 180px;
+  flex-basis: 180px;
   border-color: #fca5a5;
   background: #fef2f2;
   color: #dc2626;

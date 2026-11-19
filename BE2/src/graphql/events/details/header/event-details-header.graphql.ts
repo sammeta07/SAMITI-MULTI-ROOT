@@ -3,7 +3,9 @@ import { RowDataPacket } from 'mysql2/promise';
 import { hasEventsDisplayNameColumn } from '../event-display-name-support';
 import { throwEventError, getLoggedInUserId } from '../voting/event-voting-core.graphql';
 import {
-  hasTaskBudgetApprovalAuthority
+  hasPermission,
+  hasTaskBudgetApprovalAuthority,
+  PERMISSIONS
 } from '../../../../authorization/authorization';
 import {
   getFinanceActionTaskIds,
@@ -25,8 +27,11 @@ export const eventDetailsHeaderTypes = `
     programsCount: Int!
     tasksCount: Int!
     parentTasksCount: Int!
+    totalApprovedBudget: String!
     hasFinanceAction: Boolean!
     canAccessTaskFinance: Boolean!
+    canEditEvent: Boolean!
+    canDeleteEvent: Boolean!
     type: String
     startDate: String
     endDate: String
@@ -65,6 +70,9 @@ export const eventDetailsHeaderResolvers = {
           (SELECT COUNT(*) FROM programs p WHERE p.event_id = e.id) AS programsCount,
           (SELECT COUNT(*) FROM tasks t WHERE t.event_id = e.id) AS tasksCount,
           (SELECT COUNT(*) FROM tasks t WHERE t.event_id = e.id AND t.parent_id IS NULL) AS parentTasksCount,
+          (SELECT COALESCE(SUM(t.budget_amount), 0)
+           FROM tasks t
+           WHERE t.event_id = e.id AND t.parent_id IS NULL) AS totalApprovedBudget,
           e.type,
           DATE_FORMAT(e.start_date, '%Y-%m-%d') AS startDate,
           DATE_FORMAT(e.end_date, '%Y-%m-%d') AS endDate,
@@ -146,7 +154,7 @@ export const eventDetailsHeaderResolvers = {
         throwEventError('FORBIDDEN', 'You are not allowed to access this event');
       }
 
-      const [cashierRows, isBudgetAuthority, taskActionRows, financeRequesterRows] = await Promise.all([
+      const [cashierRows, isBudgetAuthority, taskActionRows, canEditEvent, canDeleteEvent] = await Promise.all([
         query<Array<RowDataPacket & { isCashier: number }>>(
           `SELECT EXISTS (
              SELECT 1
@@ -183,32 +191,14 @@ export const eventDetailsHeaderResolvers = {
            WHERE t.event_id = ?`,
           [eventId]
         ),
-        query<any[]>(
-          `SELECT EXISTS (
-             SELECT 1
-             FROM task_budget_requests request
-             INNER JOIN tasks task ON task.id = request.task_id
-             WHERE task.event_id = ? AND request.requested_by = ?
-             UNION ALL
-             SELECT 1
-             FROM task_finance_requests request
-             INNER JOIN tasks task ON task.id = request.task_id
-             WHERE task.event_id = ? AND request.requested_by = ?
-           ) AS isRequester`,
-          [eventId, loggedInUserId, eventId, loggedInUserId]
-        )
+        hasPermission(loggedInUserId, PERMISSIONS.EVENT_UPDATE, { type: 'EVENT', id: eventId }),
+        hasPermission(loggedInUserId, PERMISSIONS.EVENT_DELETE, { type: 'EVENT', id: eventId })
       ]);
       const isEventCashier = Number(cashierRows[0]?.isCashier) === 1;
       const canAccessTaskFinance = isCurrentUserMasterAdmin ||
         committeeRole === 'COMMITTEE_ADMIN' ||
         isEventCashier ||
-        isBudgetAuthority ||
-        Number(financeRequesterRows[0]?.isRequester) === 1 ||
-        taskActionRows.some((task) =>
-          Number(task.ownerUserId) === loggedInUserId ||
-          Number(task.createdBy) === loggedInUserId ||
-          Number(task.budgetRequestedBy) === loggedInUserId
-        );
+        isBudgetAuthority;
       const taskIds = taskActionRows.map((task) => Number(task.taskId));
       const [financeActionTaskIds, receiptTaskIds, subtaskTransferTaskIds] = await Promise.all([
         isEventCashier ? getFinanceActionTaskIds(taskIds) : Promise.resolve(new Set<number>()),
@@ -244,6 +234,7 @@ export const eventDetailsHeaderResolvers = {
         programsCount: Number(event.programsCount || 0),
         tasksCount: Number(event.tasksCount || 0),
         parentTasksCount: Number(event.parentTasksCount || 0),
+        totalApprovedBudget: String(event.totalApprovedBudget ?? 0),
         type: event.type || null,
         startDate: event.startDate || null,
         endDate: event.endDate || null,
@@ -252,7 +243,9 @@ export const eventDetailsHeaderResolvers = {
         myDesignation: myDesignation,
         committeeRole,
         hasFinanceAction,
-        canAccessTaskFinance
+        canAccessTaskFinance,
+        canEditEvent,
+        canDeleteEvent
       };
     }
   }

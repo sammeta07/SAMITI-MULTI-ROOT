@@ -32,8 +32,11 @@ export interface EventDetailsHeaderPayload {
   programsCount?: number;
   tasksCount?: number;
   parentTasksCount?: number;
+  totalApprovedBudget: string;
   hasFinanceAction: boolean;
   canAccessTaskFinance: boolean;
+  canEditEvent: boolean;
+  canDeleteEvent: boolean;
   type?: 'PUBLIC' | 'PRIVATE' | string;
   startDate?: string | null;
   endDate?: string | null;

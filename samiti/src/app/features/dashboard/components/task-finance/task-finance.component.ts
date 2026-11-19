@@ -25,6 +25,7 @@ import { TaskFinanceRequestsDialogComponent } from './task-finance-requests-dial
 export interface TaskFinanceRequestGroup {
   taskId: number;
   taskName: string;
+  taskOwnerName: string | null;
   taskOwnerUserId: number | null;
   requests: TaskFinanceRequest[];
   budgetRequests: TaskBudgetRequest[];
@@ -240,6 +241,9 @@ export class TaskFinanceComponent implements OnInit {
       return {
         taskId,
         taskName: firstRequest?.taskName ?? firstBudgetRequest!.taskName,
+        taskOwnerName: taskGroup.requests.find((request) => request.taskOwnerName)?.taskOwnerName
+          ?? taskGroup.budgetRequests.find((request) => request.taskOwnerName)?.taskOwnerName
+          ?? null,
         taskOwnerUserId: firstRequest?.taskOwnerUserId ?? null,
         requests: taskGroup.requests,
         budgetRequests: taskGroup.budgetRequests,
@@ -249,6 +253,34 @@ export class TaskFinanceComponent implements OnInit {
         remainingAdvance
       };
     });
+  }
+
+  public currentBudgetRequest(finance: TaskFinancePayload): TaskBudgetRequest | null {
+    return finance.budgetRequestId === null
+      ? null
+      : finance.budgetRequests.find((request) => request.id === finance.budgetRequestId) ?? null;
+  }
+
+  public budgetRequestsForLedger(finance: TaskFinancePayload): TaskBudgetRequest[] {
+    return finance.budgetRequests.filter((request) =>
+      request.status !== 'PENDING' ||
+      (!finance.canApprove && (request.canReviewCreator || request.canReviewAuthority))
+    );
+  }
+
+  public shouldShowBudgetReviewColumn(finance: TaskFinancePayload): boolean {
+    return !finance.canApprove && (
+      finance.isBudgetAuthority ||
+      finance.budgetRequests.some((request) =>
+        request.status === 'PENDING' && (request.canReviewCreator || request.canReviewAuthority)
+      )
+    );
+  }
+
+  public lastBudgetRequest(group: TaskFinanceRequestGroup): TaskBudgetRequest | null {
+    return [...group.budgetRequests].sort((left, right) =>
+      right.createdAt.localeCompare(left.createdAt) || right.id - left.id
+    )[0] ?? null;
   }
 
   public openBudgetRequestsDialog(group: TaskFinanceRequestGroup): void {
@@ -261,6 +293,7 @@ export class TaskFinanceComponent implements OnInit {
       disableClose: true,
       data: {
         taskName: group.taskName,
+        assigneeName: group.taskOwnerName,
         requests: computed(() =>
           (this.payload()?.budgetRequests.filter((request) => request.taskId === group.taskId) ?? [])
             .sort((left, right) =>
@@ -286,24 +319,21 @@ export class TaskFinanceComponent implements OnInit {
   }
 
   public openFinanceRequestsDialog(group: TaskFinanceRequestGroup): void {
-    const transactions = this.payload()?.transactions.filter(
-      (transaction) => transaction.taskId === group.taskId
-    ) ?? [];
     this.dialog.open(TaskFinanceRequestsDialogComponent, {
       position: { right: '0', top: '0' },
       height: '100%',
-      width: '80%',
-      maxWidth: '1000px',
+      width: '600px',
+      maxWidth: '90vw',
       autoFocus: true,
       data: {
         taskName: group.taskName,
-        assigneeName: group.requests.find((request) => request.taskOwnerName)?.taskOwnerName ?? null,
-        requests: group.requests,
-        budgetRequests: group.budgetRequests,
-        transactions,
+        assigneeName: group.taskOwnerName,
+        transactions: computed(() =>
+          this.payload()?.transactions.filter(
+            (transaction) => transaction.taskId === group.taskId
+          ) ?? []
+        ),
         isSaving: this.isSaving,
-        reviewRequest: (request: TaskFinanceRequest, decision: 'APPROVE' | 'REJECT') =>
-          this.reviewRequest(request, decision),
         confirmReceipt: (transaction: TaskFinanceTransaction) => this.confirmReceipt(transaction)
       },
       panelClass: ['slide-in-dialog', 'finance-requests-history-drawer']

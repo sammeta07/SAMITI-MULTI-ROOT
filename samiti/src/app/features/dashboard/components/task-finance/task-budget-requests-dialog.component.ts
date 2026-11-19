@@ -15,6 +15,7 @@ import {
 
 export interface TaskBudgetRequestsDialogData {
   taskName: string;
+  assigneeName: string | null;
   requests: Signal<TaskBudgetRequest[]>;
   financeRequests: Signal<TaskFinanceRequest[]>;
   isTreasurer: boolean;
@@ -41,7 +42,12 @@ type BudgetIncreaseHistoryRow =
           </div>
           <div class="header-title-stack">
             <h2>Budget Increase Requests</h2>
-            <span class="header-subtitle">{{ data.taskName | titlecase }}</span>
+            <div class="header-subtitle-row">
+              <span class="header-subtitle">{{ data.taskName | titlecase }}</span>
+              @if (data.assigneeName) {
+                <span class="assignee-subtitle">Assignee: {{ data.assigneeName | titlecase }}</span>
+              }
+            </div>
           </div>
         </div>
         <div class="header-right-actions">
@@ -101,15 +107,9 @@ type BudgetIncreaseHistoryRow =
                             <span
                               class="status"
                               [class.fixed-status]="data.isTreasurer || row.request.status === 'APPROVED' || row.request.status === 'PENDING' || row.request.status === 'REJECTED' || row.request.status === 'CANCELLED' || row.request.status === 'CANCELED'"
-                              [ngClass]="statusClass(data.isTreasurer
-                                ? (row.request.status === 'APPROVED' ? 'APPROVED' : 'PENDING')
-                                : row.request.status)"
+                              [ngClass]="statusClass(displayedStatus(row.request).status)"
                             >
-                              {{ data.isTreasurer
-                                ? (row.request.status === 'APPROVED' ? 'Approved' : 'Pending')
-                                : (row.request.status === 'PENDING'
-                                  ? (row.request.approvalStage === 'CREATOR' ? 'Creator Review' : 'Pending')
-                                  : formatLabel(row.request.status)) }}
+                              {{ displayedStatus(row.request).label }}
                             </span>
                           }
                           @if (row.request.canReviewCreator || row.request.canReviewAuthority) {
@@ -117,21 +117,26 @@ type BudgetIncreaseHistoryRow =
                               <button
                                 mat-flat-button
                                 type="button"
-                                class="submit-action-btn"
+                                class="submit-action-btn icon-action-btn"
+                                aria-label="Approve request"
+                                matTooltip="Approve request"
+                                matTooltipPosition="above"
                                 [disabled]="data.isSaving()"
                                 (click)="reviewRequest(row.request, 'APPROVE')"
                               >
-                                <mat-icon>check</mat-icon><span>Approve</span>
+                                <mat-icon>check</mat-icon><span class="action-label">Approve</span>
                               </button>
                               <button
                                 mat-button
                                 type="button"
-                                class="reject-action-btn"
-                                matTooltip="Reject Request"
+                                class="reject-action-btn icon-action-btn"
+                                aria-label="Reject request"
+                                matTooltip="Reject request"
+                                matTooltipPosition="above"
                                 [disabled]="data.isSaving()"
                                 (click)="reviewRequest(row.request, 'REJECT')"
                               >
-                                <mat-icon>close</mat-icon><span>Reject</span>
+                                <mat-icon>close</mat-icon><span class="action-label">Reject</span>
                               </button>
                             </div>
                           } @else if (row.request.canCancel) {
@@ -302,6 +307,7 @@ type BudgetIncreaseHistoryRow =
     }
 
     .header-subtitle {
+      min-width: 0;
       overflow: hidden;
       color: #64748b;
       font-size: 0.72rem;
@@ -309,7 +315,23 @@ type BudgetIncreaseHistoryRow =
       line-height: 1.2;
       text-overflow: ellipsis;
       white-space: nowrap;
+    }
+
+    .header-subtitle-row {
+      display: flex;
+      min-width: 0;
+      align-items: center;
+      gap: 8px;
       margin-top: 2px;
+    }
+
+    .assignee-subtitle {
+      flex: 0 0 auto;
+      color: #475569;
+      font-size: 0.68rem;
+      font-weight: 600;
+      line-height: 1.2;
+      white-space: nowrap;
     }
 
     .header-right-actions {
@@ -421,11 +443,11 @@ type BudgetIncreaseHistoryRow =
     .history-table th:nth-child(1) { width: 5%; }
     .history-table th:nth-child(2) { width: 12%; }
     .history-table th:nth-child(3) { width: 10%; }
-    .history-table th:nth-child(4) { width: 13%; }
+    .history-table th:nth-child(4) { width: 20%; }
     .history-table th:nth-child(5) { width: 12%; }
     .history-table th:nth-child(6) { width: 13%; }
     .history-table th:nth-child(7) { width: 14%; }
-    .history-table th:nth-child(8) { width: 21%; }
+    .history-table th:nth-child(8) { width: 14%; }
 
     .finance-request-label {
       display: flex;
@@ -493,7 +515,6 @@ type BudgetIncreaseHistoryRow =
 
     .status-heading,
     .status-cell { text-align: right; }
-    .status-cell { min-width: 195px; }
     .actioner-cell strong,
     .actioner-cell small { display: block; }
     .actioner-cell strong {
@@ -526,6 +547,7 @@ type BudgetIncreaseHistoryRow =
       align-items: center;
       gap: 4px;
       font-variant-numeric: tabular-nums;
+      white-space: nowrap;
     }
 
     .old-amt {
@@ -595,7 +617,19 @@ type BudgetIncreaseHistoryRow =
     .actions {
       display: inline-flex;
       align-items: center;
-      gap: 5px;
+      gap: 4px;
+    }
+
+    .actions .icon-action-btn {
+      width: 28px !important;
+      min-width: 28px !important;
+      justify-content: center !important;
+      gap: 0 !important;
+      padding: 0 !important;
+    }
+
+    .actions .icon-action-btn .action-label {
+      display: none !important;
     }
 
     .submit-action-btn {
@@ -726,7 +760,7 @@ export class TaskBudgetRequestsDialogComponent {
       );
     const representedBudgetRequestIds = getTopUpSourceBudgetRequestIds(financeRequests);
     const budgetRows: BudgetIncreaseHistoryRow[] = this.data.requests()
-      .filter((request) => !representedBudgetRequestIds.has(request.id))
+      .filter((request) => request.status !== 'PENDING' && !representedBudgetRequestIds.has(request.id))
       .map((request) => ({
         kind: 'budget',
         key: `budget-${request.id}`,
@@ -802,6 +836,20 @@ export class TaskBudgetRequestsDialogComponent {
       ? request.status !== 'APPROVED'
       : request.status === 'PENDING' && request.approvalStage !== 'CREATOR';
     return !(hasAction && showsPending);
+  }
+
+  public displayedStatus(request: TaskBudgetRequest): { status: string; label: string } {
+    const isFinalStatus = ['APPROVED', 'REJECTED', 'CANCELLED', 'CANCELED'].includes(request.status);
+    if (this.data.isTreasurer && !isFinalStatus) {
+      return { status: 'PENDING', label: 'Pending' };
+    }
+
+    return {
+      status: request.status,
+      label: request.status === 'PENDING' && request.approvalStage === 'CREATOR' && !this.data.isTreasurer
+        ? 'Creator Review'
+        : this.formatLabel(request.status)
+    };
   }
 
   public statusClass(status: string): string {

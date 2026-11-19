@@ -28,6 +28,7 @@ export class EventTasksService {
           parentTaskName
           taskName
           budgetAmount
+          issuedAmount
           budgetRequestId
           requestedBudgetAmount
           budgetRequestStatus

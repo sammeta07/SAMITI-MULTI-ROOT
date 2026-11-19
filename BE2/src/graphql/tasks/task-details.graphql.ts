@@ -9,6 +9,7 @@ import {
 } from '../../authorization/authorization';
 import {
   getFinanceActionTaskIds,
+  getFinanceParticipantTaskIds,
   getPendingReceiptTaskIds,
   getPendingSubtaskTransferTaskIds
 } from './task-finance.graphql';
@@ -196,7 +197,6 @@ export const taskDetailsResolvers = {
       );
       const isCashier = Number(cashierRows[0]?.isCashier) === 1;
       const isBudgetAuthority = await hasTaskBudgetApprovalAuthority(userId, Number(task.eventId));
-      const canAccessFinance = isTaskOwner || isCashier;
       const isMasterAdmin = await hasPermission(
         userId,
         PERMISSIONS.EVENT_TASK_MANAGE_ANY,
@@ -312,6 +312,18 @@ export const taskDetailsResolvers = {
         taskId,
         ...descendants.map((descendant) => Number(descendant.taskId))
       ], userId);
+      const financeParticipantTaskIds = await getFinanceParticipantTaskIds([
+        taskId,
+        ...descendants.map((descendant) => Number(descendant.taskId))
+      ], userId);
+      const canAccessFinanceForTask = (financeTask: any): boolean =>
+        Number(financeTask.ownerUserId) === userId ||
+        Number(financeTask.createdBy) === userId ||
+        isCashier ||
+        isBudgetAuthority ||
+        canManageTasks ||
+        financeParticipantTaskIds.has(Number(financeTask.taskId));
+      const canAccessFinance = canAccessFinanceForTask(task);
 
       const todos = await query<any[]>(
         `SELECT
@@ -427,7 +439,7 @@ export const taskDetailsResolvers = {
           ownerAssignedAt: child.ownerAssignedAt || null,
           updatedByName: child.updatedByName || null,
           updatedAt: child.updatedAt ? String(child.updatedAt) : null,
-          canAccessFinance: Number(child.ownerUserId) === userId || isCashier,
+          canAccessFinance: canAccessFinanceForTask(child),
           needsFinanceAction: (
             isCashier &&
             Number(child.ownerUserId) !== userId &&
@@ -461,7 +473,7 @@ export const taskDetailsResolvers = {
           ownerAssignedAt: descendant.ownerAssignedAt || null,
           updatedByName: descendant.updatedByName || null,
           updatedAt: descendant.updatedAt ? String(descendant.updatedAt) : null,
-          canAccessFinance: Number(descendant.ownerUserId) === userId || isCashier,
+          canAccessFinance: canAccessFinanceForTask(descendant),
           needsFinanceAction: (
             isCashier &&
             Number(descendant.ownerUserId) !== userId &&

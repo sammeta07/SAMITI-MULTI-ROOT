@@ -46,7 +46,7 @@
               }
             </ng-template>
 
-            @if (canManageEvent) {
+            @if (canEditEvent) {
               <input #eventLogoInput type="file" hidden accept="image/*" (change)="onEventLogoSelected($event)">
               <button type="button" class="event-logo-edit-trigger"
                       [class.is-uploading]="isUploadingEventLogo()"
@@ -98,6 +98,11 @@
               </span>
             }
 
+            <span class="meta-pill budget-pill" title="Total approved budget">
+              <mat-icon>account_balance_wallet</mat-icon>
+              <span>Approved Budget: ₹{{ formatBudgetAmount(evt.totalApprovedBudget) }}</span>
+            </span>
+
             @if (evt.category) {
               <span class="meta-pill category-pill">
                 <mat-icon>category</mat-icon>
@@ -128,12 +133,14 @@
 
           <!-- Bottom Right Action Triggers -->
           <div class="action-buttons-area">
-            @if (canManageEvent) {
+            @if (canEditEvent) {
               <button mat-button class="btn-action btn-edit" (click)="onEditEvent()">
                 <mat-icon>edit</mat-icon>
                 <span>Edit</span>
               </button>
+            }
 
+            @if (canDeleteEvent) {
               <button mat-button class="btn-action btn-delete" (click)="onDeleteEvent()">
                 <mat-icon>delete_outline</mat-icon>
                 <span>Delete</span>

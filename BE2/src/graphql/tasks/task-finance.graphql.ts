@@ -94,6 +94,39 @@ export async function getPendingSubtaskTransferTaskIds(taskIds: number[], userId
   return new Set(rows.map((row) => Number(row.taskId)));
 }
 
+export async function getFinanceParticipantTaskIds(taskIds: number[], userId: number): Promise<Set<number>> {
+  const ids = [...new Set(taskIds.filter((taskId) => Number.isInteger(taskId) && taskId > 0))];
+  if (ids.length === 0) return new Set<number>();
+
+  const placeholders = ids.map(() => '?').join(', ');
+  const rows = await query<Array<RowDataPacket & { taskId: number }>>(
+    `SELECT taskId FROM (
+       SELECT task_id AS taskId
+       FROM task_budget_requests
+       WHERE task_id IN (${placeholders}) AND requested_by = ?
+       UNION
+       SELECT task_id AS taskId
+       FROM task_finance_requests
+       WHERE task_id IN (${placeholders}) AND requested_by = ?
+       UNION
+       SELECT task_id AS taskId
+       FROM task_finance_transactions
+       WHERE task_id IN (${placeholders}) AND recipient_user_id = ?
+       UNION
+       SELECT subtask_id AS taskId
+       FROM task_subtask_transfers
+       WHERE subtask_id IN (${placeholders}) AND recipient_user_id = ?
+     ) financeParticipants`,
+    [
+      ...ids, userId,
+      ...ids, userId,
+      ...ids, userId,
+      ...ids, userId
+    ]
+  );
+  return new Set(rows.map((row) => Number(row.taskId)));
+}
+
 export const taskFinanceTypes = `
   enum TaskFinanceRequestType { ADVANCE TOP_UP }
   enum TaskFinanceRequestStatus { PENDING APPROVED PARTIALLY_APPROVED REJECTED }
@@ -150,6 +183,7 @@ export const taskFinanceTypes = `
     id: Int!
     taskId: Int!
     taskName: String!
+    taskOwnerName: String
     requestedAmount: String!
     budgetBeforeRequest: String!
     requestedIncrease: String!
@@ -314,7 +348,7 @@ async function getFinanceAccess(taskId: number, userId: number, allowReadOnly = 
   isBudgetAuthority: boolean;
   isMasterAdmin: boolean;
   isCommitteeTaskManager: boolean;
-  isRequester: boolean;
+  isParticipant: boolean;
 }> {
   if (!Number.isInteger(taskId) || taskId <= 0) throwEventError('BAD_REQUEST', 'taskId must be a positive integer');
   const tasks = await query<Array<RowDataPacket & {
@@ -361,18 +395,10 @@ async function getFinanceAccess(taskId: number, userId: number, allowReadOnly = 
     userId,
     Number(task.committeeId)
   );
-  const requesterRows = await query<any[]>(
-    `SELECT EXISTS (
-       SELECT 1 FROM task_budget_requests WHERE task_id = ? AND requested_by = ?
-       UNION ALL
-       SELECT 1 FROM task_finance_requests WHERE task_id = ? AND requested_by = ?
-     ) AS isRequester`,
-    [taskId, userId, taskId, userId]
-  );
-  const isRequester = Number(requesterRows[0]?.isRequester) === 1;
+  const isParticipant = (await getFinanceParticipantTaskIds([taskId], userId)).has(taskId);
   const isCreator = Number(task.createdBy) === userId;
   if (allowReadOnly && !isOwner && !isCashier && !isCreator &&
-      !isBudgetAuthority && !isMasterAdmin && !isCommitteeTaskManager && !isRequester) {
+      !isBudgetAuthority && !isMasterAdmin && !isCommitteeTaskManager && !isParticipant) {
     throwEventError('FORBIDDEN', 'You are not allowed to view this task finance information');
   }
   if (!allowReadOnly && !isOwner && !isCashier) {
@@ -388,7 +414,7 @@ async function getFinanceAccess(taskId: number, userId: number, allowReadOnly = 
     isBudgetAuthority,
     isMasterAdmin,
     isCommitteeTaskManager,
-    isRequester
+    isParticipant
   };
 }
 
@@ -561,6 +587,7 @@ async function loadBudgetRequests(
   const rows = await query<any[]>(
     `SELECT request.id, request.task_id AS taskId,
             COALESCE(NULLIF(TRIM(task.name), ''), 'Untitled Task') AS taskName,
+            taskOwner.name AS taskOwnerName,
             CAST(request.requested_amount AS CHAR) AS requestedAmount,
             CAST(request.budget_before_request AS CHAR) AS budgetBeforeRequest,
             request.requested_by AS requestedBy,
@@ -593,6 +620,7 @@ async function loadBudgetRequests(
      INNER JOIN tasks task ON task.id = request.task_id
      INNER JOIN events event ON event.id = task.event_id
      INNER JOIN users requester ON requester.id = request.requested_by
+     LEFT JOIN users taskOwner ON taskOwner.id = task.owner_user_id
      LEFT JOIN users actioner ON actioner.id = request.reviewed_by
      LEFT JOIN users creatorReviewer ON creatorReviewer.id = request.creator_reviewed_by
      LEFT JOIN users_events creatorReviewerUE
@@ -621,6 +649,7 @@ async function loadBudgetRequests(
       id: Number(request.id),
       taskId: Number(request.taskId),
       taskName: String(request.taskName || 'Untitled Task'),
+      taskOwnerName: request.taskOwnerName || null,
       requestedAmount: String(request.requestedAmount),
       budgetBeforeRequest: String(request.budgetBeforeRequest),
       requestedIncrease: centsToWholeRupees(requestedCents - baselineCents),
@@ -964,27 +993,11 @@ async function loadEventFinance(eventId: number, userId: number): Promise<any> {
     [eventId, userId]
   );
   const isCashier = Number(cashierRows[0]?.isCashier) === 1;
-  const accessRows = await query<any[]>(
-    `SELECT EXISTS (
-       SELECT 1 FROM tasks
-       WHERE event_id = ? AND (owner_user_id = ? OR created_by = ?)
-       UNION ALL
-       SELECT 1 FROM task_budget_requests request
-       INNER JOIN tasks task ON task.id = request.task_id
-       WHERE task.event_id = ? AND request.requested_by = ?
-       UNION ALL
-       SELECT 1 FROM task_finance_requests request
-       INNER JOIN tasks task ON task.id = request.task_id
-       WHERE task.event_id = ? AND request.requested_by = ?
-     ) AS hasTaskAccess`,
-    [eventId, userId, userId, eventId, userId, eventId, userId]
-  );
-  if (!isCommitteeTaskManager && !isBudgetAuthority && !isCashier &&
-      Number(accessRows[0]?.hasTaskAccess) !== 1) {
-    throwEventError('FORBIDDEN', 'You are not allowed to view task finance for this event');
+  const isBroadAccess = isCommitteeTaskManager || isMasterAdmin || isBudgetAuthority || isCashier;
+  if (!isBroadAccess) {
+    throwEventError('FORBIDDEN', 'You are not allowed to view event-wide task finance');
   }
 
-  const isBroadAccess = isCommitteeTaskManager || isBudgetAuthority || isCashier;
   const [requests, budgetRequests, transactions] = await Promise.all([
     query<any[]>(
       `SELECT request.id, request.task_id AS taskId,

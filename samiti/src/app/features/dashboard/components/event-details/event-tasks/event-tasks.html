@@ -170,9 +170,9 @@
                       </span>
                       <span
                         class="task-budget-metric task-budget-total"
-                        [matTooltip]="'Sanctioned Amount - ' + formatTaskBudgetAmount(task.budgetAmount)"
+                        matTooltip="Issued Amount / Sanctioned Amount"
                       >
-                        {{ formatTaskBudgetAmount(task.budgetAmount) }}
+                        {{ formatIssuedAndSanctionedTaskBudget(task.issuedAmount, task.budgetAmount) }}
                       </span>
                     </span>
                   }
@@ -266,17 +266,19 @@
                       <mat-icon>edit</mat-icon>
                     </button>
                   }
-                  <button
-                    mat-icon-button
-                    class="task-panel-finance-icon"
-                    [class.task-panel-finance-action-required]="task.needsFinanceAction"
-                    type="button"
-                    [attr.aria-label]="task.needsFinanceAction ? 'Action required — view task finance' : 'No action required — view task finance'"
-                    [matTooltip]="task.needsFinanceAction ? 'Action required' : 'No action required'"
-                    (click)="openTaskFinanceDialog(task.taskId, task.taskName, task.ownerName, $event)"
-                  >
-                    <mat-icon>currency_rupee</mat-icon>
-                  </button>
+                  @if (task.canAccessFinance) {
+                    <button
+                      mat-icon-button
+                      class="task-panel-finance-icon"
+                      [class.task-panel-finance-action-required]="task.needsFinanceAction"
+                      type="button"
+                      [attr.aria-label]="task.needsFinanceAction ? 'Action required — view task finance' : 'No action required — view task finance'"
+                      [matTooltip]="task.needsFinanceAction ? 'Action required' : 'No action required'"
+                      (click)="openTaskFinanceDialog(task.taskId, task.taskName, task.ownerName, $event)"
+                    >
+                      <mat-icon>currency_rupee</mat-icon>
+                    </button>
+                  }
                   <span class="task-panel-info-container">
                     <button
                       mat-icon-button

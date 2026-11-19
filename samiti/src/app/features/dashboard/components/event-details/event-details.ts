@@ -333,6 +333,12 @@ export class EventDetailsComponent implements OnInit, OnDestroy {
     return `${year}${suffix} Year`;
   }
 
+  public formatBudgetAmount(amount: string | number | null | undefined): string {
+    return Math.round(Number(amount || 0)).toLocaleString('en-IN', {
+      maximumFractionDigits: 0
+    });
+  }
+
   public formatEventDateRange(startDate: string | null | undefined, endDate: string | null | undefined): string {
     const startMatch = (startDate || '').match(/^(\d{4})-(\d{2})-(\d{2})$/);
     const endMatch = (endDate || '').match(/^(\d{4})-(\d{2})-(\d{2})$/);
@@ -374,16 +380,12 @@ export class EventDetailsComponent implements OnInit, OnDestroy {
     }
   }
 
-  public get isEventMasterAdmin(): boolean {
-    return this.userEventRole === 'COMMITTEE_MASTER_ADMIN';
+  public get canEditEvent(): boolean {
+    return this.headerData?.canEditEvent === true;
   }
 
-  public get hasEventRole(): boolean {
-    return Boolean(this.headerData?.myDesignation?.roleId);
-  }
-
-  public get canManageEvent(): boolean {
-    return this.hasEventRole || this.userEventRole === 'COMMITTEE_ADMIN' || this.isEventMasterAdmin;
+  public get canDeleteEvent(): boolean {
+    return this.headerData?.canDeleteEvent === true;
   }
 
   public get fallbackInitial(): string {
@@ -464,6 +466,7 @@ export class EventDetailsComponent implements OnInit, OnDestroy {
   }
 
   public onEditEvent(): void {
+    if (!this.canEditEvent) return;
     const currentEvent = this.headerData;
     if (!currentEvent?.eventId || !currentEvent?.committeeId) {
       this.notifier.error('No event available for editing');
@@ -512,6 +515,7 @@ export class EventDetailsComponent implements OnInit, OnDestroy {
   }
 
   public onDeleteEvent(): void {
+    if (!this.canDeleteEvent) return;
     const currentEvent = this.headerData;
     if (!currentEvent?.eventId) {
       this.notifier.error('No event available for deletion');
@@ -548,6 +552,7 @@ export class EventDetailsComponent implements OnInit, OnDestroy {
 
   public async onEventLogoSelected(event: Event): Promise<void> {
     event.stopPropagation();
+    if (!this.canEditEvent) return;
     const inputElement = event.target as HTMLInputElement;
     const selectedFile = inputElement.files?.[0] || null;
     inputElement.value = '';

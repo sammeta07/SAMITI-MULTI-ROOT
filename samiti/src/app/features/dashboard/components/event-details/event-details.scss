@@ -264,6 +264,13 @@
     mat-icon { color: #7c3aed; }
   }
 
+  &.budget-pill {
+    background: #ecfdf5;
+    color: #047857;
+    border-color: #a7f3d0;
+    mat-icon { color: #059669; }
+  }
+
   &.date-pill-status-started {
     background: #ecfdf5;
     color: #047857;

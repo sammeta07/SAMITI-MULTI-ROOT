@@ -19,6 +19,7 @@ export interface EventTaskEntry {
   parentTaskName: string | null;
   taskName: string;
   budgetAmount: string;
+  issuedAmount?: string;
   budgetRequestId: number | null;
   requestedBudgetAmount: string | null;
   budgetRequestStatus: string | null;
@@ -94,6 +95,14 @@ export function formatTaskBudgetAmount(value: string | number | null | undefined
   return `₹ ${(Number.isFinite(amount) ? amount : 0).toLocaleString('en-IN', {
     maximumFractionDigits: 0
   })}`;
+}
+
+export function formatIssuedAndSanctionedTaskBudget(
+  issuedAmount: string | number | null | undefined,
+  sanctionedAmount: string | number | null | undefined
+): string {
+  const formattedSanctionedAmount = formatTaskBudgetAmount(sanctionedAmount).replace(/^₹\s*/, '');
+  return `${formatTaskBudgetAmount(issuedAmount)} / ${formattedSanctionedAmount}`;
 }
 
 export function calculateTaskBudgetRemaining(

@@ -92,26 +92,43 @@
             </form>
           }
 
-          @if (finance.canRequestBudgetIncrease && finance.budgetRequestStatus !== 'PENDING') {
-            <form class="tf-tool-group" (ngSubmit)="requestBudgetIncrease()">
-              <label for="finance-budget-increase">Add Budget (₹)</label>
-              <input
-                id="finance-budget-increase"
-                type="number"
-                min="1"
-                step="1"
-                appWholeRupee
-                name="budgetIncreaseAmount"
-                [(ngModel)]="budgetIncreaseAmount"
-                placeholder="Amount"
-                [disabled]="isSaving()"
-              />
-              <button type="submit" class="tf-btn tf-btn-primary" [disabled]="isSaving() || !canRequestBudgetIncrease()">Request</button>
-            </form>
+          @if (!finance.isEventScope && finance.canRequestBudgetIncrease) {
+            @if (finance.budgetRequestStatus === 'PENDING') {
+              @if (currentBudgetRequest(finance); as request) {
+                <div class="tf-tool-group tf-pending-budget-request">
+                  <label>Budget Request</label>
+                  <span class="tf-pill pill-warning pill-xs">+₹{{ money(request.requestedIncrease) }} · Pending</span>
+                  @if (finance.canCancelBudgetRequest && request.canCancel) {
+                    <button
+                      type="button"
+                      class="tf-btn tf-btn-danger tf-btn-xs"
+                      [disabled]="isSaving()"
+                      (click)="cancelBudgetRequest(request)"
+                    >Cancel</button>
+                  }
+                </div>
+              }
+            } @else {
+              <form class="tf-tool-group" (ngSubmit)="requestBudgetIncrease()">
+                <label for="finance-budget-increase">Add Budget (₹)</label>
+                <input
+                  id="finance-budget-increase"
+                  type="number"
+                  min="1"
+                  step="1"
+                  appWholeRupee
+                  name="budgetIncreaseAmount"
+                  [(ngModel)]="budgetIncreaseAmount"
+                  placeholder="Amount"
+                  [disabled]="isSaving()"
+                />
+                <button type="submit" class="tf-btn tf-btn-primary" [disabled]="isSaving() || !canRequestBudgetIncrease()">Request</button>
+              </form>
+            }
           }
 
           @if (finance.canRequest) {
-            <form class="tf-tool-group tf-tool-grow" (ngSubmit)="submitAdvanceReturn()">
+            <form class="tf-tool-group tf-tool-return" (ngSubmit)="submitAdvanceReturn()">
               <label for="finance-return-amount">Return Cash (₹)</label>
               <input
                 id="finance-return-amount"
@@ -140,13 +157,16 @@
             <ng-template mat-tab-label>
               <mat-icon class="tab-leading-icon">request_quote</mat-icon>
               <span class="tab-name-text">Requests &amp; Ledger</span>
-              <span class="tab-badge">{{ finance.requests.length + finance.budgetRequests.length }}</span>
+              <span class="tab-badge">{{ finance.requests.length + budgetRequestsForLedger(finance).length }}</span>
             </ng-template>
 
             <div class="tf-tab-scroll-area">
               <!-- Advance & Expense Requests -->
-              @let requestGroups = groupRequestsByTask(finance.requests, finance.budgetRequests, finance.transactions);
+              @let visibleBudgetRequests = budgetRequestsForLedger(finance);
+              @let requestGroups = groupRequestsByTask(finance.requests, visibleBudgetRequests, finance.transactions);
               @let otherTransactions = getOtherTransactions(finance.requests, finance.transactions, requestGroups);
+              @let showBudgetReviewColumn = shouldShowBudgetReviewColumn(finance);
+              @let showFinanceActionColumn = !finance.isBudgetAuthority || showBudgetReviewColumn;
               @if (requestGroups.length > 0 || otherTransactions.length > 0) {
                 <div class="tf-section-block">
                   <div class="tf-block-header">
@@ -155,28 +175,51 @@
                   </div>
 
                   <!-- Column Header Bar -->
-                  <div class="tf-grid-thead">
+                  <div
+                    class="tf-grid-thead"
+                    [class.with-budget-review]="showBudgetReviewColumn"
+                    [class.without-finance-action]="!showFinanceActionColumn"
+                  >
                     <div>S.No</div>
                     <div>TASK TITLE</div>
                     <div class="text-right">Approved</div>
                     <div class="text-right">Issued</div>
                     <div class="text-right">Balance</div>
-                    <div class="text-right">Action / Status</div>
+                    @if (showBudgetReviewColumn) {
+                      <div class="text-right">BUDGET REQUEST</div>
+                      <div class="text-right">ACTION / STATUS</div>
+                    } @else if (showFinanceActionColumn) {
+                      <div class="text-right">Action / Status</div>
+                    }
                   </div>
 
                   <div class="tf-request-list">
                     @for (group of requestGroups; track group.taskId; let index = $index) {
                       <div class="tf-request-panel">
-                        <div class="tf-row-grid">
+                        <div
+                          class="tf-row-grid"
+                          [class.with-budget-review]="showBudgetReviewColumn"
+                          [class.without-finance-action]="!showFinanceActionColumn"
+                        >
+                          @let latestBudgetRequest = lastBudgetRequest(group);
                           <div class="tf-col-sno">
                             <span class="tf-sno-badge">{{ index + 1 }}</span>
                           </div>
 
                           <div class="tf-col-main">
-                            <div class="tf-title-line">
-                              <strong [title]="group.taskName">{{ group.taskName | titlecase }}</strong>
-                              <div class="tf-link-pills">
-                                @if (group.budgetRequests.length > 0) {
+                            <div class="tf-task-title-stack">
+                              <div class="tf-title-line">
+                                <strong [title]="group.taskName">{{ group.taskName | titlecase }}</strong>
+                                <div class="tf-link-pills">
+                                  @if (group.transactionCount > 0) {
+                                    <button
+                                      type="button"
+                                      class="tf-pill pill-info pill-xs tf-link-btn"
+                                      (click)="openFinanceRequestsDialog(group)"
+                                    >
+                                      Payment History
+                                    </button>
+                                  }
                                   <button
                                     type="button"
                                     class="tf-pill pill-teal pill-xs tf-link-btn"
@@ -184,16 +227,7 @@
                                   >
                                     Budget History
                                   </button>
-                                }
-                                @if (group.requests.length > 0 || group.transactionCount > 0) {
-                                  <button
-                                    type="button"
-                                    class="tf-pill pill-info pill-xs tf-link-btn"
-                                    (click)="openFinanceRequestsDialog(group)"
-                                  >
-                                    Finance History
-                                  </button>
-                                }
+                                </div>
                               </div>
                             </div>
                           </div>
@@ -210,40 +244,84 @@
                             <strong class="tf-num" [class.text-warn]="group.remainingAdvance > 0">₹{{ money(group.remainingAdvance) }}</strong>
                           </div>
 
-                          <div class="tf-col-status">
-                            @if (group.remainingAdvance > 0 && finance.canApprove && group.taskOwnerUserId !== null) {
-                              <div class="tf-dispatch-box">
-                                <div class="tf-inline-amt">
-                                  <span>₹</span>
-                                  <input
-                                    type="number"
-                                    min="1"
-                                    [max]="group.remainingAdvance"
-                                    step="1"
-                                    appWholeRupee
-                                    [name]="'dispatch-task-' + group.taskId"
-                                    [(ngModel)]="taskDispatchAmounts[group.taskId]"
-                                    [disabled]="isSaving()"
-                                    [attr.aria-label]="'Amount to dispatch for task #' + group.taskId"
-                                  />
+                          @if (showBudgetReviewColumn) {
+                            <div class="tf-col-budget-review">
+                              @if (latestBudgetRequest; as request) {
+                                <span class="tf-budget-review-amount">+₹{{ money(request.requestedIncrease) }}</span>
+                              } @else {
+                                <span class="cell-settled">—</span>
+                              }
+                            </div>
+                            <div class="tf-col-budget-actions">
+                              @if (latestBudgetRequest; as request) {
+                                @if (request.status === 'PENDING' && (request.canReviewCreator || request.canReviewAuthority)) {
+                                  <div class="tf-budget-review-row">
+                                    <button
+                                      type="button"
+                                      class="tf-btn tf-btn-success tf-btn-xs tf-budget-review-action"
+                                      aria-label="Approve budget request"
+                                      matTooltip="Approve request"
+                                      matTooltipPosition="above"
+                                      [disabled]="isSaving()"
+                                      (click)="reviewBudgetRequest(request, 'APPROVE')"
+                                    ><mat-icon>check</mat-icon></button>
+                                    <button
+                                      type="button"
+                                      class="tf-btn tf-btn-danger tf-btn-xs tf-budget-review-action"
+                                      aria-label="Reject budget request"
+                                      matTooltip="Reject request"
+                                      matTooltipPosition="above"
+                                      [disabled]="isSaving()"
+                                      (click)="reviewBudgetRequest(request, 'REJECT')"
+                                    ><mat-icon>close</mat-icon></button>
+                                  </div>
+                                } @else {
+                                  <span class="tf-pill pill-xs" [ngClass]="getStatusClass(request.status)">
+                                    {{ formatLabel(request.status) }}
+                                  </span>
+                                }
+                              } @else {
+                                <span class="cell-settled">—</span>
+                              }
+                            </div>
+                          }
+
+                          @if (showFinanceActionColumn && !showBudgetReviewColumn) {
+                            <div class="tf-col-status">
+                              @if (group.remainingAdvance > 0 && finance.canApprove && group.taskOwnerUserId !== null) {
+                                <div class="tf-dispatch-box">
+                                  <div class="tf-inline-amt">
+                                    <span>₹</span>
+                                    <input
+                                      type="number"
+                                      min="1"
+                                      [max]="group.remainingAdvance"
+                                      step="1"
+                                      appWholeRupee
+                                      [name]="'dispatch-task-' + group.taskId"
+                                      [(ngModel)]="taskDispatchAmounts[group.taskId]"
+                                      [disabled]="isSaving()"
+                                      [attr.aria-label]="'Amount to dispatch for task #' + group.taskId"
+                                    />
+                                  </div>
+                                  <button
+                                    type="button"
+                                    class="tf-btn tf-btn-primary tf-btn-xs"
+                                    [disabled]="isSaving() || !canDispatchGroupAdvance(group)"
+                                    (click)="issueGroupAdvance(group)"
+                                  >Dispatch</button>
                                 </div>
-                                <button
-                                  type="button"
-                                  class="tf-btn tf-btn-primary tf-btn-xs"
-                                  [disabled]="isSaving() || !canDispatchGroupAdvance(group)"
-                                  (click)="issueGroupAdvance(group)"
-                                >Dispatch</button>
-                              </div>
-                            } @else if (group.remainingAdvance > 0 && group.taskOwnerUserId === null) {
-                              <span class="tf-pill pill-danger tf-status-pill">Unassigned</span>
-                            } @else if (group.approvedTotal > 0 && group.remainingAdvance === 0) {
-                              <span class="tf-pill pill-success tf-status-pill">Paid</span>
-                            } @else if (group.remainingAdvance > 0) {
-                              <span class="tf-pill pill-warning tf-status-pill">Pending</span>
-                            } @else {
-                              <span class="cell-settled">—</span>
-                            }
-                          </div>
+                              } @else if (group.remainingAdvance > 0 && group.taskOwnerUserId === null) {
+                                <span class="tf-pill pill-danger tf-status-pill">Unassigned</span>
+                              } @else if (group.approvedTotal > 0 && group.remainingAdvance === 0) {
+                                <span class="tf-pill pill-success tf-status-pill">Paid</span>
+                              } @else if (group.remainingAdvance > 0) {
+                                <span class="tf-pill pill-warning tf-status-pill">Pending</span>
+                              } @else {
+                                <span class="cell-settled">—</span>
+                              }
+                            </div>
+                          }
                         </div>
                       </div>
                     }
@@ -269,7 +347,7 @@
                 </div>
               }
 
-              @if (finance.budgetRequests.length === 0 && finance.requests.length === 0 && otherTransactions.length === 0) {
+              @if (visibleBudgetRequests.length === 0 && finance.requests.length === 0 && otherTransactions.length === 0) {
                 <div class="tf-empty-state">No requests or cash/expense entries yet.</div>
               }
 

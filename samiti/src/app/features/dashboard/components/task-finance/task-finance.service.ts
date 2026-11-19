@@ -30,7 +30,7 @@ export class TaskFinanceService {
           canReviewAuthority createdAt reviewedAt
         }
         budgetRequests {
-          id taskId taskName requestedAmount budgetBeforeRequest requestedIncrease
+          id taskId taskName taskOwnerName requestedAmount budgetBeforeRequest requestedIncrease
           requestedByName actionByName status approvalStage creatorDecision creatorReviewedByName
           creatorReviewerDesignation creatorReviewedAt authorityDecision
           authorityReviewedByName authorityReviewerDesignation authorityReviewedAt
@@ -78,7 +78,7 @@ export class TaskFinanceService {
           canReviewAuthority createdAt reviewedAt
         }
         budgetRequests {
-          id taskId taskName requestedAmount budgetBeforeRequest requestedIncrease
+          id taskId taskName taskOwnerName requestedAmount budgetBeforeRequest requestedIncrease
           requestedByName actionByName status approvalStage creatorDecision creatorReviewedByName
           creatorReviewerDesignation creatorReviewedAt authorityDecision
           authorityReviewedByName authorityReviewerDesignation authorityReviewedAt
