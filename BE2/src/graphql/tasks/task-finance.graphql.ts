@@ -140,6 +140,7 @@ export const taskFinanceTypes = `
     sourceBudgetRequestId: Int
     taskName: String!
     taskBudgetAmount: String!
+    budgetAvailableForDisbursement: String!
     taskOwnerName: String
     taskOwnerUserId: Int
     requestType: TaskFinanceRequestType!
@@ -177,6 +178,7 @@ export const taskFinanceTypes = `
     receivedByName: String
     receivedAt: String
     canConfirmReceipt: Boolean!
+    canConfirmReturn: Boolean!
   }
 
   type TaskBudgetRequest {
@@ -256,12 +258,15 @@ export const taskFinanceTypes = `
     budgetRequestStatus: String
     budgetRequestedByName: String
     canEditBudget: Boolean!
+    canReduceBudget: Boolean!
+    maxBudgetReduction: String!
     canRequestBudgetIncrease: Boolean!
     canReviewBudgetRequest: Boolean!
     canCancelBudgetRequest: Boolean!
     canRequest: Boolean!
     canApprove: Boolean!
     isBudgetAuthority: Boolean!
+    canViewTaskAssignee: Boolean!
     canCreateSubtaskTransfers: Boolean!
     isEventScope: Boolean!
   }
@@ -322,6 +327,52 @@ function decimalCents(value: unknown): bigint {
   const raw = String(value ?? '0');
   const [whole, fraction = ''] = raw.split('.');
   return BigInt(whole || '0') * 100n + BigInt(fraction.padEnd(2, '0').slice(0, 2));
+}
+
+async function loadTaskBudgetCapacityCents(
+  taskIds: number[]
+): Promise<Map<number, { available: bigint; reducible: bigint }>> {
+  const ids = [...new Set(taskIds.filter((taskId) => Number.isInteger(taskId) && taskId > 0))];
+  if (ids.length === 0) return new Map<number, { available: bigint; reducible: bigint }>();
+  const placeholders = ids.map(() => '?').join(', ');
+  const rows = await query<any[]>(
+    `SELECT task.id AS taskId,
+            CAST(GREATEST(0, task.budget_amount - GREATEST(
+              COALESCE(expenses.directExpenses, 0) + COALESCE(children.allocated, 0),
+              GREATEST(0, COALESCE(cash.issued, 0) - COALESCE(cash.returned, 0))
+            )) AS CHAR) AS budgetAvailable,
+            CAST(GREATEST(
+              0,
+              task.budget_amount - COALESCE(expenses.directExpenses, 0) - COALESCE(children.allocated, 0)
+            ) AS CHAR) AS budgetReducible
+     FROM tasks task
+     LEFT JOIN (
+       SELECT task_id, SUM(expense_amount) AS directExpenses
+       FROM todos
+       WHERE task_id IN (${placeholders})
+       GROUP BY task_id
+     ) expenses ON expenses.task_id = task.id
+     LEFT JOIN (
+       SELECT parent_id, SUM(budget_amount) AS allocated
+       FROM tasks
+       WHERE parent_id IN (${placeholders})
+       GROUP BY parent_id
+     ) children ON children.parent_id = task.id
+     LEFT JOIN (
+       SELECT task_id,
+              SUM(CASE WHEN transaction_type = 'ADVANCE_ISSUED' AND status = 'CONFIRMED' THEN amount ELSE 0 END) AS issued,
+              SUM(CASE WHEN transaction_type = 'ADVANCE_RETURN' AND status = 'CONFIRMED' THEN amount ELSE 0 END) AS returned
+       FROM task_finance_transactions
+       WHERE task_id IN (${placeholders})
+       GROUP BY task_id
+     ) cash ON cash.task_id = task.id
+     WHERE task.id IN (${placeholders})`,
+    [...ids, ...ids, ...ids, ...ids]
+  );
+  return new Map(rows.map((row) => [Number(row.taskId), {
+    available: decimalCents(row.budgetAvailable),
+    reducible: decimalCents(row.budgetReducible)
+  }]));
 }
 
 function centsToWholeRupees(value: bigint): string {
@@ -466,8 +517,12 @@ async function loadRequest(requestId: number, userId: number): Promise<any> {
   );
   const request = rows[0];
   if (!request) throwEventError('NOT_FOUND', 'Finance request not found');
+  const capacityByTask = await loadTaskBudgetCapacityCents([Number(request.taskId)]);
   return {
     ...request,
+    budgetAvailableForDisbursement: centsToWholeRupees(
+      capacityByTask.get(Number(request.taskId))?.available ?? 0n
+    ),
     canReviewAuthority: request.status === 'PENDING' &&
       request.approvalStage === 'AUTHORITY' &&
       request.requestType === 'ADVANCE' &&
@@ -500,11 +555,16 @@ async function loadTransaction(transactionId: number, userId: number): Promise<a
   const transaction = rows[0];
   if (!transaction) return transaction;
   const isPayment = transaction.transactionType === 'ADVANCE_ISSUED';
+  const access = await getTransactionAccess(transactionId, userId);
   return {
     ...transaction,
     canConfirmReceipt: isPayment
       && transaction.receivedAt === null
-      && Number(transaction.recipientUserId) === userId
+      && Number(transaction.recipientUserId) === userId,
+    canConfirmReturn: transaction.transactionType === 'ADVANCE_RETURN' &&
+      transaction.status === 'PENDING' &&
+      access.isCashier &&
+      !access.isOwner
   };
 }
 
@@ -642,7 +702,13 @@ async function loadBudgetRequests(
      ORDER BY request.created_at DESC, request.id DESC`,
     scopeParams
   );
-  return rows.map((request) => {
+  const visibleRows = access.isCashier
+    ? rows.filter((request) =>
+        request.status !== 'PENDING' ||
+        decimalCents(request.requestedAmount) >= decimalCents(request.budgetBeforeRequest)
+      )
+    : rows;
+  return visibleRows.map((request) => {
     const requestedCents = decimalCents(request.requestedAmount);
     const baselineCents = decimalCents(request.budgetBeforeRequest);
     return {
@@ -871,8 +937,12 @@ async function loadFinance(taskId: number, userId: number): Promise<any> {
       [taskId, access.isOwner ? 1 : 0, userId, userId]
     )
   ]);
+  const capacityByTask = await loadTaskBudgetCapacityCents([taskId]);
+  const taskBudgetCapacity = capacityByTask.get(taskId);
+  const budgetAvailableForDisbursement = taskBudgetCapacity?.available ?? 0n;
   const financeRequests = requests.map((request: any) => ({
     ...request,
+    budgetAvailableForDisbursement: centsToWholeRupees(budgetAvailableForDisbursement),
     canReviewAuthority: request.status === 'PENDING' &&
       request.approvalStage === 'AUTHORITY' &&
       request.requestType === 'ADVANCE' &&
@@ -885,7 +955,11 @@ async function loadFinance(taskId: number, userId: number): Promise<any> {
     const canConfirmReceipt = isPayment
       && transaction.receivedAt === null
       && Number(recipientUserId) === userId;
-    return { ...visibleTransaction, canConfirmReceipt };
+    const canConfirmReturn = transaction.transactionType === 'ADVANCE_RETURN' &&
+      transaction.status === 'PENDING' &&
+      access.isCashier &&
+      !access.isOwner;
+    return { ...visibleTransaction, canConfirmReceipt, canConfirmReturn };
   });
   const aggregate = aggregates[0] ?? {};
   const advanceIssued = decimalCents(aggregate.advanceIssued);
@@ -896,9 +970,11 @@ async function loadFinance(taskId: number, userId: number): Promise<any> {
   const sanctionedBudget = decimalCents(taskBudget.sanctionedBudget);
   const checklistExpenses = decimalCents(todoExpenseRows[0]?.checklistExpenses);
   const allocatedChildBudgets = decimalCents(childBudgetRows[0]?.allocatedChildBudgets);
+  const maxBudgetReduction = taskBudgetCapacity?.reducible ?? 0n;
   const isMasterAdmin = access.isMasterAdmin;
   const canEditBudget = taskBudget.parentTaskId === null &&
     (Number(taskBudget.createdBy) === userId || isMasterAdmin || access.isCommitteeTaskManager);
+  const canReduceBudget = isMasterAdmin || access.isCommitteeTaskManager;
   const budgetRequestId = taskBudget.budgetRequestId === null
     ? null
     : Number(taskBudget.budgetRequestId);
@@ -931,6 +1007,8 @@ async function loadFinance(taskId: number, userId: number): Promise<any> {
       advanceBalance: centsToWholeRupees(advanceIssued - advanceSpent - returnPending - returnConfirmed)
     },
     budgetAmount: String(taskBudget.sanctionedBudget),
+    canReduceBudget,
+    maxBudgetReduction: centsToWholeRupees(maxBudgetReduction),
     budgetRequestId,
     requestedBudgetAmount: taskBudget.requestedBudgetAmount === null
       ? null
@@ -951,6 +1029,9 @@ async function loadFinance(taskId: number, userId: number): Promise<any> {
     canRequest: access.isOwner,
     canApprove: access.isCashier && !access.isOwner,
     isBudgetAuthority: access.isBudgetAuthority,
+    canViewTaskAssignee: access.isMasterAdmin ||
+      access.isCommitteeTaskManager ||
+      access.isBudgetAuthority,
     canCreateSubtaskTransfers: access.isOwner && subtaskTransferOptions.length > 0,
     isEventScope: false
   };
@@ -1041,6 +1122,7 @@ async function loadEventFinance(eventId: number, userId: number): Promise<any> {
     query<any[]>(
       `SELECT tx.id, tx.task_id AS taskId,
               COALESCE(NULLIF(TRIM(task.name), ''), 'Untitled Task') AS taskName,
+      task.owner_user_id AS taskOwnerUserId,
               tx.request_id AS requestId,
               tx.transaction_type AS transactionType,
               CAST(tx.amount AS CHAR) AS amount,
@@ -1067,9 +1149,15 @@ async function loadEventFinance(eventId: number, userId: number): Promise<any> {
       [eventId, isBroadAccess ? 1 : 0, userId, userId, userId]
     )
   ]);
+  const capacityByTask = await loadTaskBudgetCapacityCents(
+    requests.map((request: any) => Number(request.taskId))
+  );
   return {
     requests: requests.map((request: any) => ({
       ...request,
+      budgetAvailableForDisbursement: centsToWholeRupees(
+        capacityByTask.get(Number(request.taskId))?.available ?? 0n
+      ),
       canReviewAuthority: request.status === 'PENDING' &&
         request.approvalStage === 'AUTHORITY' &&
         request.requestType === 'ADVANCE' &&
@@ -1078,12 +1166,16 @@ async function loadEventFinance(eventId: number, userId: number): Promise<any> {
     })),
     budgetRequests,
     transactions: transactions.map((transaction) => {
-      const { recipientUserId, ...visibleTransaction } = transaction;
+      const { recipientUserId, taskOwnerUserId, ...visibleTransaction } = transaction;
       return {
         ...visibleTransaction,
         canConfirmReceipt: transaction.transactionType === 'ADVANCE_ISSUED' &&
           transaction.receivedAt === null &&
-          Number(recipientUserId) === userId
+          Number(recipientUserId) === userId,
+        canConfirmReturn: transaction.transactionType === 'ADVANCE_RETURN' &&
+          transaction.status === 'PENDING' &&
+          isCashier &&
+          Number(taskOwnerUserId) !== userId
       };
     }),
     subtaskTransferOptions: [],
@@ -1101,6 +1193,8 @@ async function loadEventFinance(eventId: number, userId: number): Promise<any> {
       advanceBalance: '0'
     },
     budgetAmount: '0',
+    canReduceBudget: false,
+    maxBudgetReduction: '0',
     budgetRequestId: null,
     requestedBudgetAmount: null,
     budgetRequestStatus: null,
@@ -1114,6 +1208,7 @@ async function loadEventFinance(eventId: number, userId: number): Promise<any> {
     canRequest: false,
     canApprove: isCashier,
     isBudgetAuthority,
+    canViewTaskAssignee: isMasterAdmin || isCommitteeTaskManager || isBudgetAuthority,
     canCreateSubtaskTransfers: false,
     isEventScope: true
   };
@@ -1142,10 +1237,11 @@ export const taskFinanceResolvers = {
       const connection = await getConnection();
       try {
         await connection.beginTransaction();
+        await connection.query('SELECT id FROM tasks WHERE id = ? FOR UPDATE', [access.taskId]);
         const [rows] = await connection.query<any[]>(
           `SELECT id, task_id AS taskId, request_type AS requestType,
                   approval_stage AS approvalStage,
-                  CAST(requested_amount AS CHAR) AS requestedAmount, status
+                  CAST(requested_amount AS CHAR) AS requestedAmount, reason, status
            FROM task_finance_requests WHERE id = ? FOR UPDATE`,
           [requestId]
         );
@@ -1181,6 +1277,14 @@ export const taskFinanceResolvers = {
         );
         if (requestUpdate.affectedRows !== 1) {
           throwEventError('CONFLICT', 'This finance request has already been reviewed');
+        }
+        if (decision === 'APPROVE' && request.reason === 'Initial sanctioned task budget') {
+          await connection.execute(
+            `UPDATE tasks
+             SET budget_amount = GREATEST(budget_amount, ?), updated_by = ?
+             WHERE id = ?`,
+            [request.requestedAmount, userId, Number(request.taskId)]
+          );
         }
         await connection.commit();
       } catch (error) {
@@ -1237,6 +1341,11 @@ export const taskFinanceResolvers = {
           if (cents > available) throwEventError('BAD_REQUEST', 'Amount exceeds the available task advance balance');
         }
         if (transactionType === 'ADVANCE_ISSUED') {
+          const capacityByTask = await loadTaskBudgetCapacityCents([taskId]);
+          const remainingBudgetCents = capacityByTask.get(taskId)?.available ?? 0n;
+          if (cents > remainingBudgetCents) {
+            throwEventError('BAD_REQUEST', "Payment exceeds the task's remaining available budget");
+          }
           if (requestId !== null) {
             const [rows] = await connection.query<any[]>(
               `SELECT request.status, CAST(request.approved_amount AS CHAR) AS approvedAmount,
@@ -1280,11 +1389,21 @@ export const taskFinanceResolvers = {
               [taskId]
             );
             const [issuedRows] = await connection.query<any[]>(
-              `SELECT COALESCE(SUM(amount), 0) AS issued FROM task_finance_transactions
-               WHERE task_id = ? AND transaction_type = 'ADVANCE_ISSUED' AND status = 'CONFIRMED'`,
+              `SELECT
+                 COALESCE(SUM(CASE
+                   WHEN transaction_type = 'ADVANCE_ISSUED' AND status = 'CONFIRMED' THEN amount
+                   ELSE 0
+                 END), 0) AS issued,
+                 COALESCE(SUM(CASE
+                   WHEN transaction_type = 'ADVANCE_RETURN' AND status = 'CONFIRMED' THEN amount
+                   ELSE 0
+                 END), 0) AS returned
+               FROM task_finance_transactions
+               WHERE task_id = ?`,
               [taskId]
             );
-            const remaining = decimalCents(approvedRows[0].approved) - decimalCents(issuedRows[0].issued);
+            const netIssued = decimalCents(issuedRows[0].issued) - decimalCents(issuedRows[0].returned);
+            const remaining = decimalCents(approvedRows[0].approved) - (netIssued > 0n ? netIssued : 0n);
             if (cents > remaining) {
               throwEventError('BAD_REQUEST', 'Payment exceeds the remaining approved task finance amount');
             }

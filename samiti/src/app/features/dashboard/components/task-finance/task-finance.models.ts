@@ -13,6 +13,7 @@ export interface TaskFinanceRequest {
   sourceBudgetRequestId: number | null;
   taskName: string;
   taskBudgetAmount: string;
+  budgetAvailableForDisbursement: string;
   taskOwnerName: string | null;
   taskOwnerUserId: number | null;
   requestType: TaskFinanceRequestType;
@@ -31,6 +32,30 @@ export interface TaskFinanceRequest {
   canReviewAuthority: boolean;
   createdAt: string;
   reviewedAt: string | null;
+}
+
+export function getEffectiveApprovedFinanceTotal(requests: TaskFinanceRequest[]): number {
+  const approvedTotal = requests
+    .filter((request) => request.status === 'APPROVED' || request.status === 'PARTIALLY_APPROVED')
+    .reduce(
+      (sum, request) => sum + Number(request.approvedAmount ?? request.requestedAmount ?? 0),
+      0
+    );
+  const sanctionedBudget = Number(requests[0]?.taskBudgetAmount);
+  return Number.isFinite(sanctionedBudget)
+    ? Math.min(approvedTotal, Math.max(0, sanctionedBudget))
+    : approvedTotal;
+}
+
+export const INITIAL_TASK_BUDGET_FINANCE_REQUEST_REASON = 'Initial sanctioned task budget';
+
+export function isInitialTaskBudgetFinanceRequest(request: TaskFinanceRequest): boolean {
+  return request.requestType === 'ADVANCE' &&
+    request.reason === INITIAL_TASK_BUDGET_FINANCE_REQUEST_REASON;
+}
+
+export function shouldShowFinanceRequestInBudgetHistory(request: TaskFinanceRequest): boolean {
+  return !isInitialTaskBudgetFinanceRequest(request) || request.status !== 'PENDING';
 }
 
 export interface TaskBudgetRequest {
@@ -76,6 +101,11 @@ export interface TaskFinanceTransaction {
   receivedByName: string | null;
   receivedAt: string | null;
   canConfirmReceipt: boolean;
+  canConfirmReturn: boolean;
+}
+
+export function isVisibleInPaymentHistory(transaction: TaskFinanceTransaction): boolean {
+  return transaction.transactionType !== 'ADVANCE_RETURN' || transaction.status === 'CONFIRMED';
 }
 
 export interface TaskSubtaskTransferOption {
@@ -129,12 +159,15 @@ export interface TaskFinancePayload {
   budgetRequestStatus: string | null;
   budgetRequestedByName: string | null;
   canEditBudget: boolean;
+  canReduceBudget: boolean;
+  maxBudgetReduction: string;
   canRequestBudgetIncrease: boolean;
   canReviewBudgetRequest: boolean;
   canCancelBudgetRequest: boolean;
   canRequest: boolean;
   canApprove: boolean;
   isBudgetAuthority: boolean;
+  canViewTaskAssignee: boolean;
   canCreateSubtaskTransfers: boolean;
   isEventScope: boolean;
 }
@@ -159,7 +192,7 @@ export function createInitialAdvanceHistoryRequest(
     approvalStage: 'TREASURER',
     requestedAmount: '0',
     approvedAmount: '0',
-    reason: 'Initial sanctioned task budget',
+    reason: INITIAL_TASK_BUDGET_FINANCE_REQUEST_REASON,
     status: 'APPROVED',
     canReviewAuthority: false
   };

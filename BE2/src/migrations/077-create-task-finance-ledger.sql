@@ -16,7 +16,7 @@ CREATE TABLE IF NOT EXISTS task_finance_requests (
   KEY idx_task_finance_requests_task (task_id, created_at),
   KEY idx_task_finance_requests_requester (requested_by),
   KEY idx_task_finance_requests_reviewer (reviewed_by),
-  CONSTRAINT chk_task_finance_request_amount CHECK (requested_amount > 0),
+  CONSTRAINT chk_task_finance_request_amount CHECK (requested_amount >= 0),
   CONSTRAINT chk_task_finance_approved_amount CHECK (approved_amount IS NULL OR approved_amount >= 0),
   CONSTRAINT fk_task_finance_requests_task FOREIGN KEY (task_id) REFERENCES tasks(id) ON DELETE CASCADE,
   CONSTRAINT fk_task_finance_requests_requester FOREIGN KEY (requested_by) REFERENCES users(id) ON DELETE RESTRICT,

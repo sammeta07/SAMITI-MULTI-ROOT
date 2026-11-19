@@ -429,7 +429,8 @@ export class TaskDetailsComponent implements OnInit {
               budgetAmount: updatedTask.budgetAmount,
               status: updatedTask.status,
               budgetRequestId: updatedTask.requestId,
-              requestedBudgetAmount: updatedTask.requestId === current.budgetRequestId
+              requestedBudgetAmount: updatedTask.requestId !== null &&
+                updatedTask.requestId === current.budgetRequestId
                 ? current.requestedBudgetAmount
                 : updatedTask.requestedBudgetAmount,
               budgetRequestStatus: updatedTask.requestStatus,
@@ -437,10 +438,12 @@ export class TaskDetailsComponent implements OnInit {
                 ? current.budgetRequestedByName
                 : null,
               canReviewBudgetRequest: updatedTask.requestStatus === 'PENDING' &&
+                updatedTask.requestId !== null &&
                 updatedTask.requestId === current.budgetRequestId
                 ? current.canReviewBudgetRequest
                 : false,
               canCancelBudgetRequest: updatedTask.requestStatus === 'PENDING' &&
+                updatedTask.requestId !== null &&
                 updatedTask.requestId === current.budgetRequestId
                 ? current.canCancelBudgetRequest
                 : false,
@@ -735,7 +738,8 @@ export class TaskDetailsComponent implements OnInit {
               budgetAmount: updatedTask.budgetAmount,
               status: updatedTask.status,
               budgetRequestId: updatedTask.requestId,
-              requestedBudgetAmount: updatedTask.requestId === current.budgetRequestId
+              requestedBudgetAmount: updatedTask.requestId !== null &&
+                updatedTask.requestId === current.budgetRequestId
                 ? current.requestedBudgetAmount
                 : updatedTask.requestedBudgetAmount,
               budgetRequestStatus: updatedTask.requestStatus,
@@ -743,10 +747,12 @@ export class TaskDetailsComponent implements OnInit {
                 ? current.budgetRequestedByName
                 : null,
               canReviewBudgetRequest: updatedTask.requestStatus === 'PENDING' &&
+                updatedTask.requestId !== null &&
                 updatedTask.requestId === current.budgetRequestId
                 ? current.canReviewBudgetRequest
                 : false,
               canCancelBudgetRequest: updatedTask.requestStatus === 'PENDING' &&
+                updatedTask.requestId !== null &&
                 updatedTask.requestId === current.budgetRequestId
                 ? current.canCancelBudgetRequest
                 : false,

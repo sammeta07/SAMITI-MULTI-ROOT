@@ -60,44 +60,14 @@
       }
 
       <!-- 2. COMPACT ACTION TOOLBAR -->
-      @if (!finance.isEventScope && (finance.canEditBudget || finance.canRequestBudgetIncrease || finance.canRequest)) {
+      @if (!finance.isEventScope && (finance.canEditBudget || finance.canReduceBudget || finance.canRequestBudgetIncrease || finance.canRequest)) {
         <section class="tf-toolbar">
-          @if (finance.canEditBudget) {
-            <form class="tf-tool-group" (ngSubmit)="saveTaskBudget()">
-              <label for="finance-task-budget">Budget (₹)</label>
-              <input
-                id="finance-task-budget"
-                type="number"
-                [min]="finance.budgetAmount"
-                step="1"
-                appWholeRupee
-                name="taskBudgetAmount"
-                [(ngModel)]="taskBudgetAmount"
-                [disabled]="isSaving()"
-                (blur)="resetTaskBudgetOnBlur($event)"
-              />
-              <span
-                class="tf-btn-tooltip-host"
-                [matTooltip]="taskBudgetSaveTooltip()"
-                [matTooltipDisabled]="!isSaving() && canSaveTaskBudget()"
-              >
-                <button
-                  id="finance-task-budget-save"
-                  type="submit"
-                  class="tf-btn tf-btn-primary"
-                  [disabled]="isSaving() || !canSaveTaskBudget()"
-                  (blur)="resetTaskBudgetAfterSubmitButtonBlur()"
-                >Save</button>
-              </span>
-            </form>
-          }
-
-          @if (!finance.isEventScope && finance.canRequestBudgetIncrease) {
+          @if (finance.canEditBudget || finance.canReduceBudget || finance.canRequestBudgetIncrease) {
             @if (finance.budgetRequestStatus === 'PENDING') {
               @if (currentBudgetRequest(finance); as request) {
                 <div class="tf-tool-group tf-pending-budget-request">
                   <label>Budget Request</label>
-                  <span class="tf-pill pill-warning pill-xs">+₹{{ money(request.requestedIncrease) }} · Pending</span>
+                  <span class="tf-pill pill-warning pill-xs">{{ budgetRequestChangeLabel(request) }} · Pending</span>
                   @if (finance.canCancelBudgetRequest && request.canCancel) {
                     <button
                       type="button"
@@ -108,23 +78,54 @@
                   }
                 </div>
               }
-            } @else {
-              <form class="tf-tool-group" (ngSubmit)="requestBudgetIncrease()">
-                <label for="finance-budget-increase">Add Budget (₹)</label>
-                <input
-                  id="finance-budget-increase"
-                  type="number"
-                  min="1"
-                  step="1"
-                  appWholeRupee
-                  name="budgetIncreaseAmount"
-                  [(ngModel)]="budgetIncreaseAmount"
-                  placeholder="Amount"
-                  [disabled]="isSaving()"
-                />
-                <button type="submit" class="tf-btn tf-btn-primary" [disabled]="isSaving() || !canRequestBudgetIncrease()">Request</button>
-              </form>
             }
+            <form class="tf-tool-group" (ngSubmit)="submitBudgetAdjustment()">
+              @if (finance.canReduceBudget) {
+                <div class="tf-budget-mode-switch" role="group" aria-label="Budget adjustment type">
+                  <button
+                    type="button"
+                    class="tf-btn tf-btn-xs"
+                    [class.tf-btn-primary]="budgetAdjustmentMode === 'INCREASE'"
+                    [attr.aria-pressed]="budgetAdjustmentMode === 'INCREASE'"
+                    [disabled]="isSaving()"
+                    (click)="setBudgetAdjustmentMode('INCREASE')"
+                  >Increase</button>
+                  <button
+                    type="button"
+                    class="tf-btn tf-btn-xs"
+                    [class.tf-btn-primary]="budgetAdjustmentMode === 'REDUCE'"
+                    [attr.aria-pressed]="budgetAdjustmentMode === 'REDUCE'"
+                    [disabled]="isSaving()"
+                    (click)="setBudgetAdjustmentMode('REDUCE')"
+                  >Reduce</button>
+                </div>
+              }
+              <label for="finance-budget-adjustment">
+                {{ budgetAdjustmentMode === 'REDUCE' ? 'Reduce Budget by (₹)' : 'Add Budget (₹)' }}
+              </label>
+              <input
+                id="finance-budget-adjustment"
+                type="number"
+                min="1"
+                [max]="budgetAdjustmentMode === 'REDUCE' ? finance.maxBudgetReduction : null"
+                step="1"
+                appWholeRupee
+                name="budgetAdjustmentAmount"
+                [(ngModel)]="budgetAdjustmentAmount"
+                placeholder="Amount"
+                [disabled]="isSaving()"
+                (blur)="resetBudgetAdjustmentOnBlur($event)"
+              />
+              @if (budgetAdjustmentMode === 'REDUCE') {
+                <small>Maximum reduction: ₹{{ money(finance.maxBudgetReduction) }}</small>
+              }
+              <button
+                id="finance-budget-adjustment-submit"
+                type="submit"
+                class="tf-btn tf-btn-primary"
+                [disabled]="isSaving() || !canSubmitBudgetAdjustment()"
+              >{{ budgetAdjustmentMode === 'REDUCE' ? 'Request Reduction' : 'Request Increase' }}</button>
+            </form>
           }
 
           @if (finance.canRequest) {
@@ -179,9 +180,13 @@
                     class="tf-grid-thead"
                     [class.with-budget-review]="showBudgetReviewColumn"
                     [class.without-finance-action]="!showFinanceActionColumn"
+                    [class.with-return-column]="finance.canApprove"
                   >
                     <div>S.No</div>
                     <div>TASK TITLE</div>
+                    @if (finance.canApprove) {
+                      <div class="text-right">Return</div>
+                    }
                     <div class="text-right">Approved</div>
                     <div class="text-right">Issued</div>
                     <div class="text-right">Balance</div>
@@ -200,8 +205,9 @@
                           class="tf-row-grid"
                           [class.with-budget-review]="showBudgetReviewColumn"
                           [class.without-finance-action]="!showFinanceActionColumn"
+                          [class.with-return-column]="finance.canApprove"
                         >
-                          @let latestBudgetRequest = lastBudgetRequest(group);
+                          @let budgetReviewItem = taskBudgetReviewItem(group);
                           <div class="tf-col-sno">
                             <span class="tf-sno-badge">{{ index + 1 }}</span>
                           </div>
@@ -229,8 +235,37 @@
                                   </button>
                                 </div>
                               </div>
+                              @if (finance.canViewTaskAssignee) {
+                                <small class="tf-assignee-name">
+                                  {{ (group.taskOwnerName || 'Unassigned') | titlecase }}
+                                </small>
+                              }
                             </div>
                           </div>
+
+                          @if (finance.canApprove) {
+                            <div class="tf-col-return">
+                              @if (group.pendingReturns.length > 0) {
+                                @for (cashReturn of group.pendingReturns; track cashReturn.id) {
+                                  <div class="tf-return-action">
+                                    <strong class="tf-num">₹{{ money(cashReturn.amount) }}</strong>
+                                    @if (cashReturn.canConfirmReturn) {
+                                      <button
+                                        type="button"
+                                        class="tf-btn tf-btn-success tf-btn-xs"
+                                        [disabled]="isSaving()"
+                                        (click)="acceptCashReturn(cashReturn)"
+                                      >Accept</button>
+                                    } @else {
+                                      <span class="tf-pill pill-warning pill-xs">Pending</span>
+                                    }
+                                  </div>
+                                }
+                              } @else {
+                                <span class="cell-settled">—</span>
+                              }
+                            </div>
+                          }
 
                           <div class="tf-col-num">
                             <strong class="tf-num">₹{{ money(group.approvedTotal) }}</strong>
@@ -246,15 +281,15 @@
 
                           @if (showBudgetReviewColumn) {
                             <div class="tf-col-budget-review">
-                              @if (latestBudgetRequest; as request) {
-                                <span class="tf-budget-review-amount">+₹{{ money(request.requestedIncrease) }}</span>
+                              @if (budgetReviewItem; as item) {
+                                <span class="tf-budget-review-amount">{{ taskBudgetReviewAmount(item) }}</span>
                               } @else {
                                 <span class="cell-settled">—</span>
                               }
                             </div>
                             <div class="tf-col-budget-actions">
-                              @if (latestBudgetRequest; as request) {
-                                @if (request.status === 'PENDING' && (request.canReviewCreator || request.canReviewAuthority)) {
+                              @if (budgetReviewItem; as item) {
+                                @if (item.request.status === 'PENDING' && canReviewTaskBudgetItem(item)) {
                                   <div class="tf-budget-review-row">
                                     <button
                                       type="button"
@@ -263,7 +298,7 @@
                                       matTooltip="Approve request"
                                       matTooltipPosition="above"
                                       [disabled]="isSaving()"
-                                      (click)="reviewBudgetRequest(request, 'APPROVE')"
+                                      (click)="reviewTaskBudgetItem(item, 'APPROVE')"
                                     ><mat-icon>check</mat-icon></button>
                                     <button
                                       type="button"
@@ -272,12 +307,12 @@
                                       matTooltip="Reject request"
                                       matTooltipPosition="above"
                                       [disabled]="isSaving()"
-                                      (click)="reviewBudgetRequest(request, 'REJECT')"
+                                      (click)="reviewTaskBudgetItem(item, 'REJECT')"
                                     ><mat-icon>close</mat-icon></button>
                                   </div>
                                 } @else {
-                                  <span class="tf-pill pill-xs" [ngClass]="getStatusClass(request.status)">
-                                    {{ formatLabel(request.status) }}
+                                  <span class="tf-pill pill-xs" [ngClass]="getStatusClass(taskBudgetReviewStatus(item))">
+                                    {{ formatLabel(taskBudgetReviewStatus(item)) }}
                                   </span>
                                 }
                               } @else {
@@ -288,7 +323,9 @@
 
                           @if (showFinanceActionColumn && !showBudgetReviewColumn) {
                             <div class="tf-col-status">
-                              @if (group.remainingAdvance > 0 && finance.canApprove && group.taskOwnerUserId !== null) {
+                              @if (group.taskOwnerUserId === null && hasApprovedFinanceRequest(group)) {
+                                <span class="tf-pill pill-danger tf-status-pill">Unassigned</span>
+                              } @else if (group.remainingAdvance > 0 && finance.canApprove && group.taskOwnerUserId !== null) {
                                 <div class="tf-dispatch-box">
                                   <div class="tf-inline-amt">
                                     <span>₹</span>
@@ -317,6 +354,10 @@
                                 <span class="tf-pill pill-success tf-status-pill">Paid</span>
                               } @else if (group.remainingAdvance > 0) {
                                 <span class="tf-pill pill-warning tf-status-pill">Pending</span>
+                              } @else if (budgetReviewItem; as item) {
+                                <span class="tf-pill tf-status-pill" [ngClass]="getStatusClass(taskBudgetReviewStatus(item))">
+                                  {{ formatLabel(taskBudgetReviewStatus(item)) }}
+                                </span>
                               } @else {
                                 <span class="cell-settled">—</span>
                               }

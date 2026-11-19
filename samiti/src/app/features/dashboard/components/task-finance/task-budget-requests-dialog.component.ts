@@ -9,6 +9,7 @@ import {
   createInitialAdvanceHistoryRequest,
   getTaskFinanceRequestRevision,
   getTopUpSourceBudgetRequestIds,
+  shouldShowFinanceRequestInBudgetHistory,
   TaskBudgetRequest,
   TaskFinanceRequest
 } from './task-finance.models';
@@ -41,7 +42,7 @@ type BudgetIncreaseHistoryRow =
             <mat-icon>request_quote</mat-icon>
           </div>
           <div class="header-title-stack">
-            <h2>Budget Increase Requests</h2>
+            <h2>Budget History</h2>
             <div class="header-subtitle-row">
               <span class="header-subtitle">{{ data.taskName | titlecase }}</span>
               @if (data.assigneeName) {
@@ -86,8 +87,13 @@ type BudgetIncreaseHistoryRow =
                     : row.request.canReviewAuthority">
                     <td><span class="request-id">{{ index + 1 }}</span></td>
                     @if (row.kind === 'budget') {
-                      <td><strong>Top Up</strong></td>
-                      <td><span class="increase">+₹{{ money(row.request.requestedIncrease) }}</span></td>
+                      <td><strong>{{ budgetRequestType(row.request) }}</strong></td>
+                      <td>
+                        <span [class.increase]="!isBudgetDecrease(row.request)"
+                          [class.decrease]="isBudgetDecrease(row.request)">
+                          {{ budgetRequestAmount(row.request) }}
+                        </span>
+                      </td>
                       <td>
                         <div class="revision-flow">
                           <span class="old-amt">₹{{ money(row.request.budgetBeforeRequest) }}</span>
@@ -581,6 +587,19 @@ type BudgetIncreaseHistoryRow =
       font-variant-numeric: tabular-nums;
     }
 
+    .decrease {
+      display: inline-flex;
+      align-items: center;
+      padding: 1px 6px;
+      border: 1px solid #fecaca;
+      border-radius: 4px;
+      background: #fef2f2;
+      color: #b91c1c;
+      font-size: 0.64rem;
+      font-weight: 700;
+      font-variant-numeric: tabular-nums;
+    }
+
     .status {
       display: inline-flex;
       align-items: center;
@@ -772,13 +791,15 @@ export class TaskBudgetRequestsDialogComponent {
     const allFinanceRequests = initialAdvance
       ? [initialAdvance, ...financeRequests]
       : financeRequests;
-    const financeRows: BudgetIncreaseHistoryRow[] = allFinanceRequests.map((request) => ({
-      kind: 'finance',
-      key: `finance-${request.id}`,
-      id: request.id,
-      createdAt: request.createdAt,
-      request
-    }));
+    const financeRows: BudgetIncreaseHistoryRow[] = allFinanceRequests
+      .filter(shouldShowFinanceRequestInBudgetHistory)
+      .map((request) => ({
+        kind: 'finance',
+        key: `finance-${request.id}`,
+        id: request.id,
+        createdAt: request.createdAt,
+        request
+      }));
 
     return [...budgetRows, ...financeRows].sort((left, right) =>
       left.createdAt.localeCompare(right.createdAt) ||
@@ -814,6 +835,19 @@ export class TaskBudgetRequestsDialogComponent {
 
   public budgetActionAt(request: TaskBudgetRequest): string | null {
     return request.authorityReviewedAt || request.creatorReviewedAt;
+  }
+
+  public budgetRequestType(request: TaskBudgetRequest): string {
+    return this.isBudgetDecrease(request) ? 'Budget Reduction' : 'Top Up';
+  }
+
+  public isBudgetDecrease(request: TaskBudgetRequest): boolean {
+    return Number(request.requestedIncrease) < 0;
+  }
+
+  public budgetRequestAmount(request: TaskBudgetRequest): string {
+    const change = Number(request.requestedIncrease);
+    return `${change < 0 ? '−' : '+'}₹${this.money(Math.abs(change))}`;
   }
 
   public money(value: string | number): string {

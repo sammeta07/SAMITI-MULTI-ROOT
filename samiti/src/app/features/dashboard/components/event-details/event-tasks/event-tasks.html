@@ -142,7 +142,7 @@
                   @if (task.budgetRequestStatus === 'PENDING') {
                     <span class="task-budget-request" [matTooltip]="task.canReviewBudgetRequest ? 'Received budget request' : 'Sent budget request'">
                       <mat-icon class="task-budget-request-direction" aria-hidden="true">{{ task.canReviewBudgetRequest ? 'call_received' : 'call_made' }}</mat-icon>
-                      <span>Pending +{{ formatTaskBudgetAmount(task.requestedBudgetAmount) }}</span>
+                      <span>Pending {{ formatTaskBudgetChange(task.requestedBudgetAmount) }}</span>
                     </span>
                   }
                   @if (editingTaskBudgetIds.has(task.taskId) && task.canEditTask && task.parentTaskId === null) {

@@ -71,7 +71,8 @@ async function executeSqlStatementsFromFile(connection: mysql.Connection, migrat
     '076-restrict-task-title-edit.sql',
     '080-remove-task-budget-decided.sql',
     '084-remove-personal-expense-link.sql',
-    '087-restrict-task-program-creation-and-budget-approvals.sql'
+    '087-restrict-task-program-creation-and-budget-approvals.sql',
+    '091-allow-zero-initial-task-finance-requests.sql'
   ]);
 
   for (const statement of statements) {

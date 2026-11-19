@@ -1,8 +1,12 @@
 import { describe, expect, it } from 'vitest';
 import {
   createInitialAdvanceHistoryRequest,
+  getEffectiveApprovedFinanceTotal,
   getTaskFinanceRequestRevision,
   getTopUpSourceBudgetRequestIds,
+  isInitialTaskBudgetFinanceRequest,
+  isVisibleInPaymentHistory,
+  shouldShowFinanceRequestInBudgetHistory,
   TaskBudgetRequest,
   TaskFinancePayload,
   TaskFinanceRequest,
@@ -35,12 +39,15 @@ function emptyFinancePayload(overrides: Partial<TaskFinancePayload> = {}): TaskF
     budgetRequestStatus: null,
     budgetRequestedByName: null,
     canEditBudget: false,
+    canReduceBudget: false,
+    maxBudgetReduction: '0',
     canRequestBudgetIncrease: false,
     canReviewBudgetRequest: false,
     canCancelBudgetRequest: false,
     canRequest: false,
     canApprove: false,
     isBudgetAuthority: false,
+    canViewTaskAssignee: false,
     canCreateSubtaskTransfers: false,
     isEventScope: false,
     ...overrides
@@ -59,6 +66,7 @@ function approvedRequest(
     sourceBudgetRequestId: null,
     taskName: 'Maha Bhog',
     taskBudgetAmount: '122222',
+    budgetAvailableForDisbursement: '122222',
     taskOwnerName: 'Task owner',
     taskOwnerUserId: 7,
     requestType,
@@ -129,9 +137,49 @@ function combinedDispatch(amount: string): TaskFinanceTransaction {
     recipientName: 'Task owner',
     receivedByName: null,
     receivedAt: null,
-    canConfirmReceipt: false
+    canConfirmReceipt: false,
+    canConfirmReturn: false
   };
 }
+
+function cashReturn(
+  status: 'PENDING' | 'CONFIRMED' | 'REJECTED',
+  amount = '250'
+): TaskFinanceTransaction {
+  return {
+    ...combinedDispatch(amount),
+    id: 2,
+    transactionType: 'ADVANCE_RETURN',
+    status,
+    canConfirmReturn: status === 'PENDING'
+  };
+}
+
+describe('effective approved task finance total', () => {
+  it('caps old finance approvals at the current sanctioned budget after a reduction', () => {
+    const request = approvedRequest(1, 'ADVANCE', '2300000', {
+      taskBudgetAmount: '200000'
+    });
+
+    expect(getEffectiveApprovedFinanceTotal([request])).toBe(200000);
+  });
+
+  it('keeps the approved total when it is below the current sanctioned budget', () => {
+    const request = approvedRequest(1, 'ADVANCE', '150000', {
+      taskBudgetAmount: '200000'
+    });
+
+    expect(getEffectiveApprovedFinanceTotal([request])).toBe(150000);
+  });
+});
+
+describe('cash return finance history', () => {
+  it('excludes pending and rejected returns until they are accepted', () => {
+    expect(isVisibleInPaymentHistory(cashReturn('PENDING'))).toBe(false);
+    expect(isVisibleInPaymentHistory(cashReturn('REJECTED'))).toBe(false);
+    expect(isVisibleInPaymentHistory(cashReturn('CONFIRMED'))).toBe(true);
+  });
+});
 
 describe('task finance action indicator', () => {
   it('marks a pending budget request for its reviewer even when they are not the treasurer', () => {
@@ -159,12 +207,15 @@ describe('task finance action indicator', () => {
       budgetRequestStatus: 'PENDING',
       budgetRequestedByName: 'Requester',
       canEditBudget: false,
+      canReduceBudget: false,
+      maxBudgetReduction: '0',
       canRequestBudgetIncrease: false,
       canReviewBudgetRequest: true,
       canCancelBudgetRequest: false,
       canRequest: false,
       canApprove: false,
       isBudgetAuthority: false,
+      canViewTaskAssignee: false,
       canCreateSubtaskTransfers: false,
       isEventScope: false
     };
@@ -180,6 +231,7 @@ describe('task finance action indicator', () => {
         sourceBudgetRequestId: null,
         taskName: 'Event arrangements',
         taskBudgetAmount: '25000',
+        budgetAvailableForDisbursement: '25000',
         taskOwnerName: 'Task owner',
         taskOwnerUserId: 7,
         requestType: 'ADVANCE',
@@ -221,12 +273,15 @@ describe('task finance action indicator', () => {
       budgetRequestStatus: null,
       budgetRequestedByName: null,
       canEditBudget: false,
+      canReduceBudget: false,
+      maxBudgetReduction: '0',
       canRequestBudgetIncrease: false,
       canReviewBudgetRequest: false,
       canCancelBudgetRequest: false,
       canRequest: false,
       canApprove: false,
       isBudgetAuthority: true,
+      canViewTaskAssignee: false,
       canCreateSubtaskTransfers: false,
       isEventScope: false
     };
@@ -274,12 +329,15 @@ describe('task finance action indicator', () => {
       budgetRequestStatus: null,
       budgetRequestedByName: null,
       canEditBudget: false,
+      canReduceBudget: false,
+      maxBudgetReduction: '0',
       canRequestBudgetIncrease: false,
       canReviewBudgetRequest: false,
       canCancelBudgetRequest: false,
       canRequest: false,
       canApprove: false,
       isBudgetAuthority: false,
+      canViewTaskAssignee: false,
       canCreateSubtaskTransfers: false,
       isEventScope: false
     };
@@ -302,9 +360,31 @@ describe('task finance action indicator', () => {
     finance.transactions = [combinedDispatch('120000')];
     expect(hasPendingFinanceAction(finance)).toBe(true);
   });
+
 });
 
 describe('initial advance history fallback', () => {
+  it('identifies initial task budget requests separately from top-ups', () => {
+    expect(isInitialTaskBudgetFinanceRequest(approvedRequest(20, 'ADVANCE', '0', {
+      reason: 'Initial sanctioned task budget'
+    }))).toBe(true);
+    expect(isInitialTaskBudgetFinanceRequest(approvedRequest(21, 'TOP_UP', '1000', {
+      reason: 'Initial sanctioned task budget'
+    }))).toBe(false);
+  });
+
+  it('shows initial task budgets in history only after they are reviewed', () => {
+    const pending = approvedRequest(20, 'ADVANCE', '0', {
+      reason: 'Initial sanctioned task budget',
+      status: 'PENDING',
+      approvedAmount: null
+    });
+    const approved = { ...pending, status: 'APPROVED' as const, approvedAmount: '0' };
+
+    expect(shouldShowFinanceRequestInBudgetHistory(pending)).toBe(false);
+    expect(shouldShowFinanceRequestInBudgetHistory(approved)).toBe(true);
+  });
+
   it('creates a zero-value advance row from the earliest approved zero-base increase', () => {
     const first = approvedRequest(21, 'TOP_UP', '1000', {
       reason: 'Sanctioned task budget increased from 0 to 1000',

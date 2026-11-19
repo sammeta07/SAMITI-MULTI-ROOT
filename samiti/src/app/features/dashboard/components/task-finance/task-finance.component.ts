@@ -14,6 +14,9 @@ import {
   TaskFinancePayload,
   TaskFinanceRequest,
   TaskFinanceTransaction,
+  getEffectiveApprovedFinanceTotal,
+  isVisibleInPaymentHistory,
+  isInitialTaskBudgetFinanceRequest,
   TaskBudgetRequest,
   TaskSubtaskTransfer,
   TaskSubtaskTransferOption
@@ -29,11 +32,17 @@ export interface TaskFinanceRequestGroup {
   taskOwnerUserId: number | null;
   requests: TaskFinanceRequest[];
   budgetRequests: TaskBudgetRequest[];
+  pendingReturns: TaskFinanceTransaction[];
   transactionCount: number;
   approvedTotal: number;
   issuedAdvance: number;
   remainingAdvance: number;
+  budgetAvailableForDisbursement: number;
 }
+
+type TaskBudgetReviewItem =
+  | { kind: 'budget'; request: TaskBudgetRequest }
+  | { kind: 'finance'; request: TaskFinanceRequest };
 
 @Component({
   selector: 'app-task-finance',
@@ -58,8 +67,8 @@ export class TaskFinanceComponent implements OnInit {
 
   public readonly taskDispatchAmounts: Record<number, string | number | null> = {};
   public returnAmount: string | number | null = '';
-  public taskBudgetAmount: string | number | null = '';
-  public budgetIncreaseAmount: string | number | null = '';
+  public budgetAdjustmentAmount: string | number | null = '';
+  public budgetAdjustmentMode: 'INCREASE' | 'REDUCE' = 'INCREASE';
   public selectedSubtaskId: number | null = null;
   public subtaskTransferAmount: string | number | null = '';
   public subtaskTransferDescription = '';
@@ -86,7 +95,7 @@ export class TaskFinanceComponent implements OnInit {
       .subscribe({
         next: (payload) => {
           this.payload.set(payload);
-          this.taskBudgetAmount = payload.budgetAmount;
+          this.budgetAdjustmentAmount = '';
           const selectedOption = payload.subtaskTransferOptions.find(
             (option) => option.subtaskId === this.selectedSubtaskId && Number(option.availableAmount) > 0
           );
@@ -212,7 +221,11 @@ export class TaskFinanceComponent implements OnInit {
     budgetRequests: TaskBudgetRequest[],
     transactions: TaskFinanceTransaction[]
   ): TaskFinanceRequestGroup[] {
-    const groups = new Map<number, { requests: TaskFinanceRequest[]; budgetRequests: TaskBudgetRequest[] }>();
+    const groups = new Map<number, {
+      requests: TaskFinanceRequest[];
+      budgetRequests: TaskBudgetRequest[];
+      pendingReturnTaskName?: string;
+    }>();
     requests.forEach((request) => {
       const taskGroup = groups.get(request.taskId) ?? { requests: [], budgetRequests: [] };
       taskGroup.requests.push(request);
@@ -223,34 +236,52 @@ export class TaskFinanceComponent implements OnInit {
       taskGroup.budgetRequests.push(request);
       groups.set(request.taskId, taskGroup);
     });
+    transactions
+      .filter((transaction) =>
+        transaction.transactionType === 'ADVANCE_RETURN' && transaction.status === 'PENDING'
+      )
+      .forEach((transaction) => {
+        const taskGroup = groups.get(transaction.taskId) ?? { requests: [], budgetRequests: [] };
+        taskGroup.pendingReturnTaskName = transaction.taskName;
+        groups.set(transaction.taskId, taskGroup);
+      });
 
     return Array.from(groups.entries()).map(([taskId, taskGroup]) => {
-      const approvedRequests = taskGroup.requests.filter((request) => this.isRequestPayable(request));
-      const approvedTotal = approvedRequests.reduce(
-        (sum, request) => sum + Number(request.approvedAmount ?? request.requestedAmount ?? 0),
-        0
-      );
+      const approvedTotal = getEffectiveApprovedFinanceTotal(taskGroup.requests);
       const taskTransactions = transactions.filter((transaction) => transaction.taskId === taskId);
       const issuedAdvance = taskTransactions
         .filter((transaction) => transaction.transactionType === 'ADVANCE_ISSUED')
         .reduce((sum, transaction) => sum + Number(transaction.amount), 0);
-      const remainingAdvance = Math.max(0, approvedTotal - issuedAdvance);
       const firstRequest = taskGroup.requests[0];
       const firstBudgetRequest = taskGroup.budgetRequests[0];
+      const budgetAvailableForDisbursement = Number(firstRequest?.budgetAvailableForDisbursement ?? 0);
+      const remainingAdvance = Math.min(
+        Math.max(0, approvedTotal - issuedAdvance),
+        budgetAvailableForDisbursement
+      );
+      const visiblePaymentTransactions = taskTransactions.filter(isVisibleInPaymentHistory);
+      const pendingReturns = taskTransactions.filter((transaction) =>
+        transaction.transactionType === 'ADVANCE_RETURN' && transaction.status === 'PENDING'
+      );
 
       return {
         taskId,
-        taskName: firstRequest?.taskName ?? firstBudgetRequest!.taskName,
+        taskName: firstRequest?.taskName
+          ?? firstBudgetRequest?.taskName
+          ?? taskGroup.pendingReturnTaskName
+          ?? 'Untitled Task',
         taskOwnerName: taskGroup.requests.find((request) => request.taskOwnerName)?.taskOwnerName
           ?? taskGroup.budgetRequests.find((request) => request.taskOwnerName)?.taskOwnerName
           ?? null,
         taskOwnerUserId: firstRequest?.taskOwnerUserId ?? null,
         requests: taskGroup.requests,
         budgetRequests: taskGroup.budgetRequests,
-        transactionCount: taskTransactions.length,
+        pendingReturns,
+        transactionCount: visiblePaymentTransactions.length,
         approvedTotal,
         issuedAdvance,
-        remainingAdvance
+        remainingAdvance,
+        budgetAvailableForDisbursement
       };
     });
   }
@@ -281,6 +312,52 @@ export class TaskFinanceComponent implements OnInit {
     return [...group.budgetRequests].sort((left, right) =>
       right.createdAt.localeCompare(left.createdAt) || right.id - left.id
     )[0] ?? null;
+  }
+
+  public taskBudgetReviewItem(group: TaskFinanceRequestGroup): TaskBudgetReviewItem | null {
+    const initialRequest = [...group.requests]
+      .filter(isInitialTaskBudgetFinanceRequest)
+      .sort((left, right) =>
+        right.createdAt.localeCompare(left.createdAt) || right.id - left.id
+      )[0] ?? null;
+    if (initialRequest?.canReviewAuthority) {
+      return { kind: 'finance', request: initialRequest };
+    }
+
+    const budgetRequest = this.lastBudgetRequest(group);
+    if (budgetRequest) return { kind: 'budget', request: budgetRequest };
+    return initialRequest ? { kind: 'finance', request: initialRequest } : null;
+  }
+
+  public taskBudgetReviewAmount(item: TaskBudgetReviewItem): string {
+    if (item.kind === 'finance') {
+      return `Initial · ₹${this.money(item.request.requestedAmount)}`;
+    }
+    const change = Number(item.request.requestedIncrease);
+    return `${change < 0 ? '−' : '+'}₹${this.money(Math.abs(change))}`;
+  }
+
+  public budgetRequestChangeLabel(request: TaskBudgetRequest): string {
+    const change = Number(request.requestedIncrease);
+    return `${change < 0 ? '−' : '+'}₹${this.money(Math.abs(change))}`;
+  }
+
+  public canReviewTaskBudgetItem(item: TaskBudgetReviewItem): boolean {
+    return item.kind === 'budget'
+      ? item.request.canReviewCreator || item.request.canReviewAuthority
+      : item.request.canReviewAuthority;
+  }
+
+  public taskBudgetReviewStatus(item: TaskBudgetReviewItem): string {
+    return item.request.status;
+  }
+
+  public reviewTaskBudgetItem(item: TaskBudgetReviewItem, decision: 'APPROVE' | 'REJECT'): void {
+    if (item.kind === 'budget') {
+      this.reviewBudgetRequest(item.request, decision);
+      return;
+    }
+    this.reviewRequest(item.request, decision);
   }
 
   public openBudgetRequestsDialog(group: TaskFinanceRequestGroup): void {
@@ -330,7 +407,8 @@ export class TaskFinanceComponent implements OnInit {
         assigneeName: group.taskOwnerName,
         transactions: computed(() =>
           this.payload()?.transactions.filter(
-            (transaction) => transaction.taskId === group.taskId
+            (transaction) =>
+              transaction.taskId === group.taskId && isVisibleInPaymentHistory(transaction)
           ) ?? []
         ),
         isSaving: this.isSaving,
@@ -346,11 +424,12 @@ export class TaskFinanceComponent implements OnInit {
     groupedTasks: TaskFinanceRequestGroup[]
   ): TaskFinanceTransaction[] {
     return transactions
-      .filter((transaction) =>
-        transaction.requestId === null
+      .filter((transaction) => {
+        if (!isVisibleInPaymentHistory(transaction)) return false;
+        return transaction.requestId === null
           ? !groupedTasks.some((group) => group.taskId === transaction.taskId)
-          : !requests.some((request) => request.id === transaction.requestId)
-      )
+          : !requests.some((request) => request.id === transaction.requestId);
+      })
       .sort((left, right) =>
         left.createdAt.localeCompare(right.createdAt) || left.id - right.id
       );
@@ -373,61 +452,64 @@ export class TaskFinanceComponent implements OnInit {
     );
   }
 
-  public canSaveTaskBudget(): boolean {
+  public acceptCashReturn(transaction: TaskFinanceTransaction): void {
+    if (!transaction.canConfirmReturn || this.isSaving()) return;
+    this.runAction(
+      this.service.acceptCashReturn(transaction.id),
+      'Cash return accepted. Issued amount and balance updated.'
+    );
+  }
+
+  public setBudgetAdjustmentMode(mode: 'INCREASE' | 'REDUCE'): void {
+    if (mode === 'REDUCE' && !this.payload()?.canReduceBudget) return;
+    this.budgetAdjustmentMode = mode;
+    this.budgetAdjustmentAmount = '';
+  }
+
+  public canSubmitBudgetAdjustment(): boolean {
     const current = this.payload();
-    const amount = String(this.taskBudgetAmount ?? '').trim();
-    return !!current?.canEditBudget
-      && isValidTaskBudgetAmount(amount)
-      && Number(amount) > Number(current.budgetAmount);
+    const amount = String(this.budgetAdjustmentAmount ?? '').trim();
+    if (!current || !isValidTaskBudgetAmount(amount) || Number(amount) <= 0) return false;
+    if (
+      current.budgetRequestStatus === 'PENDING' &&
+      !current.canEditBudget &&
+      !current.canReduceBudget &&
+      !this.currentBudgetRequest(current)?.canCancel
+    ) return false;
+    if (this.budgetAdjustmentMode === 'REDUCE') {
+      return current.canReduceBudget && Number(amount) <= Number(current.maxBudgetReduction);
+    }
+    return current.canEditBudget || current.canRequestBudgetIncrease;
   }
 
-  public taskBudgetSaveTooltip(): string {
-    return this.isSaving()
-      ? 'Budget is being saved.'
-      : 'Enter an amount greater than the current sanctioned budget to enable Save.';
-  }
-
-  public resetTaskBudgetOnBlur(event: FocusEvent): void {
+  public resetBudgetAdjustmentOnBlur(event: FocusEvent): void {
     const nextTarget = event.relatedTarget;
-    if (nextTarget instanceof HTMLElement && nextTarget.id === 'finance-task-budget-save') return;
-    this.resetTaskBudgetToSanctionedAmount();
+    if (nextTarget instanceof HTMLElement && nextTarget.id === 'finance-budget-adjustment-submit') return;
+    if (!this.isSaving()) this.budgetAdjustmentAmount = '';
   }
 
-  public resetTaskBudgetAfterSubmitButtonBlur(): void {
-    this.resetTaskBudgetToSanctionedAmount();
-  }
-
-  public saveTaskBudget(): void {
-    if (this.taskId === null || !this.canSaveTaskBudget()) return;
-    const amount = String(this.taskBudgetAmount ?? '').trim();
-    this.runAction(
-      this.taskDetailsService.updateTaskBudget(this.taskId, amount),
-      'Task budget updated.'
-    );
-  }
-
-  private resetTaskBudgetToSanctionedAmount(): void {
-    if (this.isSaving()) return;
-    this.taskBudgetAmount = this.payload()?.budgetAmount ?? '';
-  }
-
-  public canRequestBudgetIncrease(): boolean {
+  public submitBudgetAdjustment(): void {
     const current = this.payload();
-    const amount = String(this.budgetIncreaseAmount ?? '').trim();
-    return !!current?.canRequestBudgetIncrease
-      && current.budgetRequestStatus !== 'PENDING'
-      && isValidTaskBudgetAmount(amount)
-      && Number(amount) > 0;
-  }
-
-  public requestBudgetIncrease(): void {
-    if (this.taskId === null || !this.canRequestBudgetIncrease()) return;
-    const amount = String(this.budgetIncreaseAmount ?? '').trim();
-    this.runAction(
-      this.taskDetailsService.requestTaskBudgetIncrease(this.taskId, amount),
-      'Budget increase request sent for approval.'
-    );
-    this.budgetIncreaseAmount = '';
+    if (this.taskId === null || !current || !this.canSubmitBudgetAdjustment()) return;
+    const amount = String(this.budgetAdjustmentAmount ?? '').trim();
+    if (this.budgetAdjustmentMode === 'REDUCE') {
+      this.runAction(
+        this.service.requestBudgetReduction(this.taskId, amount),
+        'Budget reduction request sent for authority approval.'
+      );
+    } else if (current.canEditBudget) {
+      const targetBudget = String(Number(current.budgetAmount) + Number(amount));
+      this.runAction(
+        this.taskDetailsService.updateTaskBudget(this.taskId, targetBudget),
+        'Budget increase request sent for authority approval.'
+      );
+    } else {
+      this.runAction(
+        this.taskDetailsService.requestTaskBudgetIncrease(this.taskId, amount),
+        'Budget increase request sent for authority approval.'
+      );
+    }
+    this.budgetAdjustmentAmount = '';
   }
 
   public reviewBudgetRequest(request: TaskBudgetRequest, decision: 'APPROVE' | 'REJECT'): void {
@@ -458,6 +540,10 @@ export class TaskFinanceComponent implements OnInit {
 
   public isRequestPayable(request: TaskFinanceRequest): boolean {
     return request.status === 'APPROVED' || request.status === 'PARTIALLY_APPROVED';
+  }
+
+  public hasApprovedFinanceRequest(group: TaskFinanceRequestGroup): boolean {
+    return group.requests.some((request) => this.isRequestPayable(request));
   }
 
   public formatLabel(raw: string): string {

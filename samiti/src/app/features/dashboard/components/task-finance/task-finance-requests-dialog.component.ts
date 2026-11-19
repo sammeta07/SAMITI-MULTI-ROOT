@@ -56,13 +56,20 @@ export interface TaskFinanceRequestsDialogData {
                 </thead>
                 <tbody>
                   @for (transaction of taskTransactions(); track transaction.id; let index = $index) {
-                    <tr>
+                    <tr
+                      [class.cash-in]="transaction.transactionType === 'ADVANCE_RETURN'"
+                      [class.cash-out]="transaction.transactionType !== 'ADVANCE_RETURN'"
+                    >
                       <td>{{ index + 1 }}</td>
                       <td class="amount">₹{{ money(transaction.amount) }}</td>
                       <td>{{ transaction.createdAt | date: 'dd MMM, h:mm a' }}</td>
                       <td>{{ transaction.createdByName | titlecase }}</td>
                       <td class="ledger-status">
-                        @if (transaction.receivedByName && transaction.receivedAt) {
+                        @if (transaction.transactionType === 'ADVANCE_RETURN' && transaction.status === 'CONFIRMED') {
+                          <span class="pill approved receipt-status">
+                            <mat-icon>check</mat-icon> Return Accepted
+                          </span>
+                        } @else if (transaction.receivedByName && transaction.receivedAt) {
                           <span class="pill approved receipt-status">
                             <mat-icon>check</mat-icon> Received
                           </span>
@@ -293,6 +300,8 @@ export interface TaskFinanceRequestsDialogData {
     .ledger-table th:last-child { text-align: left; }
 
     .ledger-table tbody tr:hover { background: #f8fafc; }
+    .ledger-table tbody tr.cash-in { background: #ecfdf5; }
+    .ledger-table tbody tr.cash-out { background: #fef2f2; }
     .ledger-table tbody tr:last-child td { border-bottom: 0; }
 
     .ledger-table .amount {

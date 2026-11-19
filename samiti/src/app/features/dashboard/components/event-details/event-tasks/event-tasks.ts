@@ -628,7 +628,8 @@ export class EventTasksComponent implements OnInit, OnDestroy {
                   budgetRequestStatus: updatedTask.requestStatus,
                   budgetRequestedByName: updatedTask.requestStatus === 'PENDING' ? 'You' : null,
                   canReviewBudgetRequest: false,
-                  canCancelBudgetRequest: updatedTask.requestStatus === 'PENDING',
+                  canCancelBudgetRequest: updatedTask.requestStatus === 'PENDING' &&
+                    updatedTask.requestId !== null,
                   updatedAt: updatedTask.updatedAt
                 }
               : entry);
@@ -804,6 +805,11 @@ export class EventTasksComponent implements OnInit, OnDestroy {
 
   public formatTaskBudgetAmount(value: string | number | null | undefined): string {
     return formatTaskBudgetAmount(value);
+  }
+
+  public formatTaskBudgetChange(value: string | number | null | undefined): string {
+    const change = Number(value ?? 0);
+    return `${change < 0 ? '−' : '+'}${formatTaskBudgetAmount(Math.abs(change))}`;
   }
 
   public formatIssuedAndSanctionedTaskBudget(
