@@ -33,6 +33,7 @@ import { EventTasksComponent } from './event-tasks/event-tasks';
 import { ImageAssetService } from '../../../../core/services/image-asset.service';
 import { ImageCropperDialogComponent } from '../../../../shared/components/image-cropper-dialog/image-cropper-dialog.component';
 import { LoadingStateService } from '../../../../shared/services/loading-state.service';
+import { TaskFinanceDialogService } from '../task-finance/task-finance-dialog.service';
 
 @Component({
   selector: 'app-event-details',
@@ -69,6 +70,7 @@ export class EventDetailsComponent implements OnInit, OnDestroy {
   private readonly hierarchyTreeService = inject(DashboardHierarchyTreeService);
   private readonly imageAssetService = inject(ImageAssetService);
   private readonly loadingState = inject(LoadingStateService);
+  private readonly taskFinanceDialog = inject(TaskFinanceDialogService);
   private readonly syncLogoFromHierarchy = effect(() => {
     const update = this.hierarchyTreeService.logoUpdated();
     if (update?.type !== 'event' || update.id !== this.currentEventId) return;
@@ -206,12 +208,15 @@ export class EventDetailsComponent implements OnInit, OnDestroy {
 
   public get canCreateProgram(): boolean {
     const role = String(this.headerData?.committeeRole || 'NONE').toUpperCase();
-    if (role === 'COMMITTEE_MASTER_ADMIN') {
-      return true;
-    }
-    const designation = this.userEventRoleLabel;
-    const normalized = (designation || '').toLowerCase();
-    return normalized === 'adhyaksha' || normalized === 'upadhyaksha';
+    return role === 'COMMITTEE_MASTER_ADMIN' || role === 'COMMITTEE_ADMIN';
+  }
+
+  public openEventTaskFinance(): void {
+    const header = this.headerData;
+    if (!header?.canAccessTaskFinance) return;
+    this.taskFinanceDialog.openEvent(header.eventId, header.eventName).subscribe(() => {
+      this.loadHeaderDetails(String(header.eventId));
+    });
   }
 
   public navigateToTab(tab: string): void {
@@ -378,7 +383,7 @@ export class EventDetailsComponent implements OnInit, OnDestroy {
   }
 
   public get canManageEvent(): boolean {
-    return this.hasEventRole || this.isEventMasterAdmin;
+    return this.hasEventRole || this.userEventRole === 'COMMITTEE_ADMIN' || this.isEventMasterAdmin;
   }
 
   public get fallbackInitial(): string {

@@ -45,6 +45,7 @@ export class EventTasksService {
           ownerAssignedAt
           updatedAt
           canManage
+          canUpdateStatus
           canEditTask
           canAssignOwner
           canDelete
@@ -100,6 +101,7 @@ export class EventTasksService {
         ownerAssignedAt
         updatedAt
         canManage
+        canUpdateStatus
         canEditTask
         canAssignOwner
         canDelete
@@ -142,6 +144,7 @@ export class EventTasksService {
         ownerAssignedAt
         updatedAt
         canManage
+        canUpdateStatus
         canEditTask
         canAssignOwner
         canDelete
@@ -175,6 +178,7 @@ export class EventTasksService {
         ownerAssignedAt
         updatedAt
         canManage
+        canUpdateStatus
         canEditTask
         canAssignOwner
         canDelete

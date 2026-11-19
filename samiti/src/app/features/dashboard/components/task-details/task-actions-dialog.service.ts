@@ -71,7 +71,7 @@ export class TaskActionsDialogService {
           break;
         case 'update-status':
           if (
-            !task.canManage ||
+            !task.canUpdateStatus ||
             result.status === String(task.status || 'NEW').trim().toUpperCase().replace(/[\s-]+/g, '_')
           ) return null;
           await firstValueFrom(this.taskDetailsService.updateTaskStatus(task.taskId, result.status as TaskStatus));

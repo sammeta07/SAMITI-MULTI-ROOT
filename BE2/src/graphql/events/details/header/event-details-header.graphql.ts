@@ -2,8 +2,14 @@ import { query } from '../../../../config/db';
 import { RowDataPacket } from 'mysql2/promise';
 import { hasEventsDisplayNameColumn } from '../event-display-name-support';
 import { throwEventError, getLoggedInUserId } from '../voting/event-voting-core.graphql';
-import { hasPermission, PERMISSIONS } from '../../../../authorization/authorization';
-import { getFinanceActionTaskIds, getPendingReceiptTaskIds } from '../../../tasks/task-finance.graphql';
+import {
+  hasTaskBudgetApprovalAuthority
+} from '../../../../authorization/authorization';
+import {
+  getFinanceActionTaskIds,
+  getPendingReceiptTaskIds,
+  getPendingSubtaskTransferTaskIds
+} from '../../../tasks/task-finance.graphql';
 
 export const eventDetailsHeaderTypes = `
   type EventDetailsHeader {
@@ -20,6 +26,7 @@ export const eventDetailsHeaderTypes = `
     tasksCount: Int!
     parentTasksCount: Int!
     hasFinanceAction: Boolean!
+    canAccessTaskFinance: Boolean!
     type: String
     startDate: String
     endDate: String
@@ -135,11 +142,11 @@ export const eventDetailsHeaderResolvers = {
             ? 'COMMITTEE_MEMBER'
             : 'NONE';
 
-      if (eventType !== 'PUBLIC' && !hasCommitteeAccess) {
+      if (eventType !== 'PUBLIC' && !hasCommitteeAccess && !myDesignation?.roleId) {
         throwEventError('FORBIDDEN', 'You are not allowed to access this event');
       }
 
-      const [cashierRows, canManageAnyTasks, taskActionRows] = await Promise.all([
+      const [cashierRows, isBudgetAuthority, taskActionRows, financeRequesterRows] = await Promise.all([
         query<Array<RowDataPacket & { isCashier: number }>>(
           `SELECT EXISTS (
              SELECT 1
@@ -155,33 +162,58 @@ export const eventDetailsHeaderResolvers = {
            ) AS isCashier`,
           [eventId, loggedInUserId]
         ),
-        hasPermission(
-          loggedInUserId,
-          PERMISSIONS.EVENT_TASK_MANAGE_ANY,
-          { type: 'EVENT', id: eventId }
-        ),
+        hasTaskBudgetApprovalAuthority(loggedInUserId, eventId),
         query<Array<RowDataPacket & {
           taskId: number;
           ownerUserId: number | null;
           createdBy: number | null;
           budgetRequestId: number | null;
+          budgetApprovalStage: string | null;
+          budgetRequestedBy: number | null;
         }>>(
           `SELECT t.id AS taskId,
                   t.owner_user_id AS ownerUserId,
                   t.created_by AS createdBy,
-                  budgetRequest.id AS budgetRequestId
+                  budgetRequest.id AS budgetRequestId,
+                  budgetRequest.approval_stage AS budgetApprovalStage,
+                  budgetRequest.requested_by AS budgetRequestedBy
            FROM tasks t
            LEFT JOIN task_budget_requests budgetRequest
              ON budgetRequest.task_id = t.id AND budgetRequest.status = 'PENDING'
            WHERE t.event_id = ?`,
           [eventId]
+        ),
+        query<any[]>(
+          `SELECT EXISTS (
+             SELECT 1
+             FROM task_budget_requests request
+             INNER JOIN tasks task ON task.id = request.task_id
+             WHERE task.event_id = ? AND request.requested_by = ?
+             UNION ALL
+             SELECT 1
+             FROM task_finance_requests request
+             INNER JOIN tasks task ON task.id = request.task_id
+             WHERE task.event_id = ? AND request.requested_by = ?
+           ) AS isRequester`,
+          [eventId, loggedInUserId, eventId, loggedInUserId]
         )
       ]);
       const isEventCashier = Number(cashierRows[0]?.isCashier) === 1;
+      const canAccessTaskFinance = isCurrentUserMasterAdmin ||
+        committeeRole === 'COMMITTEE_ADMIN' ||
+        isEventCashier ||
+        isBudgetAuthority ||
+        Number(financeRequesterRows[0]?.isRequester) === 1 ||
+        taskActionRows.some((task) =>
+          Number(task.ownerUserId) === loggedInUserId ||
+          Number(task.createdBy) === loggedInUserId ||
+          Number(task.budgetRequestedBy) === loggedInUserId
+        );
       const taskIds = taskActionRows.map((task) => Number(task.taskId));
-      const [financeActionTaskIds, receiptTaskIds] = await Promise.all([
+      const [financeActionTaskIds, receiptTaskIds, subtaskTransferTaskIds] = await Promise.all([
         isEventCashier ? getFinanceActionTaskIds(taskIds) : Promise.resolve(new Set<number>()),
-        getPendingReceiptTaskIds(taskIds, loggedInUserId)
+        getPendingReceiptTaskIds(taskIds, loggedInUserId),
+        getPendingSubtaskTransferTaskIds(taskIds, loggedInUserId)
       ]);
       const hasFinanceAction = taskActionRows.some((task) => {
         const taskId = Number(task.taskId);
@@ -189,8 +221,14 @@ export const eventDetailsHeaderResolvers = {
           Number(task.ownerUserId) !== loggedInUserId &&
           financeActionTaskIds.has(taskId);
         const needsBudgetReview = Boolean(task.budgetRequestId) &&
-          (Number(task.createdBy) === loggedInUserId || canManageAnyTasks);
-        return needsCashierAction || receiptTaskIds.has(taskId) || needsBudgetReview;
+          (
+            (task.budgetApprovalStage === 'CREATOR' && Number(task.createdBy) === loggedInUserId) ||
+            (task.budgetApprovalStage === 'AUTHORITY' && isBudgetAuthority)
+          );
+        return needsCashierAction
+          || receiptTaskIds.has(taskId)
+          || subtaskTransferTaskIds.has(taskId)
+          || needsBudgetReview;
       });
 
       return {
@@ -213,7 +251,8 @@ export const eventDetailsHeaderResolvers = {
         longitude: event.longitude ? Number(event.longitude) : null,
         myDesignation: myDesignation,
         committeeRole,
-        hasFinanceAction
+        hasFinanceAction,
+        canAccessTaskFinance
       };
     }
   }

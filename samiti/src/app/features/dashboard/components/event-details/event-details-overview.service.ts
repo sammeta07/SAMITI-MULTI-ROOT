@@ -68,6 +68,7 @@ export class EventDetailsOverviewService {
         tasksCount
         parentTasksCount
         hasFinanceAction
+        canAccessTaskFinance
         type
         startDate
         endDate

@@ -178,6 +178,19 @@
                 </button>
               </div>
             }
+            <div class="task-header-actions">
+              <button
+                mat-icon-button
+                class="task-panel-finance-icon"
+                [class.task-panel-finance-action-required]="taskDetails.needsFinanceAction"
+                type="button"
+                [attr.aria-label]="taskDetails.needsFinanceAction ? 'Action required — view task finance' : 'No action required — view task finance'"
+                [matTooltip]="taskDetails.needsFinanceAction ? 'Action required' : 'No action required'"
+                (click)="openTaskFinanceDialog(taskDetails.taskId, taskDetails.taskName, taskDetails.ownerName, $event)"
+              >
+                <mat-icon>currency_rupee</mat-icon>
+              </button>
+            </div>
             @if (taskDetails.canDeleteTask) {
               <div class="task-header-actions">
                 <span class="task-delete-tooltip-host" [matTooltip]="getTaskDeletionTooltip(taskDetails)">
@@ -292,6 +305,14 @@
               >
                 {{ taskDetails.children.length }} / {{ getSubtaskDescendantCount(taskDetails.taskId) }}
               </span>
+              @if (hasSubtaskFinanceAction(taskDetails)) {
+                <mat-icon
+                  class="task-finance-action-indicator"
+                  matTooltip="Action required"
+                  matTooltipPosition="above"
+                  aria-label="Action required in a subtask"
+                >priority_high</mat-icon>
+              }
             </ng-template>
 
             <section class="horizontal-full-card tasks-section-style task-subtasks-section">
@@ -415,55 +436,21 @@
                               <span class="task-budget-request-amount">+{{ formatTaskBudgetAmount(child.requestedBudgetAmount) }}</span>
                             </span>
                           }
-                          @if (editingSubtaskBudgetIds.has(child.taskId)) {
-                            @if (child.canEditTask) {
-                              <input
-                              class="task-budget-pill task-budget-pill-input"
-                              type="number"
-                              min="0"
-                              step="1"
-                              appWholeRupee
-                              [value]="subtaskBudgetEditAmounts[child.taskId]"
-                              [disabled]="savingSubtaskBudgetIds.has(child.taskId)"
-                              [attr.aria-label]="'Edit budget for ' + child.taskName"
-                              (input)="subtaskBudgetEditAmounts[child.taskId] = $any($event.target).value"
-                              (keydown.enter)="saveSubtaskEdits(child); $event.preventDefault(); $event.stopPropagation()"
-                              (keydown.escape)="cancelEditSubtaskRow(child); $event.stopPropagation()"
-                              (click)="$event.stopPropagation()"
-                              />
-                            } @else {
-                              <span class="task-budget-pills">
-                                <span
-                                  class="task-budget-metric task-budget-remaining"
-                                  [matTooltip]="getTaskBudgetRemainingTooltip(child.taskId, child.budgetAmount)"
-                                >
-                                  {{ getTaskBudgetRemainingDisplay(child.taskId, child.budgetAmount) }}
-                                </span>
-                                <span
-                                  class="task-budget-metric task-budget-total"
-                                  [matTooltip]="'Sanctioned Amount - ' + formatTaskBudgetAmount(child.budgetAmount)"
-                                >
-                                  {{ formatTaskBudgetAmount(child.budgetAmount) }}
-                                </span>
-                              </span>
-                            }
-                          } @else {
-                            <span class="task-budget-pills">
-                              <span
-                                class="task-budget-metric task-budget-remaining"
-                                [matTooltip]="getTaskBudgetRemainingTooltip(child.taskId, child.budgetAmount)"
-                              >
-                                {{ getTaskBudgetRemainingDisplay(child.taskId, child.budgetAmount) }}
-                              </span>
-                              <span
-                                class="task-budget-metric task-budget-total"
-                                [matTooltip]="'Sanctioned Amount - ' + formatTaskBudgetAmount(child.budgetAmount)"
-                              >
-                                {{ formatTaskBudgetAmount(child.budgetAmount) }}
-                              </span>
+                          <span class="task-budget-pills">
+                            <span
+                              class="task-budget-metric task-budget-remaining"
+                              [matTooltip]="getTaskBudgetRemainingTooltip(child.taskId, child.budgetAmount)"
+                            >
+                              {{ getTaskBudgetRemainingDisplay(child.taskId, child.budgetAmount) }}
                             </span>
-                          }
-                          @if (editingSubtaskBudgetIds.has(child.taskId) && child.canManage) {
+                            <span
+                              class="task-budget-metric task-budget-total"
+                              [matTooltip]="'Sanctioned Amount - ' + formatTaskBudgetAmount(child.budgetAmount)"
+                            >
+                              {{ formatTaskBudgetAmount(child.budgetAmount) }}
+                            </span>
+                          </span>
+                          @if (editingSubtaskBudgetIds.has(child.taskId) && child.canUpdateStatus) {
                             <select
                               class="task-panel-status status-tag status-dropdown {{ 'tag-' + statusClass(subtaskBudgetEditStatuses[child.taskId]) }}"
                               [(ngModel)]="subtaskBudgetEditStatuses[child.taskId]"
@@ -518,17 +505,6 @@
 
                         <!-- Actions -->
                         <div class="task-row-actions" (click)="$event.stopPropagation()" (keydown)="$event.stopPropagation()">
-                          @if (child.needsFinanceAction === true) {
-                            <span
-                              class="task-panel-finance-action-indicator"
-                              role="img"
-                              aria-label="Action required"
-                              matTooltip="Action required"
-                              matTooltipPosition="above"
-                            >
-                              <mat-icon aria-hidden="true">priority_high</mat-icon>
-                            </span>
-                          }
                           @if (child.canDelete) {
                             <span
                               class="task-delete-tooltip-host"
@@ -566,11 +542,11 @@
                             class="task-panel-finance-icon"
                             [class.task-panel-finance-action-required]="child.needsFinanceAction"
                             type="button"
-                            [attr.aria-label]="child.needsFinanceAction ? 'Action required — view task finance' : 'View task finance'"
-                            [matTooltip]="child.needsFinanceAction ? 'Action required' : 'Task finance'"
+                            [attr.aria-label]="child.needsFinanceAction ? 'Action required — view task finance' : 'No action required — view task finance'"
+                            [matTooltip]="child.needsFinanceAction ? 'Action required' : 'No action required'"
                             (click)="openTaskFinanceDialog(child.taskId, child.taskName, child.ownerName, $event)"
                           >
-                            <mat-icon>account_balance_wallet</mat-icon>
+                            <mat-icon>currency_rupee</mat-icon>
                           </button>
                           <span class="task-panel-info-container">
                             <button
@@ -671,24 +647,6 @@
             </section>
           </mat-tab>
 
-          <!-- Finance Tab -->
-          <mat-tab>
-            <ng-template mat-tab-label>
-              <mat-icon class="tab-leading-icon">payments</mat-icon>
-              <span class="tab-name-text">Finance</span>
-              @if (taskDetails.needsFinanceAction === true) {
-                <mat-icon
-                  class="task-finance-action-indicator"
-                  matTooltip="Action required"
-                  matTooltipPosition="above"
-                  aria-label="Action required"
-                >priority_high</mat-icon>
-              }
-            </ng-template>
-            <ng-template matTabContent>
-              <app-task-finance [taskId]="taskDetails.taskId" [loadOnInit]="true" />
-            </ng-template>
-          </mat-tab>
         </mat-tab-group>
 
         @if ((selectedTaskTabIndex === 0 && taskDetails.canManageTodos) || (selectedTaskTabIndex === 2 && (taskDetails.children.length > 0 || taskDetails.canCreateTasks))) {
@@ -711,17 +669,24 @@
               </button>
             }
             @if (selectedTaskTabIndex === 2 && taskDetails.canCreateTasks) {
-              <button
-                mat-stroked-button
-                class="create-subtask-tab-action"
-                type="button"
-                aria-label="Add subtask"
-                [disabled]="isCreatingSubtask || isSavingSubtask"
-                (click)="onCreateSubtask(taskDetails)"
+              <span
+                class="subtask-action-tooltip-wrapper"
+                [class.subtask-action-disabled]="taskDetails.parentTaskId !== null"
+                [matTooltip]="taskDetails.parentTaskId !== null ? 'Subtasks are only allowed one level below a top-level task.' : ''"
+                [matTooltipDisabled]="taskDetails.parentTaskId === null"
               >
-                <mat-icon>add</mat-icon>
-                <span>Subtask</span>
-              </button>
+                <button
+                  mat-stroked-button
+                  class="create-subtask-tab-action"
+                  type="button"
+                  aria-label="Add subtask"
+                  [disabled]="taskDetails.parentTaskId !== null || isCreatingSubtask || isSavingSubtask"
+                  (click)="onCreateSubtask(taskDetails)"
+                >
+                  <mat-icon>add</mat-icon>
+                  <span>Subtask</span>
+                </button>
+              </span>
             }
           </div>
         }

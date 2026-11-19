@@ -145,11 +145,11 @@
                       <span>Pending +{{ formatTaskBudgetAmount(task.requestedBudgetAmount) }}</span>
                     </span>
                   }
-                  @if (editingTaskBudgetIds.has(task.taskId) && task.canEditTask) {
+                  @if (editingTaskBudgetIds.has(task.taskId) && task.canEditTask && task.parentTaskId === null) {
                     <input
                       class="task-budget-pill task-budget-pill-input"
                       type="number"
-                      min="0"
+                      [min]="task.budgetAmount"
                       step="1"
                       appWholeRupee
                       [value]="taskBudgetEditAmounts[task.taskId]"
@@ -176,7 +176,7 @@
                       </span>
                     </span>
                   }
-                  @if (editingTaskBudgetIds.has(task.taskId) && task.canManage) {
+                  @if (editingTaskBudgetIds.has(task.taskId) && task.canUpdateStatus) {
                     <select
                       class="task-panel-status status-tag status-dropdown {{ statusTagClass(taskStatusEditValues[task.taskId]) }}"
                       [value]="taskStatusEditValues[task.taskId]"
@@ -234,17 +234,6 @@
                 </div>
 
                 <div class="task-row-actions" (click)="$event.stopPropagation()" (keydown)="$event.stopPropagation()">
-                  @if (task.needsFinanceAction === true) {
-                    <span
-                      class="task-panel-finance-action-indicator"
-                      role="img"
-                      aria-label="Action required"
-                      matTooltip="Action required"
-                      matTooltipPosition="above"
-                    >
-                      <mat-icon aria-hidden="true">priority_high</mat-icon>
-                    </span>
-                  }
                   @if (task.canDelete) {
                     <span
                       class="task-delete-tooltip-host"
@@ -282,11 +271,11 @@
                     class="task-panel-finance-icon"
                     [class.task-panel-finance-action-required]="task.needsFinanceAction"
                     type="button"
-                    [attr.aria-label]="task.needsFinanceAction ? 'Action required — view task finance' : 'View task finance'"
-                    [matTooltip]="task.needsFinanceAction ? 'Action required' : 'Task finance'"
+                    [attr.aria-label]="task.needsFinanceAction ? 'Action required — view task finance' : 'No action required — view task finance'"
+                    [matTooltip]="task.needsFinanceAction ? 'Action required' : 'No action required'"
                     (click)="openTaskFinanceDialog(task.taskId, task.taskName, task.ownerName, $event)"
                   >
-                    <mat-icon>account_balance_wallet</mat-icon>
+                    <mat-icon>currency_rupee</mat-icon>
                   </button>
                   <span class="task-panel-info-container">
                     <button

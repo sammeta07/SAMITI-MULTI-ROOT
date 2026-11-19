@@ -2,8 +2,18 @@ import { execute, getConnection, query } from '../../../../config/db';
 import { RowDataPacket } from 'mysql2/promise';
 import type { PoolConnection } from 'mysql2/promise';
 import { throwEventError, getLoggedInUserId } from '../voting/event-voting-core.graphql';
-import { hasPermission, PERMISSIONS } from '../../../../authorization/authorization';
-import { getFinanceActionTaskIds, getPendingReceiptTaskIds } from '../../../tasks/task-finance.graphql';
+import {
+  hasCommitteeTaskProgramCreationRole,
+  hasTaskBudgetApprovalAuthority,
+  hasPermission,
+  PERMISSIONS
+} from '../../../../authorization/authorization';
+import {
+  getAuthorityFinanceActionTaskIds,
+  getFinanceActionTaskIds,
+  getPendingReceiptTaskIds,
+  getPendingSubtaskTransferTaskIds
+} from '../../../tasks/task-finance.graphql';
 
 export const eventTasksTypes = `
   enum EventTaskStatus {
@@ -25,6 +35,7 @@ export const eventTasksTypes = `
     budgetRequestId: Int
     requestedBudgetAmount: String
     budgetRequestStatus: String
+    budgetApprovalStage: String
     budgetRequestedByName: String
     canReviewBudgetRequest: Boolean!
     canCancelBudgetRequest: Boolean!
@@ -39,6 +50,7 @@ export const eventTasksTypes = `
     ownerAssignedAt: String
     updatedAt: String!
     canManage: Boolean!
+    canUpdateStatus: Boolean!
     canEditTask: Boolean!
     canAssignOwner: Boolean!
     canDelete: Boolean!
@@ -97,6 +109,7 @@ export const eventTasksTypes = `
     budgetRequestId: Int
     requestedBudgetAmount: String
     budgetRequestStatus: String
+    budgetApprovalStage: String
     budgetRequestedByName: String
     canReviewBudgetRequest: Boolean!
     canCancelBudgetRequest: Boolean!
@@ -110,6 +123,7 @@ export const eventTasksTypes = `
     ownerAssignedAt: String
     updatedAt: String!
     canManage: Boolean!
+    canUpdateStatus: Boolean!
     canEditTask: Boolean!
     canAssignOwner: Boolean!
     canDelete: Boolean!
@@ -157,46 +171,32 @@ async function getTaskForAdminMutation(taskId: number, userId: number): Promise<
   if (!isMasterAdmin && Number(task.ownerUserId) !== userId) {
     throwEventError('FORBIDDEN', 'Only the parent task owner or a master admin can add subtasks');
   }
+  if (task.parentTaskId !== null) {
+    throwEventError('BAD_REQUEST', 'Subtasks can only be created under top-level tasks');
+  }
   return task;
 }
 
-async function canCreateEventTask(eventId: number, userId: number): Promise<boolean> {
-  return hasPermission(userId, PERMISSIONS.EVENT_TASK_CREATE, { type: 'EVENT', id: eventId });
+async function hasTaskAdminPermission(
+  userId: number,
+  committeeId: number,
+  eventId: number
+): Promise<boolean> {
+  if (await hasCommitteeTaskProgramCreationRole(userId, committeeId)) return true;
+  return hasPermission(userId, PERMISSIONS.EVENT_TASK_MANAGE_ANY, { type: 'EVENT', id: eventId });
 }
 
 async function assertCanAssignTask(taskId: number, userId: number): Promise<void> {
-  const rows = await query<any[]>(
-    `SELECT t.event_id AS eventId, t.owner_user_id AS ownerUserId, t.parent_id AS parentTaskId,
-            t.created_by AS createdBy, parent.owner_user_id AS parentOwnerUserId
-     FROM tasks t
-     INNER JOIN events e ON e.id = t.event_id
-     LEFT JOIN tasks parent ON parent.id = t.parent_id
-     WHERE t.id = ?
-     LIMIT 1`,
-    [taskId]
-  );
-  if (rows.length === 0) throwEventError('NOT_FOUND', 'Task not found');
-  const task = rows[0];
-  const canManageAssignment = task.parentTaskId === null
-    ? Number(task.createdBy) === userId ||
-      await hasPermission(userId, PERMISSIONS.EVENT_TASK_ASSIGN_OWNER, { type: 'EVENT', id: Number(task.eventId) })
-    : await hasPermission(userId, PERMISSIONS.EVENT_TASK_MANAGE_ANY, { type: 'EVENT', id: Number(task.eventId) }) ||
-      Number(task.parentOwnerUserId) === userId;
-  if (!canManageAssignment) {
-    throwEventError(
-      'FORBIDDEN',
-      task.parentTaskId === null
-        ? 'Only the task creator or an authorized event role can assign root tasks'
-        : 'Only the parent task owner or a master admin can assign subtasks'
-    );
+  if (!await getTaskAssignmentPermission(taskId, userId)) {
+    throwEventError('FORBIDDEN', 'Only a Committee Admin, Committee Master Admin, authorized event role, or parent task owner can assign tasks');
   }
 }
 
 async function getTaskAssignmentPermission(taskId: number, userId: number): Promise<boolean> {
   const rows = await query<any[]>(
-    `SELECT t.event_id AS eventId,
+    `SELECT t.event_id AS eventId, e.committee_id AS committeeId,
             t.owner_user_id AS ownerUserId, t.parent_id AS parentTaskId,
-            t.created_by AS createdBy, parent.owner_user_id AS parentOwnerUserId
+            parent.owner_user_id AS parentOwnerUserId
      FROM tasks t
      INNER JOIN events e ON e.id = t.event_id
      LEFT JOIN tasks parent ON parent.id = t.parent_id
@@ -206,22 +206,22 @@ async function getTaskAssignmentPermission(taskId: number, userId: number): Prom
   );
   if (rows.length === 0) throwEventError('NOT_FOUND', 'Task not found');
   const task = rows[0];
+  const canManageTasks = await hasTaskAdminPermission(
+    userId,
+    Number(task.committeeId),
+    Number(task.eventId)
+  );
   if (task.parentTaskId === null) {
-    return Number(task.createdBy) === userId ||
+    return canManageTasks ||
       hasPermission(userId, PERMISSIONS.EVENT_TASK_ASSIGN_OWNER, { type: 'EVENT', id: Number(task.eventId) });
   }
-  const canManageAny = await hasPermission(
-    userId,
-    PERMISSIONS.EVENT_TASK_MANAGE_ANY,
-    { type: 'EVENT', id: Number(task.eventId) }
-  );
-  return canManageAny ||
+  return canManageTasks ||
     Number(task.parentOwnerUserId) === userId;
 }
 
 async function assertCanEditOrDeleteTask(taskId: number, userId: number): Promise<void> {
   const rows = await query<any[]>(
-    `SELECT t.created_by AS createdBy, t.event_id AS eventId
+    `SELECT e.committee_id AS committeeId, t.event_id AS eventId
      FROM tasks t
      INNER JOIN events e ON e.id = t.event_id
      WHERE t.id = ?
@@ -230,15 +230,15 @@ async function assertCanEditOrDeleteTask(taskId: number, userId: number): Promis
   );
   if (rows.length === 0) throwEventError('NOT_FOUND', 'Task not found');
   const task = rows[0];
-  if (Number(task.createdBy) !== userId &&
-    !await hasPermission(userId, PERMISSIONS.EVENT_TASK_MANAGE_ANY, { type: 'EVENT', id: Number(task.eventId) })) {
-    throwEventError('FORBIDDEN', 'Only the task creator or a master admin can edit this task title');
+  if (!await hasTaskAdminPermission(userId, Number(task.committeeId), Number(task.eventId))) {
+    throwEventError('FORBIDDEN', 'Only a Committee Admin or Committee Master Admin can edit or delete this task');
   }
 }
 
 async function getTaskDeletionPermission(taskId: number, userId: number): Promise<boolean> {
   const rows = await query<any[]>(
-    `SELECT t.parent_id AS parentTaskId, t.created_by AS createdBy,
+    `SELECT t.parent_id AS parentTaskId,
+            e.committee_id AS committeeId,
             t.event_id AS eventId, parent.owner_user_id AS parentOwnerUserId
      FROM tasks t
      INNER JOIN events e ON e.id = t.event_id
@@ -249,13 +249,12 @@ async function getTaskDeletionPermission(taskId: number, userId: number): Promis
   );
   if (rows.length === 0) throwEventError('NOT_FOUND', 'Task not found');
   const task = rows[0];
-  const isMasterAdmin = await hasPermission(
+  const canManageTasks = await hasTaskAdminPermission(
     userId,
-    PERMISSIONS.EVENT_TASK_MANAGE_ANY,
-    { type: 'EVENT', id: Number(task.eventId) }
+    Number(task.committeeId),
+    Number(task.eventId)
   );
-  return isMasterAdmin ||
-    Number(task.createdBy) === userId ||
+  return canManageTasks ||
     (task.parentTaskId !== null && Number(task.parentOwnerUserId) === userId);
 }
 
@@ -263,7 +262,7 @@ async function assertCanDeleteTask(taskId: number, userId: number): Promise<void
   if (!await getTaskDeletionPermission(taskId, userId)) {
     throwEventError(
       'FORBIDDEN',
-      'Only the task creator, the direct parent task owner, or a master admin can delete this task'
+      'Only a Committee Admin, Committee Master Admin, or direct parent task owner can delete this task'
     );
   }
 }
@@ -271,7 +270,8 @@ async function assertCanDeleteTask(taskId: number, userId: number): Promise<void
 async function getTaskManagementPermission(taskId: number, userId: number): Promise<boolean> {
   const taskRows = await query<any[]>(
     `SELECT t.owner_user_id AS ownerUserId, t.parent_id AS parentTaskId,
-            parent.owner_user_id AS parentOwnerUserId, t.event_id AS eventId
+            parent.owner_user_id AS parentOwnerUserId,
+            e.committee_id AS committeeId, t.event_id AS eventId
      FROM tasks t
      INNER JOIN events e ON e.id = t.event_id
      LEFT JOIN tasks parent ON parent.id = t.parent_id
@@ -284,12 +284,12 @@ async function getTaskManagementPermission(taskId: number, userId: number): Prom
   }
   const task = taskRows[0];
   return Number(task.ownerUserId) === userId ||
-    hasPermission(userId, PERMISSIONS.EVENT_TASK_MANAGE_ANY, { type: 'EVENT', id: Number(task.eventId) });
+    hasTaskAdminPermission(userId, Number(task.committeeId), Number(task.eventId));
 }
 
 async function getTaskEditPermission(taskId: number, userId: number): Promise<boolean> {
   const rows = await query<any[]>(
-    `SELECT t.created_by AS createdBy, t.event_id AS eventId
+    `SELECT e.committee_id AS committeeId, t.event_id AS eventId
      FROM tasks t
      INNER JOIN events e ON e.id = t.event_id
      WHERE t.id = ?
@@ -298,8 +298,7 @@ async function getTaskEditPermission(taskId: number, userId: number): Promise<bo
   );
   if (rows.length === 0) throwEventError('NOT_FOUND', 'Task not found');
   const task = rows[0];
-  return Number(task.createdBy) === userId ||
-    hasPermission(userId, PERMISSIONS.EVENT_TASK_MANAGE_ANY, { type: 'EVENT', id: Number(task.eventId) });
+  return hasTaskAdminPermission(userId, Number(task.committeeId), Number(task.eventId));
 }
 
 function validateTaskBudgetAmount(value: unknown): string {
@@ -331,19 +330,23 @@ async function insertSanctionedBudgetFinanceRequest(
 ): Promise<void> {
   const amount = validateTaskBudgetAmount(input.amount);
   if (amountCents(amount) <= 0) return;
+  const requiresAuthorityReview = input.requestType === 'ADVANCE';
   await connection.execute(
     `INSERT INTO task_finance_requests
        (task_id, request_type, requested_amount, approved_amount, reason, status,
-        requested_by, reviewed_by, reviewed_at, source_budget_request_id)
-     VALUES (?, ?, ?, ?, ?, 'APPROVED', ?, ?, CURRENT_TIMESTAMP, ?)`,
+        approval_stage, requested_by, reviewed_by, reviewed_at, source_budget_request_id)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
     [
       input.taskId,
       input.requestType,
       amount,
-      amount,
+      requiresAuthorityReview ? null : amount,
       input.reason,
+      requiresAuthorityReview ? 'PENDING' : 'APPROVED',
+      requiresAuthorityReview ? 'AUTHORITY' : 'TREASURER',
       input.requestedBy,
-      input.reviewedBy,
+      requiresAuthorityReview ? null : input.reviewedBy,
+      requiresAuthorityReview ? null : new Date(),
       input.sourceBudgetRequestId ?? null
     ]
   );
@@ -372,7 +375,10 @@ export const eventTasksResolvers = {
       }
 
       const event = eventResult[0];
-      const canAssignRootTasks = await canCreateEventTask(eventId, loggedInUserId);
+      const canAssignRootTasks = await hasCommitteeTaskProgramCreationRole(
+        loggedInUserId,
+        Number(event.committee_id)
+      );
       const canAssignRootTaskOwners = await hasPermission(
         loggedInUserId,
         PERMISSIONS.EVENT_TASK_ASSIGN_OWNER,
@@ -388,6 +394,7 @@ export const eventTasksResolvers = {
         PERMISSIONS.EVENT_TASK_MANAGE_ANY,
         { type: 'EVENT', id: eventId }
       );
+      const isBudgetAuthority = await hasTaskBudgetApprovalAuthority(loggedInUserId, eventId);
       const cashierRows = await query<Array<RowDataPacket & { isCashier: number }>>(
         `SELECT EXISTS (
            SELECT 1
@@ -444,6 +451,7 @@ export const eventTasksResolvers = {
         budgetRequestId: number | null;
         requestedBudgetAmount: string | null;
         budgetRequestStatus: string | null;
+        budgetApprovalStage: string | null;
         budgetRequestedByName: string | null;
         budgetRequestedBy: number | null;
         status: string | null;
@@ -470,6 +478,7 @@ export const eventTasksResolvers = {
            budgetRequest.id AS budgetRequestId,
            CAST(GREATEST(0, budgetRequest.requested_amount - t.budget_amount) AS CHAR) AS requestedBudgetAmount,
            budgetRequest.status AS budgetRequestStatus,
+           budgetRequest.approval_stage AS budgetApprovalStage,
            budgetRequester.name AS budgetRequestedByName,
            budgetRequest.requested_by AS budgetRequestedBy,
            t.status,
@@ -497,7 +506,14 @@ export const eventTasksResolvers = {
       const financeActionTaskIds = isEventCashier
         ? await getFinanceActionTaskIds(taskRows.map((taskRow) => Number(taskRow.taskId)))
         : new Set<number>();
+      const authorityFinanceActionTaskIds = isBudgetAuthority
+        ? await getAuthorityFinanceActionTaskIds(taskRows.map((taskRow) => Number(taskRow.taskId)))
+        : new Set<number>();
       const receiptTaskIds = await getPendingReceiptTaskIds(
+        taskRows.map((taskRow) => Number(taskRow.taskId)),
+        loggedInUserId
+      );
+      const subtaskTransferTaskIds = await getPendingSubtaskTransferTaskIds(
         taskRows.map((taskRow) => Number(taskRow.taskId)),
         loggedInUserId
       );
@@ -508,7 +524,10 @@ export const eventTasksResolvers = {
           const taskOwnerUserId = taskRow.ownerUserId === null ? null : Number(taskRow.ownerUserId);
           const taskId = Number(taskRow.taskId);
           const canReviewBudgetRequest = Boolean(taskRow.budgetRequestId) &&
-            (Number(taskRow.createdBy) === loggedInUserId || canManageAnyTasks);
+            (
+              (taskRow.budgetApprovalStage === 'CREATOR' && Number(taskRow.createdBy) === loggedInUserId) ||
+              (taskRow.budgetApprovalStage === 'AUTHORITY' && isBudgetAuthority)
+            );
           return {
           id: Number(taskRow.taskId),
           taskId: Number(taskRow.taskId),
@@ -520,6 +539,7 @@ export const eventTasksResolvers = {
           budgetRequestId: taskRow.budgetRequestId === null ? null : Number(taskRow.budgetRequestId),
           requestedBudgetAmount: taskRow.requestedBudgetAmount === null ? null : String(taskRow.requestedBudgetAmount),
           budgetRequestStatus: taskRow.budgetRequestStatus || null,
+          budgetApprovalStage: taskRow.budgetApprovalStage || null,
           budgetRequestedByName: taskRow.budgetRequestedByName || null,
           canReviewBudgetRequest,
           canCancelBudgetRequest: Boolean(taskRow.budgetRequestId) &&
@@ -536,20 +556,28 @@ export const eventTasksResolvers = {
           createdAt: String(taskRow.createdAt),
           ownerAssignedAt: taskRow.ownerAssignedAt || null,
           updatedAt: String(taskRow.updatedAt),
-          canManage: Number(taskRow.ownerUserId) === loggedInUserId || canManageAnyTasks,
-          canEditTask: Number(taskRow.createdBy) === loggedInUserId || canManageAnyTasks,
+          canManage: Number(taskRow.ownerUserId) === loggedInUserId ||
+            canManageAnyTasks || canAssignRootTasks,
+          canUpdateStatus: Number(taskRow.ownerUserId) === loggedInUserId || canManageAnyTasks,
+          canEditTask: canManageAnyTasks || canAssignRootTasks,
           canAssignOwner: isRootTask
-            ? canAssignRootTaskOwners || Number(taskRow.createdBy) === loggedInUserId
-            : canManageAnyTasks || Number(taskRow.parentOwnerUserId) === loggedInUserId,
+            ? canAssignRootTaskOwners || canAssignRootTasks
+            : canManageAnyTasks || canAssignRootTasks ||
+              Number(taskRow.parentOwnerUserId) === loggedInUserId,
           canDelete: canManageAnyTasks ||
-            Number(taskRow.createdBy) === loggedInUserId ||
+            canAssignRootTasks ||
             (!isRootTask && Number(taskRow.parentOwnerUserId) === loggedInUserId),
-          canAccessFinance: Number(taskRow.ownerUserId) === loggedInUserId || isEventCashier,
+          canAccessFinance: Number(taskRow.ownerUserId) === loggedInUserId || isEventCashier || isBudgetAuthority,
           needsFinanceAction: (
             isEventCashier &&
             taskOwnerUserId !== loggedInUserId &&
             financeActionTaskIds.has(taskId)
-          ) || receiptTaskIds.has(taskId) || canReviewBudgetRequest
+          ) || (
+            isBudgetAuthority &&
+            taskOwnerUserId !== loggedInUserId &&
+            authorityFinanceActionTaskIds.has(taskId)
+          ) ||
+            receiptTaskIds.has(taskId) || canReviewBudgetRequest || subtaskTransferTaskIds.has(taskId)
           };
         }),
         canCreateTasks: canAssignRootTasks,
@@ -774,6 +802,7 @@ export const eventTasksResolvers = {
         ownerAssignedAt: updatedTask.ownerAssignedAt || null,
         updatedAt: String(updatedTask.updatedAt),
         canManage: await getTaskManagementPermission(taskId, loggedInUserId),
+        canUpdateStatus: true,
         canEditTask: await getTaskEditPermission(taskId, loggedInUserId),
         canAssignOwner: await getTaskAssignmentPermission(taskId, loggedInUserId),
         canDelete: await getTaskDeletionPermission(taskId, loggedInUserId)
@@ -872,6 +901,12 @@ export const eventTasksResolvers = {
         ownerAssignedAt: updated.ownerAssignedAt || null,
         updatedAt: String(updated.updatedAt),
         canManage: await getTaskManagementPermission(taskId, loggedInUserId),
+        canUpdateStatus: Number(updated.ownerUserId) === loggedInUserId ||
+          await hasPermission(
+            loggedInUserId,
+            PERMISSIONS.EVENT_TASK_MANAGE_ANY,
+            { type: 'EVENT', id: Number(updated.eventId) }
+          ),
         canEditTask: await getTaskEditPermission(taskId, loggedInUserId),
         canAssignOwner: await getTaskAssignmentPermission(taskId, loggedInUserId),
         canDelete: await getTaskDeletionPermission(taskId, loggedInUserId)
@@ -917,9 +952,12 @@ export const eventTasksResolvers = {
       if (parentTaskId !== null) {
         await getTaskForAdminMutation(parentTaskId, loggedInUserId);
       } else {
-        const canCreateTopLevel = await canCreateEventTask(eventId, loggedInUserId);
+        const canCreateTopLevel = await hasCommitteeTaskProgramCreationRole(
+          loggedInUserId,
+          Number(eventRows[0].committee_id)
+        );
         if (!canCreateTopLevel) {
-          throwEventError('FORBIDDEN', 'Only a master admin, Adhyaksha, or Upadhyaksha can create event-level tasks');
+          throwEventError('FORBIDDEN', 'Only Committee Admins and Committee Master Admins can create top-level tasks');
         }
       }
 
@@ -928,13 +966,17 @@ export const eventTasksResolvers = {
         await connection.beginTransaction();
         if (parentTaskId !== null) {
           const [lockedParentRows] = await connection.query<any[]>(
-            `SELECT id, event_id AS eventId, budget_amount AS budgetAmount
+            `SELECT id, event_id AS eventId, parent_id AS parentTaskId,
+                    budget_amount AS budgetAmount
              FROM tasks WHERE id = ? FOR UPDATE`,
             [parentTaskId]
           );
           const lockedParent = lockedParentRows[0];
           if (!lockedParent || Number(lockedParent.eventId) !== eventId) {
             throwEventError('BAD_REQUEST', 'parentTaskId must belong to the selected event');
+          }
+          if (lockedParent.parentTaskId !== null) {
+            throwEventError('BAD_REQUEST', 'Subtasks can only be created under top-level tasks');
           }
           const [allocationRows] = await connection.query<any[]>(
             `SELECT COALESCE(SUM(budget_amount), 0) AS allocated
@@ -1011,6 +1053,7 @@ export const eventTasksResolvers = {
         budgetRequestId: null,
         requestedBudgetAmount: null,
         budgetRequestStatus: null,
+        budgetApprovalStage: null,
         budgetRequestedByName: null,
         canReviewBudgetRequest: false,
         canCancelBudgetRequest: false,
@@ -1024,6 +1067,11 @@ export const eventTasksResolvers = {
         ownerAssignedAt: task.ownerAssignedAt || null,
         updatedAt: String(task.updatedAt),
         canManage: await getTaskManagementPermission(Number(task.taskId), loggedInUserId),
+        canUpdateStatus: await hasPermission(
+          loggedInUserId,
+          PERMISSIONS.EVENT_TASK_MANAGE_ANY,
+          { type: 'EVENT', id: Number(task.eventId) }
+        ),
         canEditTask: await getTaskEditPermission(Number(task.taskId), loggedInUserId),
         canAssignOwner: await getTaskAssignmentPermission(Number(task.taskId), loggedInUserId),
         canDelete: await getTaskDeletionPermission(Number(task.taskId), loggedInUserId)
@@ -1044,7 +1092,7 @@ export const eventTasksResolvers = {
       try {
         await connection.beginTransaction();
         const [taskRows] = await connection.query<any[]>(
-          `SELECT t.id, t.created_by AS createdBy, t.owner_user_id AS ownerUserId,
+          `SELECT t.id, t.parent_id AS parentTaskId, t.created_by AS createdBy, t.owner_user_id AS ownerUserId,
                   t.budget_amount AS budgetAmount, t.status, t.event_id AS eventId,
                   DATE_FORMAT(t.updated_at, '%Y-%m-%d %H:%i:%s') AS updatedAt
            FROM tasks t WHERE t.id = ? FOR UPDATE`,
@@ -1076,9 +1124,16 @@ export const eventTasksResolvers = {
           throwEventError('CONFLICT', 'A budget increase request is already pending approval');
         }
         await connection.execute(
-          `INSERT INTO task_budget_requests (task_id, requested_amount, requested_by)
-           VALUES (?, ?, ?)`,
-          [taskId, targetBudget, userId]
+          `INSERT INTO task_budget_requests
+             (task_id, requested_amount, budget_before_request, requested_by, approval_stage)
+           VALUES (?, ?, ?, ?, ?)`,
+          [
+            taskId,
+            targetBudget,
+            String(task.budgetAmount),
+            userId,
+            task.parentTaskId === null ? 'AUTHORITY' : 'CREATOR'
+          ]
         );
         const [requestRows] = await connection.query<any[]>(
           `SELECT id, CAST(requested_amount AS CHAR) AS requestedAmount
@@ -1121,25 +1176,31 @@ export const eventTasksResolvers = {
       try {
         await connection.beginTransaction();
         const [taskRows] = await connection.query<any[]>(
-          `SELECT t.id, t.parent_id AS parentTaskId, t.created_by AS createdBy,
+          `SELECT t.id, t.parent_id AS parentTaskId,
                   t.owner_user_id AS ownerUserId, t.budget_amount AS budgetAmount,
-                  t.event_id AS eventId
-           FROM tasks t WHERE t.id = ? FOR UPDATE`,
+                  t.event_id AS eventId, e.committee_id AS committeeId
+           FROM tasks t
+           INNER JOIN events e ON e.id = t.event_id
+           WHERE t.id = ? FOR UPDATE`,
           [taskId]
         );
         const task = taskRows[0];
         if (!task) throwEventError('NOT_FOUND', 'Task not found');
 
+        const canManageTasks = await hasTaskAdminPermission(
+          loggedInUserId,
+          Number(task.committeeId),
+          Number(task.eventId)
+        );
+        const isTaskOwner = task.ownerUserId !== null && Number(task.ownerUserId) === loggedInUserId;
+        if (!canManageTasks && !isTaskOwner) {
+          throwEventError('FORBIDDEN', 'Only a Committee Admin, Committee Master Admin, or task owner can edit this budget');
+        }
         const isMasterAdmin = await hasPermission(
           loggedInUserId,
           PERMISSIONS.EVENT_TASK_MANAGE_ANY,
           { type: 'EVENT', id: Number(task.eventId) }
         );
-        const isCreator = Number(task.createdBy) === loggedInUserId;
-        const isTaskOwner = task.ownerUserId !== null && Number(task.ownerUserId) === loggedInUserId;
-        if (!isCreator && !isTaskOwner && !isMasterAdmin) {
-          throwEventError('FORBIDDEN', 'Only the task creator, task owner, or a master admin can edit this budget');
-        }
         if (status !== null && !isTaskOwner && !isMasterAdmin) {
           throwEventError('FORBIDDEN', 'Only the task owner or a master admin can update its status');
         }
@@ -1147,7 +1208,16 @@ export const eventTasksResolvers = {
         const currentBudgetCents = amountCents(task.budgetAmount);
         const requestedBudgetCents = amountCents(budgetAmount);
         const budgetChanged = requestedBudgetCents !== currentBudgetCents;
-        if (isTaskOwner && !isCreator && !isMasterAdmin && budgetChanged) {
+        if (requestedBudgetCents < currentBudgetCents) {
+          throwEventError('BAD_REQUEST', 'Task budgets cannot be decreased');
+        }
+        if (task.parentTaskId !== null && budgetChanged) {
+          throwEventError(
+            'FORBIDDEN',
+            'Subtask budget increases must go through the budget request approval flow'
+          );
+        }
+        if (isTaskOwner && !canManageTasks && budgetChanged) {
           throwEventError('FORBIDDEN', 'Task owners must request additional budget using the budget increase request');
         }
         const [pendingRequestRows] = await connection.query<any[]>(
@@ -1159,10 +1229,6 @@ export const eventTasksResolvers = {
           [taskId]
         );
         const pendingRequest = pendingRequestRows[0] ?? null;
-        if (pendingRequest && budgetChanged && !isCreator && !isMasterAdmin) {
-          throwEventError('CONFLICT', 'A budget increase request is already pending approval');
-        }
-
         if (task.parentTaskId !== null) {
           const [parentRows] = await connection.query<any[]>(
             `SELECT id, budget_amount AS budgetAmount
@@ -1194,7 +1260,7 @@ export const eventTasksResolvers = {
         if (pendingRequest && budgetChanged) {
           await connection.execute(
             `UPDATE task_budget_requests
-             SET status = 'REJECTED', reviewed_by = ?, reviewed_at = CURRENT_TIMESTAMP
+             SET status = 'CANCELLED', reviewed_by = ?, reviewed_at = CURRENT_TIMESTAMP
              WHERE id = ? AND status = 'PENDING'`,
             [loggedInUserId, Number(pendingRequest.id)]
           );
@@ -1275,7 +1341,10 @@ export const eventTasksResolvers = {
                   request.status,
                   task.parent_id AS parentTaskId, task.budget_amount AS currentBudget,
                   task.created_by AS createdBy, parent.budget_amount AS parentBudget,
-                  task.event_id AS eventId
+                  task.event_id AS eventId,
+                  request.approval_stage AS approvalStage,
+                  request.creator_decision AS creatorDecision,
+                  request.authority_decision AS authorityDecision
            FROM task_budget_requests request
            INNER JOIN tasks task ON task.id = request.task_id
            LEFT JOIN tasks parent ON parent.id = task.parent_id
@@ -1285,14 +1354,55 @@ export const eventTasksResolvers = {
         const request = requestRows[0];
         if (!request) throwEventError('NOT_FOUND', 'Budget request not found');
         if (request.status !== 'PENDING') throwEventError('CONFLICT', 'This budget request has already been reviewed');
-        const isMasterAdmin = await hasPermission(
-          loggedInUserId,
-          PERMISSIONS.EVENT_TASK_MANAGE_ANY,
-          { type: 'EVENT', id: Number(request.eventId) }
-        );
-        if (Number(request.createdBy) !== loggedInUserId && !isMasterAdmin) {
-          throwEventError('FORBIDDEN', 'Only the task creator can review this budget request');
+        if (request.approvalStage === 'CREATOR' && Number(request.createdBy) !== loggedInUserId) {
+          throwEventError('FORBIDDEN', 'Only the child task creator can review this budget request');
         }
+        const isAuthority = request.approvalStage === 'AUTHORITY' &&
+          await hasTaskBudgetApprovalAuthority(loggedInUserId, Number(request.eventId));
+        if (request.approvalStage === 'AUTHORITY' && !isAuthority) {
+          throwEventError(
+            'FORBIDDEN',
+            'Only the event Adhyaksha, Upadhyaksha, or Committee Master Admin can review this budget request'
+          );
+        }
+        if (request.approvalStage !== 'CREATOR' && request.approvalStage !== 'AUTHORITY') {
+          throwEventError('CONFLICT', 'This budget request has an invalid approval stage');
+        }
+
+        if (request.approvalStage === 'CREATOR') {
+          const nextStage = decision === 'APPROVE' ? 'AUTHORITY' : 'CREATOR';
+          const nextStatus = decision === 'APPROVE' ? 'PENDING' : 'REJECTED';
+          const [updateResult] = await connection.execute<any>(
+            `UPDATE task_budget_requests
+             SET approval_stage = ?, status = ?, creator_decision = ?, creator_reviewed_by = ?,
+                 creator_review_note = NULL, creator_reviewed_at = CURRENT_TIMESTAMP,
+                 reviewed_by = ?, review_note = NULL,
+                 reviewed_at = CASE WHEN ? = 'REJECT' THEN CURRENT_TIMESTAMP ELSE NULL END
+             WHERE id = ? AND status = 'PENDING' AND approval_stage = 'CREATOR'`,
+            [nextStage, nextStatus, decision === 'APPROVE' ? 'APPROVED' : 'REJECTED',
+              loggedInUserId, decision === 'REJECT' ? loggedInUserId : null,
+              decision, requestId]
+          );
+          if (updateResult.affectedRows !== 1) {
+            throwEventError('CONFLICT', 'This budget request has already been reviewed');
+          }
+          const [taskRows] = await connection.query<any[]>(
+            `SELECT CAST(budget_amount AS CHAR) AS budgetAmount, status,
+                    DATE_FORMAT(updated_at, '%Y-%m-%d %H:%i:%s') AS updatedAt
+             FROM tasks WHERE id = ?`,
+            [Number(request.taskId)]
+          );
+          await connection.commit();
+          return {
+            budgetAmount: String(taskRows[0].budgetAmount),
+            status: String(taskRows[0].status),
+            updatedAt: String(taskRows[0].updatedAt),
+            requestId,
+            requestStatus: nextStatus,
+            requestedBudgetAmount: String(request.requestedAmount)
+          };
+        }
+
         if (decision === 'APPROVE') {
           if (request.parentTaskId !== null) {
             const [allocationRows] = await connection.query<any[]>(
@@ -1322,7 +1432,7 @@ export const eventTasksResolvers = {
             [request.requestedAmount, loggedInUserId, Number(request.taskId)]
           );
           const approvedIncreaseCents = amountCents(request.requestedAmount) - amountCents(request.currentBudget);
-          if (approvedIncreaseCents > 0 && request.parentTaskId === null) {
+          if (approvedIncreaseCents > 0) {
             await insertSanctionedBudgetFinanceRequest(connection, {
               taskId: Number(request.taskId),
               requestType: 'TOP_UP',
@@ -1336,9 +1446,13 @@ export const eventTasksResolvers = {
         }
         await connection.execute(
           `UPDATE task_budget_requests
-           SET status = ?, reviewed_by = ?, reviewed_at = CURRENT_TIMESTAMP
-           WHERE id = ? AND status = 'PENDING'`,
-          [decision === 'APPROVE' ? 'APPROVED' : 'REJECTED', loggedInUserId, requestId]
+           SET status = ?, authority_decision = ?, authority_reviewed_by = ?,
+               authority_review_note = NULL, authority_reviewed_at = CURRENT_TIMESTAMP,
+               reviewed_by = ?, review_note = NULL, reviewed_at = CURRENT_TIMESTAMP
+           WHERE id = ? AND status = 'PENDING' AND approval_stage = 'AUTHORITY'`,
+          [decision === 'APPROVE' ? 'APPROVED' : 'REJECTED',
+            decision === 'APPROVE' ? 'APPROVED' : 'REJECTED',
+            loggedInUserId, loggedInUserId, requestId]
         );
         const [updatedRows] = await connection.query<any[]>(
           `SELECT CAST(task.budget_amount AS CHAR) AS budgetAmount,

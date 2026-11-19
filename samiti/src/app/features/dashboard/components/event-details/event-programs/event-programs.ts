@@ -87,9 +87,7 @@ export class EventProgramsComponent implements OnInit, OnDestroy {
   );
 
   public readonly canCreateTopLevelProgram = computed<boolean>(() => {
-    if (this.isEventMasterAdmin()) return true;
-    const designation = String(this.eventData()?.myDesignation?.name || '').trim().toLowerCase();
-    return designation === 'adhyaksha' || designation === 'upadhyaksha';
+    return this.isEventMasterAdmin() || this.userEventRole() === 'COMMITTEE_ADMIN';
   });
 
   public readonly sortedAssignableCandidates = computed<EventDirectAssignMember[]>(() => {

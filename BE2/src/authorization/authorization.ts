@@ -33,6 +33,53 @@ export type AuthorizationScope =
   | { type: 'COMMITTEE'; id: number }
   | { type: 'EVENT'; id: number };
 
+export async function hasCommitteeTaskProgramCreationRole(
+  userId: number,
+  committeeId: number
+): Promise<boolean> {
+  const rows = await query<any[]>(
+    `SELECT EXISTS (
+       SELECT 1
+       FROM users_committees
+       WHERE committee_id = ? AND user_id = ?
+         AND committee_role IN ('COMMITTEE_MASTER_ADMIN', 'COMMITTEE_ADMIN')
+     ) AS allowed`,
+    [committeeId, userId]
+  );
+  return Number(rows[0]?.allowed) === 1;
+}
+
+export async function hasTaskBudgetApprovalAuthority(
+  userId: number,
+  eventId: number
+): Promise<boolean> {
+  const rows = await query<any[]>(
+    `SELECT EXISTS (
+       SELECT 1
+       FROM events e
+       LEFT JOIN users_committees uc
+         ON uc.committee_id = e.committee_id AND uc.user_id = ?
+       LEFT JOIN users_events ue
+         ON ue.event_id = e.id AND ue.user_id = ?
+       LEFT JOIN events_roles_master erm ON erm.role_id = ue.role_id
+       WHERE e.id = ?
+         AND (
+           uc.committee_role = 'COMMITTEE_MASTER_ADMIN'
+           OR UPPER(REPLACE(REPLACE(TRIM(COALESCE(erm.role_name, '')), ' ', '_'), '-', '_'))
+             IN ('ADHYAKSHA', 'UPADHYAKSHA')
+           OR UPPER(REPLACE(REPLACE(TRIM(COALESCE(erm.english_name, '')), ' ', '_'), '-', '_'))
+             IN ('ADHYAKSHA', 'UPADHYAKSHA')
+           OR UPPER(REPLACE(REPLACE(TRIM(COALESCE(erm.hindi_name, '')), ' ', '_'), '-', '_'))
+             IN ('ADHYAKSHA', 'UPADHYAKSHA')
+           OR UPPER(REPLACE(REPLACE(TRIM(COALESCE(ue.designation, '')), ' ', '_'), '-', '_'))
+             IN ('ADHYAKSHA', 'UPADHYAKSHA')
+         )
+     ) AS allowed`,
+    [userId, userId, eventId]
+  );
+  return Number(rows[0]?.allowed) === 1;
+}
+
 export async function hasPermission(
   userId: number,
   permissionCode: PermissionCode,
@@ -121,8 +168,6 @@ export async function initializeCommitteePermissions(committeeId: number): Promi
      FROM authorization_roles ar
      INNER JOIN authorization_permissions ap
        ON ap.permission_code IN (
-         'event.task.create',
-         'program.create',
          'program.update',
          'program.delete',
          'program.assign_owner',
@@ -136,7 +181,7 @@ export async function initializeCommitteePermissions(committeeId: number): Promi
      SELECT ?, ar.id, ap.id
      FROM authorization_roles ar
      INNER JOIN authorization_permissions ap
-       ON ap.permission_code = 'event.task.create'
+       ON ap.permission_code IN ('event.task.create', 'program.create')
      WHERE ar.scope = 'COMMITTEE' AND ar.role_code = 'COMMITTEE_ADMIN'`,
     [committeeId]
   );

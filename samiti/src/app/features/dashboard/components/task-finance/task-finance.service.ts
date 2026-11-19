@@ -6,7 +6,8 @@ import {
   TaskFinancePayload,
   TaskFinanceRequest,
   TaskFinanceTransaction,
-  TaskFinanceTransactionType
+  TaskFinanceTransactionType,
+  TaskSubtaskTransfer
 } from './task-finance.models';
 
 interface GraphqlResponse<T> {
@@ -23,13 +24,35 @@ export class TaskFinanceService {
     const query = `query TaskFinance($taskId: Int!) {
       taskFinance(taskId: $taskId) {
         requests {
-          id requestType requestedAmount approvedAmount reason status
-          requestedByName reviewedByName reviewNote createdAt reviewedAt
+          id taskId sourceBudgetRequestId taskName taskBudgetAmount taskOwnerName taskOwnerUserId requestType approvalStage
+          requestedAmount approvedAmount reason status requestedByName reviewedByName reviewNote
+          authorityDecision authorityReviewedByName authorityReviewNote authorityReviewedAt
+          canReviewAuthority createdAt reviewedAt
+        }
+        budgetRequests {
+          id taskId taskName requestedAmount budgetBeforeRequest requestedIncrease
+          requestedByName actionByName status approvalStage creatorDecision creatorReviewedByName
+          creatorReviewerDesignation creatorReviewedAt authorityDecision
+          authorityReviewedByName authorityReviewerDesignation authorityReviewedAt
+          createdAt canReviewCreator canReviewAuthority canCancel
         }
         transactions {
-          id requestId transactionType amount description status
+          id taskId taskName requestId transactionType amount description status
           createdByName confirmedByName createdAt confirmedAt
           recipientName receivedByName receivedAt canConfirmReceipt
+        }
+        subtaskTransferOptions {
+          subtaskId subtaskName ownerName budgetAmount availableAmount
+        }
+        incomingSubtaskTransfers {
+          id parentTaskId parentTaskName subtaskId subtaskName
+          senderName recipientName amount description status createdAt
+          confirmedByName confirmedAt canConfirmReceipt
+        }
+        outgoingSubtaskTransfers {
+          id parentTaskId parentTaskName subtaskId subtaskName
+          senderName recipientName amount description status createdAt
+          confirmedByName confirmedAt canConfirmReceipt
         }
         summary {
           sanctionedBudget checklistExpenses subtaskSpent remainingBudget
@@ -37,7 +60,7 @@ export class TaskFinanceService {
         }
         budgetAmount budgetRequestId requestedBudgetAmount budgetRequestStatus budgetRequestedByName
         canEditBudget canRequestBudgetIncrease canReviewBudgetRequest canCancelBudgetRequest
-        canRequest canApprove
+        canRequest canApprove isBudgetAuthority canCreateSubtaskTransfers isEventScope
       }
     }`;
 
@@ -45,18 +68,82 @@ export class TaskFinanceService {
       .pipe(map((response) => response.taskFinance));
   }
 
-  public reviewRequest(requestId: number, decision: 'APPROVE' | 'REJECT', approvedAmount?: string, note?: string): Observable<TaskFinanceRequest> {
+  public getEventTaskFinance(eventId: number): Observable<TaskFinancePayload> {
+    const query = `query EventTaskFinance($eventId: Int!) {
+      eventTaskFinance(eventId: $eventId) {
+        requests {
+          id taskId sourceBudgetRequestId taskName taskBudgetAmount taskOwnerName taskOwnerUserId requestType approvalStage
+          requestedAmount approvedAmount reason status requestedByName reviewedByName reviewNote
+          authorityDecision authorityReviewedByName authorityReviewNote authorityReviewedAt
+          canReviewAuthority createdAt reviewedAt
+        }
+        budgetRequests {
+          id taskId taskName requestedAmount budgetBeforeRequest requestedIncrease
+          requestedByName actionByName status approvalStage creatorDecision creatorReviewedByName
+          creatorReviewerDesignation creatorReviewedAt authorityDecision
+          authorityReviewedByName authorityReviewerDesignation authorityReviewedAt
+          createdAt canReviewCreator canReviewAuthority canCancel
+        }
+        transactions {
+          id taskId taskName requestId transactionType amount description status
+          createdByName confirmedByName createdAt confirmedAt
+          recipientName receivedByName receivedAt canConfirmReceipt
+        }
+        subtaskTransferOptions { subtaskId subtaskName ownerName budgetAmount availableAmount }
+        incomingSubtaskTransfers {
+          id parentTaskId parentTaskName subtaskId subtaskName senderName recipientName
+          amount description status createdAt confirmedByName confirmedAt canConfirmReceipt
+        }
+        outgoingSubtaskTransfers {
+          id parentTaskId parentTaskName subtaskId subtaskName senderName recipientName
+          amount description status createdAt confirmedByName confirmedAt canConfirmReceipt
+        }
+        summary {
+          sanctionedBudget checklistExpenses subtaskSpent remainingBudget
+          advanceIssued advanceSpent returnPending returnConfirmed advanceBalance
+        }
+        budgetAmount budgetRequestId requestedBudgetAmount budgetRequestStatus budgetRequestedByName
+        canEditBudget canRequestBudgetIncrease canReviewBudgetRequest canCancelBudgetRequest
+        canRequest canApprove isBudgetAuthority canCreateSubtaskTransfers isEventScope
+      }
+    }`;
+    return this.request<{ eventTaskFinance: TaskFinancePayload }>(query, { eventId })
+      .pipe(map((response) => response.eventTaskFinance));
+  }
+
+  public reviewBudgetRequest(requestId: number, decision: 'APPROVE' | 'REJECT'): Observable<unknown> {
+    const mutation = `mutation ReviewTaskBudgetRequest($requestId: Int!, $decision: String!) {
+      reviewTaskBudgetRequest(requestId: $requestId, decision: $decision) {
+        requestId requestStatus
+      }
+    }`;
+    return this.request<{ reviewTaskBudgetRequest: unknown }>(mutation, { requestId, decision })
+      .pipe(map((response) => response.reviewTaskBudgetRequest));
+  }
+
+  public cancelBudgetRequest(requestId: number): Observable<unknown> {
+    const mutation = `mutation CancelTaskBudgetRequest($requestId: Int!) {
+      cancelTaskBudgetRequest(requestId: $requestId) {
+        requestId requestStatus
+      }
+    }`;
+    return this.request<{ cancelTaskBudgetRequest: unknown }>(mutation, { requestId })
+      .pipe(map((response) => response.cancelTaskBudgetRequest));
+  }
+
+  public reviewRequest(requestId: number, decision: 'APPROVE' | 'REJECT', note?: string): Observable<TaskFinanceRequest> {
     const mutation = `mutation ReviewTaskFinanceRequest($input: TaskFinanceReviewInput!) {
       reviewTaskFinanceRequest(input: $input) {
-        id requestType requestedAmount approvedAmount reason status
-        requestedByName reviewedByName reviewNote createdAt reviewedAt
+        id taskId sourceBudgetRequestId taskName taskBudgetAmount taskOwnerName taskOwnerUserId requestType approvalStage
+        requestedAmount approvedAmount reason status requestedByName reviewedByName reviewNote
+        authorityDecision authorityReviewedByName authorityReviewNote authorityReviewedAt
+        canReviewAuthority createdAt reviewedAt
       }
     }`;
     return this.request<{ reviewTaskFinanceRequest: TaskFinanceRequest }>(mutation, {
       input: {
         requestId,
         decision,
-        ...(approvedAmount !== undefined ? { approvedAmount: String(approvedAmount) } : {}),
         note
       }
     }).pipe(map((response) => response.reviewTaskFinanceRequest));
@@ -71,7 +158,7 @@ export class TaskFinanceService {
   ): Observable<TaskFinanceTransaction> {
     const mutation = `mutation RecordTaskFinanceTransaction($input: TaskFinanceTransactionInput!) {
       recordTaskFinanceTransaction(input: $input) {
-        id requestId transactionType amount description status
+        id taskId taskName requestId transactionType amount description status
         createdByName confirmedByName createdAt confirmedAt
         recipientName receivedByName receivedAt canConfirmReceipt
       }
@@ -90,13 +177,43 @@ export class TaskFinanceService {
   public confirmReceipt(transactionId: number): Observable<TaskFinanceTransaction> {
     const mutation = `mutation ConfirmTaskFinanceReceipt($transactionId: Int!) {
       confirmTaskFinanceReceipt(transactionId: $transactionId) {
-        id requestId transactionType amount description status
+        id taskId taskName requestId transactionType amount description status
         createdByName confirmedByName createdAt confirmedAt
         recipientName receivedByName receivedAt canConfirmReceipt
       }
     }`;
     return this.request<{ confirmTaskFinanceReceipt: TaskFinanceTransaction }>(mutation, { transactionId })
       .pipe(map((response) => response.confirmTaskFinanceReceipt));
+  }
+
+  public createSubtaskTransfer(
+    parentTaskId: number,
+    subtaskId: number,
+    amount: string,
+    description: string
+  ): Observable<TaskSubtaskTransfer> {
+    const mutation = `mutation CreateSubtaskTransfer($input: CreateSubtaskTransferInput!) {
+      createSubtaskTransfer(input: $input) {
+        id parentTaskId parentTaskName subtaskId subtaskName
+        senderName recipientName amount description status createdAt
+        confirmedByName confirmedAt canConfirmReceipt
+      }
+    }`;
+    return this.request<{ createSubtaskTransfer: TaskSubtaskTransfer }>(mutation, {
+      input: { parentTaskId, subtaskId, amount: String(amount), description }
+    }).pipe(map((response) => response.createSubtaskTransfer));
+  }
+
+  public confirmSubtaskTransferReceipt(transferId: number): Observable<TaskSubtaskTransfer> {
+    const mutation = `mutation ConfirmSubtaskTransferReceipt($transferId: Int!) {
+      confirmSubtaskTransferReceipt(transferId: $transferId) {
+        id parentTaskId parentTaskName subtaskId subtaskName
+        senderName recipientName amount description status createdAt
+        confirmedByName confirmedAt canConfirmReceipt
+      }
+    }`;
+    return this.request<{ confirmSubtaskTransferReceipt: TaskSubtaskTransfer }>(mutation, { transferId })
+      .pipe(map((response) => response.confirmSubtaskTransferReceipt));
   }
 
   private request<T>(query: string, variables: Record<string, unknown>): Observable<T> {

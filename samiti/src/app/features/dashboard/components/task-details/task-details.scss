@@ -1074,6 +1074,20 @@
   }
 }
 
+.subtask-action-tooltip-wrapper {
+  display: inline-flex;
+
+  &.subtask-action-disabled {
+    cursor: not-allowed;
+
+    .create-subtask-tab-action {
+      cursor: not-allowed !important;
+      opacity: 0.6;
+      pointer-events: none;
+    }
+  }
+}
+
 .horizontal-full-card {
   display: flex;
   flex-direction: column;

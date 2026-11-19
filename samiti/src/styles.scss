@@ -38,7 +38,7 @@
 }
 
 /* Shared control geometry across feature and dialog components. */
-html body .mat-mdc-button-base:not(.mat-mdc-icon-button) {
+html body .mat-mdc-button-base:not(.mat-mdc-icon-button):not(.committee-logo-edit-trigger):not(.event-logo-edit-trigger):not(.photo-edit-trigger):not(.banner-upload-tile) {
   box-sizing: border-box;
   min-height: var(--samiti-action-height) !important;
   height: var(--samiti-action-height) !important;
@@ -55,7 +55,7 @@ html body .mat-mdc-button-base:not(.mat-mdc-icon-button) {
 }
 
 /* Keep native and Material buttons compact across app views and overlays. */
-:root :is(button, .mat-mdc-button-base):not(.user-avatar-btn):not(.task-assignee-clear-btn):not(.drawer-close-btn):not(.confirm-dialog-close-btn):not([hidden]) {
+:root :is(button, .mat-mdc-button-base):not(.user-avatar-btn):not(.task-assignee-clear-btn):not(.drawer-close-btn):not(.confirm-dialog-close-btn):not(.committee-logo-edit-trigger):not(.event-logo-edit-trigger):not(.photo-edit-trigger):not(.banner-upload-tile):not([hidden]) {
   box-sizing: border-box;
   height: var(--samiti-action-height) !important;
   min-height: var(--samiti-action-height) !important;
@@ -310,6 +310,16 @@ body {
     animation: slideInFromRight 0.3s ease-out;
   }
 
+  &.task-finance-requests-drawer {
+    width: 80% !important;
+    max-width: 1000px !important;
+  }
+
+  &.finance-requests-history-drawer {
+    width: 80% !important;
+    max-width: 1000px !important;
+  }
+
   &.slide-in-dialog-left {
     position: fixed !important;
     left: 0 !important;
@@ -335,7 +345,7 @@ body {
 
 .cdk-overlay-pane.task-finance-dialog-panel {
   width: 100% !important;
-  max-width: 1000px !important;
+  max-width: 1300px !important;
 }
 
 .cdk-overlay-backdrop.confirm-dialog-backdrop {
@@ -657,15 +667,15 @@ html body button.mat-mdc-icon-button:is(.drawer-close-btn, .confirm-dialog-close
   color: #047857 !important;
 
   mat-icon {
-    width: 16px !important;
-    height: 16px !important;
-    font-size: 16px !important;
-    line-height: 16px !important;
+    width: 14px !important;
+    height: 14px !important;
+    font-size: 14px !important;
+    line-height: 14px !important;
   }
 
   > mat-icon {
     display: block;
-    flex: 0 0 16px;
+    flex: 0 0 14px;
     margin: 0 !important;
   }
 
@@ -682,6 +692,69 @@ html body button.mat-mdc-icon-button:is(.drawer-close-btn, .confirm-dialog-close
   border-color: #ef4444 !important;
   background: #fff1f2 !important;
   color: #b91c1c !important;
+  animation: task-finance-action-fill 1s ease-in-out infinite;
+
+  > mat-icon {
+    color: #b91c1c !important;
+    animation: task-finance-currency-pulse 1s ease-in-out infinite;
+    transform-origin: center;
+  }
+}
+
+@keyframes task-finance-action-fill {
+  0%,
+  100% {
+    box-shadow: inset 0 0 0 0 rgba(220, 38, 38, 0);
+  }
+
+  50% {
+    box-shadow: inset 0 0 0 14px rgba(220, 38, 38, 0.12);
+  }
+}
+
+@keyframes task-finance-currency-pulse {
+  0%,
+  100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+
+  50% {
+    opacity: 0.9;
+    transform: scale(1.12);
+  }
+}
+
+@keyframes task-finance-tab-action-glow {
+  0%,
+  100% {
+    box-shadow: inset 0 0 0 0 rgba(220, 38, 38, 0);
+  }
+
+  50% {
+    box-shadow: inset 0 0 0 7px rgba(220, 38, 38, 0.16);
+  }
+}
+
+@keyframes task-finance-tab-action-blink {
+  0%,
+  100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+
+  50% {
+    opacity: 0.65;
+    transform: scale(1);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .task-panel-finance-icon.task-panel-finance-action-required,
+  .task-panel-finance-icon.task-panel-finance-action-required > mat-icon,
+  .task-finance-action-indicator {
+    animation: none;
+  }
 }
 
 .task-panel-finance-action-indicator,
@@ -714,9 +787,15 @@ html body button.mat-mdc-icon-button:is(.drawer-close-btn, .confirm-dialog-close
 }
 
 .task-finance-action-indicator {
-  flex: 0 0 19px;
+  flex: 0 0 14px;
   margin-left: 2px;
   cursor: help;
+  width: 14px !important;
+  height: 14px !important;
+  font-size: 10px !important;
+  line-height: 10px !important;
+  animation: task-finance-tab-action-glow 1s ease-in-out infinite, task-finance-tab-action-blink 1s steps(2, end) infinite;
+  transform-origin: center;
 }
 
 .tf-ack-required-icon {

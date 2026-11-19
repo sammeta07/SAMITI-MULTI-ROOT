@@ -36,6 +36,7 @@ export interface EventTaskEntry {
   ownerAssignedAt: string | null;
   updatedAt: string;
   canManage: boolean;
+  canUpdateStatus: boolean;
   canEditTask: boolean;
   canAssignOwner: boolean;
   canDelete: boolean;

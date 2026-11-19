@@ -145,6 +145,7 @@ export class EventTasksComponent implements OnInit, OnDestroy {
           ownerAssignedAt: updatedTask.ownerAssignedAt,
           updatedAt: updatedTask.updatedAt,
           canManage: updatedTask.canManage,
+          canUpdateStatus: updatedTask.canUpdateStatus,
           canEditTask: updatedTask.canEditTask,
           canAssignOwner: updatedTask.canAssignOwner,
           canDelete: updatedTask.canDeleteTask,
@@ -399,7 +400,7 @@ export class EventTasksComponent implements OnInit, OnDestroy {
 
   public editTaskRow(task: EventTaskEntry): void {
     if (this.isEditingTaskRow(task)) return;
-    if (task.canManage) {
+    if (task.canUpdateStatus) {
       this.taskBudgetEditAmounts[task.taskId] = task.budgetAmount;
       this.taskStatusEditValues[task.taskId] = this.statusValue(task.status) as TaskStatus;
       this.editingTaskBudgetIds.add(task.taskId);
@@ -472,7 +473,7 @@ export class EventTasksComponent implements OnInit, OnDestroy {
   public updateTaskStatus(task: EventTaskEntry, selectedStatus: string): void {
     const status = this.statusValue(selectedStatus) as TaskStatus;
     if (
-      !task.canManage ||
+      !task.canUpdateStatus ||
       status === this.statusValue(task.status) ||
       this.savingTaskBudgetIds.has(task.taskId)
     ) return;

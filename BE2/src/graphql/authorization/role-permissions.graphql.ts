@@ -205,6 +205,24 @@ export const rolePermissionsResolvers = {
       if (normalizedPermissionCodes.includes(PERMISSIONS.AUTHORIZATION_MANAGE)) {
         throwEventError('FORBIDDEN', 'The authorization management permission is reserved for committee master admins');
       }
+      const isCommitteeAdminRole = scope === 'COMMITTEE' &&
+        ['COMMITTEE_ADMIN', 'COMMITTEE_MASTER_ADMIN'].includes(roleCode);
+      if (!isCommitteeAdminRole && normalizedPermissionCodes.some((code) => (
+        code === PERMISSIONS.EVENT_TASK_CREATE || code === PERMISSIONS.PROGRAM_CREATE
+      ))) {
+        throwEventError(
+          'FORBIDDEN',
+          'Task and program creation permissions are reserved for Committee Admin roles'
+        );
+      }
+      if (scope === 'COMMITTEE' && roleCode === 'COMMITTEE_ADMIN' &&
+        [PERMISSIONS.EVENT_TASK_CREATE, PERMISSIONS.PROGRAM_CREATE]
+          .some((code) => !normalizedPermissionCodes.includes(code))) {
+        throwEventError(
+          'BAD_REQUEST',
+          'Committee Admin roles must retain task and program creation permissions'
+        );
+      }
 
       const connection = await getConnection();
       try {

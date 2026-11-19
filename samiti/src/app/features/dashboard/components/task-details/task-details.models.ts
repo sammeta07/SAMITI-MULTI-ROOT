@@ -24,6 +24,7 @@ export interface TaskChild {
   updatedByName?: string | null;
   updatedAt?: string | null;
   canManage: boolean;
+  canUpdateStatus: boolean;
   canEditTask: boolean;
   canAssignOwner: boolean;
   canDelete: boolean;
@@ -61,6 +62,7 @@ export interface TaskDetailsPayload {
   todos: TodoItem[];
   todoAssignees: TodoAssignee[];
   canManage: boolean;
+  canUpdateStatus: boolean;
   canEditTask: boolean;
   canAssignOwner: boolean;
   canDeleteTask: boolean;

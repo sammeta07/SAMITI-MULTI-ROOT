@@ -43,6 +43,7 @@ export class TaskDetailsService {
         ownerAssignedAt
         updatedByName
         canManage
+        canUpdateStatus
         canEditTask
         canAssignOwner
         canDeleteTask
@@ -72,6 +73,7 @@ export class TaskDetailsService {
           updatedByName
           updatedAt
           canManage
+          canUpdateStatus
           canEditTask
           canAssignOwner
           canDelete
@@ -101,6 +103,7 @@ export class TaskDetailsService {
           updatedByName
           updatedAt
           canManage
+          canUpdateStatus
           canEditTask
           canAssignOwner
           canDelete

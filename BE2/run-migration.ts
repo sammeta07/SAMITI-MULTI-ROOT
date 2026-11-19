@@ -70,14 +70,15 @@ async function executeSqlStatementsFromFile(connection: mysql.Connection, migrat
     '075-set-event-task-permission-grants.sql',
     '076-restrict-task-title-edit.sql',
     '080-remove-task-budget-decided.sql',
-    '084-remove-personal-expense-link.sql'
+    '084-remove-personal-expense-link.sql',
+    '087-restrict-task-program-creation-and-budget-approvals.sql'
   ]);
 
   for (const statement of statements) {
     const isDestructiveStatement =
       /\bDROP\s+(TABLE|TRIGGER|VIEW|DATABASE)\b/i.test(statement) ||
       /\bTRUNCATE\s+TABLE\b/i.test(statement) ||
-      /\bDELETE\s+FROM\b/i.test(statement) ||
+      /\bDELETE\s+(?:[A-Za-z_][A-Za-z0-9_]*\s+)?FROM\b/i.test(statement) ||
       /\bALTER\s+TABLE\b[\s\S]*\bDROP\b/i.test(statement);
     if (isDestructiveStatement && !approvedDestructiveMigrations.has(migrationFileName)) {
       throw new Error(`Refusing destructive migration statement in ${migrationFileName}`);

@@ -1,0 +1,23 @@
+CREATE TABLE IF NOT EXISTS task_subtask_transfers (
+  id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+  parent_task_id INT NOT NULL,
+  subtask_id INT NOT NULL,
+  sender_user_id INT NOT NULL,
+  recipient_user_id INT NOT NULL,
+  amount DECIMAL(12, 0) NOT NULL,
+  description VARCHAR(1000) NOT NULL,
+  status ENUM('PENDING', 'CONFIRMED') NOT NULL DEFAULT 'PENDING',
+  confirmed_by INT DEFAULT NULL,
+  created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  confirmed_at TIMESTAMP NULL DEFAULT NULL,
+  PRIMARY KEY (id),
+  KEY idx_task_subtask_transfers_parent_created (parent_task_id, created_at),
+  KEY idx_task_subtask_transfers_child_status (subtask_id, status),
+  KEY idx_task_subtask_transfers_recipient_status (recipient_user_id, status),
+  CONSTRAINT chk_task_subtask_transfer_amount CHECK (amount > 0),
+  CONSTRAINT fk_task_subtask_transfers_parent FOREIGN KEY (parent_task_id) REFERENCES tasks(id) ON DELETE CASCADE,
+  CONSTRAINT fk_task_subtask_transfers_subtask FOREIGN KEY (subtask_id) REFERENCES tasks(id) ON DELETE CASCADE,
+  CONSTRAINT fk_task_subtask_transfers_sender FOREIGN KEY (sender_user_id) REFERENCES users(id) ON DELETE RESTRICT,
+  CONSTRAINT fk_task_subtask_transfers_recipient FOREIGN KEY (recipient_user_id) REFERENCES users(id) ON DELETE RESTRICT,
+  CONSTRAINT fk_task_subtask_transfers_confirmer FOREIGN KEY (confirmed_by) REFERENCES users(id) ON DELETE SET NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;

@@ -14,7 +14,7 @@
     <section class="task-dialog-card" aria-label="Task details">
       <div class="section-header-row">
         <span class="section-label-tag"><mat-icon>info</mat-icon> Task Information</span>
-        @if (!task.canManage) {
+        @if (!task.canUpdateStatus) {
           <span class="task-status-pill" [ngClass]="'task-status-' + statusClass(task.status)">
             {{ displayStatus(task.status) }}
           </span>
@@ -179,7 +179,7 @@
             </div>
           }
 
-          @if (task.canManage) {
+          @if (task.canUpdateStatus) {
             <div class="task-dialog-action-row">
               <label for="task-dialog-status">Status</label>
               <div class="task-dialog-control">

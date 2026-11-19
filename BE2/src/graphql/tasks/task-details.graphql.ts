@@ -1,8 +1,17 @@
 import { query } from '../../config/db';
 import { getLoggedInUserId, throwEventError } from '../events/details/voting/event-voting-core.graphql';
 import { getTodoAssignees } from '../todos/todos.graphql';
-import { hasPermission, PERMISSIONS } from '../../authorization/authorization';
-import { getFinanceActionTaskIds, getPendingReceiptTaskIds } from './task-finance.graphql';
+import {
+  hasCommitteeTaskProgramCreationRole,
+  hasTaskBudgetApprovalAuthority,
+  hasPermission,
+  PERMISSIONS
+} from '../../authorization/authorization';
+import {
+  getFinanceActionTaskIds,
+  getPendingReceiptTaskIds,
+  getPendingSubtaskTransferTaskIds
+} from './task-finance.graphql';
 
 export const taskDetailsTypes = `
   type TaskChild {
@@ -14,6 +23,7 @@ export const taskDetailsTypes = `
     budgetRequestId: Int
     requestedBudgetAmount: String
     budgetRequestStatus: String
+    budgetApprovalStage: String
     budgetRequestedByName: String
     canReviewBudgetRequest: Boolean!
     canCancelBudgetRequest: Boolean!
@@ -28,6 +38,7 @@ export const taskDetailsTypes = `
     updatedByName: String
     updatedAt: String
     canManage: Boolean!
+    canUpdateStatus: Boolean!
     canEditTask: Boolean!
     canAssignOwner: Boolean!
     canDelete: Boolean!
@@ -53,6 +64,7 @@ export const taskDetailsTypes = `
     budgetRequestId: Int
     requestedBudgetAmount: String
     budgetRequestStatus: String
+    budgetApprovalStage: String
     budgetRequestedByName: String
     canReviewBudgetRequest: Boolean!
     canCancelBudgetRequest: Boolean!
@@ -76,6 +88,7 @@ export const taskDetailsTypes = `
     todos: [TodoItem!]!
     todoAssignees: [TodoAssignee!]!
     canManage: Boolean!
+    canUpdateStatus: Boolean!
     canEditTask: Boolean!
     canAssignOwner: Boolean!
     canDeleteTask: Boolean!
@@ -108,6 +121,7 @@ export const taskDetailsResolvers = {
            budgetRequest.id AS budgetRequestId,
            CAST(GREATEST(0, budgetRequest.requested_amount - t.budget_amount) AS CHAR) AS requestedBudgetAmount,
            budgetRequest.status AS budgetRequestStatus,
+           budgetRequest.approval_stage AS budgetApprovalStage,
            budgetRequester.name AS budgetRequestedByName,
            budgetRequest.requested_by AS budgetRequestedBy,
            t.status,
@@ -158,6 +172,10 @@ export const taskDetailsResolvers = {
       const isTaskOwner = Number(task.ownerUserId) === userId;
       const isTaskCreator = Number(task.createdBy) === userId;
       const isParentTaskOwner = Number(task.parentOwnerUserId) === userId;
+      const isCommitteeTaskManager = await hasCommitteeTaskProgramCreationRole(
+        userId,
+        Number(task.committeeId)
+      );
       if (!hasCommitteeAccess && !isTaskOwner && !isTaskCreator && !isParentTaskOwner) {
         throwEventError('FORBIDDEN', 'You are not allowed to access this task');
       }
@@ -177,19 +195,21 @@ export const taskDetailsResolvers = {
         [Number(task.eventId), userId]
       );
       const isCashier = Number(cashierRows[0]?.isCashier) === 1;
+      const isBudgetAuthority = await hasTaskBudgetApprovalAuthority(userId, Number(task.eventId));
       const canAccessFinance = isTaskOwner || isCashier;
       const isMasterAdmin = await hasPermission(
         userId,
         PERMISSIONS.EVENT_TASK_MANAGE_ANY,
         { type: 'EVENT', id: Number(task.eventId) }
       );
+      const canManageTasks = isCommitteeTaskManager || isMasterAdmin;
       const canAssignOwner = task.parentTaskId === null
-        ? Number(task.createdBy) === userId || await hasPermission(
+        ? canManageTasks || await hasPermission(
             userId,
             PERMISSIONS.EVENT_TASK_ASSIGN_OWNER,
             { type: 'EVENT', id: Number(task.eventId) }
           )
-        : isMasterAdmin || isParentTaskOwner;
+        : canManageTasks || isParentTaskOwner;
       const canAssignRootTaskOwners = await hasPermission(
         userId,
         PERMISSIONS.EVENT_TASK_ASSIGN_OWNER,
@@ -207,6 +227,7 @@ export const taskDetailsResolvers = {
            budgetRequest.id AS budgetRequestId,
            CAST(GREATEST(0, budgetRequest.requested_amount - t.budget_amount) AS CHAR) AS requestedBudgetAmount,
            budgetRequest.status AS budgetRequestStatus,
+           budgetRequest.approval_stage AS budgetApprovalStage,
            budgetRequester.name AS budgetRequestedByName,
            budgetRequest.requested_by AS budgetRequestedBy,
            t.status,
@@ -236,18 +257,20 @@ export const taskDetailsResolvers = {
         const isRootTask = child.parentTaskId === null;
         const isChildParentOwner = Number(child.parentOwnerUserId) === userId;
         return {
-          canEditTask: Number(child.createdBy) === userId || isMasterAdmin,
-          canManage: Number(child.ownerUserId) === userId || isMasterAdmin,
+          canEditTask: canManageTasks,
+          canManage: Number(child.ownerUserId) === userId || canManageTasks,
+          canUpdateStatus: Number(child.ownerUserId) === userId || isMasterAdmin,
           canCancelBudgetRequest: Boolean(child.budgetRequestId) &&
-            (Number(child.budgetRequestedBy) === userId || isMasterAdmin),
+            (Number(child.budgetRequestedBy) === userId || canManageTasks),
           canAssignOwner: isRootTask
-            ? canAssignRootTaskOwners || Number(child.createdBy) === userId
-            : isMasterAdmin || isChildParentOwner,
-          canDelete: isMasterAdmin ||
-            Number(child.createdBy) === userId ||
+            ? canAssignRootTaskOwners || canManageTasks
+            : canManageTasks || isChildParentOwner,
+          canDelete: canManageTasks ||
             (!isRootTask && isChildParentOwner),
-          canReviewBudgetRequest: Boolean(child.budgetRequestId) &&
-            (Number(child.createdBy) === userId || isMasterAdmin),
+          canReviewBudgetRequest: Boolean(child.budgetRequestId) && (
+            (child.budgetApprovalStage === 'CREATOR' && Number(child.createdBy) === userId) ||
+            (child.budgetApprovalStage === 'AUTHORITY' && isBudgetAuthority)
+          ),
           canRequestBudgetIncrease: Number(child.ownerUserId) === userId &&
             Number(child.createdBy) !== userId &&
             !isMasterAdmin
@@ -282,6 +305,10 @@ export const taskDetailsResolvers = {
           ])
         : new Set<number>();
       const receiptTaskIds = await getPendingReceiptTaskIds([
+        taskId,
+        ...descendants.map((descendant) => Number(descendant.taskId))
+      ], userId);
+      const subtaskTransferTaskIds = await getPendingSubtaskTransferTaskIds([
         taskId,
         ...descendants.map((descendant) => Number(descendant.taskId))
       ], userId);
@@ -340,9 +367,12 @@ export const taskDetailsResolvers = {
         PERMISSIONS.TODO_MANAGE,
         { type: 'EVENT', id: Number(task.eventId) }
       ) || isTaskOwner;
-      const canCreateSubtasks = isMasterAdmin || isTaskOwner;
+      const canCreateSubtasks = task.parentTaskId === null && (isMasterAdmin || isTaskOwner);
       const canReviewBudgetRequest = Boolean(task.budgetRequestId) &&
-        (isTaskCreator || isMasterAdmin);
+        (
+          (task.budgetApprovalStage === 'CREATOR' && isTaskCreator) ||
+          (task.budgetApprovalStage === 'AUTHORITY' && isBudgetAuthority)
+        );
       return {
         taskId: Number(task.taskId),
         taskName: String(task.taskName || 'Untitled Task'),
@@ -350,10 +380,11 @@ export const taskDetailsResolvers = {
         budgetRequestId: task.budgetRequestId === null ? null : Number(task.budgetRequestId),
         requestedBudgetAmount: task.requestedBudgetAmount === null ? null : String(task.requestedBudgetAmount),
         budgetRequestStatus: task.budgetRequestStatus || null,
+        budgetApprovalStage: task.budgetApprovalStage || null,
         budgetRequestedByName: task.budgetRequestedByName || null,
         canReviewBudgetRequest,
         canCancelBudgetRequest: Boolean(task.budgetRequestId) &&
-          (Number(task.budgetRequestedBy) === userId || isMasterAdmin),
+          (Number(task.budgetRequestedBy) === userId || canManageTasks),
         canRequestBudgetIncrease: isTaskOwner && !isTaskCreator && !isMasterAdmin,
         status: task.status ? String(task.status) : null,
         eventId: Number(task.eventId),
@@ -368,13 +399,14 @@ export const taskDetailsResolvers = {
         ownerAssignedAt: task.ownerAssignedAt || null,
         updatedByName: task.updatedByName || null,
         updatedAt: String(task.updatedAt),
-        canEditTask: isTaskCreator || isMasterAdmin,
+        canEditTask: canManageTasks,
+        canUpdateStatus: isTaskOwner || isMasterAdmin,
         canAssignOwner,
-        canDeleteTask: isMasterAdmin || isTaskCreator || (task.parentTaskId !== null && isParentTaskOwner),
+        canDeleteTask: canManageTasks || (task.parentTaskId !== null && isParentTaskOwner),
         canAccessFinance,
         needsFinanceAction: (
           isCashier && !isTaskOwner && financeActionTaskIds.has(taskId)
-        ) || receiptTaskIds.has(taskId) || canReviewBudgetRequest,
+        ) || receiptTaskIds.has(taskId) || canReviewBudgetRequest || subtaskTransferTaskIds.has(taskId),
         children: children.map((child) => ({
           taskId: Number(child.taskId),
           parentTaskId: Number(taskId),
@@ -384,6 +416,7 @@ export const taskDetailsResolvers = {
           budgetRequestId: child.budgetRequestId === null ? null : Number(child.budgetRequestId),
           requestedBudgetAmount: child.requestedBudgetAmount === null ? null : String(child.requestedBudgetAmount),
           budgetRequestStatus: child.budgetRequestStatus || null,
+          budgetApprovalStage: child.budgetApprovalStage || null,
           budgetRequestedByName: child.budgetRequestedByName || null,
           status: child.status ? String(child.status) : null,
           ownerUserId: child.ownerUserId === null ? null : Number(child.ownerUserId),
@@ -401,8 +434,11 @@ export const taskDetailsResolvers = {
             financeActionTaskIds.has(Number(child.taskId))
           ) || receiptTaskIds.has(Number(child.taskId)) || (
             Boolean(child.budgetRequestId) &&
-            (Number(child.createdBy) === userId || isMasterAdmin)
-          ),
+            (
+              (child.budgetApprovalStage === 'CREATOR' && Number(child.createdBy) === userId) ||
+              (child.budgetApprovalStage === 'AUTHORITY' && isBudgetAuthority)
+            )
+          ) || subtaskTransferTaskIds.has(Number(child.taskId)),
           ...mapChildPermissions(child)
         })),
         descendants: descendants.map((descendant) => ({
@@ -414,6 +450,7 @@ export const taskDetailsResolvers = {
           budgetRequestId: descendant.budgetRequestId === null ? null : Number(descendant.budgetRequestId),
           requestedBudgetAmount: descendant.requestedBudgetAmount === null ? null : String(descendant.requestedBudgetAmount),
           budgetRequestStatus: descendant.budgetRequestStatus || null,
+          budgetApprovalStage: descendant.budgetApprovalStage || null,
           budgetRequestedByName: descendant.budgetRequestedByName || null,
           status: descendant.status ? String(descendant.status) : null,
           ownerUserId: descendant.ownerUserId === null ? null : Number(descendant.ownerUserId),
@@ -431,8 +468,11 @@ export const taskDetailsResolvers = {
             financeActionTaskIds.has(Number(descendant.taskId))
           ) || receiptTaskIds.has(Number(descendant.taskId)) || (
             Boolean(descendant.budgetRequestId) &&
-            (Number(descendant.createdBy) === userId || isMasterAdmin)
-          ),
+            (
+              (descendant.budgetApprovalStage === 'CREATOR' && Number(descendant.createdBy) === userId) ||
+              (descendant.budgetApprovalStage === 'AUTHORITY' && isBudgetAuthority)
+            )
+          ) || subtaskTransferTaskIds.has(Number(descendant.taskId)),
           ...mapChildPermissions(descendant)
         })),
         taskAssignees: taskAssignees.map((assignee) => ({
@@ -461,7 +501,7 @@ export const taskDetailsResolvers = {
           updatedAt: String(todo.updatedAt)
         })),
         todoAssignees: await getTodoAssignees(Number(task.committeeId)),
-        canManage: isMasterAdmin || isTaskOwner,
+        canManage: canManageTasks || isTaskOwner,
         canCreateTasks: canCreateSubtasks,
         canManageTodos,
         canToggleTodos: canManageTodos

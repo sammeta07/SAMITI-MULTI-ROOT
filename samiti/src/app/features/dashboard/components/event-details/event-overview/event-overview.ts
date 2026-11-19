@@ -114,9 +114,7 @@ export class EventOverviewComponent implements OnInit {
   }
 
   public get canCreateProgram(): boolean {
-    if (this.isEventMasterAdmin) return true;
-    const designation = (this.eventData?.myDesignation?.name || '').trim().toLowerCase();
-    return designation === 'adhyaksha' || designation === 'upadhyaksha';
+    return this.isEventMasterAdmin || this.isEventAdmin;
   }
 
   public get canDeleteBanners(): boolean {

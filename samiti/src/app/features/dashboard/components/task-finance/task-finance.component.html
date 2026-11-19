@@ -1,13 +1,13 @@
 <section class="tf-container">
-  <!-- Ultra-Compact Sticky Header -->
+  <!-- Sticky Header -->
   <header class="tf-header">
     <div class="tf-header-left">
       <h3>Task Finance</h3>
-      <span class="tf-subtitle">Budget, advances &amp; cash ledger</span>
+      <span class="tf-subtitle">Budget requests, disbursements &amp; cash ledger</span>
     </div>
     <div class="tf-header-right">
       @if (payload()?.canApprove) {
-        <span class="tf-auth-tag">Treasurer Mode</span>
+        <span class="tf-pill pill-info">Treasurer Mode</span>
       }
       <button type="button" class="tf-btn tf-btn-ghost" [disabled]="isLoading() || isSaving()" (click)="load()">
         <span class="tf-icon" [class.spinning]="isLoading()">↻</span>
@@ -21,44 +21,46 @@
   } @else if (payload(); as finance) {
     <div class="tf-body">
 
-      <!-- 1. COMPACT KPI SUMMARY CARDS -->
-      <div class="tf-kpi-grid">
-        <div class="tf-kpi-card">
-          <div class="tf-kpi-head">
-            <span>Budget</span>
-            <strong class="tf-num text-primary">Rem: ₹{{ money(finance.summary.remainingBudget) }}</strong>
+      <!-- 1. ULTRA-COMPACT KPI BAR -->
+      @if (!finance.isEventScope) {
+        <div class="tf-kpi-grid">
+          <div class="tf-kpi-card">
+            <div class="tf-kpi-head">
+              <span>Budget Overview</span>
+              <span class="tf-pill pill-primary tf-num">Rem: ₹{{ money(finance.summary.remainingBudget) }}</span>
+            </div>
+            <div class="tf-kpi-metrics">
+              <div><span>Sanctioned</span><strong class="tf-num">₹{{ money(finance.summary.sanctionedBudget) }}</strong></div>
+              <div><span>Checklist</span><strong class="tf-num">₹{{ money(finance.summary.checklistExpenses) }}</strong></div>
+              <div><span>Subtask</span><strong class="tf-num">₹{{ money(finance.summary.subtaskSpent) }}</strong></div>
+            </div>
           </div>
-          <div class="tf-kpi-metrics">
-            <div><span>Sanctioned</span><strong class="tf-num">₹{{ money(finance.summary.sanctionedBudget) }}</strong></div>
-            <div><span>Checklist</span><strong class="tf-num">₹{{ money(finance.summary.checklistExpenses) }}</strong></div>
-            <div><span>Subtask</span><strong class="tf-num">₹{{ money(finance.summary.subtaskSpent) }}</strong></div>
+
+          <div class="tf-kpi-card">
+            <div class="tf-kpi-head">
+              <span>Advance Cash</span>
+              <span class="tf-pill pill-neutral tf-num">In-Hand: ₹{{ money(finance.summary.advanceBalance) }}</span>
+            </div>
+            <div class="tf-kpi-metrics">
+              <div><span>Issued</span><strong class="tf-num">₹{{ money(finance.summary.advanceIssued) }}</strong></div>
+              <div><span>Spent</span><strong class="tf-num">₹{{ money(finance.summary.advanceSpent) }}</strong></div>
+            </div>
+          </div>
+
+          <div class="tf-kpi-card">
+            <div class="tf-kpi-head">
+              <span>Cash Returns</span>
+            </div>
+            <div class="tf-kpi-metrics">
+              <div><span>Pending</span><strong class="tf-num text-warn">₹{{ money(finance.summary.returnPending) }}</strong></div>
+              <div><span>Confirmed</span><strong class="tf-num text-ok">₹{{ money(finance.summary.returnConfirmed) }}</strong></div>
+            </div>
           </div>
         </div>
+      }
 
-        <div class="tf-kpi-card">
-          <div class="tf-kpi-head">
-            <span>Advance Cash</span>
-            <strong class="tf-num">In-Hand: ₹{{ money(finance.summary.advanceBalance) }}</strong>
-          </div>
-          <div class="tf-kpi-metrics">
-            <div><span>Issued</span><strong class="tf-num">₹{{ money(finance.summary.advanceIssued) }}</strong></div>
-            <div><span>Spent</span><strong class="tf-num">₹{{ money(finance.summary.advanceSpent) }}</strong></div>
-          </div>
-        </div>
-
-        <div class="tf-kpi-card">
-          <div class="tf-kpi-head">
-            <span>Cash Returns</span>
-          </div>
-          <div class="tf-kpi-metrics">
-            <div><span>Pending</span><strong class="tf-num text-warn">₹{{ money(finance.summary.returnPending) }}</strong></div>
-            <div><span>Confirmed</span><strong class="tf-num text-ok">₹{{ money(finance.summary.returnConfirmed) }}</strong></div>
-          </div>
-        </div>
-      </div>
-
-      <!-- 2. COMPACT BUDGET & RETURN TOOLBAR -->
-      @if (finance.canEditBudget || finance.canRequestBudgetIncrease || finance.canRequest || finance.budgetRequestStatus === 'PENDING') {
+      <!-- 2. COMPACT ACTION TOOLBAR -->
+      @if (!finance.isEventScope && (finance.canEditBudget || finance.canRequestBudgetIncrease || finance.canRequest)) {
         <section class="tf-toolbar">
           @if (finance.canEditBudget) {
             <form class="tf-tool-group" (ngSubmit)="saveTaskBudget()">
@@ -66,7 +68,7 @@
               <input
                 id="finance-task-budget"
                 type="number"
-                min="0"
+                [min]="finance.budgetAmount"
                 step="1"
                 appWholeRupee
                 name="taskBudgetAmount"
@@ -79,29 +81,18 @@
                 [matTooltip]="taskBudgetSaveTooltip()"
                 [matTooltipDisabled]="!isSaving() && canSaveTaskBudget()"
               >
-                <button id="finance-task-budget-save" type="submit" class="tf-btn tf-btn-primary" [disabled]="isSaving() || !canSaveTaskBudget()" (blur)="resetTaskBudgetAfterSubmitButtonBlur()">Save</button>
+                <button
+                  id="finance-task-budget-save"
+                  type="submit"
+                  class="tf-btn tf-btn-primary"
+                  [disabled]="isSaving() || !canSaveTaskBudget()"
+                  (blur)="resetTaskBudgetAfterSubmitButtonBlur()"
+                >Save</button>
               </span>
             </form>
           }
 
-          @if (finance.budgetRequestStatus === 'PENDING' && finance.budgetRequestId) {
-            <div class="tf-alert-bar">
-              <div class="tf-alert-info">
-                <strong>+₹{{ money(finance.requestedBudgetAmount) }}</strong>
-                <span>budget increase requested</span>
-              </div>
-              <div class="tf-btn-group">
-                @if (finance.canReviewBudgetRequest) {
-                  <button type="button" class="tf-btn tf-btn-success" [disabled]="isSaving()" (click)="reviewBudgetRequest('APPROVE')">Approve</button>
-                  <button type="button" class="tf-btn tf-btn-danger" [disabled]="isSaving()" (click)="reviewBudgetRequest('REJECT')">Reject</button>
-                } @else if (finance.canCancelBudgetRequest) {
-                  <button type="button" class="tf-btn tf-btn-danger" [disabled]="isSaving()" (click)="cancelBudgetRequest()">Cancel</button>
-                } @else {
-                  <span class="tf-muted">Awaiting review</span>
-                }
-              </div>
-            </div>
-          } @else if (finance.canRequestBudgetIncrease) {
+          @if (finance.canRequestBudgetIncrease && finance.budgetRequestStatus !== 'PENDING') {
             <form class="tf-tool-group" (ngSubmit)="requestBudgetIncrease()">
               <label for="finance-budget-increase">Add Budget (₹)</label>
               <input
@@ -121,7 +112,7 @@
 
           @if (finance.canRequest) {
             <form class="tf-tool-group tf-tool-grow" (ngSubmit)="submitAdvanceReturn()">
-              <label for="finance-return-amount">Return (₹)</label>
+              <label for="finance-return-amount">Return Cash (₹)</label>
               <input
                 id="finance-return-amount"
                 class="tf-inp-sm"
@@ -142,229 +133,165 @@
 
       <!-- 3. TABULAR LEDGER SECTION -->
       <section class="tf-ledger-section">
-        <mat-tab-group
-          class="tf-history-tabs samiti-nav-tabs"
-          animationDuration="150ms"
-        >
+        <mat-tab-group class="tf-history-tabs samiti-nav-tabs" animationDuration="150ms">
+          
+          <!-- TAB 1: REQUESTS & LEDGER -->
           <mat-tab>
             <ng-template mat-tab-label>
               <mat-icon class="tab-leading-icon">request_quote</mat-icon>
-              <span class="tab-name-text">Approved requests</span>
-              <span class="tab-badge">{{ finance.requests.length }}</span>
+              <span class="tab-name-text">Requests &amp; Ledger</span>
+              <span class="tab-badge">{{ finance.requests.length + finance.budgetRequests.length }}</span>
             </ng-template>
 
-            <!-- TAB 1: REQUESTS -->
-            @let otherTransactions = getOtherTransactions(finance.requests, finance.transactions);
-            @if (finance.requests.length > 0 || otherTransactions.length > 0) {
-              <mat-accordion class="tf-request-accordion" [multi]="true">
-                @for (request of finance.requests; track request.id) {
-                  @let remAdvance = remainingRequestAmount(request, 'ADVANCE_ISSUED', 'approvedAmount');
-                  @let issuedAdvance = issuedRequestAmount(request);
-                  @let isReadyToPay = isRequestPayable(request) && remAdvance > 0;
-                  @let isPaid = isRequestPayable(request) && remAdvance === 0;
-                  @let ledgerTransactions = getRequestTransactions(request, finance.transactions);
-                  @let requestImpact = getRequestImpact(request);
-                  @let hasReceiptAction = hasPendingReceiptConfirmation(ledgerTransactions);
-                  @let hasPanelDetails = ledgerTransactions.length > 0
-                    || (finance.canApprove && (request.status === 'PENDING' || (isReadyToPay && request.requestType !== 'TOP_UP')));
+            <div class="tf-tab-scroll-area">
+              <!-- Advance & Expense Requests -->
+              @let requestGroups = groupRequestsByTask(finance.requests, finance.budgetRequests, finance.transactions);
+              @let otherTransactions = getOtherTransactions(finance.requests, finance.transactions, requestGroups);
+              @if (requestGroups.length > 0 || otherTransactions.length > 0) {
+                <div class="tf-section-block">
+                  <div class="tf-block-header">
+                    <h4>Task Finance Requests</h4>
+                    <span class="tf-block-count">{{ requestGroups.length }} tasks</span>
+                  </div>
 
-                  <mat-expansion-panel
-                    class="tf-request-panel"
-                    [disabled]="!hasPanelDetails"
-                    [hideToggle]="!hasPanelDetails"
-                  >
-                    <mat-expansion-panel-header>
-                      <mat-panel-title>
-                        <div class="tf-request-header-title">
-                          <div class="cell-type">
-                            <span class="tf-id">#{{ request.id }}</span>
-                            <strong>{{ formatLabel(request.requestType) }}</strong>
+                  <!-- Column Header Bar -->
+                  <div class="tf-grid-thead">
+                    <div>S.No</div>
+                    <div>TASK TITLE</div>
+                    <div class="text-right">Approved</div>
+                    <div class="text-right">Issued</div>
+                    <div class="text-right">Balance</div>
+                    <div class="text-right">Action / Status</div>
+                  </div>
+
+                  <div class="tf-request-list">
+                    @for (group of requestGroups; track group.taskId; let index = $index) {
+                      <div class="tf-request-panel">
+                        <div class="tf-row-grid">
+                          <div class="tf-col-sno">
+                            <span class="tf-sno-badge">{{ index + 1 }}</span>
                           </div>
-                          <div class="tf-request-details">
-                            <small class="tf-request-impact-label">Impact</small>
-                            <span class="cell-desc" [matTooltip]="requestImpact">{{ requestImpact }}</span>
+
+                          <div class="tf-col-main">
+                            <div class="tf-title-line">
+                              <strong [title]="group.taskName">{{ group.taskName | titlecase }}</strong>
+                              <div class="tf-link-pills">
+                                @if (group.budgetRequests.length > 0) {
+                                  <button
+                                    type="button"
+                                    class="tf-pill pill-teal pill-xs tf-link-btn"
+                                    (click)="openBudgetRequestsDialog(group)"
+                                  >
+                                    Budget History
+                                  </button>
+                                }
+                                @if (group.requests.length > 0 || group.transactionCount > 0) {
+                                  <button
+                                    type="button"
+                                    class="tf-pill pill-info pill-xs tf-link-btn"
+                                    (click)="openFinanceRequestsDialog(group)"
+                                  >
+                                    Finance History
+                                  </button>
+                                }
+                              </div>
+                            </div>
                           </div>
-                        </div>
-                      </mat-panel-title>
-                      <mat-panel-description>
-                        <div class="tf-request-header-summary">
-                          <div class="tf-request-metric tf-request-metric-total">
-                            <small>Total</small>
-                            <strong class="tf-num">₹{{ money(request.approvedAmount || request.requestedAmount) }}</strong>
-                            @if (request.approvedAmount && request.approvedAmount !== request.requestedAmount) {
-                              <small class="tf-request-metric-sub">Requested: ₹{{ money(request.requestedAmount) }}</small>
+
+                          <div class="tf-col-num">
+                            <strong class="tf-num">₹{{ money(group.approvedTotal) }}</strong>
+                          </div>
+
+                          <div class="tf-col-num">
+                            <span class="tf-num text-muted">₹{{ money(group.issuedAdvance) }}</span>
+                          </div>
+
+                          <div class="tf-col-num">
+                            <strong class="tf-num" [class.text-warn]="group.remainingAdvance > 0">₹{{ money(group.remainingAdvance) }}</strong>
+                          </div>
+
+                          <div class="tf-col-status">
+                            @if (group.remainingAdvance > 0 && finance.canApprove && group.taskOwnerUserId !== null) {
+                              <div class="tf-dispatch-box">
+                                <div class="tf-inline-amt">
+                                  <span>₹</span>
+                                  <input
+                                    type="number"
+                                    min="1"
+                                    [max]="group.remainingAdvance"
+                                    step="1"
+                                    appWholeRupee
+                                    [name]="'dispatch-task-' + group.taskId"
+                                    [(ngModel)]="taskDispatchAmounts[group.taskId]"
+                                    [disabled]="isSaving()"
+                                    [attr.aria-label]="'Amount to dispatch for task #' + group.taskId"
+                                  />
+                                </div>
+                                <button
+                                  type="button"
+                                  class="tf-btn tf-btn-primary tf-btn-xs"
+                                  [disabled]="isSaving() || !canDispatchGroupAdvance(group)"
+                                  (click)="issueGroupAdvance(group)"
+                                >Dispatch</button>
+                              </div>
+                            } @else if (group.remainingAdvance > 0 && group.taskOwnerUserId === null) {
+                              <span class="tf-pill pill-danger tf-status-pill">Unassigned</span>
+                            } @else if (group.approvedTotal > 0 && group.remainingAdvance === 0) {
+                              <span class="tf-pill pill-success tf-status-pill">Paid</span>
+                            } @else if (group.remainingAdvance > 0) {
+                              <span class="tf-pill pill-warning tf-status-pill">Pending</span>
+                            } @else {
+                              <span class="cell-settled">—</span>
                             }
                           </div>
-                          @if (isRequestPayable(request)) {
-                            <div class="tf-request-metric tf-request-metric-issued">
-                              <small>Issued</small>
-                              <strong class="tf-num">₹{{ money(issuedAdvance) }}</strong>
-                            </div>
-                            <div class="tf-request-metric tf-request-metric-remaining">
-                              <small>Remaining</small>
-                              <strong class="tf-num">₹{{ money(remAdvance) }}</strong>
-                            </div>
-                          } @else {
-                            <div class="tf-request-metric-placeholder tf-request-metric-issued" aria-hidden="true"></div>
-                            <div class="tf-request-metric-placeholder tf-request-metric-remaining" aria-hidden="true"></div>
-                          }
-                          @if (finance.canApprove && request.requestType === 'TOP_UP' && isReadyToPay) {
-                            <div
-                              class="tf-request-header-dispatch"
-                              (click)="$event.stopPropagation()"
-                              (keydown)="$event.stopPropagation()"
-                            >
-                              <div class="tf-inline-amt">
-                                <span>₹</span>
-                                <input
-                                  type="number"
-                                  min="1"
-                                  [max]="remAdvance"
-                                  step="1"
-                                  appWholeRupee
-                                  [name]="'dispatch-' + request.id"
-                                  [(ngModel)]="dispatchAmounts[request.id]"
-                                  [disabled]="isSaving()"
-                                  [attr.aria-label]="'Amount to dispatch for request #' + request.id"
-                                  title="Amount to dispatch"
-                                />
-                              </div>
-                              <button
-                                type="button"
-                                class="tf-btn tf-btn-primary"
-                                [disabled]="isSaving() || !canDispatchAdvance(request, remAdvance)"
-                                (click)="issueAdvance(request)"
-                              >Dispatch</button>
-                            </div>
-                          } @else {
-                            <div class="tf-request-header-dispatch tf-request-header-dispatch-placeholder" aria-hidden="true"></div>
-                          }
-                          @if (isPaid) {
-                            <span class="tf-badge tf-status-pill tf-request-header-status badge-success">Paid</span>
-                          } @else if (isReadyToPay) {
-                            <span class="tf-badge tf-status-pill tf-request-header-status badge-warning">Pending</span>
-                          } @else {
-                            <span
-                              class="tf-badge tf-status-pill tf-request-header-status"
-                              [ngClass]="getStatusClass(request.status)"
-                            >{{ formatLabel(request.status) }}</span>
-                          }
-                          @if (hasReceiptAction) {
-                            <mat-icon
-                              class="tf-ack-required-icon"
-                              matTooltip="Action required"
-                              matTooltipPosition="above"
-                              aria-label="Action required"
-                            >priority_high</mat-icon>
-                          } @else {
-                            <span class="tf-ack-required-placeholder" aria-hidden="true"></span>
-                          }
                         </div>
-                      </mat-panel-description>
-                    </mat-expansion-panel-header>
-
-                    @if (finance.canApprove && request.status === 'PENDING') {
-                      <div class="tf-request-actions">
-                        <div class="tf-inline-amt">
-                          <span>₹</span>
-                          <input type="number" min="1" [max]="request.requestedAmount" step="1" appWholeRupee [name]="'approval-' + request.id" [(ngModel)]="approvalAmounts[request.id]" title="Approve Amount" />
-                        </div>
-                        <button type="button" class="tf-btn tf-btn-success" [disabled]="isSaving()" (click)="reviewRequest(request, 'APPROVE')">Approve</button>
-                        <button type="button" class="tf-btn tf-btn-danger" [disabled]="isSaving()" (click)="reviewRequest(request, 'REJECT')">Reject</button>
-                      </div>
-                    } @else if (finance.canApprove && isReadyToPay && request.requestType !== 'TOP_UP') {
-                      <div class="tf-request-actions">
-                        <div class="tf-inline-amt">
-                          <span>₹</span>
-                          <input
-                            type="number"
-                            min="1"
-                            [max]="remAdvance"
-                            step="1"
-                            appWholeRupee
-                            [name]="'dispatch-' + request.id"
-                            [(ngModel)]="dispatchAmounts[request.id]"
-                            [disabled]="isSaving()"
-                            [attr.aria-label]="'Amount to dispatch for request #' + request.id"
-                            title="Amount to dispatch"
-                          />
-                        </div>
-                        <button
-                          type="button"
-                          class="tf-btn tf-btn-primary"
-                          [disabled]="isSaving() || !canDispatchAdvance(request, remAdvance)"
-                          (click)="issueAdvance(request)"
-                        >Dispatch</button>
                       </div>
                     }
 
-                    @if (ledgerTransactions.length > 0) {
-                      <ng-container
-                        [ngTemplateOutlet]="transactionTable"
-                        [ngTemplateOutletContext]="{ $implicit: ledgerTransactions }"
-                      ></ng-container>
-                    }
-                  </mat-expansion-panel>
-                }
-
-                @if (otherTransactions.length > 0) {
-                  <mat-expansion-panel class="tf-request-panel">
-                    <mat-expansion-panel-header>
-                      <mat-panel-title>
-                        <div class="tf-request-header-title">
-                          <div class="cell-type">
+                    @if (otherTransactions.length > 0) {
+                      <div class="tf-request-panel tf-other-panel">
+                        <div class="tf-other-header">
+                          <div class="tf-title-line">
                             <mat-icon class="tab-leading-icon">account_balance_wallet</mat-icon>
-                            <strong>Other cash &amp; expense entries</strong>
+                            <strong>Other Cash &amp; Expense Entries</strong>
                           </div>
+                          <span class="tf-pill pill-neutral pill-xs">{{ otherTransactions.length }} entries</span>
                         </div>
-                      </mat-panel-title>
-                      <mat-panel-description>
-                        <div class="tf-request-header-summary tf-request-other-summary">
-                          <span class="tab-badge">{{ otherTransactions.length }}</span>
+                        <div class="tf-request-content">
+                          <ng-container
+                            [ngTemplateOutlet]="transactionTable"
+                            [ngTemplateOutletContext]="{ $implicit: otherTransactions }"
+                          ></ng-container>
                         </div>
-                      </mat-panel-description>
-                    </mat-expansion-panel-header>
-                    <ng-container
-                      [ngTemplateOutlet]="transactionTable"
-                      [ngTemplateOutletContext]="{ $implicit: otherTransactions }"
-                    ></ng-container>
-                  </mat-expansion-panel>
-                }
-              </mat-accordion>
+                      </div>
+                    }
+                  </div>
+                </div>
+              }
 
+              @if (finance.budgetRequests.length === 0 && finance.requests.length === 0 && otherTransactions.length === 0) {
+                <div class="tf-empty-state">No requests or cash/expense entries yet.</div>
+              }
+
+              <!-- Shared Disbursement / Ledger Table Template -->
               <ng-template #transactionTable let-transactions>
                 <div class="tf-table-wrap">
                   <table class="tf-table">
                     <thead>
                       <tr>
-                        <th>Requested By</th>
-                        <th>Approved By</th>
+                        @if (finance.isEventScope) { <th>Task</th> }
                         <th>Recorded By</th>
                         <th>Dispatched To</th>
-                        <th>Acknowledged</th>
-                        <th class="col-right">Dispatched Amt</th>
+                        <th>Acknowledgement</th>
+                        <th class="col-right">Amount</th>
                       </tr>
                     </thead>
                     <tbody>
                       @for (transaction of transactions; track transaction.id) {
-                        @let request = getRequestForTransaction(transaction, finance.requests);
                         <tr>
-                          <td class="col-meta">
-                            @if (request) {
-                              <span class="meta-val">{{ request.requestedByName | titlecase }}</span>
-                              <small>{{ request.createdAt | date: 'dd MMM yy, h:mm a' }}</small>
-                            } @else {
-                              <span class="cell-settled">—</span>
-                            }
-                          </td>
-                          <td class="col-meta">
-                            @if (request?.reviewedByName && request?.reviewedAt) {
-                              <span class="meta-val">{{ request?.reviewedByName | titlecase }}</span>
-                              <small>{{ request?.reviewedAt | date: 'dd MMM yy, h:mm a' }}</small>
-                            } @else {
-                              <span class="cell-settled">—</span>
-                            }
-                          </td>
+                          @if (finance.isEventScope) {
+                            <td class="fw-600">{{ transaction.taskName | titlecase }}</td>
+                          }
                           <td class="col-meta">
                             <span class="meta-val">{{ transaction.createdByName | titlecase }}</span>
                             <small>{{ transaction.createdAt | date: 'dd MMM yy, h:mm a' }}</small>
@@ -376,21 +303,22 @@
                               <span class="cell-settled">—</span>
                             }
                           </td>
-                          <td class="col-meta">
+                          <td>
                             @if (transaction.receivedByName && transaction.receivedAt) {
-                              <span class="tf-badge badge-success">YES</span>
-                              <small>{{ transaction.receivedAt | date: 'dd MMM yy, h:mm a' }}</small>
+                              <div class="tf-ack-done">
+                                <span class="tf-pill pill-success pill-xs">Received</span>
+                                <small>{{ transaction.receivedAt | date: 'dd MMM yy, h:mm a' }}</small>
+                              </div>
                             } @else if (transaction.canConfirmReceipt) {
                               <button
                                 type="button"
                                 class="tf-btn tf-btn-success tf-btn-xs"
                                 [disabled]="isSaving()"
                                 (click)="confirmReceipt(transaction)"
-                                [attr.aria-label]="'Mark ₹' + money(transaction.amount) + ' as received'"
-                              >Amount Received</button>
+                              >Confirm Receipt</button>
                             } @else if (transaction.transactionType === 'ADVANCE_ISSUED') {
-                              <span class="receipt-pending">
-                                {{ transaction.recipientName ? 'Awaiting ' + (transaction.recipientName | titlecase) : 'Awaiting' }}
+                              <span class="tf-pill pill-warning pill-xs">
+                                Awaiting {{ transaction.recipientName ? (transaction.recipientName | titlecase) : 'Recipient' }}
                               </span>
                             } @else {
                               <span class="cell-settled">—</span>
@@ -409,10 +337,180 @@
                   </table>
                 </div>
               </ng-template>
-            } @else {
-              <div class="tf-empty-state">No requests or cash/expense entries yet.</div>
-            }
+            </div>
           </mat-tab>
+
+          <!-- TAB 2: SUBTASK TRANSFERS -->
+          @if (shouldShowSubtaskTransfers(finance)) {
+            <mat-tab>
+              <ng-template mat-tab-label>
+                <mat-icon class="tab-leading-icon">swap_horiz</mat-icon>
+                <span class="tab-name-text">Subtask Transfers</span>
+                <span class="tab-badge">
+                  {{ finance.incomingSubtaskTransfers.length + finance.outgoingSubtaskTransfers.length }}
+                </span>
+                @if (hasPendingSubtaskTransferAction(finance)) {
+                  <mat-icon
+                    class="tf-ack-required-icon"
+                    matTooltip="Action required"
+                    matTooltipPosition="above"
+                  >priority_high</mat-icon>
+                }
+              </ng-template>
+
+              <div class="tf-tab-scroll-area">
+                @if (finance.canCreateSubtaskTransfers) {
+                  <form class="tf-subtask-transfer-form" (ngSubmit)="recordSubtaskTransfer()">
+                    <label class="tf-transfer-field">
+                      <span>Subtask &amp; Owner</span>
+                      <select
+                        name="subtaskTransferTarget"
+                        [(ngModel)]="selectedSubtaskId"
+                        [disabled]="isSaving()"
+                      >
+                        @for (option of finance.subtaskTransferOptions; track option.subtaskId) {
+                          <option [ngValue]="option.subtaskId">
+                            {{ option.subtaskName | titlecase }} — {{ option.ownerName | titlecase }}
+                            (₹{{ money(option.availableAmount) }} avail)
+                          </option>
+                        }
+                      </select>
+                    </label>
+                    <label class="tf-transfer-field">
+                      <span>Amount (₹)</span>
+                      <input
+                        type="number"
+                        min="1"
+                        step="1"
+                        appWholeRupee
+                        name="subtaskTransferAmount"
+                        [(ngModel)]="subtaskTransferAmount"
+                        [max]="selectedSubtaskTransferOption()?.availableAmount ?? null"
+                        [disabled]="isSaving()"
+                      />
+                    </label>
+                    <label class="tf-transfer-field">
+                      <span>Remarks</span>
+                      <input
+                        type="text"
+                        maxlength="1000"
+                        name="subtaskTransferDescription"
+                        [(ngModel)]="subtaskTransferDescription"
+                        placeholder="Transfer note"
+                        [disabled]="isSaving()"
+                      />
+                    </label>
+                    <button
+                      type="submit"
+                      class="tf-btn tf-btn-primary"
+                      [disabled]="isSaving() || !canRecordSubtaskTransfer()"
+                    >Transfer</button>
+                  </form>
+                }
+
+                @if (finance.outgoingSubtaskTransfers.length > 0) {
+                  <div class="tf-section-block">
+                    <div class="tf-block-header">
+                      <h4>Outgoing Transfers</h4>
+                    </div>
+                    <div class="tf-table-wrap">
+                      <table class="tf-table">
+                        <thead>
+                          <tr>
+                            <th>Subtask</th>
+                            <th>Recipient</th>
+                            <th>Remarks</th>
+                            <th>Recorded On</th>
+                            <th>Status</th>
+                            <th class="col-right">Amount</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          @for (transfer of finance.outgoingSubtaskTransfers; track transfer.id) {
+                            <tr>
+                              <td class="fw-600">{{ transfer.subtaskName | titlecase }}</td>
+                              <td>{{ transfer.recipientName | titlecase }}</td>
+                              <td class="col-desc">{{ transfer.description || '—' }}</td>
+                              <td class="col-meta"><small>{{ transfer.createdAt | date: 'dd MMM yy, h:mm a' }}</small></td>
+                              <td>
+                                <span class="tf-pill pill-xs" [ngClass]="getStatusClass(transfer.status)">
+                                  {{ formatLabel(transfer.status) }}
+                                </span>
+                                @if (transfer.confirmedAt) {
+                                  <small class="tf-sub-time">
+                                    {{ transfer.confirmedByName | titlecase }} · {{ transfer.confirmedAt | date: 'dd MMM yy' }}
+                                  </small>
+                                }
+                              </td>
+                              <td class="col-right">
+                                <strong class="tf-num cell-amt">₹{{ money(transfer.amount) }}</strong>
+                              </td>
+                            </tr>
+                          }
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+                }
+
+                @if (finance.incomingSubtaskTransfers.length > 0) {
+                  <div class="tf-section-block">
+                    <div class="tf-block-header">
+                      <h4>Incoming Transfers</h4>
+                    </div>
+                    <div class="tf-table-wrap">
+                      <table class="tf-table">
+                        <thead>
+                          <tr>
+                            <th>Parent Task</th>
+                            <th>Sent By</th>
+                            <th>Remarks</th>
+                            <th>Recorded On</th>
+                            <th>Receipt</th>
+                            <th class="col-right">Amount</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          @for (transfer of finance.incomingSubtaskTransfers; track transfer.id) {
+                            <tr>
+                              <td class="fw-600">{{ transfer.parentTaskName | titlecase }}</td>
+                              <td>{{ transfer.senderName | titlecase }}</td>
+                              <td class="col-desc">{{ transfer.description || '—' }}</td>
+                              <td class="col-meta"><small>{{ transfer.createdAt | date: 'dd MMM yy, h:mm a' }}</small></td>
+                              <td>
+                                @if (transfer.confirmedByName && transfer.confirmedAt) {
+                                  <span class="tf-pill pill-success pill-xs">Received</span>
+                                  <small class="tf-sub-time">
+                                    {{ transfer.confirmedByName | titlecase }} · {{ transfer.confirmedAt | date: 'dd MMM yy' }}
+                                  </small>
+                                } @else if (transfer.canConfirmReceipt) {
+                                  <button
+                                    type="button"
+                                    class="tf-btn tf-btn-success tf-btn-xs"
+                                    [disabled]="isSaving()"
+                                    (click)="confirmSubtaskTransfer(transfer)"
+                                  >Confirm Receipt</button>
+                                } @else {
+                                  <span class="tf-pill pill-warning pill-xs">Awaiting {{ transfer.recipientName | titlecase }}</span>
+                                }
+                              </td>
+                              <td class="col-right">
+                                <strong class="tf-num cell-amt">₹{{ money(transfer.amount) }}</strong>
+                              </td>
+                            </tr>
+                          }
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+                }
+
+                @if (finance.incomingSubtaskTransfers.length === 0 && finance.outgoingSubtaskTransfers.length === 0) {
+                  <div class="tf-empty-state">No subtask transfers have been recorded yet.</div>
+                }
+              </div>
+            </mat-tab>
+          }
         </mat-tab-group>
       </section>
 

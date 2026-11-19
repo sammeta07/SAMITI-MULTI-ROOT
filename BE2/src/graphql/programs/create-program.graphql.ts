@@ -1,6 +1,6 @@
 import { query, execute } from '../../config/db';
 import { getProgramLifecycleStatus } from './program-status';
-import { hasPermission, PERMISSIONS } from '../../authorization/authorization';
+import { hasCommitteeTaskProgramCreationRole } from '../../authorization/authorization';
 
 const ALLOWED_PROGRAM_VISIBILITIES = new Set(['VISIBLE', 'HIDDEN']);
 
@@ -189,8 +189,8 @@ export const createProgramResolvers = {
       }
 
       const eventRow = eventRows[0];
-      if (!await hasPermission(loggedInUserId, PERMISSIONS.PROGRAM_CREATE, { type: 'EVENT', id: eventId })) {
-        throwProgramError('FORBIDDEN', 'Only a master admin, Adhyaksha, or Upadhyaksha can create programs');
+      if (!await hasCommitteeTaskProgramCreationRole(loggedInUserId, Number(eventRow.committee_id))) {
+        throwProgramError('FORBIDDEN', 'Only Committee Admins and Committee Master Admins can create programs');
       }
 
       if (parentProgramId !== null) {

@@ -179,7 +179,7 @@ export class TaskActionsDialogComponent {
   }
 
   public submitStatus(): void {
-    if (!this.task.canManage || !this.isSupportedStatus(this.status) || this.status === this.currentStatusValue()) return;
+    if (!this.task.canUpdateStatus || !this.isSupportedStatus(this.status) || this.status === this.currentStatusValue()) return;
     void this.runAction({ action: 'update-status', status: this.status as TaskStatus });
   }
 

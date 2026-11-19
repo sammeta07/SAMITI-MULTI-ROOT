@@ -139,6 +139,20 @@
                 <span>Delete</span>
               </button>
             }
+            @if (evt.canAccessTaskFinance) {
+              <button
+                mat-icon-button
+                class="task-panel-finance-icon"
+                [class.task-panel-finance-action-required]="evt.hasFinanceAction"
+                type="button"
+                [attr.aria-label]="evt.hasFinanceAction ? 'Action required — open event task finance' : 'Open event task finance'"
+                [matTooltip]="evt.hasFinanceAction ? 'Task finance action required' : 'Task finance'"
+                matTooltipPosition="above"
+                (click)="openEventTaskFinance()"
+              >
+                <mat-icon>currency_rupee</mat-icon>
+              </button>
+            }
           </div>
         </div>
       </section>

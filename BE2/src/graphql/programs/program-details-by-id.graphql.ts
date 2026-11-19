@@ -1,7 +1,11 @@
 import { RowDataPacket } from 'mysql2/promise';
 import { query } from '../../config/db';
 import { getTodoAssignees } from '../todos/todos.graphql';
-import { hasPermission, PERMISSIONS } from '../../authorization/authorization';
+import {
+  hasCommitteeTaskProgramCreationRole,
+  hasPermission,
+  PERMISSIONS
+} from '../../authorization/authorization';
 
 function throwProgramError(code: string, message: string): never {
   throw new Error(`${code}: ${message}`);
@@ -173,6 +177,10 @@ export const programDetailsResolvers = {
       );
       const ownerPermission = ownerPermissionRows[0];
       const committeeRole = String(ownerPermission?.committeeRole || '').toUpperCase();
+      const canCreateSubprogram = await hasCommitteeTaskProgramCreationRole(
+        loggedInUserId,
+        Number(program.committeeId)
+      );
       const isCommitteeMember = [
         'COMMITTEE_MEMBER',
         'COMMITTEE_ADMIN',
@@ -323,7 +331,7 @@ export const programDetailsResolvers = {
           : [],
         canManageTodos,
         canToggleTodos: canManageTodos,
-        canCreateSubprogram: canEditProgram,
+        canCreateSubprogram,
         subprograms: subprogramRows.map((subprogram) => ({
           programId: Number(subprogram.programId),
           programName: String(subprogram.programName || 'Untitled Program'),

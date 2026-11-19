@@ -26,7 +26,6 @@ import { EventTasksService } from '../event-details/event-tasks/event-tasks.serv
 import { EventDetailsStateService } from '../event-details/event-details-state.service';
 import { TaskChild, TaskDetailsPayload } from './task-details.models';
 import { TaskDetailsService } from './task-details.service';
-import { TaskFinanceComponent } from '../task-finance/task-finance.component';
 import { hasPendingFinanceAction } from '../task-finance/task-finance.models';
 import { TaskFinanceService } from '../task-finance/task-finance.service';
 import { TaskFinanceDialogService } from '../task-finance/task-finance-dialog.service';
@@ -49,8 +48,7 @@ import { TaskActionsDialogService } from './task-actions-dialog.service';
     MatInputModule,
     MatTooltipModule,
     WholeRupeeDirective,
-    TodoChecklistComponent,
-    TaskFinanceComponent
+    TodoChecklistComponent
   ],
   templateUrl: './task-details.html',
   styleUrl: './task-details.scss'
@@ -160,7 +158,8 @@ export class TaskDetailsComponent implements OnInit {
   }
 
   public onCreateSubtask(task: TaskDetailsPayload): void {
-    if (!task.canCreateTasks || this.isCreatingSubtask || this.isSavingSubtask) return;
+    if (!task.canCreateTasks || task.parentTaskId !== null ||
+      this.isCreatingSubtask || this.isSavingSubtask) return;
     this.newSubtaskName = '';
     this.newSubtaskBudget = '0';
     this.isCreatingSubtask = true;
@@ -175,7 +174,7 @@ export class TaskDetailsComponent implements OnInit {
 
   public async onSaveSubtask(task: TaskDetailsPayload): Promise<void> {
     const taskName = this.newSubtaskName.trim();
-    if (!task.canCreateTasks || !taskName || taskName.length > 255 ||
+    if (!task.canCreateTasks || task.parentTaskId !== null || !taskName || taskName.length > 255 ||
       !isValidTaskBudgetAmount(this.newSubtaskBudget) || this.isSavingSubtask) return;
 
     this.isSavingSubtask = true;
@@ -211,6 +210,7 @@ export class TaskDetailsComponent implements OnInit {
                 ownerAssignedAt: child.ownerAssignedAt,
                 canEditTask: child.canEditTask,
                 canManage: child.canManage,
+                canUpdateStatus: child.canUpdateStatus,
                 canAssignOwner: child.canAssignOwner,
                 canDelete: child.canDelete
               }],
@@ -235,6 +235,7 @@ export class TaskDetailsComponent implements OnInit {
                 ownerAssignedAt: child.ownerAssignedAt,
                 canEditTask: child.canEditTask,
                 canManage: child.canManage,
+                canUpdateStatus: child.canUpdateStatus,
                 canAssignOwner: child.canAssignOwner,
                 canDelete: child.canDelete
               }]
@@ -284,6 +285,9 @@ export class TaskDetailsComponent implements OnInit {
           this.task.update((current) => current && current.taskId === rootTaskId
             ? {
                 ...current,
+                needsFinanceAction: current.taskId === taskId
+                  ? needsFinanceAction
+                  : current.needsFinanceAction,
                 children: current.children.map((child) =>
                   child.taskId === taskId ? { ...child, needsFinanceAction } : child
                 ),
@@ -331,6 +335,7 @@ export class TaskDetailsComponent implements OnInit {
             updatedAt: updatedTask.updatedAt,
             canAccessFinance: updatedTask.canAccessFinance,
             canManage: updatedTask.canManage,
+            canUpdateStatus: updatedTask.canUpdateStatus,
             canEditTask: updatedTask.canEditTask,
             canAssignOwner: updatedTask.canAssignOwner,
             canDelete: updatedTask.canDeleteTask
@@ -409,7 +414,7 @@ export class TaskDetailsComponent implements OnInit {
   }
 
   public async updateTaskStatus(task: TaskDetailsPayload, status: TaskStatus): Promise<boolean> {
-    if (!task.canManage || this.isSavingBudget() || status === this.statusValue(task.status)) return false;
+    if (!task.canUpdateStatus || this.isSavingBudget() || status === this.statusValue(task.status)) return false;
 
     this.editingBudgetStatus = status;
     this.isSavingBudget.set(true);
@@ -699,17 +704,17 @@ export class TaskDetailsComponent implements OnInit {
 
   public canSaveTaskBudget(task: TaskDetailsPayload): boolean {
     const amount = String(this.editingBudgetAmount).trim();
-    return (task.canEditTask || task.canManage) &&
+    return (task.canEditTask || task.canUpdateStatus) &&
       !this.isSavingBudget() &&
       isValidTaskBudgetAmount(amount) &&
       (Number(amount) !== Number(task.budgetAmount) ||
-        (task.canManage && this.editingBudgetStatus !== this.statusValue(task.status)));
+        (task.canUpdateStatus && this.editingBudgetStatus !== this.statusValue(task.status)));
   }
 
   public async saveTaskBudget(task: TaskDetailsPayload): Promise<boolean> {
     const budgetAmount = String(this.editingBudgetAmount).trim();
     if (!this.canSaveTaskBudget(task)) return false;
-    const hasStatusChange = task.canManage &&
+    const hasStatusChange = task.canUpdateStatus &&
       this.editingBudgetStatus !== this.statusValue(task.status);
 
     this.isSavingBudget.set(true);
@@ -718,7 +723,7 @@ export class TaskDetailsComponent implements OnInit {
         this.service.updateTaskBudget(
           task.taskId,
           budgetAmount,
-          task.canManage && this.editingBudgetStatus !== this.statusValue(task.status)
+          task.canUpdateStatus && this.editingBudgetStatus !== this.statusValue(task.status)
             ? this.editingBudgetStatus
             : undefined
         )
@@ -856,6 +861,10 @@ export class TaskDetailsComponent implements OnInit {
 
   public getSubtaskChildren(parentTaskId: number): TaskDetailsPayload['descendants'] {
     return (this.task()?.descendants ?? []).filter((child) => child.parentTaskId === parentTaskId);
+  }
+
+  public hasSubtaskFinanceAction(taskDetails: TaskDetailsPayload): boolean {
+    return taskDetails.descendants.some((subtask) => subtask.needsFinanceAction === true);
   }
 
   public getTaskDeletionBlockReason(task: Pick<TaskDetailsPayload, 'taskId' | 'status'>): string | null {
@@ -1030,7 +1039,7 @@ export class TaskDetailsComponent implements OnInit {
 
   public editSubtaskRow(child: TaskDetailsPayload['descendants'][number]): void {
     if (this.isEditingSubtaskRow(child.taskId)) return;
-    if (child.canManage) {
+    if (child.canUpdateStatus) {
       this.subtaskBudgetEditAmounts[child.taskId] = child.budgetAmount;
       this.subtaskBudgetEditStatuses[child.taskId] = this.statusValue(child.status) as TaskStatus;
       this.editingSubtaskBudgetIds.add(child.taskId);
@@ -1088,7 +1097,7 @@ export class TaskDetailsComponent implements OnInit {
   ): void {
     const status = this.statusValue(selectedStatus) as TaskStatus;
     const currentStatus = this.statusValue(child.status);
-    if (!child.canManage || status === currentStatus || this.savingSubtaskBudgetIds.has(child.taskId)) return;
+    if (!child.canUpdateStatus || status === currentStatus || this.savingSubtaskBudgetIds.has(child.taskId)) return;
 
     this.subtaskBudgetEditStatuses[child.taskId] = status;
     this.savingSubtaskBudgetIds.add(child.taskId);
@@ -1145,7 +1154,7 @@ export class TaskDetailsComponent implements OnInit {
     const budgetAmount = String(this.subtaskBudgetEditAmounts[child.taskId] ?? '').trim();
     const hasBudgetChange = this.editingSubtaskBudgetIds.has(child.taskId) &&
       Number(budgetAmount) !== Number(child.budgetAmount);
-    const hasStatusChange = child.canManage &&
+    const hasStatusChange = child.canUpdateStatus &&
       this.subtaskBudgetEditStatuses[child.taskId] !== this.statusValue(child.status);
     if (hasNameChange && !taskName) {
       this.notifier.error('Task title cannot be empty.');
