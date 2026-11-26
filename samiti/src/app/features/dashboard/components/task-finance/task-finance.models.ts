@@ -14,6 +14,8 @@ export interface TaskFinanceRequest {
   taskName: string;
   taskBudgetAmount: string;
   budgetAvailableForDisbursement: string;
+  remainingSanctionedBudget: string;
+  checklistExpenseAmount: string;
   taskOwnerName: string | null;
   taskOwnerUserId: number | null;
   requestType: TaskFinanceRequestType;
@@ -31,6 +33,7 @@ export interface TaskFinanceRequest {
   authorityReviewedAt: string | null;
   canReviewAuthority: boolean;
   createdAt: string;
+  taskCreatedAt: string;
   reviewedAt: string | null;
 }
 
@@ -63,6 +66,8 @@ export interface TaskBudgetRequest {
   taskId: number;
   taskName: string;
   taskOwnerName: string | null;
+  remainingSanctionedBudget: string;
+  checklistExpenseAmount: string;
   requestedAmount: string;
   budgetBeforeRequest: string;
   requestedIncrease: string;
@@ -79,6 +84,7 @@ export interface TaskBudgetRequest {
   authorityReviewerDesignation: string | null;
   authorityReviewedAt: string | null;
   createdAt: string;
+  taskCreatedAt: string;
   canReviewCreator: boolean;
   canReviewAuthority: boolean;
   canCancel: boolean;
@@ -88,20 +94,44 @@ export interface TaskFinanceTransaction {
   id: number;
   taskId: number;
   taskName: string;
+  taskOwnerName: string | null;
   requestId: number | null;
   transactionType: TaskFinanceTransactionType;
   amount: string;
   description: string;
   status: TaskFinanceTransactionStatus;
+  checklistExpenseAmount: string;
   createdByName: string;
   confirmedByName: string | null;
   createdAt: string;
+  taskCreatedAt: string;
   confirmedAt: string | null;
   recipientName: string | null;
   receivedByName: string | null;
   receivedAt: string | null;
   canConfirmReceipt: boolean;
   canConfirmReturn: boolean;
+  canCancel: boolean;
+}
+
+export function getTaskCashSummary(transactions: TaskFinanceTransaction[]): {
+  confirmedReturns: number;
+  inHand: number;
+} {
+  let issued = 0;
+  let confirmedExpenses = 0;
+  let confirmedReturns = 0;
+  transactions.forEach((transaction) => {
+    if (transaction.status !== 'CONFIRMED') return;
+    const amount = Number(transaction.amount);
+    if (transaction.transactionType === 'ADVANCE_ISSUED') issued += amount;
+    if (transaction.transactionType === 'ADVANCE_EXPENSE') confirmedExpenses += amount;
+    if (transaction.transactionType === 'ADVANCE_RETURN') confirmedReturns += amount;
+  });
+  return {
+    confirmedReturns,
+    inHand: Math.max(0, issued - confirmedExpenses - confirmedReturns)
+  };
 }
 
 export function isVisibleInPaymentHistory(transaction: TaskFinanceTransaction): boolean {
@@ -167,6 +197,7 @@ export interface TaskFinancePayload {
   canRequest: boolean;
   canApprove: boolean;
   isBudgetAuthority: boolean;
+  canViewBudgetIncreaseRequests: boolean;
   canViewTaskAssignee: boolean;
   canCreateSubtaskTransfers: boolean;
   isEventScope: boolean;
@@ -210,7 +241,7 @@ function getInitialAdvanceSourceRequest(
       (request.status === 'APPROVED' || request.status === 'PARTIALLY_APPROVED')
     )
     .sort((left, right) =>
-      left.createdAt.localeCompare(right.createdAt) || left.id - right.id
+      left.createdAt.localeCompare(right.createdAt) || left.id - left.id
     );
 
   for (const request of topUps) {

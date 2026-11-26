@@ -55,9 +55,17 @@ export class ProgramDetailsService {
           expenseAmount
           status
           isCompleted
+          createdBy
+          canManage
+          canUpdateStatus
           assignedUserId
           assignedUserName
+          createdByName
           createdAt
+          assignedByName
+          assignedAt
+          updatedByName
+          updatedAt
         }
         todoAssignees {
           userId

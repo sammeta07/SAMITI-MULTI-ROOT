@@ -1,0 +1,6 @@
+UPDATE todos
+SET status = 'NEW'
+WHERE status = 'PENDING';
+
+ALTER TABLE todos
+  MODIFY COLUMN status VARCHAR(30) NOT NULL DEFAULT 'NEW';

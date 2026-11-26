@@ -3,6 +3,7 @@ import { getConnection, query } from '../../config/db';
 import {
   hasCommitteeTaskProgramCreationRole,
   hasTaskBudgetApprovalAuthority,
+  hasTaskBudgetRequestReviewRole,
   hasPermission,
   PERMISSIONS
 } from '../../authorization/authorization';
@@ -141,6 +142,8 @@ export const taskFinanceTypes = `
     taskName: String!
     taskBudgetAmount: String!
     budgetAvailableForDisbursement: String!
+    remainingSanctionedBudget: String!
+    checklistExpenseAmount: String!
     taskOwnerName: String
     taskOwnerUserId: Int
     requestType: TaskFinanceRequestType!
@@ -158,6 +161,7 @@ export const taskFinanceTypes = `
     authorityReviewedAt: String
     canReviewAuthority: Boolean!
     createdAt: String!
+    taskCreatedAt: String!
     reviewedAt: String
   }
 
@@ -165,20 +169,24 @@ export const taskFinanceTypes = `
     id: Int!
     taskId: Int!
     taskName: String!
+    taskOwnerName: String
     requestId: Int
     transactionType: TaskFinanceTransactionType!
     amount: String!
     description: String!
     status: TaskFinanceTransactionStatus!
+    checklistExpenseAmount: String!
     createdByName: String!
     confirmedByName: String
     createdAt: String!
+    taskCreatedAt: String!
     confirmedAt: String
     recipientName: String
     receivedByName: String
     receivedAt: String
     canConfirmReceipt: Boolean!
     canConfirmReturn: Boolean!
+    canCancel: Boolean!
   }
 
   type TaskBudgetRequest {
@@ -186,6 +194,8 @@ export const taskFinanceTypes = `
     taskId: Int!
     taskName: String!
     taskOwnerName: String
+    remainingSanctionedBudget: String!
+    checklistExpenseAmount: String!
     requestedAmount: String!
     budgetBeforeRequest: String!
     requestedIncrease: String!
@@ -202,6 +212,7 @@ export const taskFinanceTypes = `
     authorityReviewerDesignation: String
     authorityReviewedAt: String
     createdAt: String!
+    taskCreatedAt: String!
     canReviewCreator: Boolean!
     canReviewAuthority: Boolean!
     canCancel: Boolean!
@@ -266,6 +277,7 @@ export const taskFinanceTypes = `
     canRequest: Boolean!
     canApprove: Boolean!
     isBudgetAuthority: Boolean!
+    canViewBudgetIncreaseRequests: Boolean!
     canViewTaskAssignee: Boolean!
     canCreateSubtaskTransfers: Boolean!
     isEventScope: Boolean!
@@ -309,6 +321,7 @@ export const taskFinanceMutationFields = `
   recordTaskFinanceTransaction(input: TaskFinanceTransactionInput!): TaskFinanceTransaction!
   confirmTaskFinanceReceipt(transactionId: Int!): TaskFinanceTransaction!
   reviewTaskFinanceReturn(input: TaskFinanceReturnReviewInput!): TaskFinanceTransaction!
+  cancelTaskFinanceReturn(transactionId: Int!): TaskFinanceTransaction!
   createSubtaskTransfer(input: CreateSubtaskTransferInput!): TaskSubtaskTransfer!
   confirmSubtaskTransferReceipt(transferId: Int!): TaskSubtaskTransfer!
 `;
@@ -331,12 +344,15 @@ function decimalCents(value: unknown): bigint {
 
 async function loadTaskBudgetCapacityCents(
   taskIds: number[]
-): Promise<Map<number, { available: bigint; reducible: bigint }>> {
+): Promise<Map<number, { available: bigint; reducible: bigint; checklistExpenses: bigint }>> {
   const ids = [...new Set(taskIds.filter((taskId) => Number.isInteger(taskId) && taskId > 0))];
-  if (ids.length === 0) return new Map<number, { available: bigint; reducible: bigint }>();
+  if (ids.length === 0) {
+    return new Map<number, { available: bigint; reducible: bigint; checklistExpenses: bigint }>();
+  }
   const placeholders = ids.map(() => '?').join(', ');
   const rows = await query<any[]>(
     `SELECT task.id AS taskId,
+            CAST(COALESCE(expenses.directExpenses, 0) AS CHAR) AS directExpenses,
             CAST(GREATEST(0, task.budget_amount - GREATEST(
               COALESCE(expenses.directExpenses, 0) + COALESCE(children.allocated, 0),
               GREATEST(0, COALESCE(cash.issued, 0) - COALESCE(cash.returned, 0))
@@ -371,7 +387,8 @@ async function loadTaskBudgetCapacityCents(
   );
   return new Map(rows.map((row) => [Number(row.taskId), {
     available: decimalCents(row.budgetAvailable),
-    reducible: decimalCents(row.budgetReducible)
+    reducible: decimalCents(row.budgetReducible),
+    checklistExpenses: decimalCents(row.directExpenses)
   }]));
 }
 
@@ -505,6 +522,7 @@ async function loadRequest(requestId: number, userId: number): Promise<any> {
             r.authority_review_note AS authorityReviewNote,
             DATE_FORMAT(r.authority_reviewed_at, '%Y-%m-%d %H:%i:%s') AS authorityReviewedAt,
             DATE_FORMAT(r.created_at, '%Y-%m-%d %H:%i:%s') AS createdAt,
+            DATE_FORMAT(task.created_at, '%Y-%m-%d %H:%i:%s') AS taskCreatedAt,
             DATE_FORMAT(r.reviewed_at, '%Y-%m-%d %H:%i:%s') AS reviewedAt
      FROM task_finance_requests r
      INNER JOIN tasks task ON task.id = r.task_id
@@ -523,6 +541,12 @@ async function loadRequest(requestId: number, userId: number): Promise<any> {
     budgetAvailableForDisbursement: centsToWholeRupees(
       capacityByTask.get(Number(request.taskId))?.available ?? 0n
     ),
+    remainingSanctionedBudget: centsToWholeRupees(
+      capacityByTask.get(Number(request.taskId))?.reducible ?? 0n
+    ),
+    checklistExpenseAmount: centsToWholeRupees(
+      capacityByTask.get(Number(request.taskId))?.checklistExpenses ?? 0n
+    ),
     canReviewAuthority: request.status === 'PENDING' &&
       request.approvalStage === 'AUTHORITY' &&
       request.requestType === 'ADVANCE' &&
@@ -535,10 +559,12 @@ async function loadTransaction(transactionId: number, userId: number): Promise<a
   const rows = await query<any[]>(
     `SELECT t.id, t.task_id AS taskId,
             COALESCE(NULLIF(TRIM(task.name), ''), 'Untitled Task') AS taskName,
+    taskOwner.name AS taskOwnerName,
             t.request_id AS requestId, t.transaction_type AS transactionType,
             CAST(t.amount AS CHAR) AS amount, t.description, t.status,
             creator.name AS createdByName, confirmer.name AS confirmedByName,
             DATE_FORMAT(t.created_at, '%Y-%m-%d %H:%i:%s') AS createdAt,
+            DATE_FORMAT(task.created_at, '%Y-%m-%d %H:%i:%s') AS taskCreatedAt,
             DATE_FORMAT(t.confirmed_at, '%Y-%m-%d %H:%i:%s') AS confirmedAt,
             recipient.name AS recipientName, receiver.name AS receivedByName,
             DATE_FORMAT(t.received_at, '%Y-%m-%d %H:%i:%s') AS receivedAt,
@@ -546,6 +572,7 @@ async function loadTransaction(transactionId: number, userId: number): Promise<a
      FROM task_finance_transactions t
      INNER JOIN tasks task ON task.id = t.task_id
      INNER JOIN users creator ON creator.id = t.created_by
+     LEFT JOIN users taskOwner ON taskOwner.id = task.owner_user_id
      LEFT JOIN users confirmer ON confirmer.id = t.confirmed_by
      LEFT JOIN users recipient ON recipient.id = t.recipient_user_id
      LEFT JOIN users receiver ON receiver.id = t.received_by
@@ -564,7 +591,10 @@ async function loadTransaction(transactionId: number, userId: number): Promise<a
     canConfirmReturn: transaction.transactionType === 'ADVANCE_RETURN' &&
       transaction.status === 'PENDING' &&
       access.isCashier &&
-      !access.isOwner
+      !access.isOwner,
+    canCancel: transaction.transactionType === 'ADVANCE_RETURN' &&
+      transaction.status === 'PENDING' &&
+      access.isOwner
   };
 }
 
@@ -675,6 +705,7 @@ async function loadBudgetRequests(
             END AS authorityReviewerDesignation,
             DATE_FORMAT(request.authority_reviewed_at, '%Y-%m-%d %H:%i:%s') AS authorityReviewedAt,
             DATE_FORMAT(request.created_at, '%Y-%m-%d %H:%i:%s') AS createdAt,
+            DATE_FORMAT(task.created_at, '%Y-%m-%d %H:%i:%s') AS taskCreatedAt,
             task.created_by AS taskCreatedBy
      FROM task_budget_requests request
      INNER JOIN tasks task ON task.id = request.task_id
@@ -708,6 +739,9 @@ async function loadBudgetRequests(
         decimalCents(request.requestedAmount) >= decimalCents(request.budgetBeforeRequest)
       )
     : rows;
+  const remainingBudgetByTask = await loadTaskBudgetCapacityCents(
+    visibleRows.map((request) => Number(request.taskId))
+  );
   return visibleRows.map((request) => {
     const requestedCents = decimalCents(request.requestedAmount);
     const baselineCents = decimalCents(request.budgetBeforeRequest);
@@ -716,6 +750,12 @@ async function loadBudgetRequests(
       taskId: Number(request.taskId),
       taskName: String(request.taskName || 'Untitled Task'),
       taskOwnerName: request.taskOwnerName || null,
+      remainingSanctionedBudget: centsToWholeRupees(
+        remainingBudgetByTask.get(Number(request.taskId))?.reducible ?? 0n
+      ),
+      checklistExpenseAmount: centsToWholeRupees(
+        remainingBudgetByTask.get(Number(request.taskId))?.checklistExpenses ?? 0n
+      ),
       requestedAmount: String(request.requestedAmount),
       budgetBeforeRequest: String(request.budgetBeforeRequest),
       requestedIncrease: centsToWholeRupees(requestedCents - baselineCents),
@@ -732,6 +772,7 @@ async function loadBudgetRequests(
       authorityReviewerDesignation: request.authorityReviewerDesignation || null,
       authorityReviewedAt: request.authorityReviewedAt || null,
       createdAt: String(request.createdAt),
+      taskCreatedAt: String(request.taskCreatedAt),
       canReviewCreator: request.status === 'PENDING' &&
         request.approvalStage === 'CREATOR' &&
         Number(request.taskCreatedBy) === userId,
@@ -774,6 +815,7 @@ async function loadFinance(taskId: number, userId: number): Promise<any> {
               r.authority_review_note AS authorityReviewNote,
               DATE_FORMAT(r.authority_reviewed_at, '%Y-%m-%d %H:%i:%s') AS authorityReviewedAt,
               DATE_FORMAT(r.created_at, '%Y-%m-%d %H:%i:%s') AS createdAt,
+              DATE_FORMAT(task.created_at, '%Y-%m-%d %H:%i:%s') AS taskCreatedAt,
               DATE_FORMAT(r.reviewed_at, '%Y-%m-%d %H:%i:%s') AS reviewedAt
        FROM task_finance_requests r
        INNER JOIN tasks task ON task.id = r.task_id
@@ -789,10 +831,12 @@ async function loadFinance(taskId: number, userId: number): Promise<any> {
     query<any[]>(
       `SELECT t.id, t.task_id AS taskId,
               COALESCE(NULLIF(TRIM(task.name), ''), 'Untitled Task') AS taskName,
+              taskOwner.name AS taskOwnerName,
               t.request_id AS requestId, t.transaction_type AS transactionType,
               CAST(t.amount AS CHAR) AS amount, t.description, t.status,
               creator.name AS createdByName, confirmer.name AS confirmedByName,
               DATE_FORMAT(t.created_at, '%Y-%m-%d %H:%i:%s') AS createdAt,
+              DATE_FORMAT(task.created_at, '%Y-%m-%d %H:%i:%s') AS taskCreatedAt,
               DATE_FORMAT(t.confirmed_at, '%Y-%m-%d %H:%i:%s') AS confirmedAt,
               recipient.name AS recipientName, receiver.name AS receivedByName,
               DATE_FORMAT(t.received_at, '%Y-%m-%d %H:%i:%s') AS receivedAt,
@@ -800,13 +844,17 @@ async function loadFinance(taskId: number, userId: number): Promise<any> {
        FROM task_finance_transactions t
        INNER JOIN tasks task ON task.id = t.task_id
        INNER JOIN users creator ON creator.id = t.created_by
+       LEFT JOIN users taskOwner ON taskOwner.id = task.owner_user_id
        LEFT JOIN users confirmer ON confirmer.id = t.confirmed_by
        LEFT JOIN users recipient ON recipient.id = t.recipient_user_id
        LEFT JOIN users receiver ON receiver.id = t.received_by
        WHERE t.task_id = ?
          AND t.transaction_type IN ('ADVANCE_ISSUED', 'ADVANCE_EXPENSE', 'ADVANCE_RETURN')
+         AND (
+           ? = 1 OR ? = 1 OR t.transaction_type <> 'ADVANCE_RETURN' OR t.status <> 'PENDING'
+         )
        ORDER BY t.created_at DESC, t.id DESC`,
-      [taskId]
+      [taskId, access.isCashier ? 1 : 0, access.isOwner ? 1 : 0]
     ),
     query<any[]>(
       `SELECT
@@ -943,6 +991,8 @@ async function loadFinance(taskId: number, userId: number): Promise<any> {
   const financeRequests = requests.map((request: any) => ({
     ...request,
     budgetAvailableForDisbursement: centsToWholeRupees(budgetAvailableForDisbursement),
+    remainingSanctionedBudget: centsToWholeRupees(taskBudgetCapacity?.reducible ?? 0n),
+    checklistExpenseAmount: centsToWholeRupees(taskBudgetCapacity?.checklistExpenses ?? 0n),
     canReviewAuthority: request.status === 'PENDING' &&
       request.approvalStage === 'AUTHORITY' &&
       request.requestType === 'ADVANCE' &&
@@ -959,7 +1009,16 @@ async function loadFinance(taskId: number, userId: number): Promise<any> {
       transaction.status === 'PENDING' &&
       access.isCashier &&
       !access.isOwner;
-    return { ...visibleTransaction, canConfirmReceipt, canConfirmReturn };
+    const canCancel = transaction.transactionType === 'ADVANCE_RETURN' &&
+      transaction.status === 'PENDING' &&
+      access.isOwner;
+    return {
+      ...visibleTransaction,
+      checklistExpenseAmount: centsToWholeRupees(taskBudgetCapacity?.checklistExpenses ?? 0n),
+      canConfirmReceipt,
+      canConfirmReturn,
+      canCancel
+    };
   });
   const aggregate = aggregates[0] ?? {};
   const advanceIssued = decimalCents(aggregate.advanceIssued);
@@ -972,6 +1031,10 @@ async function loadFinance(taskId: number, userId: number): Promise<any> {
   const allocatedChildBudgets = decimalCents(childBudgetRows[0]?.allocatedChildBudgets);
   const maxBudgetReduction = taskBudgetCapacity?.reducible ?? 0n;
   const isMasterAdmin = access.isMasterAdmin;
+  const canViewBudgetIncreaseRequests = await hasTaskBudgetRequestReviewRole(
+    userId,
+    access.eventId
+  );
   const canEditBudget = taskBudget.parentTaskId === null &&
     (Number(taskBudget.createdBy) === userId || isMasterAdmin || access.isCommitteeTaskManager);
   const canReduceBudget = isMasterAdmin || access.isCommitteeTaskManager;
@@ -1029,6 +1092,7 @@ async function loadFinance(taskId: number, userId: number): Promise<any> {
     canRequest: access.isOwner,
     canApprove: access.isCashier && !access.isOwner,
     isBudgetAuthority: access.isBudgetAuthority,
+    canViewBudgetIncreaseRequests,
     canViewTaskAssignee: access.isMasterAdmin ||
       access.isCommitteeTaskManager ||
       access.isBudgetAuthority,
@@ -1059,6 +1123,7 @@ async function loadEventFinance(eventId: number, userId: number): Promise<any> {
     Number(event.committeeId)
   );
   const isBudgetAuthority = await hasTaskBudgetApprovalAuthority(userId, eventId);
+  const canViewBudgetIncreaseRequests = await hasTaskBudgetRequestReviewRole(userId, eventId);
   const cashierRows = await query<any[]>(
     `SELECT EXISTS (
        SELECT 1
@@ -1098,6 +1163,7 @@ async function loadEventFinance(eventId: number, userId: number): Promise<any> {
               request.authority_review_note AS authorityReviewNote,
               DATE_FORMAT(request.authority_reviewed_at, '%Y-%m-%d %H:%i:%s') AS authorityReviewedAt,
               DATE_FORMAT(request.created_at, '%Y-%m-%d %H:%i:%s') AS createdAt,
+              DATE_FORMAT(task.created_at, '%Y-%m-%d %H:%i:%s') AS taskCreatedAt,
               DATE_FORMAT(request.reviewed_at, '%Y-%m-%d %H:%i:%s') AS reviewedAt
        FROM task_finance_requests request
        INNER JOIN tasks task ON task.id = request.task_id
@@ -1123,12 +1189,14 @@ async function loadEventFinance(eventId: number, userId: number): Promise<any> {
       `SELECT tx.id, tx.task_id AS taskId,
               COALESCE(NULLIF(TRIM(task.name), ''), 'Untitled Task') AS taskName,
       task.owner_user_id AS taskOwnerUserId,
+              taskOwner.name AS taskOwnerName,
               tx.request_id AS requestId,
               tx.transaction_type AS transactionType,
               CAST(tx.amount AS CHAR) AS amount,
               tx.description, tx.status,
               creator.name AS createdByName, confirmer.name AS confirmedByName,
               DATE_FORMAT(tx.created_at, '%Y-%m-%d %H:%i:%s') AS createdAt,
+              DATE_FORMAT(task.created_at, '%Y-%m-%d %H:%i:%s') AS taskCreatedAt,
               DATE_FORMAT(tx.confirmed_at, '%Y-%m-%d %H:%i:%s') AS confirmedAt,
               recipient.name AS recipientName, receiver.name AS receivedByName,
               DATE_FORMAT(tx.received_at, '%Y-%m-%d %H:%i:%s') AS receivedAt,
@@ -1136,6 +1204,7 @@ async function loadEventFinance(eventId: number, userId: number): Promise<any> {
        FROM task_finance_transactions tx
        INNER JOIN tasks task ON task.id = tx.task_id
        INNER JOIN users creator ON creator.id = tx.created_by
+       LEFT JOIN users taskOwner ON taskOwner.id = task.owner_user_id
        LEFT JOIN users confirmer ON confirmer.id = tx.confirmed_by
        LEFT JOIN users recipient ON recipient.id = tx.recipient_user_id
        LEFT JOIN users receiver ON receiver.id = tx.received_by
@@ -1145,18 +1214,30 @@ async function loadEventFinance(eventId: number, userId: number): Promise<any> {
            ? = 1 OR task.owner_user_id = ? OR task.created_by = ?
            OR tx.recipient_user_id = ?
          )
+         AND (
+           ? = 1 OR tx.transaction_type <> 'ADVANCE_RETURN' OR tx.status <> 'PENDING'
+         )
        ORDER BY tx.created_at DESC, tx.id DESC`,
-      [eventId, isBroadAccess ? 1 : 0, userId, userId, userId]
+      [eventId, isBroadAccess ? 1 : 0, userId, userId, userId, isCashier ? 1 : 0]
     )
   ]);
   const capacityByTask = await loadTaskBudgetCapacityCents(
-    requests.map((request: any) => Number(request.taskId))
+    [
+      ...requests.map((request: any) => Number(request.taskId)),
+      ...budgetRequests.map((request: any) => Number(request.taskId))
+    ]
   );
   return {
     requests: requests.map((request: any) => ({
       ...request,
       budgetAvailableForDisbursement: centsToWholeRupees(
         capacityByTask.get(Number(request.taskId))?.available ?? 0n
+      ),
+      remainingSanctionedBudget: centsToWholeRupees(
+        capacityByTask.get(Number(request.taskId))?.reducible ?? 0n
+      ),
+      checklistExpenseAmount: centsToWholeRupees(
+        capacityByTask.get(Number(request.taskId))?.checklistExpenses ?? 0n
       ),
       canReviewAuthority: request.status === 'PENDING' &&
         request.approvalStage === 'AUTHORITY' &&
@@ -1169,13 +1250,19 @@ async function loadEventFinance(eventId: number, userId: number): Promise<any> {
       const { recipientUserId, taskOwnerUserId, ...visibleTransaction } = transaction;
       return {
         ...visibleTransaction,
+        checklistExpenseAmount: centsToWholeRupees(
+          capacityByTask.get(Number(transaction.taskId))?.checklistExpenses ?? 0n
+        ),
         canConfirmReceipt: transaction.transactionType === 'ADVANCE_ISSUED' &&
           transaction.receivedAt === null &&
           Number(recipientUserId) === userId,
         canConfirmReturn: transaction.transactionType === 'ADVANCE_RETURN' &&
           transaction.status === 'PENDING' &&
           isCashier &&
-          Number(taskOwnerUserId) !== userId
+          Number(taskOwnerUserId) !== userId,
+        canCancel: transaction.transactionType === 'ADVANCE_RETURN' &&
+          transaction.status === 'PENDING' &&
+          Number(taskOwnerUserId) === userId
       };
     }),
     subtaskTransferOptions: [],
@@ -1208,6 +1295,7 @@ async function loadEventFinance(eventId: number, userId: number): Promise<any> {
     canRequest: false,
     canApprove: isCashier,
     isBudgetAuthority,
+    canViewBudgetIncreaseRequests,
     canViewTaskAssignee: isMasterAdmin || isCommitteeTaskManager || isBudgetAuthority,
     canCreateSubtaskTransfers: false,
     isEventScope: true
@@ -1329,6 +1417,24 @@ export const taskFinanceResolvers = {
         await connection.beginTransaction();
         await connection.query('SELECT id FROM tasks WHERE id = ? FOR UPDATE', [taskId]);
         if (transactionType === 'ADVANCE_RETURN') {
+          const [pendingReturnRows] = await connection.query<any[]>(
+            `SELECT id FROM task_finance_transactions
+             WHERE task_id = ? AND transaction_type = 'ADVANCE_RETURN' AND status = 'PENDING'
+             LIMIT 1 FOR UPDATE`,
+            [taskId]
+          );
+          if (pendingReturnRows.length > 0) {
+            throwEventError('CONFLICT', 'A cash return request is already pending confirmation');
+          }
+          const [pendingBudgetRows] = await connection.query<any[]>(
+            `SELECT id FROM task_budget_requests
+             WHERE task_id = ? AND status = 'PENDING'
+             LIMIT 1 FOR UPDATE`,
+            [taskId]
+          );
+          if (pendingBudgetRows.length > 0) {
+            throwEventError('CONFLICT', 'Resolve the pending budget request before submitting a cash return');
+          }
           const [rows] = await connection.query<any[]>(
             `SELECT
                COALESCE(SUM(CASE WHEN transaction_type = 'ADVANCE_ISSUED' AND status = 'CONFIRMED' THEN amount ELSE 0 END), 0) AS issued,
@@ -1619,6 +1725,30 @@ export const taskFinanceResolvers = {
       } finally {
         connection.release();
       }
+      return loadTransaction(transactionId, userId);
+    },
+
+    async cancelTaskFinanceReturn(_: unknown, args: { transactionId: number }, context: unknown) {
+      const userId = await getLoggedInUserId(context);
+      const transactionId = Number(args.transactionId);
+      const access = await getTransactionAccess(transactionId, userId);
+      if (!access.isOwner) {
+        throwEventError('FORBIDDEN', 'Only the task assignee can cancel their cash return');
+      }
+      const result = await query<any[]>(
+        `SELECT id FROM task_finance_transactions
+         WHERE id = ? AND transaction_type = 'ADVANCE_RETURN' AND status = 'PENDING'`,
+        [transactionId]
+      );
+      if (!result.length) {
+        throwEventError('CONFLICT', 'This cash return is no longer pending');
+      }
+      await query(
+        `UPDATE task_finance_transactions
+         SET status = 'REJECTED', confirmed_by = NULL, confirmed_at = NULL
+         WHERE id = ? AND transaction_type = 'ADVANCE_RETURN' AND status = 'PENDING'`,
+        [transactionId]
+      );
       return loadTransaction(transactionId, userId);
     }
   }

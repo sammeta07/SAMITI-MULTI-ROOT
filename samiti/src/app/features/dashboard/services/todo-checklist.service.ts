@@ -2,7 +2,7 @@ import { inject, Injectable } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Observable, map } from 'rxjs';
 import { environment } from '../../../../environments/environment';
-import { TodoItem, TodoParentType, TodoStatus } from '../models/todo.models';
+import { EditableTodoStatus, TodoItem, TodoParentType } from '../models/todo.models';
 
 interface GraphqlResponse<T> {
   data?: T;
@@ -24,9 +24,17 @@ export class TodoChecklistService {
         expenseAmount
         status
         isCompleted
+        createdBy
+        canManage
+        canUpdateStatus
         assignedUserId
         assignedUserName
+        createdByName
         createdAt
+        assignedByName
+        assignedAt
+        updatedByName
+        updatedAt
       }
     }`;
 
@@ -45,9 +53,17 @@ export class TodoChecklistService {
         expenseAmount
         status
         isCompleted
+        createdBy
+        canManage
+        canUpdateStatus
         assignedUserId
         assignedUserName
+        createdByName
         createdAt
+        assignedByName
+        assignedAt
+        updatedByName
+        updatedAt
       }
     }`;
 
@@ -58,7 +74,7 @@ export class TodoChecklistService {
     ).pipe(map((response) => this.extract(response, 'updateTodo')));
   }
 
-  public updateTodoDetails(todoId: number, title: string, status: TodoStatus, expenseAmount: string): Observable<TodoItem> {
+  public updateTodoDetails(todoId: number, title: string, status: EditableTodoStatus, expenseAmount: string): Observable<TodoItem> {
     const mutation = `mutation UpdateTodoDetails($todoId: Int!, $title: String!, $status: TodoStatus!, $expenseAmount: String) {
       updateTodoDetails(todoId: $todoId, title: $title, status: $status, expenseAmount: $expenseAmount) {
         id
@@ -66,6 +82,9 @@ export class TodoChecklistService {
         expenseAmount
         status
         isCompleted
+        createdBy
+        canManage
+        canUpdateStatus
         assignedUserId
         assignedUserName
         createdByName
@@ -84,7 +103,7 @@ export class TodoChecklistService {
     ).pipe(map((response) => this.extract(response, 'updateTodoDetails')));
   }
 
-  public setStatus(todoId: number, status: TodoStatus): Observable<TodoItem> {
+  public setStatus(todoId: number, status: EditableTodoStatus): Observable<TodoItem> {
     const mutation = `mutation SetTodoStatus($todoId: Int!, $status: TodoStatus!) {
       setTodoStatus(todoId: $todoId, status: $status) {
         id
@@ -92,9 +111,17 @@ export class TodoChecklistService {
         expenseAmount
         status
         isCompleted
+        createdBy
+        canManage
+        canUpdateStatus
         assignedUserId
         assignedUserName
+        createdByName
         createdAt
+        assignedByName
+        assignedAt
+        updatedByName
+        updatedAt
       }
     }`;
 
@@ -113,9 +140,17 @@ export class TodoChecklistService {
         expenseAmount
         status
         isCompleted
+        createdBy
+        canManage
+        canUpdateStatus
         assignedUserId
         assignedUserName
+        createdByName
         createdAt
+        assignedByName
+        assignedAt
+        updatedByName
+        updatedAt
       }
     }`;
 

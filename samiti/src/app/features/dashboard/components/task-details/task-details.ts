@@ -26,7 +26,7 @@ import { EventTasksService } from '../event-details/event-tasks/event-tasks.serv
 import { EventDetailsStateService } from '../event-details/event-details-state.service';
 import { TaskChild, TaskDetailsPayload } from './task-details.models';
 import { TaskDetailsService } from './task-details.service';
-import { hasPendingFinanceAction } from '../task-finance/task-finance.models';
+import { getTaskCashSummary, hasPendingFinanceAction } from '../task-finance/task-finance.models';
 import { TaskFinanceService } from '../task-finance/task-finance.service';
 import { TaskFinanceDialogService } from '../task-finance/task-finance-dialog.service';
 import { TaskActionsDialogService } from './task-actions-dialog.service';
@@ -72,6 +72,7 @@ export class TaskDetailsComponent implements OnInit {
   private requestId = 0;
   public readonly isLoading = signal(true);
   public readonly task = signal<TaskDetailsPayload | null>(null);
+  public readonly taskInHand = signal<number | null>(null);
   public readonly taskStatuses = TASK_STATUSES;
   public readonly isSavingTaskName = signal(false);
   public readonly isSavingBudget = signal(false);
@@ -135,6 +136,7 @@ export class TaskDetailsComponent implements OnInit {
   public onCancelChecklistItem(checklist: TodoChecklistComponent): void {
     if (checklist.isAdding) return;
     this.newChecklistName = '';
+    checklist.newExpenseAmount = '0';
     this.isCreatingChecklist = false;
   }
 
@@ -281,6 +283,7 @@ export class TaskDetailsComponent implements OnInit {
       this.taskFinanceService.getTaskFinance(taskId).subscribe({
         next: (finance) => {
           if (this.task()?.taskId !== rootTaskId) return;
+          if (taskId === rootTaskId) this.taskInHand.set(getTaskCashSummary(finance.transactions).inHand);
           const needsFinanceAction = hasPendingFinanceAction(finance);
           this.task.update((current) => current && current.taskId === rootTaskId
             ? {
@@ -473,6 +476,14 @@ export class TaskDetailsComponent implements OnInit {
 
   public formatTaskBudgetAmount(value: string | number | null | undefined): string {
     return formatTaskBudgetAmount(value);
+  }
+
+  public formatInHandAndSanctionedBudget(
+    inHandAmount: number,
+    sanctionedAmount: string | number | null | undefined
+  ): string {
+    const formattedSanctionedAmount = formatTaskBudgetAmount(sanctionedAmount).replace(/^₹\s*/, '');
+    return `${formatTaskBudgetAmount(inHandAmount)} / ${formattedSanctionedAmount}`;
   }
 
   public getTaskBudgetRemainingDisplay(taskId: number, budgetAmount: string | number): string {
@@ -1473,6 +1484,7 @@ export class TaskDetailsComponent implements OnInit {
     const requestId = ++this.requestId;
     this.isLoading.set(true);
     this.task.set(null);
+    this.taskInHand.set(null);
     this.pendingSubtaskOwnerIds = {};
     this.subtaskAssigneeSearchText = {};
     this.subtaskNameEditText = {};
@@ -1488,12 +1500,29 @@ export class TaskDetailsComponent implements OnInit {
       })
     ).subscribe({
       next: (details) => {
-        if (requestId === this.requestId) this.task.set(details);
+        if (requestId !== this.requestId) return;
+        this.task.set(details);
+        if (details.canAccessFinance) this.loadTaskInHand(details.taskId, requestId);
       },
       error: (error) => {
         if (requestId !== this.requestId) return;
         this.task.set(null);
         this.notifier.error(error?.error?.errors?.[0]?.message || error?.message || 'Failed to load task details.');
+      }
+    });
+  }
+
+  private loadTaskInHand(taskId: number, requestId: number): void {
+    this.taskFinanceService.getTaskFinance(taskId).subscribe({
+      next: (finance) => {
+        if (requestId !== this.requestId || this.task()?.taskId !== taskId) return;
+        this.taskInHand.set(getTaskCashSummary(finance.transactions).inHand);
+      },
+      error: (error) => {
+        if (requestId !== this.requestId || this.task()?.taskId !== taskId) return;
+        this.notifier.error(
+          error?.error?.errors?.[0]?.message || error?.message || 'Failed to load task in-hand amount.'
+        );
       }
     });
   }

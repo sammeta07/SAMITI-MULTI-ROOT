@@ -832,9 +832,10 @@
 .task-info-button {
   display: inline-flex !important;
   box-sizing: border-box;
-  width: var(--task-pill-height) !important;
-  height: var(--task-pill-height) !important;
-  min-height: var(--task-pill-height) !important;
+  width: 28px !important;
+  height: 28px !important;
+  min-width: 28px !important;
+  min-height: 28px !important;
   align-items: center !important;
   justify-content: center !important;
   padding: 0 !important;
@@ -1000,6 +1001,8 @@
   }
 
   ::ng-deep .mat-mdc-tab-body-content {
+    display: flex;
+    flex-direction: column;
     height: 100%;
     overflow: hidden;
   }
@@ -1308,7 +1311,9 @@
 .task-panel-info-container .task-info-button {
   width: 28px !important;
   height: 28px !important;
+  min-width: 28px !important;
   min-height: 28px !important;
+  flex: 0 0 28px;
 }
 
 .task-panel-edit-icon {

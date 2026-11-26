@@ -1,5 +1,6 @@
 export type TodoParentType = 'TASK' | 'PROGRAM';
-export type TodoStatus = 'PENDING' | 'IN_PROGRESS' | 'COMPLETED';
+export type TodoStatus = 'NEW' | 'IN_PROGRESS' | 'COMPLETED' | 'CANCELLED' | 'PENDING';
+export type EditableTodoStatus = Exclude<TodoStatus, 'PENDING'>;
 
 export interface TodoItem {
   id: number;
@@ -7,6 +8,9 @@ export interface TodoItem {
   expenseAmount: string;
   status: TodoStatus;
   isCompleted: boolean;
+  createdBy: number;
+  canManage: boolean;
+  canUpdateStatus: boolean;
   assignedUserId: number | null;
   assignedUserName: string | null;
   createdByName?: string | null;
@@ -20,4 +24,10 @@ export interface TodoItem {
 export interface TodoAssignee {
   userId: number;
   name: string;
+  email?: string;
+  photo?: string | null;
+  committeeRole?: string;
+  isWinner?: boolean;
+  roleIcon?: string | null;
+  roleColor?: string | null;
 }

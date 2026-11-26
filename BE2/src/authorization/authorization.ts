@@ -80,6 +80,32 @@ export async function hasTaskBudgetApprovalAuthority(
   return Number(rows[0]?.allowed) === 1;
 }
 
+export async function hasTaskBudgetRequestReviewRole(
+  userId: number,
+  eventId: number
+): Promise<boolean> {
+  const rows = await query<any[]>(
+    `SELECT EXISTS (
+       SELECT 1
+       FROM users_events ue
+       INNER JOIN events_roles_master erm ON erm.role_id = ue.role_id
+       WHERE ue.event_id = ? AND ue.user_id = ?
+         AND (
+           UPPER(REPLACE(REPLACE(TRIM(COALESCE(erm.role_name, '')), ' ', '_'), '-', '_'))
+             IN ('ADHYAKSHA', 'UPADHYAKSHA')
+           OR UPPER(REPLACE(REPLACE(TRIM(COALESCE(erm.english_name, '')), ' ', '_'), '-', '_'))
+             IN ('ADHYAKSHA', 'UPADHYAKSHA')
+           OR UPPER(REPLACE(REPLACE(TRIM(COALESCE(erm.hindi_name, '')), ' ', '_'), '-', '_'))
+             IN ('ADHYAKSHA', 'UPADHYAKSHA')
+           OR UPPER(REPLACE(REPLACE(TRIM(COALESCE(ue.designation, '')), ' ', '_'), '-', '_'))
+             IN ('ADHYAKSHA', 'UPADHYAKSHA')
+         )
+     ) AS allowed`,
+    [eventId, userId]
+  );
+  return Number(rows[0]?.allowed) === 1;
+}
+
 export async function hasPermission(
   userId: number,
   permissionCode: PermissionCode,

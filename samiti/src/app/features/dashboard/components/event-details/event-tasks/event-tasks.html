@@ -266,7 +266,7 @@
                       <mat-icon>edit</mat-icon>
                     </button>
                   }
-                  @if (task.canAccessFinance) {
+                  @if (shouldShowTaskFinanceButton(task)) {
                     <button
                       mat-icon-button
                       class="task-panel-finance-icon"

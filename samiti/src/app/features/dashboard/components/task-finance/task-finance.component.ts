@@ -19,7 +19,8 @@ import {
   isInitialTaskBudgetFinanceRequest,
   TaskBudgetRequest,
   TaskSubtaskTransfer,
-  TaskSubtaskTransferOption
+  TaskSubtaskTransferOption,
+  getTaskCashSummary
 } from './task-finance.models';
 import { TaskFinanceService } from './task-finance.service';
 import { TaskBudgetRequestsDialogComponent } from './task-budget-requests-dialog.component';
@@ -27,6 +28,7 @@ import { TaskFinanceRequestsDialogComponent } from './task-finance-requests-dial
 
 export interface TaskFinanceRequestGroup {
   taskId: number;
+  taskCreatedAt: string;
   taskName: string;
   taskOwnerName: string | null;
   taskOwnerUserId: number | null;
@@ -37,6 +39,10 @@ export interface TaskFinanceRequestGroup {
   approvedTotal: number;
   issuedAdvance: number;
   remainingAdvance: number;
+  confirmedReturns: number;
+  inHand: number;
+  remainingSanctionedBudget: number | null;
+  checklistExpenseAmount: number | null;
   budgetAvailableForDisbursement: number;
 }
 
@@ -108,6 +114,23 @@ export class TaskFinanceComponent implements OnInit {
       });
   }
 
+  public toNum(value: string | number | null | undefined): number {
+    const n = Number(value ?? 0);
+    return Number.isFinite(n) ? n : 0;
+  }
+
+  public maxZero(value: number): number {
+    return Math.max(0, value);
+  }
+
+  public getPrimaryGroup(groups: TaskFinanceRequestGroup[]): TaskFinanceRequestGroup | undefined {
+    return groups.length > 0 ? groups[0] : undefined;
+  }
+
+  public getPendingReceipts(transactions: TaskFinanceTransaction[]): TaskFinanceTransaction[] {
+    return transactions.filter((transaction) => transaction.canConfirmReceipt);
+  }
+
   public shouldShowSubtaskTransfers(finance: TaskFinancePayload): boolean {
     return finance.canCreateSubtaskTransfers
       || finance.incomingSubtaskTransfers.length > 0
@@ -166,7 +189,13 @@ export class TaskFinanceComponent implements OnInit {
 
   public canSubmitAdvanceReturn(): boolean {
     const amount = String(this.returnAmount ?? '').trim();
-    return !!this.payload()?.canRequest
+    const current = this.payload();
+    return !!current?.canRequest
+      && current.budgetRequestStatus !== 'PENDING'
+      && !current.transactions.some((transaction) =>
+        transaction.transactionType === 'ADVANCE_RETURN'
+        && transaction.status === 'PENDING'
+      )
       && isValidTaskBudgetAmount(amount)
       && Number(amount) > 0;
   }
@@ -224,15 +253,24 @@ export class TaskFinanceComponent implements OnInit {
     const groups = new Map<number, {
       requests: TaskFinanceRequest[];
       budgetRequests: TaskBudgetRequest[];
+      taskCreatedAt: string;
       pendingReturnTaskName?: string;
     }>();
     requests.forEach((request) => {
-      const taskGroup = groups.get(request.taskId) ?? { requests: [], budgetRequests: [] };
+      const taskGroup = groups.get(request.taskId) ?? {
+        requests: [],
+        budgetRequests: [],
+        taskCreatedAt: request.taskCreatedAt
+      };
       taskGroup.requests.push(request);
       groups.set(request.taskId, taskGroup);
     });
     budgetRequests.forEach((request) => {
-      const taskGroup = groups.get(request.taskId) ?? { requests: [], budgetRequests: [] };
+      const taskGroup = groups.get(request.taskId) ?? {
+        requests: [],
+        budgetRequests: [],
+        taskCreatedAt: request.taskCreatedAt
+      };
       taskGroup.budgetRequests.push(request);
       groups.set(request.taskId, taskGroup);
     });
@@ -241,7 +279,11 @@ export class TaskFinanceComponent implements OnInit {
         transaction.transactionType === 'ADVANCE_RETURN' && transaction.status === 'PENDING'
       )
       .forEach((transaction) => {
-        const taskGroup = groups.get(transaction.taskId) ?? { requests: [], budgetRequests: [] };
+        const taskGroup = groups.get(transaction.taskId) ?? {
+          requests: [],
+          budgetRequests: [],
+          taskCreatedAt: transaction.taskCreatedAt
+        };
         taskGroup.pendingReturnTaskName = transaction.taskName;
         groups.set(transaction.taskId, taskGroup);
       });
@@ -252,8 +294,17 @@ export class TaskFinanceComponent implements OnInit {
       const issuedAdvance = taskTransactions
         .filter((transaction) => transaction.transactionType === 'ADVANCE_ISSUED')
         .reduce((sum, transaction) => sum + Number(transaction.amount), 0);
+      const { confirmedReturns, inHand } = getTaskCashSummary(taskTransactions);
       const firstRequest = taskGroup.requests[0];
       const firstBudgetRequest = taskGroup.budgetRequests[0];
+      const remainingSanctionedBudget = Number(
+        firstRequest?.remainingSanctionedBudget ?? firstBudgetRequest?.remainingSanctionedBudget
+      );
+      const checklistExpenseAmount = Number(
+        firstRequest?.checklistExpenseAmount
+        ?? firstBudgetRequest?.checklistExpenseAmount
+        ?? taskTransactions.find((transaction) => transaction.checklistExpenseAmount)?.checklistExpenseAmount
+      );
       const budgetAvailableForDisbursement = Number(firstRequest?.budgetAvailableForDisbursement ?? 0);
       const remainingAdvance = Math.min(
         Math.max(0, approvedTotal - issuedAdvance),
@@ -266,12 +317,14 @@ export class TaskFinanceComponent implements OnInit {
 
       return {
         taskId,
+        taskCreatedAt: taskGroup.taskCreatedAt,
         taskName: firstRequest?.taskName
           ?? firstBudgetRequest?.taskName
           ?? taskGroup.pendingReturnTaskName
           ?? 'Untitled Task',
         taskOwnerName: taskGroup.requests.find((request) => request.taskOwnerName)?.taskOwnerName
           ?? taskGroup.budgetRequests.find((request) => request.taskOwnerName)?.taskOwnerName
+          ?? taskTransactions.find((transaction) => transaction.taskOwnerName)?.taskOwnerName
           ?? null,
         taskOwnerUserId: firstRequest?.taskOwnerUserId ?? null,
         requests: taskGroup.requests,
@@ -281,9 +334,19 @@ export class TaskFinanceComponent implements OnInit {
         approvedTotal,
         issuedAdvance,
         remainingAdvance,
+        confirmedReturns,
+        inHand,
+        remainingSanctionedBudget: Number.isFinite(remainingSanctionedBudget)
+          ? remainingSanctionedBudget
+          : null,
+        checklistExpenseAmount: Number.isFinite(checklistExpenseAmount)
+          ? checklistExpenseAmount
+          : null,
         budgetAvailableForDisbursement
       };
-    });
+    }).sort((left, right) =>
+      left.taskCreatedAt.localeCompare(right.taskCreatedAt) || left.taskId - right.taskId
+    );
   }
 
   public currentBudgetRequest(finance: TaskFinancePayload): TaskBudgetRequest | null {
@@ -299,13 +362,20 @@ export class TaskFinanceComponent implements OnInit {
     );
   }
 
+  public hasPendingBudgetIncreaseRequests(requests: TaskBudgetRequest[]): boolean {
+    return requests.some((request) => request.status === 'PENDING');
+  }
+
   public shouldShowBudgetReviewColumn(finance: TaskFinancePayload): boolean {
-    return !finance.canApprove && (
-      finance.isBudgetAuthority ||
-      finance.budgetRequests.some((request) =>
-        request.status === 'PENDING' && (request.canReviewCreator || request.canReviewAuthority)
-      )
-    );
+    return finance.isEventScope && finance.canViewBudgetIncreaseRequests;
+  }
+
+  public pendingBudgetIncreaseRequest(group: TaskFinanceRequestGroup): TaskBudgetRequest | null {
+    return [...group.budgetRequests]
+      .filter((request) => request.status === 'PENDING')
+      .sort((left, right) =>
+        right.createdAt.localeCompare(left.createdAt) || right.id - left.id
+      )[0] ?? null;
   }
 
   public lastBudgetRequest(group: TaskFinanceRequestGroup): TaskBudgetRequest | null {
@@ -431,7 +501,7 @@ export class TaskFinanceComponent implements OnInit {
           : !requests.some((request) => request.id === transaction.requestId);
       })
       .sort((left, right) =>
-        left.createdAt.localeCompare(right.createdAt) || left.id - right.id
+        left.createdAt.localeCompare(right.createdAt) || left.id - left.id
       );
   }
 
@@ -460,6 +530,14 @@ export class TaskFinanceComponent implements OnInit {
     );
   }
 
+  public cancelCashReturn(transaction: TaskFinanceTransaction): void {
+    if (!transaction.canCancel || this.isSaving()) return;
+    this.runAction(
+      this.service.cancelCashReturn(transaction.id),
+      'Cash return request cancelled.'
+    );
+  }
+
   public setBudgetAdjustmentMode(mode: 'INCREASE' | 'REDUCE'): void {
     if (mode === 'REDUCE' && !this.payload()?.canReduceBudget) return;
     this.budgetAdjustmentMode = mode;
@@ -470,6 +548,9 @@ export class TaskFinanceComponent implements OnInit {
     const current = this.payload();
     const amount = String(this.budgetAdjustmentAmount ?? '').trim();
     if (!current || !isValidTaskBudgetAmount(amount) || Number(amount) <= 0) return false;
+    if (current.transactions.some((transaction) =>
+      transaction.transactionType === 'ADVANCE_RETURN' && transaction.status === 'PENDING'
+    )) return false;
     if (
       current.budgetRequestStatus === 'PENDING' &&
       !current.canEditBudget &&

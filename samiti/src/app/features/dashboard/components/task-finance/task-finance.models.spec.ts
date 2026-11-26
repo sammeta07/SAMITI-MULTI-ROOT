@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import {
   createInitialAdvanceHistoryRequest,
   getEffectiveApprovedFinanceTotal,
+  getTaskCashSummary,
   getTaskFinanceRequestRevision,
   getTopUpSourceBudgetRequestIds,
   isInitialTaskBudgetFinanceRequest,
@@ -47,6 +48,7 @@ function emptyFinancePayload(overrides: Partial<TaskFinancePayload> = {}): TaskF
     canRequest: false,
     canApprove: false,
     isBudgetAuthority: false,
+    canViewBudgetIncreaseRequests: false,
     canViewTaskAssignee: false,
     canCreateSubtaskTransfers: false,
     isEventScope: false,
@@ -67,6 +69,8 @@ function approvedRequest(
     taskName: 'Maha Bhog',
     taskBudgetAmount: '122222',
     budgetAvailableForDisbursement: '122222',
+    remainingSanctionedBudget: '122222',
+    checklistExpenseAmount: '1000',
     taskOwnerName: 'Task owner',
     taskOwnerUserId: 7,
     requestType,
@@ -84,6 +88,7 @@ function approvedRequest(
     authorityReviewedAt: null,
     canReviewAuthority: false,
     createdAt: '2026-11-17 10:00:00',
+    taskCreatedAt: '2026-11-01 10:00:00',
     reviewedAt: null,
     ...overrides
   };
@@ -98,6 +103,8 @@ function approvedBudgetRequest(
     taskId: 43,
     taskName: 'Maha Bhog',
     taskOwnerName: 'Task owner',
+    remainingSanctionedBudget: '122222',
+    checklistExpenseAmount: '1000',
     requestedAmount: '1000',
     budgetBeforeRequest,
     requestedIncrease: '1000',
@@ -114,6 +121,7 @@ function approvedBudgetRequest(
     authorityReviewerDesignation: null,
     authorityReviewedAt: null,
     createdAt: '2026-11-17 10:00:00',
+    taskCreatedAt: '2026-11-01 10:00:00',
     canReviewCreator: false,
     canReviewAuthority: false,
     canCancel: false
@@ -125,20 +133,24 @@ function combinedDispatch(amount: string): TaskFinanceTransaction {
     id: 1,
     taskId: 43,
     taskName: 'Maha Bhog',
+    taskOwnerName: 'Task owner',
     requestId: null,
     transactionType: 'ADVANCE_ISSUED',
     amount,
     description: 'Combined task dispatch',
     status: 'CONFIRMED',
+    checklistExpenseAmount: '0',
     createdByName: 'Treasurer',
     confirmedByName: 'Treasurer',
     createdAt: '2026-11-18 10:00:00',
+    taskCreatedAt: '2026-11-01 10:00:00',
     confirmedAt: '2026-11-18 10:00:00',
     recipientName: 'Task owner',
     receivedByName: null,
     receivedAt: null,
     canConfirmReceipt: false,
-    canConfirmReturn: false
+    canConfirmReturn: false,
+    canCancel: false
   };
 }
 
@@ -151,7 +163,8 @@ function cashReturn(
     id: 2,
     transactionType: 'ADVANCE_RETURN',
     status,
-    canConfirmReturn: status === 'PENDING'
+    canConfirmReturn: status === 'PENDING',
+    canCancel: status === 'PENDING'
   };
 }
 
@@ -178,6 +191,24 @@ describe('cash return finance history', () => {
     expect(isVisibleInPaymentHistory(cashReturn('PENDING'))).toBe(false);
     expect(isVisibleInPaymentHistory(cashReturn('REJECTED'))).toBe(false);
     expect(isVisibleInPaymentHistory(cashReturn('CONFIRMED'))).toBe(true);
+  });
+
+  it('calculates confirmed returns and cash in hand without subtracting pending returns', () => {
+    const transactions = [
+      combinedDispatch('1000'),
+      {
+        ...combinedDispatch('200'),
+        id: 3,
+        transactionType: 'ADVANCE_EXPENSE' as const
+      },
+      cashReturn('CONFIRMED', '100'),
+      cashReturn('PENDING', '300')
+    ];
+
+    expect(getTaskCashSummary(transactions)).toEqual({
+      confirmedReturns: 100,
+      inHand: 700
+    });
   });
 });
 

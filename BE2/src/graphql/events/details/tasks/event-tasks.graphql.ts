@@ -1162,6 +1162,15 @@ export const eventTasksResolvers = {
         if (!await hasTaskAdminPermission(userId, Number(task.committeeId), Number(task.eventId))) {
           throwEventError('FORBIDDEN', 'Only a Committee Admin or Master Admin can request a budget reduction');
         }
+        const [pendingReturnRows] = await connection.query<any[]>(
+          `SELECT id FROM task_finance_transactions
+           WHERE task_id = ? AND transaction_type = 'ADVANCE_RETURN' AND status = 'PENDING'
+           LIMIT 1 FOR UPDATE`,
+          [taskId]
+        );
+        if (pendingReturnRows.length > 0) {
+          throwEventError('CONFLICT', 'Resolve the pending cash return request before requesting a budget change');
+        }
 
         const [pendingRequestRows] = await connection.query<any[]>(
           `SELECT id FROM task_budget_requests
@@ -1255,6 +1264,15 @@ export const eventTasksResolvers = {
         );
         if (Number(task.ownerUserId) !== userId || Number(task.createdBy) === userId || isMasterAdmin) {
           throwEventError('FORBIDDEN', 'Only the task owner can request an increase to this task budget');
+        }
+        const [pendingReturnRows] = await connection.query<any[]>(
+          `SELECT id FROM task_finance_transactions
+           WHERE task_id = ? AND transaction_type = 'ADVANCE_RETURN' AND status = 'PENDING'
+           LIMIT 1 FOR UPDATE`,
+          [taskId]
+        );
+        if (pendingReturnRows.length > 0) {
+          throwEventError('CONFLICT', 'Resolve the pending cash return request before requesting a budget change');
         }
         const targetBudgetCents = amountCents(task.budgetAmount) + amountCents(amount);
         if (targetBudgetCents > MAX_TASK_BUDGET_CENTS) {
@@ -1373,6 +1391,17 @@ export const eventTasksResolvers = {
         const budgetChanged = requestedBudgetCents !== currentBudgetCents;
         if (requestedBudgetCents < currentBudgetCents) {
           throwEventError('BAD_REQUEST', 'Task budgets cannot be decreased');
+        }
+        if (budgetChanged) {
+          const [pendingReturnRows] = await connection.query<any[]>(
+            `SELECT id FROM task_finance_transactions
+             WHERE task_id = ? AND transaction_type = 'ADVANCE_RETURN' AND status = 'PENDING'
+             LIMIT 1 FOR UPDATE`,
+            [taskId]
+          );
+          if (pendingReturnRows.length > 0) {
+            throwEventError('CONFLICT', 'Resolve the pending cash return request before requesting a budget change');
+          }
         }
         if (task.parentTaskId !== null && budgetChanged) {
           throwEventError(

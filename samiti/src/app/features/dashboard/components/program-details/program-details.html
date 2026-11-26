@@ -299,7 +299,6 @@
               <span class="tab-badge">{{ programData()?.todos?.length ?? 0 }}</span>
             </ng-template>
 
-            <section class="horizontal-full-card tasks-section-style">
               <app-todo-checklist
                 parentType="PROGRAM"
                 [parentId]="programData()?.programId ?? 0"
@@ -310,7 +309,6 @@
                 [tableView]="true"
                 (itemsChange)="onProgramTodosChange($event)"
               />
-            </section>
           </mat-tab>
 
           <!-- Notes Tab -->

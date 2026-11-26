@@ -116,6 +116,11 @@ export class EventTasksComponent implements OnInit, OnDestroy {
     return task.canEditTask || task.canAssignOwner || task.canManage;
   }
 
+  public shouldShowTaskFinanceButton(task: EventTaskEntry): boolean {
+    return task.canAccessFinance === true &&
+      this.eventDetailsState.headerData()?.canAccessTaskFinance !== true;
+  }
+
   public openTaskActionsDialog(task: EventTaskEntry, event: Event): void {
     event.stopPropagation();
     void this.taskActionsDialog.open(task.taskId, (updatedTask) => this.updateTaskFromDialog(task, updatedTask));

@@ -202,6 +202,7 @@ export const taskDetailsResolvers = {
         PERMISSIONS.EVENT_TASK_MANAGE_ANY,
         { type: 'EVENT', id: Number(task.eventId) }
       );
+      const isChecklistMasterAdmin = String(task.committeeRole || '').toUpperCase() === 'COMMITTEE_MASTER_ADMIN';
       const canManageTasks = isCommitteeTaskManager || isMasterAdmin;
       const canAssignOwner = task.parentTaskId === null
         ? canManageTasks || await hasPermission(
@@ -334,6 +335,7 @@ export const taskDetailsResolvers = {
            todo.is_completed AS isCompleted,
            todo.assigned_user_id AS assignedUserId,
            assignee.name AS assignedUserName,
+           todo.created_by AS createdBy,
            creator.name AS createdByName,
            DATE_FORMAT(todo.created_at, '%Y-%m-%d %H:%i:%s') AS createdAt,
            assigner.name AS assignedByName,
@@ -503,6 +505,9 @@ export const taskDetailsResolvers = {
           expenseAmount: String(todo.expenseAmount),
           status: String(todo.status),
           isCompleted: Boolean(Number(todo.isCompleted)),
+          createdBy: Number(todo.createdBy),
+          canManage: Number(todo.createdBy) === userId || isChecklistMasterAdmin,
+          canUpdateStatus: todo.assignedUserId !== null && Number(todo.assignedUserId) === userId,
           assignedUserId: todo.assignedUserId === null ? null : Number(todo.assignedUserId),
           assignedUserName: todo.assignedUserName || null,
           createdByName: todo.createdByName || null,

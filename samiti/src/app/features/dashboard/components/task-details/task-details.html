@@ -54,11 +54,18 @@
                 >
                   {{ formatTaskBudgetAmount(getTaskBudgetRemainingAmount(taskDetails.taskId, taskDetails.budgetAmount)) }}
                 </span>
+                @let inHandAmount = taskInHand();
                 <span
                   class="task-budget-metric task-budget-total"
-                  [matTooltip]="'Sanctioned Amount - ' + formatTaskBudgetAmount(taskDetails.budgetAmount)"
+                  [matTooltip]="taskDetails.canAccessFinance && inHandAmount !== null
+                    ? 'In-Hand / Sanctioned Amount'
+                    : 'Sanctioned Amount - ' + formatTaskBudgetAmount(taskDetails.budgetAmount)"
                 >
-                  {{ formatTaskBudgetAmount(taskDetails.budgetAmount) }}
+                  @if (taskDetails.canAccessFinance && inHandAmount !== null) {
+                    {{ formatInHandAndSanctionedBudget(inHandAmount, taskDetails.budgetAmount) }}
+                  } @else {
+                    {{ formatTaskBudgetAmount(taskDetails.budgetAmount) }}
+                  }
                 </span>
               </span>
             </div>
@@ -233,24 +240,40 @@
               <span class="tab-badge">{{ taskDetails.todos.length }}</span>
             </ng-template>
 
-            <section class="horizontal-full-card tasks-section-style">
               @if (isCreatingChecklist) {
                 <form class="task-subtask-create-row" (ngSubmit)="checklistComponent.add(newChecklistName)">
-                  <input
-                    type="text"
-                    maxlength="255"
-                    placeholder="Enter checklist item"
-                    name="newChecklistName"
-                    [(ngModel)]="newChecklistName"
-                    [disabled]="checklistComponent.isAdding"
-                    aria-label="Checklist item title"
-                    (keydown.escape)="onCancelChecklistItem(checklistComponent)"
-                  />
+                  <div class="task-subtask-create-fields">
+                    <input
+                      type="text"
+                      maxlength="255"
+                      placeholder="Enter checklist title"
+                      name="newChecklistName"
+                      [(ngModel)]="newChecklistName"
+                      [disabled]="checklistComponent.isAdding"
+                      aria-label="Checklist item title"
+                      (keydown.escape)="onCancelChecklistItem(checklistComponent)"
+                    />
+                    <label class="task-subtask-budget">
+                      <span>Budget (₹)</span>
+                      <input
+                        type="number"
+                        min="0"
+                        step="1"
+                        appWholeRupee
+                        name="newChecklistExpenseAmount"
+                        [(ngModel)]="checklistComponent.newExpenseAmount"
+                        [disabled]="checklistComponent.isAdding"
+                        aria-label="Checklist budget in rupees"
+                        (keydown.enter)="checklistComponent.add(newChecklistName)"
+                        (keydown.escape)="onCancelChecklistItem(checklistComponent)"
+                      />
+                    </label>
+                  </div>
                   <div class="task-subtask-create-actions">
                     <button
                       type="submit"
                       class="task-subtask-create-button task-subtask-save-button"
-                      [disabled]="!newChecklistName.trim() || checklistComponent.isAdding"
+                      [disabled]="!newChecklistName.trim() || !checklistComponent.isValidExpenseAmount(checklistComponent.newExpenseAmount) || checklistComponent.isAdding"
                       aria-label="Save checklist item"
                       matTooltip="Save checklist item"
                     >
@@ -274,7 +297,7 @@
                 parentType="TASK"
                 [parentId]="taskDetails.taskId"
                 [items]="taskDetails.todos"
-                [assignees]="taskDetails.todoAssignees"
+                [assignees]="taskDetails.taskAssignees"
                 [canManage]="taskDetails.canManageTodos"
                 [canToggle]="taskDetails.canToggleTodos"
                 [tableView]="true"
@@ -283,7 +306,6 @@
                 (itemsChange)="onTodosChange($event)"
                 (itemAdded)="onChecklistItemAdded()"
               />
-            </section>
           </mat-tab>
 
           <!-- Notes Tab -->

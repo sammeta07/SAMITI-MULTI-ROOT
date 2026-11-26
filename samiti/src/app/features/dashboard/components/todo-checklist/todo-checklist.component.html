@@ -3,11 +3,10 @@
   }
   @if (expansionView) {
     @if (items.length) {
-      <mat-accordion class="todo-expansion-list" [multi]="true">
+      <div class="todo-expansion-list">
         @for (item of items; track item.id; let i = $index) {
-          <mat-expansion-panel class="todo-expansion-panel task-subtask-panel" [style.--task-level-background]="'#e2e8f0'">
-            <mat-expansion-panel-header>
-              <div class="todo-panel-summary">
+          <div class="todo-expansion-panel" [style.--task-level-background]="'#e2e8f0'">
+            <div class="todo-checklist-expansion-header">
                 <div class="todo-panel-title">
                   <span class="todo-panel-count">{{ i + 1 }}</span>
                   @if (editingId === item.id) {
@@ -27,161 +26,276 @@
                   }
                 </div>
 
-                <div class="todo-panel-meta">
-                  @if (parentType === 'TASK') {
-                    <span class="todo-panel-expense" [matTooltip]="'Checklist expense: ₹ ' + formatExpenseAmount(item.expenseAmount)">
-                      <mat-icon>payments</mat-icon>
-                      ₹ {{ formatExpenseAmount(item.expenseAmount) }}
+                @if (parentType === 'TASK') {
+                  @if (editingId === item.id) {
+                    <span class="todo-panel-expense-edit" (click)="$event.stopPropagation()">
+                      <span aria-hidden="true">-</span>
+                      <input
+                        class="todo-expense-input"
+                        type="number"
+                        min="0"
+                        max="9999999999"
+                        step="1"
+                        appWholeRupee
+                        [(ngModel)]="editExpenseAmount"
+                        [ngModelOptions]="{ standalone: true }"
+                        [disabled]="pendingIds.has(item.id)"
+                        [attr.aria-label]="'Checklist expense for ' + item.title"
+                        (keydown)="$event.stopPropagation()"
+                      />
+                    </span>
+                  } @else {
+                    <span class="todo-panel-expense" [matTooltip]="'Checklist expense: ' + formatExpenseAmount(item.expenseAmount)">
+                      - {{ formatExpenseAmount(item.expenseAmount) }}
                     </span>
                   }
-                  @if (item.assignedUserName) {
+                }
+
+                <div class="todo-panel-status-assignee" (click)="$event.stopPropagation()" (keydown)="$event.stopPropagation()">
+                  @if (editingId === item.id && canUpdateStatusItem(item)) {
+                    <span class="todo-status-dropdown-wrapper">
+                      <select
+                        class="todo-panel-status-dropdown"
+                        [class.todo-status-completed]="editStatus === 'COMPLETED'"
+                        [class.todo-status-in-progress]="editStatus === 'IN_PROGRESS'"
+                        [class.todo-status-new]="editStatus === 'NEW'"
+                        [class.todo-status-cancelled]="editStatus === 'CANCELLED'"
+                        [ngModel]="editStatus"
+                        [ngModelOptions]="{ standalone: true }"
+                        [disabled]="pendingIds.has(item.id)"
+                        [attr.aria-label]="'Update status for ' + item.title"
+                        (click)="$event.stopPropagation()"
+                        (ngModelChange)="onEditStatusChange($event)"
+                        (focus)="statusDropdownOpen = true"
+                        (blur)="statusDropdownOpen = false"
+                      >
+                          <option value="NEW">New</option>
+                        <option value="IN_PROGRESS">In progress</option>
+                        <option value="COMPLETED">Completed</option>
+                          <option value="CANCELLED">Cancelled</option>
+                      </select>
+                      <mat-icon aria-hidden="true">{{ statusDropdownOpen ? 'expand_less' : 'expand_more' }}</mat-icon>
+                    </span>
+                  } @else if (canUpdateStatusItem(item)) {
+                    <span class="todo-status-dropdown-wrapper">
+                      <select
+                        class="todo-panel-status-dropdown"
+                        [class.todo-status-completed]="item.status === 'COMPLETED'"
+                        [class.todo-status-in-progress]="item.status === 'IN_PROGRESS'"
+                        [class.todo-status-new]="normalizeStatus(item.status) === 'NEW'"
+                        [class.todo-status-cancelled]="item.status === 'CANCELLED'"
+                        [value]="normalizeStatus(item.status)"
+                        [disabled]="pendingIds.has(item.id)"
+                        [attr.aria-label]="'Update status for ' + item.title"
+                        (change)="setStatus(item, $event)"
+                      >
+                        <option value="NEW">New</option>
+                        <option value="IN_PROGRESS">In progress</option>
+                        <option value="COMPLETED">Completed</option>
+                        <option value="CANCELLED">Cancelled</option>
+                      </select>
+                      <mat-icon aria-hidden="true">expand_more</mat-icon>
+                    </span>
+                  } @else {
+                    <span
+                      class="todo-panel-status todo-status-label"
+                      [class.todo-status-completed]="item.status === 'COMPLETED'"
+                      [class.todo-status-in-progress]="item.status === 'IN_PROGRESS'"
+                      [class.todo-status-new]="normalizeStatus(item.status) === 'NEW'"
+                      [class.todo-status-cancelled]="item.status === 'CANCELLED'"
+                    >
+                      {{ getStatusLabel(item.status) | uppercase }}
+                    </span>
+                  }
+                  @if (!canManageItem(item) && item.assignedUserName) {
                     <span class="todo-panel-meta-item" [matTooltip]="'Assigned to ' + item.assignedUserName">
                       <mat-icon>person</mat-icon>
                       {{ item.assignedUserName }}
                     </span>
                   }
-                </div>
-
-                @if (editingId === item.id) {
-                  <span class="todo-status-dropdown-wrapper">
-                    <select
-                      class="todo-panel-status-dropdown"
-                      [class.todo-status-completed]="editStatus === 'COMPLETED'"
-                      [class.todo-status-in-progress]="editStatus === 'IN_PROGRESS'"
-                      [class.todo-status-pending]="editStatus === 'PENDING'"
-                      [(ngModel)]="editStatus"
-                      [ngModelOptions]="{ standalone: true }"
-                      [disabled]="pendingIds.has(item.id)"
-                      [attr.aria-label]="'Update status for ' + item.title"
-                      (click)="$event.stopPropagation()"
-                      (focus)="statusDropdownOpen = true"
-                      (blur)="statusDropdownOpen = false"
+                  @if (canManageItem(item)) {
+                    <mat-form-field
+                      class="todo-panel-assignee-field"
+                      [class.todo-assignee-unassigned]="getSelectedAssigneeId(item) === null"
+                      appearance="fill"
+                      subscriptSizing="dynamic"
                     >
-                      <option value="PENDING">Pending</option>
-                      <option value="IN_PROGRESS">In progress</option>
-                      <option value="COMPLETED">Completed</option>
-                    </select>
-                    <mat-icon aria-hidden="true">{{ statusDropdownOpen ? 'expand_less' : 'expand_more' }}</mat-icon>
-                  </span>
-                } @else {
-                  <span
-                    class="todo-panel-status todo-status-label"
-                    [class.todo-status-completed]="item.status === 'COMPLETED'"
-                    [class.todo-status-in-progress]="item.status === 'IN_PROGRESS'"
-                    [class.todo-status-pending]="item.status === 'PENDING'"
-                  >
-                    {{ (item.status === 'COMPLETED' ? 'Completed' : item.status === 'IN_PROGRESS' ? 'In progress' : 'Pending') | uppercase }}
-                  </span>
-                }
+                      <span matPrefix class="todo-assignee-search-icon"><mat-icon>search</mat-icon></span>
+                      @if (getAssigneeSearchText(item)) {
+                        @if (getSelectedAssignee(item); as selectedAssignee) {
+                          <span matPrefix class="todo-assignee-selected-avatar">
+                            @if (selectedAssignee.photo) {
+                              <img [src]="selectedAssignee.photo" [alt]="selectedAssignee.name" />
+                            } @else {
+                              <span>{{ getAssigneeInitials(selectedAssignee.name) }}</span>
+                            }
+                          </span>
+                        }
+                      }
+                      <input
+                        type="text"
+                        matInput
+                        autocomplete="off"
+                        placeholder="Search member..."
+                        [value]="getAssigneeSearchText(item)"
+                        [disabled]="pendingIds.has(item.id)"
+                        [matAutocomplete]="assigneeAutocomplete"
+                        [attr.aria-label]="'Assignee for ' + item.title"
+                        #assigneeTrigger="matAutocompleteTrigger"
+                        (input)="onAssigneeSearch(item.id, $any($event.target).value)"
+                        (focus)="onAssigneeFocus(item.id, assigneeTrigger)"
+                      />
+                      <span matSuffix class="todo-assignee-input-suffix">
+                        <button
+                          type="button"
+                          class="todo-assignee-clear-button"
+                          aria-label="Clear assignee search"
+                          (mousedown)="clearAssigneeSearch(item.id, assigneeTrigger, $event)"
+                        ><mat-icon>close</mat-icon></button>
+                      </span>
+                      <mat-autocomplete
+                        #assigneeAutocomplete="matAutocomplete"
+                        class="todo-assignee-autocomplete"
+                        hideSingleSelectionIndicator
+                        (closed)="onAssigneeAutocompleteClosed(item)"
+                        (optionSelected)="onAssigneeSelected(item, $event)"
+                      >
+                        @for (assignee of getFilteredAssignees(item); track assignee.userId) {
+                          <mat-option
+                            [value]="assignee.userId"
+                            [disabled]="assignee.userId === getSelectedAssigneeId(item)"
+                            class="todo-assignee-option"
+                          >
+                            <div class="todo-assignee-option-content">
+                              <span
+                                class="todo-assignee-avatar"
+                                [style.border-color]="assignee.roleColor || '#3b82f6'"
+                                [style.background-color]="assignee.photo ? '#ffffff' : (assignee.roleColor || '#3b82f6') + '18'"
+                              >
+                                @if (assignee.photo) {
+                                  <img [src]="assignee.photo" [alt]="assignee.name" />
+                                } @else {
+                                  <span>{{ getAssigneeInitials(assignee.name) }}</span>
+                                }
+                              </span>
+                              <span class="todo-assignee-option-details">
+                                <span class="todo-assignee-option-name">{{ assignee.name | titlecase }}</span>
+                                <span class="todo-assignee-option-email">{{ assignee.email || 'Committee member' }}</span>
+                              </span>
+                              @if (assignee.roleIcon) {
+                                <span class="todo-assignee-role-icon" [style.color]="assignee.roleColor || '#16a34a'">
+                                  {{ assignee.roleIcon }}
+                                </span>
+                              }
+                            </div>
+                          </mat-option>
+                        } @empty {
+                          <mat-option disabled>No members found</mat-option>
+                        }
+                      </mat-autocomplete>
+                    </mat-form-field>
+                  }
+                </div>
 
                 <div class="todo-panel-actions" (click)="$event.stopPropagation()" (keydown)="$event.stopPropagation()">
-                @if (canManage) {
-                  @if (editingId === item.id) {
-                    <button
-                      type="button"
-                      class="todo-action-button todo-save-action"
-                      (click)="saveExpansionChanges(item)"
-                      [disabled]="pendingIds.has(item.id)"
-                      aria-label="Save checklist item"
-                      matTooltip="Save checklist item"
-                    >
-                      <mat-icon>check</mat-icon>
-                    </button>
-                    <button
-                      type="button"
-                      class="todo-action-button todo-cancel-action"
-                      (click)="cancelEditing()"
-                      [disabled]="pendingIds.has(item.id)"
-                      aria-label="Cancel editing checklist item"
-                      matTooltip="Cancel editing"
-                    >
-                      <mat-icon>close</mat-icon>
-                    </button>
-                  } @else {
-                    <button
-                      type="button"
-                      class="todo-action-button todo-edit-action"
-                      (click)="startEditing(item)"
-                      [disabled]="pendingIds.has(item.id)"
-                      aria-label="Edit checklist item"
-                      matTooltip="Edit checklist item"
-                    >
-                      <mat-icon>edit_outline</mat-icon>
-                    </button>
-                    <button
-                      type="button"
-                      class="todo-action-button todo-delete-action"
-                      (click)="remove(item)"
-                      [disabled]="pendingIds.has(item.id)"
-                      aria-label="Delete checklist item"
-                      matTooltip="Delete checklist item"
-                    >
-                      <mat-icon>delete_outline</mat-icon>
-                    </button>
+                  @if (canManageItem(item)) {
+                    @if (editingId === item.id) {
+                      <button
+                        type="button"
+                        class="todo-action-button todo-save-action"
+                        (click)="saveExpansionChanges(item)"
+                        [disabled]="pendingIds.has(item.id)"
+                        aria-label="Save checklist item"
+                        matTooltip="Save checklist item"
+                      >
+                        <mat-icon>check</mat-icon>
+                      </button>
+                      <button
+                        type="button"
+                        class="todo-action-button todo-cancel-action"
+                        (click)="cancelEditing()"
+                        [disabled]="pendingIds.has(item.id)"
+                        aria-label="Cancel editing checklist item"
+                        matTooltip="Cancel editing"
+                      >
+                        <mat-icon>close</mat-icon>
+                      </button>
+                    } @else {
+                      <button
+                        type="button"
+                        class="todo-action-button todo-edit-action"
+                        (click)="startEditing(item)"
+                        [disabled]="pendingIds.has(item.id)"
+                        aria-label="Edit checklist item"
+                        matTooltip="Edit checklist item"
+                      >
+                        <mat-icon>edit_outline</mat-icon>
+                      </button>
+                      <button
+                        type="button"
+                        class="todo-action-button todo-delete-action"
+                        (click)="remove(item)"
+                        [disabled]="pendingIds.has(item.id)"
+                        aria-label="Delete checklist item"
+                        matTooltip="Delete checklist item"
+                      >
+                        <mat-icon>delete_outline</mat-icon>
+                      </button>
+                    }
                   }
-                }
-              </div>
-              </div>
-            </mat-expansion-panel-header>
-
-            <div class="todo-details-grid">
-              <div class="todo-detail-field">
-                <span class="todo-detail-label">Checklist ID</span>
-                <div class="todo-detail-value">
-                  <mat-icon>tag</mat-icon>
-                  <span>#{{ item.id }}</span>
-                </div>
-              </div>
-              @if (parentType === 'TASK') {
-                <div class="todo-detail-field todo-expense-detail">
-                  <span class="todo-detail-label">Expense (₹)</span>
-                  @if (editingId === item.id) {
-                    <input
-                      class="todo-expense-input"
-                      type="number"
-                      min="0"
-                      max="9999999999"
-                      step="1"
-                      appWholeRupee
-                      [(ngModel)]="editExpenseAmount"
-                      [ngModelOptions]="{ standalone: true }"
-                      [disabled]="pendingIds.has(item.id)"
-                      [attr.aria-label]="'Checklist expense for ' + item.title"
-                      (click)="$event.stopPropagation()"
-                    />
-                  } @else {
-                    <div class="todo-detail-value">
-                      <mat-icon>payments</mat-icon>
-                      <span>₹ {{ formatExpenseAmount(item.expenseAmount) }}</span>
+                  <span class="todo-panel-info-container">
+                    <button
+                      type="button"
+                      class="todo-panel-info-button"
+                      [attr.aria-describedby]="'todo-panel-details-popover-' + item.id"
+                      aria-label="Show checklist details"
+                    >
+                      <mat-icon aria-hidden="true">info</mat-icon>
+                    </button>
+                    <div
+                      [id]="'todo-panel-details-popover-' + item.id"
+                      class="todo-panel-details-popover"
+                      role="tooltip"
+                    >
+                      <div class="todo-panel-details-item">
+                        <span class="todo-panel-details-label">Checklist ID</span>
+                        <span class="todo-panel-details-value">#{{ item.id }}</span>
+                      </div>
+                      <div class="todo-panel-details-item">
+                        <span class="todo-panel-details-label">{{ parentType === 'TASK' ? 'Parent task' : 'Parent program' }}</span>
+                        <span class="todo-panel-details-value">#{{ parentId }}</span>
+                      </div>
+                      <div class="todo-panel-details-item">
+                        <span class="todo-panel-details-label">Created by</span>
+                        <span class="todo-panel-details-value">{{ (item.createdByName || 'Unknown') | titlecase }}</span>
+                      </div>
+                      <div class="todo-panel-details-item">
+                        <span class="todo-panel-details-label">Created at</span>
+                        <span class="todo-panel-details-value">{{ item.createdAt | date: 'medium' }}</span>
+                      </div>
+                      <div class="todo-panel-details-item">
+                        <span class="todo-panel-details-label">Assigned by</span>
+                        <span class="todo-panel-details-value">{{ (item.assignedByName || 'Not assigned') | titlecase }}</span>
+                      </div>
+                      <div class="todo-panel-details-item">
+                        <span class="todo-panel-details-label">Assigned at</span>
+                        <span class="todo-panel-details-value">{{ item.assignedAt ? (item.assignedAt | date: 'medium') : 'Not assigned' }}</span>
+                      </div>
+                      <div class="todo-panel-details-item">
+                        <span class="todo-panel-details-label">Updated by</span>
+                        <span class="todo-panel-details-value">{{ (item.updatedByName || 'Unknown') | titlecase }}</span>
+                      </div>
+                      <div class="todo-panel-details-item">
+                        <span class="todo-panel-details-label">Updated at</span>
+                        <span class="todo-panel-details-value">{{ (item.updatedAt || item.createdAt) | date: 'medium' }}</span>
+                      </div>
                     </div>
-                  }
+                  </span>
                 </div>
-              }
-              <div class="todo-detail-field">
-                <span class="todo-detail-label">Created by</span>
-                <div class="todo-detail-value">
-                  <mat-icon>person</mat-icon>
-                  <span>{{ (item.createdByName || 'Unknown') | titlecase }}</span>
-                </div>
-              </div>
-              <div class="todo-detail-field">
-                <span class="todo-detail-label">Created at</span>
-                <div class="todo-detail-value" [title]="item.createdAt | date: 'dd-MMM-yyyy, hh:mm a'">
-                  <mat-icon>calendar_today</mat-icon>
-                  <span>{{ item.createdAt | date: 'dd-MMM-yy, hh:mm a' }}</span>
-                </div>
-              </div>
-              <div class="todo-detail-field">
-                <span class="todo-detail-label">Last updated</span>
-                <div class="todo-detail-value" [title]="(item.updatedAt || item.createdAt) | date: 'dd-MMM-yyyy, hh:mm a'">
-                  <mat-icon>update</mat-icon>
-                  <span>{{ (item.updatedAt || item.createdAt) | date: 'dd-MMM-yy, hh:mm a' }}</span>
-                </div>
-              </div>
             </div>
-          </mat-expansion-panel>
+          </div>
         }
-      </mat-accordion>
+      </div>
     } @else {
       <div class="todo-empty-state">
         <span class="todo-empty-icon"><mat-icon>playlist_add_check</mat-icon></span>
@@ -298,25 +412,68 @@
             <ng-container matColumnDef="status">
               <th mat-header-cell *matHeaderCellDef>Status</th>
               <td mat-cell *matCellDef="let item">
-                <span
-                  class="todo-status-label"
-                  [class.todo-status-completed]="item.status === 'COMPLETED'"
-                  [class.todo-status-in-progress]="item.status === 'IN_PROGRESS'"
-                  [class.todo-status-pending]="item.status === 'PENDING'"
-                >
-                  <span class="todo-status-dot" aria-hidden="true"></span>
-                  {{ (item.status === 'COMPLETED' ? 'Completed' : item.status === 'IN_PROGRESS' ? 'In progress' : 'Pending') | uppercase }}
-                </span>
+                @if (editingId === item.id && canUpdateStatusItem(item)) {
+                  <span class="todo-status-dropdown-wrapper">
+                    <select
+                      class="todo-panel-status-dropdown"
+                      [class.todo-status-completed]="editStatus === 'COMPLETED'"
+                      [class.todo-status-in-progress]="editStatus === 'IN_PROGRESS'"
+                      [class.todo-status-new]="editStatus === 'NEW'"
+                      [class.todo-status-cancelled]="editStatus === 'CANCELLED'"
+                      [ngModel]="editStatus"
+                      [ngModelOptions]="{ standalone: true }"
+                      [disabled]="pendingIds.has(item.id)"
+                      [attr.aria-label]="'Update status for ' + item.title"
+                      (ngModelChange)="onEditStatusChange($event)"
+                    >
+                      <option value="NEW">New</option>
+                      <option value="IN_PROGRESS">In progress</option>
+                      <option value="COMPLETED">Completed</option>
+                      <option value="CANCELLED">Cancelled</option>
+                    </select>
+                    <mat-icon aria-hidden="true">expand_more</mat-icon>
+                  </span>
+                } @else if (canUpdateStatusItem(item)) {
+                  <span class="todo-status-dropdown-wrapper">
+                    <select
+                      class="todo-panel-status-dropdown"
+                      [class.todo-status-completed]="item.status === 'COMPLETED'"
+                      [class.todo-status-in-progress]="item.status === 'IN_PROGRESS'"
+                      [class.todo-status-new]="normalizeStatus(item.status) === 'NEW'"
+                      [class.todo-status-cancelled]="item.status === 'CANCELLED'"
+                      [value]="normalizeStatus(item.status)"
+                      [disabled]="pendingIds.has(item.id)"
+                      [attr.aria-label]="'Update status for ' + item.title"
+                      (change)="setStatus(item, $event)"
+                    >
+                      <option value="NEW">New</option>
+                      <option value="IN_PROGRESS">In progress</option>
+                      <option value="COMPLETED">Completed</option>
+                      <option value="CANCELLED">Cancelled</option>
+                    </select>
+                    <mat-icon aria-hidden="true">expand_more</mat-icon>
+                  </span>
+                } @else {
+                  <span
+                    class="todo-status-label"
+                    [class.todo-status-completed]="item.status === 'COMPLETED'"
+                    [class.todo-status-in-progress]="item.status === 'IN_PROGRESS'"
+                    [class.todo-status-new]="normalizeStatus(item.status) === 'NEW'"
+                    [class.todo-status-cancelled]="item.status === 'CANCELLED'"
+                  >
+                    <span class="todo-status-dot" aria-hidden="true"></span>
+                    {{ getStatusLabel(item.status) | uppercase }}
+                  </span>
+                }
               </td>
             </ng-container>
 
-            @if (canManage || canToggle) {
-              <ng-container matColumnDef="actions">
-                <th mat-header-cell *matHeaderCellDef>Actions</th>
-                <td mat-cell *matCellDef="let item">
-                  <div class="todo-actions">
-                    @if (canManage) {
-                      @if (editingId === item.id) {
+            <ng-container matColumnDef="actions">
+              <th mat-header-cell *matHeaderCellDef>Actions</th>
+              <td mat-cell *matCellDef="let item">
+                <div class="todo-actions">
+                  @if (canManageItem(item)) {
+                    @if (editingId === item.id) {
                         <button
                           type="button"
                           class="todo-action-button todo-save-action"
@@ -337,7 +494,7 @@
                         >
                           <mat-icon>close</mat-icon>
                         </button>
-                      } @else {
+                    } @else {
                         <button
                           type="button"
                           class="todo-action-button"
@@ -358,9 +515,9 @@
                         >
                           <mat-icon>delete_outline</mat-icon>
                         </button>
-                      }
                     }
-                    @if (canToggle) {
+                  }
+                  @if (canManageItem(item) && canUpdateStatusItem(item)) {
                       <span
                         class="todo-completion-checkbox-wrapper"
                         [class.todo-completion-disabled]="editingId !== item.id || pendingIds.has(item.id)"
@@ -374,11 +531,10 @@
                           (change)="toggleCompleted(item, $event)"
                         />
                       </span>
-                    }
-                  </div>
-                </td>
-              </ng-container>
-            }
+                  }
+                </div>
+              </td>
+            </ng-container>
 
             <tr mat-header-row *matHeaderRowDef="tableColumns"></tr>
             <tr mat-row *matRowDef="let row; columns: tableColumns"></tr>
@@ -400,20 +556,21 @@
         <div class="todo-row">
           <select
             class="todo-status"
-            [value]="item.status"
-            [disabled]="!canToggle || pendingIds.has(item.id)"
+            [value]="normalizeStatus(item.status)"
+            [disabled]="!canUpdateStatusItem(item) || pendingIds.has(item.id)"
             [attr.aria-label]="'Status for ' + item.title"
             (change)="setStatus(item, $event)"
           >
-            <option value="PENDING">Pending</option>
+            <option value="NEW">New</option>
             <option value="IN_PROGRESS">In progress</option>
             <option value="COMPLETED">Completed</option>
+            <option value="CANCELLED">Cancelled</option>
           </select>
           <span class="todo-title" [class.todo-completed]="item.isCompleted">{{ toSentenceCase(item.title) }}</span>
           @if (parentType === 'TASK') {
             <span class="todo-expense-value">₹ {{ formatExpenseAmount(item.expenseAmount) }}</span>
           }
-          @if (canManage && !tableView) {
+          @if (canManageItem(item) && !tableView) {
             <select
               class="todo-assignee"
               [value]="item.assignedUserId ?? ''"
@@ -429,7 +586,7 @@
           } @else {
             <span class="todo-assignee-name">{{ item.assignedUserName || 'Unassigned' }}</span>
           }
-          @if (canManage) {
+          @if (canManageItem(item)) {
             <button type="button" class="todo-delete" (click)="remove(item)" [disabled]="pendingIds.has(item.id)" aria-label="Delete checklist item" matTooltip="Delete checklist item">
               <mat-icon>delete_outline</mat-icon>
             </button>

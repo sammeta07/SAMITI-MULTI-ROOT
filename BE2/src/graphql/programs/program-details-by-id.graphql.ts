@@ -177,6 +177,7 @@ export const programDetailsResolvers = {
       );
       const ownerPermission = ownerPermissionRows[0];
       const committeeRole = String(ownerPermission?.committeeRole || '').toUpperCase();
+      const isChecklistMasterAdmin = committeeRole === 'COMMITTEE_MASTER_ADMIN';
       const canCreateSubprogram = await hasCommitteeTaskProgramCreationRole(
         loggedInUserId,
         Number(program.committeeId)
@@ -264,9 +265,18 @@ export const programDetailsResolvers = {
            todo.is_completed AS isCompleted,
            todo.assigned_user_id AS assignedUserId,
            assignee.name AS assignedUserName,
-           DATE_FORMAT(todo.created_at, '%Y-%m-%d %H:%i:%s') AS createdAt
+           todo.created_by AS createdBy,
+           creator.name AS createdByName,
+           DATE_FORMAT(todo.created_at, '%Y-%m-%d %H:%i:%s') AS createdAt,
+           assigner.name AS assignedByName,
+           DATE_FORMAT(todo.assigned_at, '%Y-%m-%d %H:%i:%s') AS assignedAt,
+           updater.name AS updatedByName,
+           DATE_FORMAT(todo.updated_at, '%Y-%m-%d %H:%i:%s') AS updatedAt
          FROM todos todo
          LEFT JOIN users assignee ON assignee.id = todo.assigned_user_id
+         LEFT JOIN users creator ON creator.id = todo.created_by
+         LEFT JOIN users assigner ON assigner.id = todo.assigned_by
+         LEFT JOIN users updater ON updater.id = todo.updated_by
          WHERE todo.program_id = ?
          ORDER BY todo.created_at ASC, todo.id ASC`,
         [programId]
@@ -322,9 +332,17 @@ export const programDetailsResolvers = {
           expenseAmount: String(todo.expenseAmount),
           status: String(todo.status),
           isCompleted: Boolean(Number(todo.isCompleted)),
+          createdBy: Number(todo.createdBy),
+          canManage: Number(todo.createdBy) === loggedInUserId || isChecklistMasterAdmin,
+          canUpdateStatus: todo.assignedUserId !== null && Number(todo.assignedUserId) === loggedInUserId,
           assignedUserId: todo.assignedUserId === null ? null : Number(todo.assignedUserId),
           assignedUserName: todo.assignedUserName || null,
-          createdAt: String(todo.createdAt)
+          createdByName: todo.createdByName || null,
+          createdAt: String(todo.createdAt),
+          assignedByName: todo.assignedByName || null,
+          assignedAt: todo.assignedAt || null,
+          updatedByName: todo.updatedByName || null,
+          updatedAt: String(todo.updatedAt)
         })),
         todoAssignees: isCommitteeMember
           ? await getTodoAssignees(Number(program.committeeId))

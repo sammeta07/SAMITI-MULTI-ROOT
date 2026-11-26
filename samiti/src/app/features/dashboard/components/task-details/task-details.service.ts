@@ -126,6 +126,9 @@ export class TaskDetailsService {
           expenseAmount
           status
           isCompleted
+          createdBy
+          canManage
+          canUpdateStatus
           assignedUserId
           assignedUserName
           createdByName

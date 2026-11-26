@@ -4,9 +4,11 @@ import { hasPermission, PERMISSIONS } from '../../authorization/authorization';
 
 export const todoTypes = `
   enum TodoStatus {
-    PENDING
+    NEW
     IN_PROGRESS
     COMPLETED
+    CANCELLED
+    PENDING
   }
 
   enum TodoParentType {
@@ -20,6 +22,9 @@ export const todoTypes = `
     expenseAmount: String!
     status: TodoStatus!
     isCompleted: Boolean!
+    createdBy: Int!
+    canManage: Boolean!
+    canUpdateStatus: Boolean!
     assignedUserId: Int
     assignedUserName: String
     createdByName: String
@@ -101,6 +106,7 @@ async function getParentPermission(parentType: ParentType, parentId: number, use
   return {
     eventId,
     committeeId: Number(row.committeeId),
+    committeeRole: role,
     hasCommitteeAccess,
     canManage: await hasPermission(
       userId,
@@ -111,9 +117,17 @@ async function getParentPermission(parentType: ParentType, parentId: number, use
   };
 }
 
-async function getTodoParent(todoId: number): Promise<{ parentType: ParentType; parentId: number }> {
+async function getTodoParent(todoId: number): Promise<{
+  parentType: ParentType;
+  parentId: number;
+  createdBy: number;
+  assignedUserId: number | null;
+  status: string;
+  isCompleted: boolean;
+}> {
   const rows = await query<any[]>(
-    `SELECT todo.task_id AS taskId, todo.program_id AS programId
+    `SELECT todo.task_id AS taskId, todo.program_id AS programId, todo.created_by AS createdBy,
+            todo.assigned_user_id AS assignedUserId, todo.status, todo.is_completed AS isCompleted
      FROM todos todo
      WHERE todo.id = ?
      LIMIT 1`,
@@ -127,11 +141,35 @@ async function getTodoParent(todoId: number): Promise<{ parentType: ParentType; 
   const parentType: ParentType = rows[0].taskId !== null ? 'TASK' : 'PROGRAM';
   return {
     parentType,
-    parentId: Number(parentType === 'TASK' ? rows[0].taskId : rows[0].programId)
+    parentId: Number(parentType === 'TASK' ? rows[0].taskId : rows[0].programId),
+    createdBy: Number(rows[0].createdBy),
+    assignedUserId: rows[0].assignedUserId === null ? null : Number(rows[0].assignedUserId),
+    status: String(rows[0].status),
+    isCompleted: Boolean(Number(rows[0].isCompleted))
   };
 }
 
-async function getTodoItem(todoId: number) {
+async function requireTodoManagePermission(todoId: number, userId: number) {
+  const todoParent = await getTodoParent(todoId);
+  const permission = await getParentPermission(todoParent.parentType, todoParent.parentId, userId);
+  if (
+    todoParent.createdBy !== userId &&
+    permission.committeeRole !== 'COMMITTEE_MASTER_ADMIN'
+  ) {
+    throwEventError('FORBIDDEN', 'Only the checklist creator or a committee master admin can manage this checklist item');
+  }
+  return { ...permission, ...todoParent };
+}
+
+async function requireTodoAssigneeStatusPermission(todoId: number, userId: number) {
+  const todo = await getTodoParent(todoId);
+  if (todo.assignedUserId !== userId) {
+    throwEventError('FORBIDDEN', 'Only the checklist assignee can change its status');
+  }
+  return todo;
+}
+
+async function getTodoItem(todoId: number, userId: number, canManage = true) {
   const rows = await query<any[]>(
     `SELECT
        todo.id,
@@ -139,6 +177,7 @@ async function getTodoItem(todoId: number) {
        CAST(todo.expense_amount AS CHAR) AS expenseAmount,
        todo.status,
        todo.is_completed AS isCompleted,
+       todo.created_by AS createdBy,
        todo.assigned_user_id AS assignedUserId,
        assignee.name AS assignedUserName,
        creator.name AS createdByName,
@@ -164,6 +203,9 @@ async function getTodoItem(todoId: number) {
     expenseAmount: String(row.expenseAmount),
     status: String(row.status),
     isCompleted: Boolean(Number(row.isCompleted)),
+    createdBy: Number(row.createdBy),
+    canManage,
+    canUpdateStatus: row.assignedUserId !== null && Number(row.assignedUserId) === userId,
     assignedUserId: row.assignedUserId === null ? null : Number(row.assignedUserId),
     assignedUserName: row.assignedUserName || null,
     createdByName: row.createdByName || null,
@@ -209,11 +251,13 @@ export const todoResolvers = {
 
       const parentColumn = parentType === 'TASK' ? 'task_id' : 'program_id';
       const result = await execute(
-        `INSERT INTO todos (${parentColumn}, title, expense_amount, created_by, updated_by)
-         VALUES (?, ?, ?, ?, ?)`,
-        [parentId, title, expenseAmount, userId, userId]
+        `INSERT INTO todos (
+           ${parentColumn}, title, expense_amount, status, assigned_user_id, assigned_by, assigned_at, created_by, updated_by
+         )
+         VALUES (?, ?, ?, 'NEW', ?, ?, CURRENT_TIMESTAMP, ?, ?)` ,
+        [parentId, title, expenseAmount, userId, userId, userId, userId]
       );
-      return getTodoItem(result.insertId);
+      return getTodoItem(result.insertId, userId);
     },
 
     async updateTodo(_: any, args: { todoId?: number; title?: string; isCompleted?: boolean; expenseAmount?: string | null }, context: any) {
@@ -225,23 +269,35 @@ export const todoResolvers = {
       const expenseAmount = args.expenseAmount == null ? null : validateTodoExpenseAmount(args.expenseAmount);
 
       const userId = await getLoggedInUserId(context);
-      const parent = await getTodoParent(todoId);
-      const permission = await getParentPermission(parent.parentType, parent.parentId, userId);
-      if (!permission.canManage) {
-        throwEventError('FORBIDDEN', 'Only the task or program owner or a master admin can manage checklist items');
+      const permission = await requireTodoManagePermission(todoId, userId);
+      if (Boolean(args.isCompleted) !== permission.isCompleted && permission.assignedUserId !== userId) {
+        throwEventError('FORBIDDEN', 'Only the checklist assignee can change its status');
       }
 
-      await execute(
-        `UPDATE todos
-         SET title = ?,
-             expense_amount = COALESCE(?, expense_amount),
-             status = CASE WHEN is_completed <> ? THEN ? ELSE status END,
-             is_completed = ?,
-             updated_by = ?
-         WHERE id = ?`,
-        [title, expenseAmount, args.isCompleted ? 1 : 0, args.isCompleted ? 'COMPLETED' : 'PENDING', args.isCompleted ? 1 : 0, userId, todoId]
-      );
-      return getTodoItem(todoId);
+      if (permission.assignedUserId === userId) {
+        await execute(
+          `UPDATE todos
+           SET title = ?,
+               expense_amount = COALESCE(?, expense_amount),
+               status = CASE WHEN is_completed <> ? THEN ? ELSE status END,
+               is_completed = ?,
+               updated_by = ?
+           WHERE id = ? AND assigned_user_id = ?`,
+          [title, expenseAmount, args.isCompleted ? 1 : 0, args.isCompleted ? 'COMPLETED' : 'NEW', args.isCompleted ? 1 : 0, userId, todoId, userId]
+        );
+        const currentTodo = await getTodoParent(todoId);
+        if (currentTodo.assignedUserId !== userId) {
+          throwEventError('FORBIDDEN', 'Only the checklist assignee can change its status');
+        }
+      } else {
+        await execute(
+          `UPDATE todos
+           SET title = ?, expense_amount = COALESCE(?, expense_amount), updated_by = ?
+           WHERE id = ?`,
+          [title, expenseAmount, userId, todoId]
+        );
+      }
+      return getTodoItem(todoId, userId);
     },
 
     async updateTodoDetails(_: any, args: { todoId?: number; title?: string; status?: string; expenseAmount?: string | null }, context: any) {
@@ -249,49 +305,63 @@ export const todoResolvers = {
       const title = String(args?.title || '').trim();
       const status = String(args?.status || '').toUpperCase();
       if (!Number.isInteger(todoId) || todoId <= 0 || !title || title.length > 255 ||
-        !['PENDING', 'IN_PROGRESS', 'COMPLETED'].includes(status)) {
+        !['NEW', 'IN_PROGRESS', 'COMPLETED', 'CANCELLED'].includes(status)) {
         throwEventError('BAD_REQUEST', 'todoId, a valid title, and a valid status are required');
       }
       const expenseAmount = args.expenseAmount == null ? null : validateTodoExpenseAmount(args.expenseAmount);
 
       const userId = await getLoggedInUserId(context);
-      const parent = await getTodoParent(todoId);
-      const permission = await getParentPermission(parent.parentType, parent.parentId, userId);
-      if (!permission.canManage) {
-        throwEventError('FORBIDDEN', 'Only the task or program owner or a master admin can manage checklist items');
+      const permission = await requireTodoManagePermission(todoId, userId);
+      if (status !== permission.status && permission.assignedUserId !== userId) {
+        throwEventError('FORBIDDEN', 'Only the checklist assignee can change its status');
       }
 
-      await execute(
-        `UPDATE todos
-         SET title = ?, expense_amount = COALESCE(?, expense_amount), status = ?, is_completed = ?, updated_by = ?
-         WHERE id = ?`,
-        [title, expenseAmount, status, status === 'COMPLETED' ? 1 : 0, userId, todoId]
-      );
-      return getTodoItem(todoId);
+      if (permission.assignedUserId === userId) {
+        await execute(
+          `UPDATE todos
+           SET title = ?, expense_amount = COALESCE(?, expense_amount), status = ?, is_completed = ?, updated_by = ?
+           WHERE id = ? AND assigned_user_id = ?`,
+          [title, expenseAmount, status, status === 'COMPLETED' ? 1 : 0, userId, todoId, userId]
+        );
+        const currentTodo = await getTodoParent(todoId);
+        if (currentTodo.assignedUserId !== userId) {
+          throwEventError('FORBIDDEN', 'Only the checklist assignee can change its status');
+        }
+      } else {
+        await execute(
+          `UPDATE todos
+           SET title = ?, expense_amount = COALESCE(?, expense_amount), updated_by = ?
+           WHERE id = ?`,
+          [title, expenseAmount, userId, todoId]
+        );
+      }
+      return getTodoItem(todoId, userId);
     },
 
     async setTodoStatus(_: any, args: { todoId?: number; status?: string }, context: any) {
       const todoId = Number(args?.todoId);
       const status = String(args?.status || '').toUpperCase();
       if (!Number.isInteger(todoId) || todoId <= 0 ||
-        !['PENDING', 'IN_PROGRESS', 'COMPLETED'].includes(status)) {
+        !['NEW', 'IN_PROGRESS', 'COMPLETED', 'CANCELLED'].includes(status)) {
         throwEventError('BAD_REQUEST', 'todoId and a valid status are required');
       }
 
       const userId = await getLoggedInUserId(context);
-      const parent = await getTodoParent(todoId);
-      const permission = await getParentPermission(parent.parentType, parent.parentId, userId);
-      if (!permission.canManage) {
-        throwEventError('FORBIDDEN', 'Only the task or program owner or a master admin can manage checklist items');
-      }
+      const todo = await requireTodoAssigneeStatusPermission(todoId, userId);
 
       await execute(
         `UPDATE todos
          SET status = ?, is_completed = ?, updated_by = ?
-         WHERE id = ?`,
-        [status, status === 'COMPLETED' ? 1 : 0, userId, todoId]
+         WHERE id = ? AND assigned_user_id = ?`,
+        [status, status === 'COMPLETED' ? 1 : 0, userId, todoId, userId]
       );
-      return getTodoItem(todoId);
+      const currentTodo = await getTodoParent(todoId);
+      if (currentTodo.assignedUserId !== userId) {
+        throwEventError('FORBIDDEN', 'Only the checklist assignee can change its status');
+      }
+      const parentPermission = await getParentPermission(todo.parentType, todo.parentId, userId);
+      const canManage = todo.createdBy === userId || parentPermission.committeeRole === 'COMMITTEE_MASTER_ADMIN';
+      return getTodoItem(todoId, userId, canManage);
     },
 
     async assignTodo(_: any, args: { todoId?: number; ownerUserId?: number | null }, context: any) {
@@ -303,11 +373,7 @@ export const todoResolvers = {
       }
 
       const userId = await getLoggedInUserId(context);
-      const parent = await getTodoParent(todoId);
-      const permission = await getParentPermission(parent.parentType, parent.parentId, userId);
-      if (!permission.canManage) {
-        throwEventError('FORBIDDEN', 'Only the task or program owner or a master admin can manage checklist items');
-      }
+      const permission = await requireTodoManagePermission(todoId, userId);
 
       if (ownerUserId !== null) {
         const memberRows = await query<any[]>(
@@ -330,7 +396,7 @@ export const todoResolvers = {
          WHERE id = ?`,
         [ownerUserId, ownerUserId === null ? null : userId, ownerUserId, userId, todoId]
       );
-      return getTodoItem(todoId);
+      return getTodoItem(todoId, userId);
     },
 
     async deleteTodo(_: any, args: { todoId?: number }, context: any) {
@@ -340,11 +406,7 @@ export const todoResolvers = {
       }
 
       const userId = await getLoggedInUserId(context);
-      const parent = await getTodoParent(todoId);
-      const permission = await getParentPermission(parent.parentType, parent.parentId, userId);
-      if (!permission.canManage) {
-        throwEventError('FORBIDDEN', 'Only the task or program owner or a master admin can manage checklist items');
-      }
+      await requireTodoManagePermission(todoId, userId);
 
       await execute('DELETE FROM todos WHERE id = ?', [todoId]);
       return true;

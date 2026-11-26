@@ -24,22 +24,22 @@ export class TaskFinanceService {
     const query = `query TaskFinance($taskId: Int!) {
       taskFinance(taskId: $taskId) {
         requests {
-          id taskId sourceBudgetRequestId taskName taskBudgetAmount budgetAvailableForDisbursement taskOwnerName taskOwnerUserId requestType approvalStage
+          id taskId sourceBudgetRequestId taskName taskBudgetAmount budgetAvailableForDisbursement remainingSanctionedBudget checklistExpenseAmount taskOwnerName taskOwnerUserId requestType approvalStage
           requestedAmount approvedAmount reason status requestedByName reviewedByName reviewNote
           authorityDecision authorityReviewedByName authorityReviewNote authorityReviewedAt
-          canReviewAuthority createdAt reviewedAt
+          canReviewAuthority createdAt taskCreatedAt reviewedAt
         }
         budgetRequests {
-          id taskId taskName taskOwnerName requestedAmount budgetBeforeRequest requestedIncrease
+          id taskId taskName taskOwnerName remainingSanctionedBudget checklistExpenseAmount requestedAmount budgetBeforeRequest requestedIncrease
           requestedByName actionByName status approvalStage creatorDecision creatorReviewedByName
           creatorReviewerDesignation creatorReviewedAt authorityDecision
           authorityReviewedByName authorityReviewerDesignation authorityReviewedAt
-          createdAt canReviewCreator canReviewAuthority canCancel
+          createdAt taskCreatedAt canReviewCreator canReviewAuthority canCancel
         }
         transactions {
-          id taskId taskName requestId transactionType amount description status
-          createdByName confirmedByName createdAt confirmedAt
-          recipientName receivedByName receivedAt canConfirmReceipt canConfirmReturn
+          id taskId taskName taskOwnerName requestId transactionType amount description status checklistExpenseAmount
+          createdByName confirmedByName createdAt taskCreatedAt confirmedAt
+          recipientName receivedByName receivedAt canConfirmReceipt canConfirmReturn canCancel
         }
         subtaskTransferOptions {
           subtaskId subtaskName ownerName budgetAmount availableAmount
@@ -60,7 +60,7 @@ export class TaskFinanceService {
         }
         budgetAmount budgetRequestId requestedBudgetAmount budgetRequestStatus budgetRequestedByName
         canEditBudget canReduceBudget maxBudgetReduction canRequestBudgetIncrease canReviewBudgetRequest canCancelBudgetRequest
-        canRequest canApprove isBudgetAuthority canViewTaskAssignee canCreateSubtaskTransfers isEventScope
+        canRequest canApprove isBudgetAuthority canViewBudgetIncreaseRequests canViewTaskAssignee canCreateSubtaskTransfers isEventScope
       }
     }`;
 
@@ -72,22 +72,22 @@ export class TaskFinanceService {
     const query = `query EventTaskFinance($eventId: Int!) {
       eventTaskFinance(eventId: $eventId) {
         requests {
-          id taskId sourceBudgetRequestId taskName taskBudgetAmount budgetAvailableForDisbursement taskOwnerName taskOwnerUserId requestType approvalStage
+          id taskId sourceBudgetRequestId taskName taskBudgetAmount budgetAvailableForDisbursement remainingSanctionedBudget checklistExpenseAmount taskOwnerName taskOwnerUserId requestType approvalStage
           requestedAmount approvedAmount reason status requestedByName reviewedByName reviewNote
           authorityDecision authorityReviewedByName authorityReviewNote authorityReviewedAt
-          canReviewAuthority createdAt reviewedAt
+          canReviewAuthority createdAt taskCreatedAt reviewedAt
         }
         budgetRequests {
-          id taskId taskName taskOwnerName requestedAmount budgetBeforeRequest requestedIncrease
+          id taskId taskName taskOwnerName remainingSanctionedBudget checklistExpenseAmount requestedAmount budgetBeforeRequest requestedIncrease
           requestedByName actionByName status approvalStage creatorDecision creatorReviewedByName
           creatorReviewerDesignation creatorReviewedAt authorityDecision
           authorityReviewedByName authorityReviewerDesignation authorityReviewedAt
-          createdAt canReviewCreator canReviewAuthority canCancel
+          createdAt taskCreatedAt canReviewCreator canReviewAuthority canCancel
         }
         transactions {
-          id taskId taskName requestId transactionType amount description status
-          createdByName confirmedByName createdAt confirmedAt
-          recipientName receivedByName receivedAt canConfirmReceipt canConfirmReturn
+          id taskId taskName taskOwnerName requestId transactionType amount description status checklistExpenseAmount
+          createdByName confirmedByName createdAt taskCreatedAt confirmedAt
+          recipientName receivedByName receivedAt canConfirmReceipt canConfirmReturn canCancel
         }
         subtaskTransferOptions { subtaskId subtaskName ownerName budgetAmount availableAmount }
         incomingSubtaskTransfers {
@@ -104,7 +104,7 @@ export class TaskFinanceService {
         }
         budgetAmount budgetRequestId requestedBudgetAmount budgetRequestStatus budgetRequestedByName
         canEditBudget canReduceBudget maxBudgetReduction canRequestBudgetIncrease canReviewBudgetRequest canCancelBudgetRequest
-        canRequest canApprove isBudgetAuthority canViewTaskAssignee canCreateSubtaskTransfers isEventScope
+        canRequest canApprove isBudgetAuthority canViewBudgetIncreaseRequests canViewTaskAssignee canCreateSubtaskTransfers isEventScope
       }
     }`;
     return this.request<{ eventTaskFinance: TaskFinancePayload }>(query, { eventId })
@@ -170,7 +170,7 @@ export class TaskFinanceService {
       recordTaskFinanceTransaction(input: $input) {
         id taskId taskName requestId transactionType amount description status
         createdByName confirmedByName createdAt confirmedAt
-        recipientName receivedByName receivedAt canConfirmReceipt canConfirmReturn
+        recipientName receivedByName receivedAt canConfirmReceipt canConfirmReturn canCancel
       }
     }`;
     return this.request<{ recordTaskFinanceTransaction: TaskFinanceTransaction }>(mutation, {
@@ -189,7 +189,7 @@ export class TaskFinanceService {
       confirmTaskFinanceReceipt(transactionId: $transactionId) {
         id taskId taskName requestId transactionType amount description status
         createdByName confirmedByName createdAt confirmedAt
-        recipientName receivedByName receivedAt canConfirmReceipt canConfirmReturn
+        recipientName receivedByName receivedAt canConfirmReceipt canConfirmReturn canCancel
       }
     }`;
     return this.request<{ confirmTaskFinanceReceipt: TaskFinanceTransaction }>(mutation, { transactionId })
@@ -201,12 +201,24 @@ export class TaskFinanceService {
       reviewTaskFinanceReturn(input: $input) {
         id taskId taskName requestId transactionType amount description status
         createdByName confirmedByName createdAt confirmedAt
-        recipientName receivedByName receivedAt canConfirmReceipt canConfirmReturn
+        recipientName receivedByName receivedAt canConfirmReceipt canConfirmReturn canCancel
       }
     }`;
     return this.request<{ reviewTaskFinanceReturn: TaskFinanceTransaction }>(mutation, {
       input: { transactionId, decision: 'CONFIRM' }
     }).pipe(map((response) => response.reviewTaskFinanceReturn));
+  }
+
+  public cancelCashReturn(transactionId: number): Observable<TaskFinanceTransaction> {
+    const mutation = `mutation CancelTaskFinanceReturn($transactionId: Int!) {
+      cancelTaskFinanceReturn(transactionId: $transactionId) {
+        id taskId taskName requestId transactionType amount description status
+        createdByName confirmedByName createdAt confirmedAt
+        recipientName receivedByName receivedAt canConfirmReceipt canConfirmReturn canCancel
+      }
+    }`;
+    return this.request<{ cancelTaskFinanceReturn: TaskFinanceTransaction }>(mutation, { transactionId })
+      .pipe(map((response) => response.cancelTaskFinanceReturn));
   }
 
   public createSubtaskTransfer(
