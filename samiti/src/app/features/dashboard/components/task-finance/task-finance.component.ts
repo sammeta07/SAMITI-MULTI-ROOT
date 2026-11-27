@@ -16,6 +16,7 @@ import {
   TaskFinanceTransaction,
   isCashReturnWithinAvailableCash,
   getEffectiveApprovedFinanceTotal,
+  getSanctionedBudgetDisplayTotal,
   isVisibleInBudgetRequestLedger,
   isVisibleInPaymentHistory,
   isInitialTaskBudgetFinanceRequest,
@@ -38,6 +39,7 @@ export interface TaskFinanceRequestGroup {
   pendingReturns: TaskFinanceTransaction[];
   transactionCount: number;
   approvedTotal: number;
+  sanctionedTotal: number;
   issuedAdvance: number;
   remainingAdvance: number;
   confirmedReturns: number;
@@ -290,6 +292,7 @@ export class TaskFinanceComponent implements OnInit {
       const { confirmedReturns, availableInHand } = getTaskCashSummary(taskTransactions);
       const firstRequest = taskGroup.requests[0];
       const firstBudgetRequest = taskGroup.budgetRequests[0];
+      const taskBudgetAmount = firstRequest?.taskBudgetAmount ?? firstBudgetRequest?.taskBudgetAmount;
       const remainingSanctionedBudget = Number(
         firstRequest?.remainingSanctionedBudget ?? firstBudgetRequest?.remainingSanctionedBudget
       );
@@ -326,6 +329,11 @@ export class TaskFinanceComponent implements OnInit {
         pendingReturns,
         transactionCount: visiblePaymentTransactions.length,
         approvedTotal,
+        sanctionedTotal: getSanctionedBudgetDisplayTotal(
+          taskGroup.isSubtask,
+          approvedTotal,
+          taskBudgetAmount
+        ),
         issuedAdvance,
         remainingAdvance,
         confirmedReturns,

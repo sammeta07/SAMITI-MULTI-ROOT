@@ -49,6 +49,18 @@ export function getEffectiveApprovedFinanceTotal(requests: TaskFinanceRequest[])
     : approvedTotal;
 }
 
+export function getSanctionedBudgetDisplayTotal(
+  isSubtask: boolean,
+  approvedFinanceTotal: number,
+  taskBudgetAmount?: string | null
+): number {
+  if (!isSubtask || taskBudgetAmount === null || taskBudgetAmount === undefined) {
+    return approvedFinanceTotal;
+  }
+  const taskBudget = Number(taskBudgetAmount);
+  return Number.isFinite(taskBudget) ? taskBudget : approvedFinanceTotal;
+}
+
 export const INITIAL_TASK_BUDGET_FINANCE_REQUEST_REASON = 'Initial sanctioned task budget';
 
 export function isInitialTaskBudgetFinanceRequest(request: TaskFinanceRequest): boolean {
@@ -66,6 +78,8 @@ export interface TaskBudgetRequest {
   isSubtask: boolean;
   taskName: string;
   taskOwnerName: string | null;
+  taskCreatedByName: string | null;
+  taskBudgetAmount: string;
   remainingSanctionedBudget: string;
   checklistExpenseAmount: string;
   requestedAmount: string;
@@ -88,6 +102,32 @@ export interface TaskBudgetRequest {
   canReviewCreator: boolean;
   canReviewAuthority: boolean;
   canCancel: boolean;
+}
+
+export interface InitialSubtaskBudgetHistoryEntry {
+  amount: number;
+  createdAt: string;
+  creatorName: string | null;
+}
+
+export function getInitialSubtaskBudgetHistoryEntry(
+  requests: TaskBudgetRequest[]
+): InitialSubtaskBudgetHistoryEntry | null {
+  const firstRequest = [...requests]
+    .filter((request) => request.isSubtask)
+    .sort((left, right) =>
+      left.createdAt.localeCompare(right.createdAt) || left.id - right.id
+    )[0];
+  if (!firstRequest) return null;
+
+  const amount = Number(firstRequest.budgetBeforeRequest);
+  if (!Number.isFinite(amount) || amount <= 0) return null;
+
+  return {
+    amount,
+    createdAt: firstRequest.taskCreatedAt,
+    creatorName: firstRequest.taskCreatedByName
+  };
 }
 
 export function isVisibleInBudgetRequestLedger(request: TaskBudgetRequest): boolean {

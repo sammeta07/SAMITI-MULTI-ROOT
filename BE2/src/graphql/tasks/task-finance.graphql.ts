@@ -176,6 +176,8 @@ export const taskFinanceTypes = `
     isSubtask: Boolean!
     taskName: String!
     taskOwnerName: String
+    taskCreatedByName: String
+    taskBudgetAmount: String!
     remainingSanctionedBudget: String!
     checklistExpenseAmount: String!
     requestedAmount: String!
@@ -645,6 +647,8 @@ async function loadBudgetRequests(
             task.parent_id AS parentTaskId,
             COALESCE(NULLIF(TRIM(task.name), ''), 'Untitled Task') AS taskName,
             taskOwner.name AS taskOwnerName,
+            taskCreator.name AS taskCreatedByName,
+            CAST(task.budget_amount AS CHAR) AS taskBudgetAmount,
             CAST(request.requested_amount AS CHAR) AS requestedAmount,
             CAST(request.budget_before_request AS CHAR) AS budgetBeforeRequest,
             request.requested_by AS requestedBy,
@@ -679,6 +683,7 @@ async function loadBudgetRequests(
      INNER JOIN events event ON event.id = task.event_id
      INNER JOIN users requester ON requester.id = request.requested_by
      LEFT JOIN users taskOwner ON taskOwner.id = task.owner_user_id
+     LEFT JOIN users taskCreator ON taskCreator.id = task.created_by
      LEFT JOIN users actioner ON actioner.id = request.reviewed_by
      LEFT JOIN users creatorReviewer ON creatorReviewer.id = request.creator_reviewed_by
      LEFT JOIN users_events creatorReviewerUE
@@ -718,6 +723,8 @@ async function loadBudgetRequests(
       isSubtask: request.parentTaskId !== null,
       taskName: String(request.taskName || 'Untitled Task'),
       taskOwnerName: request.taskOwnerName || null,
+      taskCreatedByName: request.taskCreatedByName || null,
+      taskBudgetAmount: String(request.taskBudgetAmount),
       remainingSanctionedBudget: centsToWholeRupees(
         remainingBudgetByTask.get(Number(request.taskId))?.reducible ?? 0n
       ),
@@ -1496,11 +1503,27 @@ export const taskFinanceResolvers = {
         }
         const status = transactionType === 'ADVANCE_RETURN' ? 'PENDING'
           : 'CONFIRMED';
+        const receivedBy = transactionType === 'ADVANCE_ISSUED' && recipientUserId === userId
+          ? userId
+          : null;
         const [result] = await connection.execute<any>(
           `INSERT INTO task_finance_transactions
-             (task_id, request_id, recipient_user_id, transaction_type, amount, description, status, created_by, confirmed_by, confirmed_at)
-           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ${status === 'PENDING' ? 'NULL' : 'CURRENT_TIMESTAMP'})`,
-          [taskId, requestId, recipientUserId, transactionType, amount, description, status, userId, status === 'PENDING' ? null : userId]
+             (task_id, request_id, recipient_user_id, transaction_type, amount, description, status,
+              created_by, confirmed_by, confirmed_at, received_by, received_at)
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ${status === 'PENDING' ? 'NULL' : 'CURRENT_TIMESTAMP'},
+                   ?, ${receivedBy === null ? 'NULL' : 'CURRENT_TIMESTAMP'})`,
+          [
+            taskId,
+            requestId,
+            recipientUserId,
+            transactionType,
+            amount,
+            description,
+            status,
+            userId,
+            status === 'PENDING' ? null : userId,
+            receivedBy
+          ]
         );
         transactionId = Number(result.insertId);
         await connection.commit();

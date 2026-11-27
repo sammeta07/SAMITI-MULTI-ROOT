@@ -128,6 +128,7 @@ export class EventTasksComponent implements OnInit, OnDestroy {
 
     return task.canAccessFinance === true &&
       (task.canViewCreatedSubtaskFinance === true ||
+        task.canRequestBudgetIncrease === true ||
         this.eventDetailsState.headerData()?.canAccessTaskFinance !== true);
   }
 

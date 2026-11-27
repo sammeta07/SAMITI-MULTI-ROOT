@@ -2,6 +2,8 @@ import { describe, expect, it } from 'vitest';
 import {
   createInitialAdvanceHistoryRequest,
   getEffectiveApprovedFinanceTotal,
+  getInitialSubtaskBudgetHistoryEntry,
+  getSanctionedBudgetDisplayTotal,
   isCashReturnWithinAvailableCash,
   getTaskCashSummary,
   getTaskFinanceRequestRevision,
@@ -107,6 +109,8 @@ function approvedBudgetRequest(
     isSubtask: false,
     taskName: 'Maha Bhog',
     taskOwnerName: 'Task owner',
+    taskCreatedByName: 'Task creator',
+    taskBudgetAmount: '1000',
     remainingSanctionedBudget: '122222',
     checklistExpenseAmount: '1000',
     requestedAmount: '1000',
@@ -189,6 +193,42 @@ describe('effective approved task finance total', () => {
     });
 
     expect(getEffectiveApprovedFinanceTotal([request])).toBe(150000);
+  });
+});
+
+describe('sanctioned budget ledger display', () => {
+  it('shows a subtask budget while its increase request is still pending', () => {
+    expect(getSanctionedBudgetDisplayTotal(true, 0, '1000')).toBe(1000);
+  });
+
+  it('keeps the approved finance total for root tasks', () => {
+    expect(getSanctionedBudgetDisplayTotal(false, 4000, '5000')).toBe(4000);
+  });
+});
+
+describe('initial subtask budget history', () => {
+  it('creates an initial allocation entry from the first budget change baseline', () => {
+    const request = {
+      ...approvedBudgetRequest(1, '1000'),
+      isSubtask: true,
+      taskCreatedByName: 'Subtask creator',
+      taskCreatedAt: '2026-11-20 09:00:00'
+    };
+
+    expect(getInitialSubtaskBudgetHistoryEntry([request])).toEqual({
+      amount: 1000,
+      createdAt: '2026-11-20 09:00:00',
+      creatorName: 'Subtask creator'
+    });
+  });
+
+  it('does not add an initial allocation entry for zero-budget subtasks', () => {
+    const request = {
+      ...approvedBudgetRequest(1, '0'),
+      isSubtask: true
+    };
+
+    expect(getInitialSubtaskBudgetHistoryEntry([request])).toBeNull();
   });
 });
 

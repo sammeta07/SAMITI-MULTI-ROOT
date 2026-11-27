@@ -29,7 +29,7 @@ export class TaskFinanceService {
           canReviewAuthority createdAt taskCreatedAt reviewedAt
         }
         budgetRequests {
-          id taskId isSubtask taskName taskOwnerName remainingSanctionedBudget checklistExpenseAmount requestedAmount budgetBeforeRequest requestedIncrease
+          id taskId isSubtask taskName taskOwnerName taskCreatedByName taskBudgetAmount remainingSanctionedBudget checklistExpenseAmount requestedAmount budgetBeforeRequest requestedIncrease
           requestedByName actionByName status approvalStage creatorDecision creatorReviewedByName
           creatorReviewerDesignation creatorReviewedAt authorityDecision
           authorityReviewedByName authorityReviewerDesignation authorityReviewedAt
@@ -64,7 +64,7 @@ export class TaskFinanceService {
           canReviewAuthority createdAt taskCreatedAt reviewedAt
         }
         budgetRequests {
-          id taskId isSubtask taskName taskOwnerName remainingSanctionedBudget checklistExpenseAmount requestedAmount budgetBeforeRequest requestedIncrease
+          id taskId isSubtask taskName taskOwnerName taskCreatedByName taskBudgetAmount remainingSanctionedBudget checklistExpenseAmount requestedAmount budgetBeforeRequest requestedIncrease
           requestedByName actionByName status approvalStage creatorDecision creatorReviewedByName
           creatorReviewerDesignation creatorReviewedAt authorityDecision
           authorityReviewedByName authorityReviewerDesignation authorityReviewedAt
@@ -98,7 +98,7 @@ export class TaskFinanceService {
           canReviewAuthority createdAt taskCreatedAt reviewedAt
         }
         budgetRequests {
-          id taskId isSubtask taskName taskOwnerName remainingSanctionedBudget checklistExpenseAmount requestedAmount budgetBeforeRequest requestedIncrease
+          id taskId isSubtask taskName taskOwnerName taskCreatedByName taskBudgetAmount remainingSanctionedBudget checklistExpenseAmount requestedAmount budgetBeforeRequest requestedIncrease
           requestedByName actionByName status approvalStage creatorDecision creatorReviewedByName
           creatorReviewerDesignation creatorReviewedAt authorityDecision
           authorityReviewedByName authorityReviewerDesignation authorityReviewedAt
@@ -134,7 +134,7 @@ export class TaskFinanceService {
           canReviewAuthority createdAt taskCreatedAt reviewedAt
         }
         budgetRequests {
-          id taskId isSubtask taskName taskOwnerName remainingSanctionedBudget checklistExpenseAmount requestedAmount budgetBeforeRequest requestedIncrease
+          id taskId isSubtask taskName taskOwnerName taskCreatedByName taskBudgetAmount remainingSanctionedBudget checklistExpenseAmount requestedAmount budgetBeforeRequest requestedIncrease
           requestedByName actionByName status approvalStage creatorDecision creatorReviewedByName
           creatorReviewerDesignation creatorReviewedAt authorityDecision
           authorityReviewedByName authorityReviewerDesignation authorityReviewedAt

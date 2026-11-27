@@ -7,8 +7,10 @@ import { MatToolbarModule } from '@angular/material/toolbar';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import {
   createInitialAdvanceHistoryRequest,
+  getInitialSubtaskBudgetHistoryEntry,
   getTaskFinanceRequestRevision,
   getTopUpSourceBudgetRequestIds,
+  isInitialTaskBudgetFinanceRequest,
   shouldShowBudgetRequestInHistory,
   shouldShowFinanceRequestInBudgetHistory,
   TaskBudgetRequest,
@@ -29,7 +31,8 @@ export interface TaskBudgetRequestsDialogData {
 
 type BudgetIncreaseHistoryRow =
   | { kind: 'budget'; key: string; id: number; createdAt: string; request: TaskBudgetRequest }
-  | { kind: 'finance'; key: string; id: number; createdAt: string; request: TaskFinanceRequest };
+  | { kind: 'finance'; key: string; id: number; createdAt: string; request: TaskFinanceRequest }
+  | { kind: 'initial'; key: string; id: number; createdAt: string; amount: number; creatorName: string | null };
 
 @Component({
   selector: 'app-task-budget-requests-dialog',
@@ -53,7 +56,7 @@ type BudgetIncreaseHistoryRow =
           </div>
         </div>
         <div class="header-right-actions">
-          <span class="request-count-pill">{{ historyRows().length }} {{ historyRows().length === 1 ? 'Request' : 'Requests' }}</span>
+          <span class="request-count-pill">{{ historyRows().length }} {{ historyRows().length === 1 ? 'Entry' : 'Entries' }}</span>
           <button mat-icon-button type="button" class="drawer-close-btn" aria-label="Close dialog" matTooltip="Close" (click)="close()">
             <mat-icon>close</mat-icon>
           </button>
@@ -72,7 +75,7 @@ type BudgetIncreaseHistoryRow =
               <thead>
                 <tr>
                   <th>SNo</th>
-                  <th>Request</th>
+                  <th>Request / Entry</th>
                   <th>Amount</th>
                   <th>Revision</th>
                   <th>Requested By</th>
@@ -85,7 +88,7 @@ type BudgetIncreaseHistoryRow =
                 @for (row of historyRows(); track row.key; let index = $index) {
                   <tr [class.is-actionable]="row.kind === 'budget'
                     ? row.request.canReviewCreator || row.request.canReviewAuthority
-                    : row.request.canReviewAuthority">
+                    : row.kind === 'finance' && row.request.canReviewAuthority">
                     <td><span class="request-id">{{ index + 1 }}</span></td>
                     @if (row.kind === 'budget') {
                       <td><strong>{{ budgetRequestType(row.request) }}</strong></td>
@@ -161,10 +164,23 @@ type BudgetIncreaseHistoryRow =
                           }
                         </div>
                       </td>
+                    } @else if (row.kind === 'initial') {
+                      <td><strong>Initial Budget</strong></td>
+                      <td class="finance-amount">₹{{ money(row.amount) }}</td>
+                      <td class="finance-revision">₹0 → ₹{{ money(row.amount) }}</td>
+                      <td>{{ row.creatorName ? (row.creatorName | titlecase) : '—' }}</td>
+                      <td>{{ row.createdAt | date: 'dd MMM yy, h:mm a' }}</td>
+                      <td class="actioner-cell">
+                        <strong>{{ row.creatorName ? (row.creatorName | titlecase) : '—' }}</strong>
+                        <small>{{ row.createdAt | date: 'dd MMM yy, h:mm a' }}</small>
+                      </td>
+                      <td class="status-cell">
+                        <span class="status fixed-status approved">Allocated</span>
+                      </td>
                     } @else {
                       <td>
                         <div class="finance-request-label">
-                          <strong>{{ formatLabel(row.request.requestType) }}</strong>
+                          <strong>{{ financeRequestLabel(row.request) }}</strong>
                           @if (row.request.status !== 'APPROVED' && !row.request.canReviewAuthority) {
                             <span class="status" [ngClass]="statusClass(row.request.status)">
                               {{ formatLabel(row.request.status) }}
@@ -183,7 +199,9 @@ type BudgetIncreaseHistoryRow =
                       <td class="status-cell">
                         <div class="status-action-stack">
                           @if (row.request.status === 'APPROVED') {
-                            <span class="status fixed-status approved">Approved</span>
+                            <span class="status fixed-status approved">
+                              {{ financeStatusLabel(row.request) }}
+                            </span>
                           } @else if (!row.request.canReviewAuthority) {
                             <span class="status fixed-status" [ngClass]="statusClass(row.request.status)">
                               {{ formatLabel(row.request.status) }}
@@ -789,9 +807,22 @@ export class TaskBudgetRequestsDialogComponent {
         request
       }));
     const initialAdvance = createInitialAdvanceHistoryRequest(financeRequests, this.data.requests());
+    const initialSubtaskBudget = financeRequests.some(isInitialTaskBudgetFinanceRequest)
+      ? null
+      : getInitialSubtaskBudgetHistoryEntry(this.data.requests());
     const allFinanceRequests = initialAdvance
       ? [initialAdvance, ...financeRequests]
       : financeRequests;
+    const initialBudgetRows: BudgetIncreaseHistoryRow[] = initialSubtaskBudget
+      ? [{
+        kind: 'initial',
+        key: 'initial-subtask-budget',
+        id: 0,
+        createdAt: initialSubtaskBudget.createdAt,
+        amount: initialSubtaskBudget.amount,
+        creatorName: initialSubtaskBudget.creatorName
+      }]
+      : [];
     const financeRows: BudgetIncreaseHistoryRow[] = allFinanceRequests
       .filter(shouldShowFinanceRequestInBudgetHistory)
       .map((request) => ({
@@ -802,7 +833,7 @@ export class TaskBudgetRequestsDialogComponent {
         request
       }));
 
-    return [...budgetRows, ...financeRows].sort((left, right) =>
+    return [...initialBudgetRows, ...budgetRows, ...financeRows].sort((left, right) =>
       left.createdAt.localeCompare(right.createdAt) ||
       left.id - right.id ||
       left.kind.localeCompare(right.kind)
@@ -816,6 +847,16 @@ export class TaskBudgetRequestsDialogComponent {
     return requested === approved
       ? requestedLabel
       : `${requestedLabel} → ₹${this.money(approved)}`;
+  }
+
+  public financeRequestLabel(request: TaskFinanceRequest): string {
+    return isInitialTaskBudgetFinanceRequest(request)
+      ? 'Initial Budget'
+      : this.formatLabel(request.requestType);
+  }
+
+  public financeStatusLabel(request: TaskFinanceRequest): string {
+    return isInitialTaskBudgetFinanceRequest(request) ? 'Allocated' : 'Approved';
   }
 
   public financeRevision(request: TaskFinanceRequest): string {
