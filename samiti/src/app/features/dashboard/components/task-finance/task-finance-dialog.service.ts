@@ -7,9 +7,15 @@ import { TaskFinanceDialogComponent } from './task-finance-dialog.component';
 export class TaskFinanceDialogService {
   private readonly dialog = inject(MatDialog);
 
-  public open(taskId: number, taskName: string, ownerName: string | null | undefined): Observable<void> {
+  public open(
+    taskId: number,
+    taskName: string,
+    ownerName: string | null | undefined,
+    eventId: number
+  ): Observable<void> {
     return this.openDialog({
       taskId,
+      eventId,
       taskName,
       ownerName: ownerName ?? null
     });
@@ -23,9 +29,19 @@ export class TaskFinanceDialogService {
     });
   }
 
+  public openCreatorEventSubtasks(eventId: number, eventName: string): Observable<void> {
+    return this.openDialog({
+      eventId,
+      creatorEventScope: true,
+      taskName: `${eventName} · Subtask Finance`,
+      ownerName: null
+    });
+  }
+
   private openDialog(data: {
     taskId?: number;
     eventId?: number;
+    creatorEventScope?: boolean;
     taskName: string;
     ownerName: string | null;
   }): Observable<void> {

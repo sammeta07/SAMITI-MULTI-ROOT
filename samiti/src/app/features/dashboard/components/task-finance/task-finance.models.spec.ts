@@ -2,11 +2,14 @@ import { describe, expect, it } from 'vitest';
 import {
   createInitialAdvanceHistoryRequest,
   getEffectiveApprovedFinanceTotal,
+  isCashReturnWithinAvailableCash,
   getTaskCashSummary,
   getTaskFinanceRequestRevision,
   getTopUpSourceBudgetRequestIds,
   isInitialTaskBudgetFinanceRequest,
+  isVisibleInBudgetRequestLedger,
   isVisibleInPaymentHistory,
+  shouldShowBudgetRequestInHistory,
   shouldShowFinanceRequestInBudgetHistory,
   TaskBudgetRequest,
   TaskFinancePayload,
@@ -20,19 +23,18 @@ function emptyFinancePayload(overrides: Partial<TaskFinancePayload> = {}): TaskF
     requests: [],
     budgetRequests: [],
     transactions: [],
-    subtaskTransferOptions: [],
-    incomingSubtaskTransfers: [],
-    outgoingSubtaskTransfers: [],
     summary: {
       sanctionedBudget: '0',
       checklistExpenses: '0',
+      checklistReserved: '0',
       subtaskSpent: '0',
       remainingBudget: '0',
       advanceIssued: '0',
       advanceSpent: '0',
       returnPending: '0',
       returnConfirmed: '0',
-      advanceBalance: '0'
+      advanceBalance: '0',
+      availableInHand: '0'
     },
     budgetAmount: '0',
     budgetRequestId: null,
@@ -50,7 +52,7 @@ function emptyFinancePayload(overrides: Partial<TaskFinancePayload> = {}): TaskF
     isBudgetAuthority: false,
     canViewBudgetIncreaseRequests: false,
     canViewTaskAssignee: false,
-    canCreateSubtaskTransfers: false,
+    canViewCreatedSubtaskFinance: false,
     isEventScope: false,
     ...overrides
   };
@@ -65,6 +67,7 @@ function approvedRequest(
   return {
     id,
     taskId: 43,
+    isSubtask: false,
     sourceBudgetRequestId: null,
     taskName: 'Maha Bhog',
     taskBudgetAmount: '122222',
@@ -101,6 +104,7 @@ function approvedBudgetRequest(
   return {
     id,
     taskId: 43,
+    isSubtask: false,
     taskName: 'Maha Bhog',
     taskOwnerName: 'Task owner',
     remainingSanctionedBudget: '122222',
@@ -132,6 +136,7 @@ function combinedDispatch(amount: string): TaskFinanceTransaction {
   return {
     id: 1,
     taskId: 43,
+    isSubtask: false,
     taskName: 'Maha Bhog',
     taskOwnerName: 'Task owner',
     requestId: null,
@@ -140,6 +145,7 @@ function combinedDispatch(amount: string): TaskFinanceTransaction {
     description: 'Combined task dispatch',
     status: 'CONFIRMED',
     checklistExpenseAmount: '0',
+    checklistReservedAmount: '0',
     createdByName: 'Treasurer',
     confirmedByName: 'Treasurer',
     createdAt: '2026-11-18 10:00:00',
@@ -187,13 +193,19 @@ describe('effective approved task finance total', () => {
 });
 
 describe('cash return finance history', () => {
+  it('allows returning up to available cash and rejects an excess amount', () => {
+    expect(isCashReturnWithinAvailableCash('35489', 35489)).toBe(true);
+    expect(isCashReturnWithinAvailableCash('35490', 35489)).toBe(false);
+    expect(isCashReturnWithinAvailableCash('0', 35489)).toBe(false);
+  });
+
   it('excludes pending and rejected returns until they are accepted', () => {
     expect(isVisibleInPaymentHistory(cashReturn('PENDING'))).toBe(false);
     expect(isVisibleInPaymentHistory(cashReturn('REJECTED'))).toBe(false);
     expect(isVisibleInPaymentHistory(cashReturn('CONFIRMED'))).toBe(true);
   });
 
-  it('calculates confirmed returns and cash in hand without subtracting pending returns', () => {
+  it('calculates cash in hand and excludes pending returns from spendable cash', () => {
     const transactions = [
       combinedDispatch('1000'),
       {
@@ -207,8 +219,70 @@ describe('cash return finance history', () => {
 
     expect(getTaskCashSummary(transactions)).toEqual({
       confirmedReturns: 100,
-      inHand: 700
+      inHand: 700,
+      availableInHand: 400
     });
+  });
+
+  it('subtracts active checklist reservations from spendable in-hand cash', () => {
+    const transactions = [
+      {
+        ...combinedDispatch('1000'),
+        checklistExpenseAmount: '100',
+        checklistReservedAmount: '250'
+      },
+      {
+        ...cashReturn('PENDING', '50'),
+        checklistExpenseAmount: '100',
+        checklistReservedAmount: '250'
+      }
+    ];
+
+    expect(getTaskCashSummary(transactions)).toEqual({
+      confirmedReturns: 0,
+      inHand: 900,
+      availableInHand: 600
+    });
+  });
+
+});
+
+describe('budget request ledger visibility', () => {
+  it('keeps a pending creator-review request visible to its reviewer', () => {
+    const request = approvedBudgetRequest(1, '0');
+    request.status = 'PENDING';
+    request.approvalStage = 'CREATOR';
+    request.canReviewCreator = true;
+
+    expect(isVisibleInBudgetRequestLedger(request)).toBe(true);
+  });
+
+  it('hides pending requests from users who cannot review them', () => {
+    const request = approvedBudgetRequest(1, '0');
+    request.status = 'PENDING';
+    request.approvalStage = 'CREATOR';
+
+    expect(isVisibleInBudgetRequestLedger(request)).toBe(false);
+  });
+});
+
+describe('budget request history visibility', () => {
+  it('shows a pending request to its creator-stage reviewer', () => {
+    const request = approvedBudgetRequest(1, '0');
+    request.status = 'PENDING';
+    request.approvalStage = 'CREATOR';
+    request.canReviewCreator = true;
+
+    expect(shouldShowBudgetRequestInHistory(request, new Set())).toBe(true);
+  });
+
+  it('shows a pending request to its requester but hides it from unrelated viewers', () => {
+    const request = approvedBudgetRequest(1, '0');
+    request.status = 'PENDING';
+
+    expect(shouldShowBudgetRequestInHistory(request, new Set())).toBe(false);
+    request.canCancel = true;
+    expect(shouldShowBudgetRequestInHistory(request, new Set())).toBe(true);
   });
 });
 
@@ -218,19 +292,18 @@ describe('task finance action indicator', () => {
       requests: [],
       budgetRequests: [],
       transactions: [],
-      subtaskTransferOptions: [],
-      incomingSubtaskTransfers: [],
-      outgoingSubtaskTransfers: [],
       summary: {
         sanctionedBudget: '0',
         checklistExpenses: '0',
+        checklistReserved: '0',
         subtaskSpent: '0',
         remainingBudget: '0',
         advanceIssued: '0',
         advanceSpent: '0',
         returnPending: '0',
         returnConfirmed: '0',
-        advanceBalance: '0'
+        advanceBalance: '0',
+        availableInHand: '0'
       },
       budgetAmount: '0',
       budgetRequestId: 1,
@@ -247,7 +320,7 @@ describe('task finance action indicator', () => {
       canApprove: false,
       isBudgetAuthority: false,
       canViewTaskAssignee: false,
-      canCreateSubtaskTransfers: false,
+      canViewCreatedSubtaskFinance: false,
       isEventScope: false
     };
 
@@ -259,6 +332,7 @@ describe('task finance action indicator', () => {
       requests: [{
         id: 1,
         taskId: 10,
+        isSubtask: false,
         sourceBudgetRequestId: null,
         taskName: 'Event arrangements',
         taskBudgetAmount: '25000',
@@ -284,19 +358,18 @@ describe('task finance action indicator', () => {
       }],
       budgetRequests: [],
       transactions: [],
-      subtaskTransferOptions: [],
-      incomingSubtaskTransfers: [],
-      outgoingSubtaskTransfers: [],
       summary: {
         sanctionedBudget: '0',
         checklistExpenses: '0',
+        checklistReserved: '0',
         subtaskSpent: '0',
         remainingBudget: '0',
         advanceIssued: '0',
         advanceSpent: '0',
         returnPending: '0',
         returnConfirmed: '0',
-        advanceBalance: '0'
+        advanceBalance: '0',
+        availableInHand: '0'
       },
       budgetAmount: '0',
       budgetRequestId: null,
@@ -313,68 +386,14 @@ describe('task finance action indicator', () => {
       canApprove: false,
       isBudgetAuthority: true,
       canViewTaskAssignee: false,
-      canCreateSubtaskTransfers: false,
+      canViewCreatedSubtaskFinance: false,
       isEventScope: false
     };
 
     expect(hasPendingFinanceAction(finance)).toBe(true);
   });
 
-  it('marks a pending subtask transfer for its recipient', () => {
-    const finance: TaskFinancePayload = {
-      requests: [],
-      budgetRequests: [],
-      transactions: [],
-      subtaskTransferOptions: [],
-      incomingSubtaskTransfers: [{
-        id: 1,
-        parentTaskId: 10,
-        parentTaskName: 'Parent task',
-        subtaskId: 11,
-        subtaskName: 'Subtask',
-        senderName: 'Parent owner',
-        recipientName: 'Subtask owner',
-        amount: '500',
-        description: 'Materials',
-        status: 'PENDING',
-        createdAt: '2026-11-17 10:00:00',
-        confirmedByName: null,
-        confirmedAt: null,
-        canConfirmReceipt: true
-      }],
-      outgoingSubtaskTransfers: [],
-      summary: {
-        sanctionedBudget: '0',
-        checklistExpenses: '0',
-        subtaskSpent: '0',
-        remainingBudget: '0',
-        advanceIssued: '0',
-        advanceSpent: '0',
-        returnPending: '0',
-        returnConfirmed: '0',
-        advanceBalance: '0'
-      },
-      budgetAmount: '0',
-      budgetRequestId: null,
-      requestedBudgetAmount: null,
-      budgetRequestStatus: null,
-      budgetRequestedByName: null,
-      canEditBudget: false,
-      canReduceBudget: false,
-      maxBudgetReduction: '0',
-      canRequestBudgetIncrease: false,
-      canReviewBudgetRequest: false,
-      canCancelBudgetRequest: false,
-      canRequest: false,
-      canApprove: false,
-      isBudgetAuthority: false,
-      canViewTaskAssignee: false,
-      canCreateSubtaskTransfers: false,
-      isEventScope: false
-    };
 
-    expect(hasPendingFinanceAction(finance)).toBe(true);
-  });
 
   it('counts one task-level dispatch against the combined approved advance and top-up amounts', () => {
     const finance = emptyFinancePayload({

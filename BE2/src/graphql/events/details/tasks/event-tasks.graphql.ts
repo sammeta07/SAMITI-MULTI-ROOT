@@ -12,8 +12,7 @@ import {
   getAuthorityFinanceActionTaskIds,
   getFinanceActionTaskIds,
   getFinanceParticipantTaskIds,
-  getPendingReceiptTaskIds,
-  getPendingSubtaskTransferTaskIds
+  getPendingReceiptTaskIds
 } from '../../../tasks/task-finance.graphql';
 
 export const eventTasksTypes = `
@@ -57,6 +56,8 @@ export const eventTasksTypes = `
     canAssignOwner: Boolean!
     canDelete: Boolean!
     canAccessFinance: Boolean
+    isTaskCreator: Boolean!
+    canViewCreatedSubtaskFinance: Boolean!
     needsFinanceAction: Boolean!
   }
 
@@ -326,7 +327,11 @@ async function getMaximumTaskBudgetReductionCents(
   currentBudget: unknown
 ): Promise<number> {
   const [expenseRows] = await connection.query<any[]>(
-    `SELECT COALESCE(SUM(expense_amount), 0) AS directExpenses
+    `SELECT COALESCE(SUM(CASE
+       WHEN expense_status = 'CONFIRMED' OR
+            (expense_status = 'RESERVED' AND status <> 'CANCELLED')
+       THEN expense_amount ELSE 0
+     END), 0) AS directExpenses
      FROM todos
      WHERE task_id = ?`,
     [taskId]
@@ -548,14 +553,15 @@ export const eventTasksResolvers = {
         taskRows.map((taskRow) => Number(taskRow.taskId)),
         loggedInUserId
       );
+      const creatorParentTaskIds = new Set(taskRows
+        .filter((taskRow) =>
+          taskRow.parentTaskId !== null && Number(taskRow.createdBy) === loggedInUserId
+        )
+        .map((taskRow) => Number(taskRow.parentTaskId)));
       const authorityFinanceActionTaskIds = isBudgetAuthority
         ? await getAuthorityFinanceActionTaskIds(taskRows.map((taskRow) => Number(taskRow.taskId)))
         : new Set<number>();
       const receiptTaskIds = await getPendingReceiptTaskIds(
-        taskRows.map((taskRow) => Number(taskRow.taskId)),
-        loggedInUserId
-      );
-      const subtaskTransferTaskIds = await getPendingSubtaskTransferTaskIds(
         taskRows.map((taskRow) => Number(taskRow.taskId)),
         loggedInUserId
       );
@@ -572,7 +578,7 @@ export const eventTasksResolvers = {
           const canReviewBudgetRequest = Boolean(budgetRequestId) &&
             (
               (taskRow.budgetApprovalStage === 'CREATOR' && Number(taskRow.createdBy) === loggedInUserId) ||
-              (taskRow.budgetApprovalStage === 'AUTHORITY' && isBudgetAuthority)
+              (isRootTask && taskRow.budgetApprovalStage === 'AUTHORITY' && isBudgetAuthority)
             );
           return {
           id: Number(taskRow.taskId),
@@ -622,17 +628,22 @@ export const eventTasksResolvers = {
             isBudgetAuthority ||
             canAssignRootTasks ||
             canManageAnyTasks ||
-            financeParticipantTaskIds.has(taskId),
+            financeParticipantTaskIds.has(taskId) ||
+            creatorParentTaskIds.has(taskId),
+          isTaskCreator: Number(taskRow.createdBy) === loggedInUserId,
+          canViewCreatedSubtaskFinance: creatorParentTaskIds.has(taskId),
           needsFinanceAction: (
             isEventCashier &&
+            isRootTask &&
             taskOwnerUserId !== loggedInUserId &&
             financeActionTaskIds.has(taskId)
           ) || (
             isBudgetAuthority &&
+            isRootTask &&
             taskOwnerUserId !== loggedInUserId &&
             authorityFinanceActionTaskIds.has(taskId)
           ) ||
-            receiptTaskIds.has(taskId) || canReviewBudgetRequest || subtaskTransferTaskIds.has(taskId)
+            receiptTaskIds.has(taskId) || canReviewBudgetRequest
           };
         }),
         canCreateTasks: canAssignRootTasks,
@@ -1590,6 +1601,7 @@ export const eventTasksResolvers = {
           throwEventError('FORBIDDEN', 'Only the child task creator can review this budget request');
         }
         const isAuthority = request.approvalStage === 'AUTHORITY' &&
+          request.parentTaskId === null &&
           await hasTaskBudgetApprovalAuthority(loggedInUserId, Number(request.eventId));
         if (request.approvalStage === 'AUTHORITY' && !isAuthority) {
           throwEventError(
@@ -1602,18 +1614,61 @@ export const eventTasksResolvers = {
         }
 
         if (request.approvalStage === 'CREATOR') {
-          const nextStage = decision === 'APPROVE' ? 'AUTHORITY' : 'CREATOR';
-          const nextStatus = decision === 'APPROVE' ? 'PENDING' : 'REJECTED';
+          if (decision === 'APPROVE') {
+            if (request.parentTaskId !== null) {
+              const [allocationRows] = await connection.query<any[]>(
+                `SELECT COALESCE(SUM(budget_amount), 0) AS allocated
+                 FROM tasks WHERE parent_id = ?`,
+                [Number(request.parentTaskId)]
+              );
+              const availableCents =
+                amountCents(request.parentBudget) - amountCents(allocationRows[0].allocated);
+              const requestedDelta =
+                amountCents(request.requestedAmount) - amountCents(request.currentBudget);
+              if (requestedDelta > availableCents) {
+                throwEventError('BAD_REQUEST', 'Requested budget exceeds the parent task remaining budget');
+              }
+            }
+            if (amountCents(request.requestedAmount) > MAX_TASK_BUDGET_CENTS) {
+              throwEventError('BAD_REQUEST', 'The approved increase exceeds the maximum task budget');
+            }
+            const [childAllocationRows] = await connection.query<any[]>(
+              `SELECT COALESCE(SUM(budget_amount), 0) AS allocated
+               FROM tasks WHERE parent_id = ?`,
+              [Number(request.taskId)]
+            );
+            if (amountCents(request.requestedAmount) < amountCents(childAllocationRows[0].allocated)) {
+              throwEventError('BAD_REQUEST', 'Requested budget cannot be lower than the amount already allocated to subtasks');
+            }
+
+            await connection.execute(
+              `UPDATE tasks SET budget_amount = ?, updated_by = ? WHERE id = ?`,
+              [request.requestedAmount, loggedInUserId, Number(request.taskId)]
+            );
+            const approvedIncreaseCents =
+              amountCents(request.requestedAmount) - amountCents(request.currentBudget);
+            if (approvedIncreaseCents > 0) {
+              await insertSanctionedBudgetFinanceRequest(connection, {
+                taskId: Number(request.taskId),
+                requestType: 'TOP_UP',
+                amount: String(approvedIncreaseCents / 100),
+                reason: `Approved task budget increase to ${request.requestedAmount}`,
+                requestedBy: Number(request.requestedBy),
+                reviewedBy: loggedInUserId,
+                sourceBudgetRequestId: requestId
+              });
+            }
+          }
           const [updateResult] = await connection.execute<any>(
             `UPDATE task_budget_requests
              SET approval_stage = ?, status = ?, creator_decision = ?, creator_reviewed_by = ?,
                  creator_review_note = NULL, creator_reviewed_at = CURRENT_TIMESTAMP,
                  reviewed_by = ?, review_note = NULL,
-                 reviewed_at = CASE WHEN ? = 'REJECT' THEN CURRENT_TIMESTAMP ELSE NULL END
+                 reviewed_at = CURRENT_TIMESTAMP
              WHERE id = ? AND status = 'PENDING' AND approval_stage = 'CREATOR'`,
-            [nextStage, nextStatus, decision === 'APPROVE' ? 'APPROVED' : 'REJECTED',
-              loggedInUserId, decision === 'REJECT' ? loggedInUserId : null,
-              decision, requestId]
+            ['CREATOR', decision === 'APPROVE' ? 'APPROVED' : 'REJECTED',
+              decision === 'APPROVE' ? 'APPROVED' : 'REJECTED',
+              loggedInUserId, loggedInUserId, requestId]
           );
           if (updateResult.affectedRows !== 1) {
             throwEventError('CONFLICT', 'This budget request has already been reviewed');
@@ -1630,7 +1685,7 @@ export const eventTasksResolvers = {
             status: String(taskRows[0].status),
             updatedAt: String(taskRows[0].updatedAt),
             requestId,
-            requestStatus: nextStatus,
+            requestStatus: decision === 'APPROVE' ? 'APPROVED' : 'REJECTED',
             requestedBudgetAmount: String(request.requestedAmount)
           };
         }

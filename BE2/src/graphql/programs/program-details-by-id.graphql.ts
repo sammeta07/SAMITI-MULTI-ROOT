@@ -261,6 +261,9 @@ export const programDetailsResolvers = {
            todo.id,
            todo.title,
            CAST(todo.expense_amount AS CHAR) AS expenseAmount,
+           todo.expense_status AS expenseStatus,
+           expenseConfirmer.name AS expenseConfirmedByName,
+           DATE_FORMAT(todo.expense_confirmed_at, '%Y-%m-%d %H:%i:%s') AS expenseConfirmedAt,
            todo.status,
            todo.is_completed AS isCompleted,
            todo.assigned_user_id AS assignedUserId,
@@ -277,6 +280,7 @@ export const programDetailsResolvers = {
          LEFT JOIN users creator ON creator.id = todo.created_by
          LEFT JOIN users assigner ON assigner.id = todo.assigned_by
          LEFT JOIN users updater ON updater.id = todo.updated_by
+         LEFT JOIN users expenseConfirmer ON expenseConfirmer.id = todo.expense_confirmed_by
          WHERE todo.program_id = ?
          ORDER BY todo.created_at ASC, todo.id ASC`,
         [programId]
@@ -330,11 +334,15 @@ export const programDetailsResolvers = {
           id: Number(todo.id),
           title: String(todo.title),
           expenseAmount: String(todo.expenseAmount),
+          expenseStatus: String(todo.expenseStatus),
+          expenseConfirmedByName: todo.expenseConfirmedByName || null,
+          expenseConfirmedAt: todo.expenseConfirmedAt || null,
           status: String(todo.status),
           isCompleted: Boolean(Number(todo.isCompleted)),
           createdBy: Number(todo.createdBy),
           canManage: Number(todo.createdBy) === loggedInUserId || isChecklistMasterAdmin,
           canUpdateStatus: todo.assignedUserId !== null && Number(todo.assignedUserId) === loggedInUserId,
+          canConfirmExpense: false,
           assignedUserId: todo.assignedUserId === null ? null : Number(todo.assignedUserId),
           assignedUserName: todo.assignedUserName || null,
           createdByName: todo.createdByName || null,

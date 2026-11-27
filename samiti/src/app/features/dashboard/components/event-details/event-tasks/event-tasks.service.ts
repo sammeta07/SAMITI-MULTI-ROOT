@@ -51,6 +51,8 @@ export class EventTasksService {
           canAssignOwner
           canDelete
           canAccessFinance
+          isTaskCreator
+          canViewCreatedSubtaskFinance
           needsFinanceAction
         }
         canCreateTasks

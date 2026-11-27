@@ -9,6 +9,7 @@ import {
   createInitialAdvanceHistoryRequest,
   getTaskFinanceRequestRevision,
   getTopUpSourceBudgetRequestIds,
+  shouldShowBudgetRequestInHistory,
   shouldShowFinanceRequestInBudgetHistory,
   TaskBudgetRequest,
   TaskFinanceRequest
@@ -779,7 +780,7 @@ export class TaskBudgetRequestsDialogComponent {
       );
     const representedBudgetRequestIds = getTopUpSourceBudgetRequestIds(financeRequests);
     const budgetRows: BudgetIncreaseHistoryRow[] = this.data.requests()
-      .filter((request) => request.status !== 'PENDING' && !representedBudgetRequestIds.has(request.id))
+      .filter((request) => shouldShowBudgetRequestInHistory(request, representedBudgetRequestIds))
       .map((request) => ({
         kind: 'budget',
         key: `budget-${request.id}`,
@@ -846,8 +847,7 @@ export class TaskBudgetRequestsDialogComponent {
   }
 
   public budgetRequestAmount(request: TaskBudgetRequest): string {
-    const change = Number(request.requestedIncrease);
-    return `${change < 0 ? '−' : '+'}₹${this.money(Math.abs(change))}`;
+    return `₹${this.money(Math.abs(Number(request.requestedIncrease)))}`;
   }
 
   public money(value: string | number): string {

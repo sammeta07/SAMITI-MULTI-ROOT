@@ -117,8 +117,18 @@ export class EventTasksComponent implements OnInit, OnDestroy {
   }
 
   public shouldShowTaskFinanceButton(task: EventTaskEntry): boolean {
+    const parentHasCreatorFinance = task.parentTaskId !== null &&
+      this.tasks.find((candidate) => candidate.taskId === task.parentTaskId)
+        ?.canViewCreatedSubtaskFinance === true;
+    const hasEventCreatorFinance = this.eventDetailsState.headerData()
+      ?.canAccessCreatedSubtaskFinance === true;
+    if (task.isTaskCreator && (parentHasCreatorFinance || (task.parentTaskId !== null && hasEventCreatorFinance))) {
+      return false;
+    }
+
     return task.canAccessFinance === true &&
-      this.eventDetailsState.headerData()?.canAccessTaskFinance !== true;
+      (task.canViewCreatedSubtaskFinance === true ||
+        this.eventDetailsState.headerData()?.canAccessTaskFinance !== true);
   }
 
   public openTaskActionsDialog(task: EventTaskEntry, event: Event): void {
@@ -162,7 +172,8 @@ export class EventTasksComponent implements OnInit, OnDestroy {
   public openTaskFinanceDialog(taskId: number, taskName: string, ownerName: string | null | undefined, event: Event): void {
     event.stopPropagation();
     const eventId = this.currentEventId;
-    this.taskFinanceDialog.open(taskId, taskName, ownerName).subscribe(() => {
+    if (eventId === null) return;
+    this.taskFinanceDialog.open(taskId, taskName, ownerName, eventId).subscribe(() => {
       if (eventId === null || eventId !== this.currentEventId) return;
       this.taskFinanceService.getTaskFinance(taskId).subscribe({
         next: (finance) => {
@@ -1019,12 +1030,15 @@ export class EventTasksComponent implements OnInit, OnDestroy {
   }
 
   // --- Data Fetching ---
-  private loadEventTasks(eventId: string): void {
+  private loadEventTasks(eventId: string, preserveExisting = false): void {
     const requestId = ++this.taskLoadRequestId;
-    this.taskAssigneeSearchText = {};
-    this.pendingTaskOwnerIds = {};
-    this.isLoading = true;
-    this.hasLoadError = false;
+    const keepExistingData = preserveExisting && this.eventData !== null;
+    if (!keepExistingData) {
+      this.taskAssigneeSearchText = {};
+      this.pendingTaskOwnerIds = {};
+      this.isLoading = true;
+      this.hasLoadError = false;
+    }
 
     this.tasksService.getEventTasks(eventId).subscribe({
       next: (data: EventTasksPayload) => {
@@ -1036,11 +1050,13 @@ export class EventTasksComponent implements OnInit, OnDestroy {
       },
       error: (error) => {
         if (requestId !== this.taskLoadRequestId) return;
-        this.eventData = [];
-        this.taskAssignees = [];
-        this.canCreateTasks = false;
+        if (!keepExistingData) {
+          this.eventData = [];
+          this.taskAssignees = [];
+          this.canCreateTasks = false;
+          this.hasLoadError = true;
+        }
         this.isLoading = false;
-        this.hasLoadError = true;
         this.notifier.error(error?.error?.errors?.[0]?.message || 'Failed to load event tasks.');
       }
     });

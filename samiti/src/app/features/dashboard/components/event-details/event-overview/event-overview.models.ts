@@ -35,6 +35,7 @@ export interface EventDetailsHeaderPayload {
   totalApprovedBudget: string;
   hasFinanceAction: boolean;
   canAccessTaskFinance: boolean;
+  canAccessCreatedSubtaskFinance: boolean;
   canEditEvent: boolean;
   canDeleteEvent: boolean;
   type?: 'PUBLIC' | 'PRIVATE' | string;

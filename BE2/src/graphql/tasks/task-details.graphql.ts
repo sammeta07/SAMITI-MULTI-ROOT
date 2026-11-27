@@ -10,8 +10,7 @@ import {
 import {
   getFinanceActionTaskIds,
   getFinanceParticipantTaskIds,
-  getPendingReceiptTaskIds,
-  getPendingSubtaskTransferTaskIds
+  getPendingReceiptTaskIds
 } from './task-finance.graphql';
 
 export const taskDetailsTypes = `
@@ -44,6 +43,7 @@ export const taskDetailsTypes = `
     canAssignOwner: Boolean!
     canDelete: Boolean!
     canAccessFinance: Boolean!
+    isTaskCreator: Boolean!
     needsFinanceAction: Boolean!
   }
 
@@ -62,6 +62,7 @@ export const taskDetailsTypes = `
     taskId: Int!
     taskName: String!
     budgetAmount: String!
+    remainingBudgetAfterExpenses: String!
     budgetRequestId: Int
     requestedBudgetAmount: String
     budgetRequestStatus: String
@@ -97,6 +98,7 @@ export const taskDetailsTypes = `
     canManageTodos: Boolean!
     canToggleTodos: Boolean!
     canAccessFinance: Boolean!
+    canViewCreatedSubtaskFinance: Boolean!
     needsFinanceAction: Boolean!
   }
 `;
@@ -266,6 +268,7 @@ export const taskDetailsResolvers = {
           canAssignOwner: isRootTask
             ? canAssignRootTaskOwners || canManageTasks
             : canManageTasks || isChildParentOwner,
+          isTaskCreator: Number(child.createdBy) === userId,
           canDelete: canManageTasks ||
             (!isRootTask && isChildParentOwner),
           canReviewBudgetRequest: Boolean(child.budgetRequestId) && (
@@ -277,6 +280,11 @@ export const taskDetailsResolvers = {
             !isMasterAdmin
         };
       };
+      const creatorParentTaskIds = new Set(descendantRows
+        .filter((descendant) =>
+          descendant.parentTaskId !== null && Number(descendant.createdBy) === userId
+        )
+        .map((descendant) => Number(descendant.parentTaskId)));
       const childrenByParentId = new Map<number, any[]>();
       for (const descendant of descendantRows) {
         const parentId = descendant.parentTaskId === null ? null : Number(descendant.parentTaskId);
@@ -309,10 +317,6 @@ export const taskDetailsResolvers = {
         taskId,
         ...descendants.map((descendant) => Number(descendant.taskId))
       ], userId);
-      const subtaskTransferTaskIds = await getPendingSubtaskTransferTaskIds([
-        taskId,
-        ...descendants.map((descendant) => Number(descendant.taskId))
-      ], userId);
       const financeParticipantTaskIds = await getFinanceParticipantTaskIds([
         taskId,
         ...descendants.map((descendant) => Number(descendant.taskId))
@@ -323,7 +327,8 @@ export const taskDetailsResolvers = {
         isCashier ||
         isBudgetAuthority ||
         canManageTasks ||
-        financeParticipantTaskIds.has(Number(financeTask.taskId));
+        financeParticipantTaskIds.has(Number(financeTask.taskId)) ||
+        creatorParentTaskIds.has(Number(financeTask.taskId));
       const canAccessFinance = canAccessFinanceForTask(task);
 
       const todos = await query<any[]>(
@@ -331,6 +336,9 @@ export const taskDetailsResolvers = {
            todo.id,
            todo.title,
            CAST(todo.expense_amount AS CHAR) AS expenseAmount,
+           todo.expense_status AS expenseStatus,
+           expenseConfirmer.name AS expenseConfirmedByName,
+           DATE_FORMAT(todo.expense_confirmed_at, '%Y-%m-%d %H:%i:%s') AS expenseConfirmedAt,
            todo.status,
            todo.is_completed AS isCompleted,
            todo.assigned_user_id AS assignedUserId,
@@ -347,9 +355,30 @@ export const taskDetailsResolvers = {
          LEFT JOIN users creator ON creator.id = todo.created_by
          LEFT JOIN users assigner ON assigner.id = todo.assigned_by
          LEFT JOIN users updater ON updater.id = todo.updated_by
+         LEFT JOIN users expenseConfirmer ON expenseConfirmer.id = todo.expense_confirmed_by
          WHERE todo.task_id = ?
          ORDER BY todo.created_at ASC, todo.id ASC`,
         [taskId]
+      );
+      const remainingBudgetRows = await query<any[]>(
+        `WITH RECURSIVE task_tree (id) AS (
+           SELECT id FROM tasks WHERE id = ?
+           UNION ALL
+           SELECT child.id
+           FROM tasks child
+           INNER JOIN task_tree parent ON child.parent_id = parent.id
+         )
+         SELECT CAST(
+           task.budget_amount - COALESCE(SUM(
+             CASE WHEN todo.expense_status = 'CONFIRMED' THEN todo.expense_amount ELSE 0 END
+           ), 0) AS CHAR
+         ) AS remainingBudgetAfterExpenses
+         FROM tasks task
+         LEFT JOIN task_tree ON task_tree.id = task.id
+         LEFT JOIN todos todo ON todo.task_id = task_tree.id
+         WHERE task.id = ?
+         GROUP BY task.id, task.budget_amount`,
+        [taskId, taskId]
       );
 
       const taskAssignees = await query<any[]>(
@@ -391,6 +420,7 @@ export const taskDetailsResolvers = {
         taskId: Number(task.taskId),
         taskName: String(task.taskName || 'Untitled Task'),
         budgetAmount: String(task.budgetAmount),
+        remainingBudgetAfterExpenses: String(remainingBudgetRows[0]?.remainingBudgetAfterExpenses ?? task.budgetAmount),
         budgetRequestId: task.budgetRequestId === null ? null : Number(task.budgetRequestId),
         requestedBudgetAmount: task.requestedBudgetAmount === null ? null : String(task.requestedBudgetAmount),
         budgetRequestStatus: task.budgetRequestStatus || null,
@@ -420,7 +450,7 @@ export const taskDetailsResolvers = {
         canAccessFinance,
         needsFinanceAction: (
           isCashier && !isTaskOwner && financeActionTaskIds.has(taskId)
-        ) || receiptTaskIds.has(taskId) || canReviewBudgetRequest || subtaskTransferTaskIds.has(taskId),
+        ) || receiptTaskIds.has(taskId) || canReviewBudgetRequest,
         children: children.map((child) => ({
           taskId: Number(child.taskId),
           parentTaskId: Number(taskId),
@@ -452,7 +482,7 @@ export const taskDetailsResolvers = {
               (child.budgetApprovalStage === 'CREATOR' && Number(child.createdBy) === userId) ||
               (child.budgetApprovalStage === 'AUTHORITY' && isBudgetAuthority)
             )
-          ) || subtaskTransferTaskIds.has(Number(child.taskId)),
+          ),
           ...mapChildPermissions(child)
         })),
         descendants: descendants.map((descendant) => ({
@@ -486,7 +516,7 @@ export const taskDetailsResolvers = {
               (descendant.budgetApprovalStage === 'CREATOR' && Number(descendant.createdBy) === userId) ||
               (descendant.budgetApprovalStage === 'AUTHORITY' && isBudgetAuthority)
             )
-          ) || subtaskTransferTaskIds.has(Number(descendant.taskId)),
+          ),
           ...mapChildPermissions(descendant)
         })),
         taskAssignees: taskAssignees.map((assignee) => ({
@@ -503,11 +533,15 @@ export const taskDetailsResolvers = {
           id: Number(todo.id),
           title: String(todo.title),
           expenseAmount: String(todo.expenseAmount),
+          expenseStatus: String(todo.expenseStatus),
+          expenseConfirmedByName: todo.expenseConfirmedByName || null,
+          expenseConfirmedAt: todo.expenseConfirmedAt || null,
           status: String(todo.status),
           isCompleted: Boolean(Number(todo.isCompleted)),
           createdBy: Number(todo.createdBy),
           canManage: Number(todo.createdBy) === userId || isChecklistMasterAdmin,
           canUpdateStatus: todo.assignedUserId !== null && Number(todo.assignedUserId) === userId,
+          canConfirmExpense: Number(task.ownerUserId) === userId || isCashier,
           assignedUserId: todo.assignedUserId === null ? null : Number(todo.assignedUserId),
           assignedUserName: todo.assignedUserName || null,
           createdByName: todo.createdByName || null,
@@ -521,7 +555,8 @@ export const taskDetailsResolvers = {
         canManage: canManageTasks || isTaskOwner,
         canCreateTasks: canCreateSubtasks,
         canManageTodos,
-        canToggleTodos: canManageTodos
+        canToggleTodos: canManageTodos,
+        canViewCreatedSubtaskFinance: creatorParentTaskIds.has(taskId)
       };
     }
   }

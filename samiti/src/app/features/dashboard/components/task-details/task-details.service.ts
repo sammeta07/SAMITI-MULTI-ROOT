@@ -23,6 +23,7 @@ export class TaskDetailsService {
         taskId
         taskName
         budgetAmount
+        remainingBudgetAfterExpenses
         budgetRequestId
         requestedBudgetAmount
         budgetRequestStatus
@@ -48,6 +49,7 @@ export class TaskDetailsService {
         canAssignOwner
         canDeleteTask
         canAccessFinance
+        canViewCreatedSubtaskFinance
         needsFinanceAction
         updatedAt
         children {
@@ -78,6 +80,7 @@ export class TaskDetailsService {
           canAssignOwner
           canDelete
           canAccessFinance
+          isTaskCreator
           needsFinanceAction
         }
         descendants {
@@ -108,6 +111,7 @@ export class TaskDetailsService {
           canAssignOwner
           canDelete
           canAccessFinance
+          isTaskCreator
           needsFinanceAction
         }
         taskAssignees {
@@ -124,6 +128,10 @@ export class TaskDetailsService {
           id
           title
           expenseAmount
+          expenseStatus
+          expenseConfirmedByName
+          expenseConfirmedAt
+          canConfirmExpense
           status
           isCompleted
           createdBy

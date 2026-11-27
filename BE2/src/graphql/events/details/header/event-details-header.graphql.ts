@@ -9,8 +9,7 @@ import {
 } from '../../../../authorization/authorization';
 import {
   getFinanceActionTaskIds,
-  getPendingReceiptTaskIds,
-  getPendingSubtaskTransferTaskIds
+  getPendingReceiptTaskIds
 } from '../../../tasks/task-finance.graphql';
 
 export const eventDetailsHeaderTypes = `
@@ -30,6 +29,7 @@ export const eventDetailsHeaderTypes = `
     totalApprovedBudget: String!
     hasFinanceAction: Boolean!
     canAccessTaskFinance: Boolean!
+    canAccessCreatedSubtaskFinance: Boolean!
     canEditEvent: Boolean!
     canDeleteEvent: Boolean!
     type: String
@@ -173,6 +173,7 @@ export const eventDetailsHeaderResolvers = {
         hasTaskBudgetApprovalAuthority(loggedInUserId, eventId),
         query<Array<RowDataPacket & {
           taskId: number;
+          parentTaskId: number | null;
           ownerUserId: number | null;
           createdBy: number | null;
           budgetRequestId: number | null;
@@ -180,6 +181,7 @@ export const eventDetailsHeaderResolvers = {
           budgetRequestedBy: number | null;
         }>>(
           `SELECT t.id AS taskId,
+                  t.parent_id AS parentTaskId,
                   t.owner_user_id AS ownerUserId,
                   t.created_by AS createdBy,
                   budgetRequest.id AS budgetRequestId,
@@ -199,11 +201,13 @@ export const eventDetailsHeaderResolvers = {
         committeeRole === 'COMMITTEE_ADMIN' ||
         isEventCashier ||
         isBudgetAuthority;
+      const canAccessCreatedSubtaskFinance = taskActionRows.some((task) =>
+        task.parentTaskId !== null && Number(task.createdBy) === loggedInUserId
+      );
       const taskIds = taskActionRows.map((task) => Number(task.taskId));
-      const [financeActionTaskIds, receiptTaskIds, subtaskTransferTaskIds] = await Promise.all([
+      const [financeActionTaskIds, receiptTaskIds] = await Promise.all([
         isEventCashier ? getFinanceActionTaskIds(taskIds) : Promise.resolve(new Set<number>()),
-        getPendingReceiptTaskIds(taskIds, loggedInUserId),
-        getPendingSubtaskTransferTaskIds(taskIds, loggedInUserId)
+        getPendingReceiptTaskIds(taskIds, loggedInUserId)
       ]);
       const hasFinanceAction = taskActionRows.some((task) => {
         const taskId = Number(task.taskId);
@@ -217,7 +221,6 @@ export const eventDetailsHeaderResolvers = {
           );
         return needsCashierAction
           || receiptTaskIds.has(taskId)
-          || subtaskTransferTaskIds.has(taskId)
           || needsBudgetReview;
       });
 
@@ -244,6 +247,7 @@ export const eventDetailsHeaderResolvers = {
         committeeRole,
         hasFinanceAction,
         canAccessTaskFinance,
+        canAccessCreatedSubtaskFinance,
         canEditEvent,
         canDeleteEvent
       };

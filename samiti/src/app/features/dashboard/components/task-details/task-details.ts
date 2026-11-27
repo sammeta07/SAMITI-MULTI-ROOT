@@ -26,7 +26,7 @@ import { EventTasksService } from '../event-details/event-tasks/event-tasks.serv
 import { EventDetailsStateService } from '../event-details/event-details-state.service';
 import { TaskChild, TaskDetailsPayload } from './task-details.models';
 import { TaskDetailsService } from './task-details.service';
-import { getTaskCashSummary, hasPendingFinanceAction } from '../task-finance/task-finance.models';
+import { hasPendingFinanceAction } from '../task-finance/task-finance.models';
 import { TaskFinanceService } from '../task-finance/task-finance.service';
 import { TaskFinanceDialogService } from '../task-finance/task-finance-dialog.service';
 import { TaskActionsDialogService } from './task-actions-dialog.service';
@@ -72,7 +72,8 @@ export class TaskDetailsComponent implements OnInit {
   private requestId = 0;
   public readonly isLoading = signal(true);
   public readonly task = signal<TaskDetailsPayload | null>(null);
-  public readonly taskInHand = signal<number | null>(null);
+  public readonly taskAvailableInHand = signal<number | null>(null);
+  public readonly taskBudgetRemaining = signal<number | null>(null);
   public readonly taskStatuses = TASK_STATUSES;
   public readonly isSavingTaskName = signal(false);
   public readonly isSavingBudget = signal(false);
@@ -124,7 +125,25 @@ export class TaskDetailsComponent implements OnInit {
   }
 
   public onTodosChange(todos: TodoItem[]): void {
+    const currentTask = this.task();
+    const remainingBudget = this.taskBudgetRemaining();
+    if (currentTask && remainingBudget !== null) {
+      const previousConfirmedExpenses = this.confirmedChecklistExpenseTotal(currentTask.todos);
+      const updatedConfirmedExpenses = this.confirmedChecklistExpenseTotal(todos);
+      this.taskBudgetRemaining.set(remainingBudget + previousConfirmedExpenses - updatedConfirmedExpenses);
+    }
     this.task.update((current) => current ? { ...current, todos } : current);
+    if (currentTask?.canAccessFinance) {
+      this.loadTaskFinanceSnapshot(currentTask.taskId, this.requestId);
+    }
+  }
+
+  private confirmedChecklistExpenseTotal(todos: TodoItem[]): number {
+    return todos.reduce((total, todo) => {
+      if (todo.expenseStatus !== 'CONFIRMED') return total;
+      const amount = Number(todo.expenseAmount);
+      return total + (Number.isFinite(amount) ? amount : 0);
+    }, 0);
   }
 
   public onCreateChecklistItem(task: TaskDetailsPayload): void {
@@ -191,6 +210,7 @@ export class TaskDetailsComponent implements OnInit {
         current?.taskId === task.taskId
           ? {
               ...current,
+              canViewCreatedSubtaskFinance: true,
               children: [...current.children, {
                 taskId: child.taskId,
                 parentTaskId: task.taskId,
@@ -203,6 +223,7 @@ export class TaskDetailsComponent implements OnInit {
                 canReviewBudgetRequest: false,
                 canCancelBudgetRequest: false,
                 canRequestBudgetIncrease: child.canRequestBudgetIncrease,
+                isTaskCreator: true,
                 status: child.status,
                 ownerUserId: child.ownerUserId,
                 ownerName: child.ownerName,
@@ -228,6 +249,7 @@ export class TaskDetailsComponent implements OnInit {
                 canReviewBudgetRequest: false,
                 canCancelBudgetRequest: false,
                 canRequestBudgetIncrease: child.canRequestBudgetIncrease,
+                isTaskCreator: true,
                 status: child.status,
                 ownerUserId: child.ownerUserId,
                 ownerName: child.ownerName,
@@ -275,15 +297,24 @@ export class TaskDetailsComponent implements OnInit {
     void this.taskActionsDialog.open(task.taskId, (updatedTask) => this.updateTaskFromDialog(updatedTask));
   }
 
-  public openTaskFinanceDialog(taskId: number, taskName: string, ownerName: string | null | undefined, event: Event): void {
+  public openTaskFinanceDialog(
+    taskId: number,
+    taskName: string,
+    ownerName: string | null | undefined,
+    eventId: number,
+    event: Event
+  ): void {
     event.stopPropagation();
     const rootTaskId = this.task()?.taskId;
-    this.taskFinanceDialog.open(taskId, taskName, ownerName).subscribe(() => {
+    this.taskFinanceDialog.open(taskId, taskName, ownerName, eventId).subscribe(() => {
       if (rootTaskId === undefined || this.task()?.taskId !== rootTaskId) return;
       this.taskFinanceService.getTaskFinance(taskId).subscribe({
         next: (finance) => {
           if (this.task()?.taskId !== rootTaskId) return;
-          if (taskId === rootTaskId) this.taskInHand.set(getTaskCashSummary(finance.transactions).inHand);
+          if (taskId === rootTaskId) {
+            this.taskAvailableInHand.set(Number(finance.summary.availableInHand));
+            this.taskBudgetRemaining.set(Number(finance.summary.remainingBudget));
+          }
           const needsFinanceAction = hasPendingFinanceAction(finance);
           this.task.update((current) => current && current.taskId === rootTaskId
             ? {
@@ -478,12 +509,12 @@ export class TaskDetailsComponent implements OnInit {
     return formatTaskBudgetAmount(value);
   }
 
-  public formatInHandAndSanctionedBudget(
-    inHandAmount: number,
+  public formatAvailableAndSanctionedBudget(
+    availableAmount: number,
     sanctionedAmount: string | number | null | undefined
   ): string {
     const formattedSanctionedAmount = formatTaskBudgetAmount(sanctionedAmount).replace(/^₹\s*/, '');
-    return `${formatTaskBudgetAmount(inHandAmount)} / ${formattedSanctionedAmount}`;
+    return `${formatTaskBudgetAmount(availableAmount)} / ${formattedSanctionedAmount}`;
   }
 
   public getTaskBudgetRemainingDisplay(taskId: number, budgetAmount: string | number): string {
@@ -1484,7 +1515,8 @@ export class TaskDetailsComponent implements OnInit {
     const requestId = ++this.requestId;
     this.isLoading.set(true);
     this.task.set(null);
-    this.taskInHand.set(null);
+    this.taskAvailableInHand.set(null);
+    this.taskBudgetRemaining.set(null);
     this.pendingSubtaskOwnerIds = {};
     this.subtaskAssigneeSearchText = {};
     this.subtaskNameEditText = {};
@@ -1502,7 +1534,8 @@ export class TaskDetailsComponent implements OnInit {
       next: (details) => {
         if (requestId !== this.requestId) return;
         this.task.set(details);
-        if (details.canAccessFinance) this.loadTaskInHand(details.taskId, requestId);
+        this.taskBudgetRemaining.set(Number(details.remainingBudgetAfterExpenses));
+        if (details.canAccessFinance) this.loadTaskFinanceSnapshot(details.taskId, requestId);
       },
       error: (error) => {
         if (requestId !== this.requestId) return;
@@ -1512,16 +1545,17 @@ export class TaskDetailsComponent implements OnInit {
     });
   }
 
-  private loadTaskInHand(taskId: number, requestId: number): void {
+  private loadTaskFinanceSnapshot(taskId: number, requestId: number): void {
     this.taskFinanceService.getTaskFinance(taskId).subscribe({
       next: (finance) => {
         if (requestId !== this.requestId || this.task()?.taskId !== taskId) return;
-        this.taskInHand.set(getTaskCashSummary(finance.transactions).inHand);
+        this.taskAvailableInHand.set(Number(finance.summary.availableInHand));
+        this.taskBudgetRemaining.set(Number(finance.summary.remainingBudget));
       },
       error: (error) => {
         if (requestId !== this.requestId || this.task()?.taskId !== taskId) return;
         this.notifier.error(
-          error?.error?.errors?.[0]?.message || error?.message || 'Failed to load task in-hand amount.'
+          error?.error?.errors?.[0]?.message || error?.message || 'Failed to load task finance summary.'
         );
       }
     });

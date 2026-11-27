@@ -5,7 +5,7 @@ import { MatDialog } from '@angular/material/dialog';
 import { MatIconModule } from '@angular/material/icon';
 import { MatTabsModule } from '@angular/material/tabs';
 import { MatTooltipModule } from '@angular/material/tooltip';
-import { finalize, Observable } from 'rxjs';
+import { finalize, map, Observable, of, switchMap } from 'rxjs';
 import { NotifierService } from '../../../../shared/notifier/notifier.service';
 import { WholeRupeeDirective } from '../../../../shared/directives/whole-rupee.directive';
 import { isValidTaskBudgetAmount } from '../event-details/event-tasks/event-tasks.models';
@@ -14,12 +14,12 @@ import {
   TaskFinancePayload,
   TaskFinanceRequest,
   TaskFinanceTransaction,
+  isCashReturnWithinAvailableCash,
   getEffectiveApprovedFinanceTotal,
+  isVisibleInBudgetRequestLedger,
   isVisibleInPaymentHistory,
   isInitialTaskBudgetFinanceRequest,
   TaskBudgetRequest,
-  TaskSubtaskTransfer,
-  TaskSubtaskTransferOption,
   getTaskCashSummary
 } from './task-finance.models';
 import { TaskFinanceService } from './task-finance.service';
@@ -28,6 +28,7 @@ import { TaskFinanceRequestsDialogComponent } from './task-finance-requests-dial
 
 export interface TaskFinanceRequestGroup {
   taskId: number;
+  isSubtask: boolean;
   taskCreatedAt: string;
   taskName: string;
   taskOwnerName: string | null;
@@ -40,7 +41,7 @@ export interface TaskFinanceRequestGroup {
   issuedAdvance: number;
   remainingAdvance: number;
   confirmedReturns: number;
-  inHand: number;
+  availableInHand: number;
   remainingSanctionedBudget: number | null;
   checklistExpenseAmount: number | null;
   budgetAvailableForDisbursement: number;
@@ -60,6 +61,7 @@ type TaskBudgetReviewItem =
 export class TaskFinanceComponent implements OnInit {
   @Input() taskId: number | null = null;
   @Input() eventId: number | null = null;
+  @Input() creatorEventScope = false;
   @Input() loadOnInit = false;
 
   private readonly service = inject(TaskFinanceService);
@@ -68,6 +70,7 @@ export class TaskFinanceComponent implements OnInit {
   private readonly notifier = inject(NotifierService);
 
   public readonly payload = signal<TaskFinancePayload | null>(null);
+  public readonly creatorSubtaskFinance = signal<TaskFinancePayload | null>(null);
   public readonly isLoading = signal(false);
   public readonly isSaving = signal(false);
 
@@ -75,9 +78,6 @@ export class TaskFinanceComponent implements OnInit {
   public returnAmount: string | number | null = '';
   public budgetAdjustmentAmount: string | number | null = '';
   public budgetAdjustmentMode: 'INCREASE' | 'REDUCE' = 'INCREASE';
-  public selectedSubtaskId: number | null = null;
-  public subtaskTransferAmount: string | number | null = '';
-  public subtaskTransferDescription = '';
 
   public ngOnInit(): void {
     if (this.loadOnInit) this.load();
@@ -86,11 +86,29 @@ export class TaskFinanceComponent implements OnInit {
   public load(): void {
     if (this.isLoading() || this.isSaving()) return;
     this.isLoading.set(true);
-    const request = this.eventId !== null
-      ? this.service.getEventTaskFinance(this.eventId)
-      : this.taskId !== null
-        ? this.service.getTaskFinance(this.taskId)
-        : null;
+    const taskId = this.taskId;
+    const eventId = this.eventId;
+    let request: Observable<{
+      finance: TaskFinancePayload;
+      creatorFinance: TaskFinancePayload | null;
+    }> | null = null;
+    if (this.creatorEventScope && eventId !== null) {
+      request = this.service.getCreatorEventSubtaskFinance(eventId)
+        .pipe(map((finance) => ({ finance, creatorFinance: null })));
+    } else if (taskId !== null) {
+      request = this.service.getTaskFinance(taskId).pipe(
+        switchMap((finance) => {
+          if (eventId === null || !finance.canViewCreatedSubtaskFinance) {
+            return of({ finance, creatorFinance: null });
+          }
+          return this.service.getCreatorSubtaskFinance(eventId, taskId)
+            .pipe(map((creatorFinance) => ({ finance, creatorFinance })));
+        })
+      );
+    } else if (eventId !== null) {
+      request = this.service.getEventTaskFinance(eventId)
+        .pipe(map((finance) => ({ finance, creatorFinance: null })));
+    }
     if (!request) {
       this.isLoading.set(false);
       this.notifier.error('Task finance scope is missing.');
@@ -99,19 +117,18 @@ export class TaskFinanceComponent implements OnInit {
     request
       .pipe(finalize(() => this.isLoading.set(false)))
       .subscribe({
-        next: (payload) => {
-          this.payload.set(payload);
-          this.budgetAdjustmentAmount = '';
-          const selectedOption = payload.subtaskTransferOptions.find(
-            (option) => option.subtaskId === this.selectedSubtaskId && Number(option.availableAmount) > 0
-          );
-          this.selectedSubtaskId = selectedOption?.subtaskId
-            ?? payload.subtaskTransferOptions.find((option) => Number(option.availableAmount) > 0)?.subtaskId
-            ?? payload.subtaskTransferOptions[0]?.subtaskId
-            ?? null;
-        },
+        next: ({ finance, creatorFinance }) => this.setFinancePayload(finance, creatorFinance),
         error: (error: Error) => this.notifier.error(error.message || 'Could not load task finance.')
       });
+  }
+
+  private setFinancePayload(
+    payload: TaskFinancePayload,
+    creatorFinance: TaskFinancePayload | null
+  ): void {
+    this.payload.set(payload);
+    this.creatorSubtaskFinance.set(creatorFinance);
+    this.budgetAdjustmentAmount = '';
   }
 
   public toNum(value: string | number | null | undefined): number {
@@ -131,63 +148,26 @@ export class TaskFinanceComponent implements OnInit {
     return transactions.filter((transaction) => transaction.canConfirmReceipt);
   }
 
-  public shouldShowSubtaskTransfers(finance: TaskFinancePayload): boolean {
-    return finance.canCreateSubtaskTransfers
-      || finance.incomingSubtaskTransfers.length > 0
-      || finance.outgoingSubtaskTransfers.length > 0;
-  }
-
-  public hasPendingSubtaskTransferAction(finance: TaskFinancePayload): boolean {
-    return finance.incomingSubtaskTransfers.some((transfer) => transfer.canConfirmReceipt);
-  }
-
-  public selectedSubtaskTransferOption(): TaskSubtaskTransferOption | undefined {
-    return this.payload()?.subtaskTransferOptions.find(
-      (option) => option.subtaskId === Number(this.selectedSubtaskId)
-    );
-  }
-
-  public canRecordSubtaskTransfer(): boolean {
+  public availableCashForReturn(): number {
     const finance = this.payload();
-    const option = this.selectedSubtaskTransferOption();
-    const amount = String(this.subtaskTransferAmount ?? '').trim();
-    const description = this.subtaskTransferDescription.trim();
-    return !!finance?.canCreateSubtaskTransfers
-      && !!option
-      && isValidTaskBudgetAmount(amount)
+    if (!finance) return 0;
+    const groups = this.groupRequestsByTask(
+      finance.requests,
+      this.budgetRequestsForLedger(finance),
+      finance.transactions
+    );
+    return this.getPrimaryGroup(groups)?.availableInHand
+      ?? this.toNum(finance.summary.availableInHand);
+  }
+
+  public isReturnAmountOverAvailable(availableCash: number): boolean {
+    const amount = String(this.returnAmount ?? '').trim();
+    return isValidTaskBudgetAmount(amount)
       && Number(amount) > 0
-      && Number(amount) <= Number(option.availableAmount)
-      && description.length > 0
-      && description.length <= 1000;
+      && !isCashReturnWithinAvailableCash(amount, availableCash);
   }
 
-  public recordSubtaskTransfer(): void {
-    const option = this.selectedSubtaskTransferOption();
-    if (this.taskId === null || !option || !this.canRecordSubtaskTransfer()) return;
-    this.runAction(
-      this.service.createSubtaskTransfer(
-        this.taskId,
-        option.subtaskId,
-        String(this.subtaskTransferAmount).trim(),
-        this.subtaskTransferDescription.trim()
-      ),
-      'Subtask transfer recorded.',
-      () => {
-        this.subtaskTransferAmount = '';
-        this.subtaskTransferDescription = '';
-      }
-    );
-  }
-
-  public confirmSubtaskTransfer(transfer: TaskSubtaskTransfer): void {
-    if (!transfer.canConfirmReceipt) return;
-    this.runAction(
-      this.service.confirmSubtaskTransferReceipt(transfer.id),
-      'Subtask transfer receipt confirmed.'
-    );
-  }
-
-  public canSubmitAdvanceReturn(): boolean {
+  public canSubmitAdvanceReturn(availableCash = this.availableCashForReturn()): boolean {
     const amount = String(this.returnAmount ?? '').trim();
     const current = this.payload();
     return !!current?.canRequest
@@ -197,7 +177,7 @@ export class TaskFinanceComponent implements OnInit {
         && transaction.status === 'PENDING'
       )
       && isValidTaskBudgetAmount(amount)
-      && Number(amount) > 0;
+      && isCashReturnWithinAvailableCash(amount, availableCash);
   }
 
   public submitAdvanceReturn(): void {
@@ -220,9 +200,13 @@ export class TaskFinanceComponent implements OnInit {
     );
   }
 
-  public issueGroupAdvance(group: TaskFinanceRequestGroup): void {
+  public issueGroupAdvance(
+    group: TaskFinanceRequestGroup,
+    finance: TaskFinancePayload | null = this.payload(),
+    creatorScope = false
+  ): void {
     const amount = String(this.taskDispatchAmounts[group.taskId] ?? '').trim();
-    if (!this.canDispatchGroupAdvance(group)) return;
+    if (!this.canDispatchGroupAdvance(group, finance, creatorScope)) return;
     this.runAction(
       this.service.recordTransaction(
         group.taskId,
@@ -235,10 +219,15 @@ export class TaskFinanceComponent implements OnInit {
     );
   }
 
-  public canDispatchGroupAdvance(group: TaskFinanceRequestGroup): boolean {
+  public canDispatchGroupAdvance(
+    group: TaskFinanceRequestGroup,
+    finance: TaskFinancePayload | null = this.payload(),
+    creatorScope = false
+  ): boolean {
     const amount = String(this.taskDispatchAmounts[group.taskId] ?? '').trim();
-    return group.taskOwnerUserId !== null
-      && !!this.payload()?.canApprove
+    return (!group.isSubtask || creatorScope)
+      && group.taskOwnerUserId !== null
+      && !!finance?.canApprove
       && group.remainingAdvance > 0
       && isValidTaskBudgetAmount(amount)
       && Number(amount) > 0
@@ -253,6 +242,7 @@ export class TaskFinanceComponent implements OnInit {
     const groups = new Map<number, {
       requests: TaskFinanceRequest[];
       budgetRequests: TaskBudgetRequest[];
+      isSubtask: boolean;
       taskCreatedAt: string;
       pendingReturnTaskName?: string;
     }>();
@@ -260,6 +250,7 @@ export class TaskFinanceComponent implements OnInit {
       const taskGroup = groups.get(request.taskId) ?? {
         requests: [],
         budgetRequests: [],
+        isSubtask: request.isSubtask,
         taskCreatedAt: request.taskCreatedAt
       };
       taskGroup.requests.push(request);
@@ -269,6 +260,7 @@ export class TaskFinanceComponent implements OnInit {
       const taskGroup = groups.get(request.taskId) ?? {
         requests: [],
         budgetRequests: [],
+        isSubtask: request.isSubtask,
         taskCreatedAt: request.taskCreatedAt
       };
       taskGroup.budgetRequests.push(request);
@@ -282,6 +274,7 @@ export class TaskFinanceComponent implements OnInit {
         const taskGroup = groups.get(transaction.taskId) ?? {
           requests: [],
           budgetRequests: [],
+          isSubtask: transaction.isSubtask,
           taskCreatedAt: transaction.taskCreatedAt
         };
         taskGroup.pendingReturnTaskName = transaction.taskName;
@@ -294,7 +287,7 @@ export class TaskFinanceComponent implements OnInit {
       const issuedAdvance = taskTransactions
         .filter((transaction) => transaction.transactionType === 'ADVANCE_ISSUED')
         .reduce((sum, transaction) => sum + Number(transaction.amount), 0);
-      const { confirmedReturns, inHand } = getTaskCashSummary(taskTransactions);
+      const { confirmedReturns, availableInHand } = getTaskCashSummary(taskTransactions);
       const firstRequest = taskGroup.requests[0];
       const firstBudgetRequest = taskGroup.budgetRequests[0];
       const remainingSanctionedBudget = Number(
@@ -317,6 +310,7 @@ export class TaskFinanceComponent implements OnInit {
 
       return {
         taskId,
+        isSubtask: taskGroup.isSubtask,
         taskCreatedAt: taskGroup.taskCreatedAt,
         taskName: firstRequest?.taskName
           ?? firstBudgetRequest?.taskName
@@ -335,7 +329,7 @@ export class TaskFinanceComponent implements OnInit {
         issuedAdvance,
         remainingAdvance,
         confirmedReturns,
-        inHand,
+        availableInHand,
         remainingSanctionedBudget: Number.isFinite(remainingSanctionedBudget)
           ? remainingSanctionedBudget
           : null,
@@ -355,19 +349,19 @@ export class TaskFinanceComponent implements OnInit {
       : finance.budgetRequests.find((request) => request.id === finance.budgetRequestId) ?? null;
   }
 
-  public budgetRequestsForLedger(finance: TaskFinancePayload): TaskBudgetRequest[] {
-    return finance.budgetRequests.filter((request) =>
-      request.status !== 'PENDING' ||
-      (!finance.canApprove && (request.canReviewCreator || request.canReviewAuthority))
-    );
+  public reviewablePendingBudgetRequest(finance: TaskFinancePayload): TaskBudgetRequest | null {
+    return finance.budgetRequests.find((request) =>
+      request.status === 'PENDING' && (request.canReviewCreator || request.canReviewAuthority)
+    ) ?? null;
   }
 
-  public hasPendingBudgetIncreaseRequests(requests: TaskBudgetRequest[]): boolean {
-    return requests.some((request) => request.status === 'PENDING');
+  public budgetRequestsForLedger(finance: TaskFinancePayload): TaskBudgetRequest[] {
+    return finance.budgetRequests.filter(isVisibleInBudgetRequestLedger);
   }
 
   public shouldShowBudgetReviewColumn(finance: TaskFinancePayload): boolean {
-    return finance.isEventScope && finance.canViewBudgetIncreaseRequests;
+    return finance.isEventScope &&
+      (finance.canViewBudgetIncreaseRequests || finance.canReviewBudgetRequest);
   }
 
   public pendingBudgetIncreaseRequest(group: TaskFinanceRequestGroup): TaskBudgetRequest | null {
@@ -403,13 +397,18 @@ export class TaskFinanceComponent implements OnInit {
     if (item.kind === 'finance') {
       return `Initial · ₹${this.money(item.request.requestedAmount)}`;
     }
-    const change = Number(item.request.requestedIncrease);
-    return `${change < 0 ? '−' : '+'}₹${this.money(Math.abs(change))}`;
+    return `₹${this.money(Math.abs(Number(item.request.requestedIncrease)))}`;
   }
 
   public budgetRequestChangeLabel(request: TaskBudgetRequest): string {
     const change = Number(request.requestedIncrease);
-    return `${change < 0 ? '−' : '+'}₹${this.money(Math.abs(change))}`;
+    const sign = change > 0 ? '+' : change < 0 ? '-' : '';
+    return `${sign}${this.money(Math.abs(change))}`;
+  }
+
+  public budgetRequestChangeClass(request: TaskBudgetRequest): string {
+    const change = Number(request.requestedIncrease);
+    return change > 0 ? 'text-ok' : change < 0 ? 'text-danger' : '';
   }
 
   public canReviewTaskBudgetItem(item: TaskBudgetReviewItem): boolean {
@@ -430,7 +429,11 @@ export class TaskFinanceComponent implements OnInit {
     this.reviewRequest(item.request, decision);
   }
 
-  public openBudgetRequestsDialog(group: TaskFinanceRequestGroup): void {
+  public openBudgetRequestsDialog(
+    group: TaskFinanceRequestGroup,
+    creatorScope = false
+  ): void {
+    const financeSource = creatorScope ? this.creatorSubtaskFinance : this.payload;
     this.dialog.open(TaskBudgetRequestsDialogComponent, {
       position: { right: '0', top: '0' },
       height: '100%',
@@ -442,18 +445,18 @@ export class TaskFinanceComponent implements OnInit {
         taskName: group.taskName,
         assigneeName: group.taskOwnerName,
         requests: computed(() =>
-          (this.payload()?.budgetRequests.filter((request) => request.taskId === group.taskId) ?? [])
+          (financeSource()?.budgetRequests.filter((request) => request.taskId === group.taskId) ?? [])
             .sort((left, right) =>
               left.createdAt.localeCompare(right.createdAt) || left.id - right.id
             )
         ),
         financeRequests: computed(() =>
-          (this.payload()?.requests.filter((request) => request.taskId === group.taskId) ?? [])
+          (financeSource()?.requests.filter((request) => request.taskId === group.taskId) ?? [])
             .sort((left, right) =>
               left.createdAt.localeCompare(right.createdAt) || left.id - right.id
             )
         ),
-        isTreasurer: this.payload()?.canApprove ?? false,
+        isTreasurer: financeSource()?.canApprove ?? false,
         isSaving: this.isSaving,
         reviewRequest: (request: TaskBudgetRequest, decision: 'APPROVE' | 'REJECT') =>
           this.reviewBudgetRequest(request, decision),
@@ -465,7 +468,11 @@ export class TaskFinanceComponent implements OnInit {
     });
   }
 
-  public openFinanceRequestsDialog(group: TaskFinanceRequestGroup): void {
+  public openFinanceRequestsDialog(
+    group: TaskFinanceRequestGroup,
+    creatorScope = false
+  ): void {
+    const financeSource = creatorScope ? this.creatorSubtaskFinance : this.payload;
     this.dialog.open(TaskFinanceRequestsDialogComponent, {
       position: { right: '0', top: '0' },
       height: '100%',
@@ -476,7 +483,7 @@ export class TaskFinanceComponent implements OnInit {
         taskName: group.taskName,
         assigneeName: group.taskOwnerName,
         transactions: computed(() =>
-          this.payload()?.transactions.filter(
+          financeSource()?.transactions.filter(
             (transaction) =>
               transaction.taskId === group.taskId && isVisibleInPaymentHistory(transaction)
           ) ?? []
@@ -598,9 +605,7 @@ export class TaskFinanceComponent implements OnInit {
     this.runAction(
       this.service.reviewBudgetRequest(request.id, decision),
       decision === 'APPROVE'
-        ? request.approvalStage === 'CREATOR'
-          ? 'Budget request approved and sent to the event authority.'
-          : 'Budget request approved and sent to the Treasurer.'
+        ? 'Budget request approved.'
         : 'Budget request rejected.'
     );
   }

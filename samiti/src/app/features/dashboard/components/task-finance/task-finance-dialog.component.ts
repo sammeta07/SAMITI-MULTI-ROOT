@@ -9,6 +9,7 @@ import { TaskFinanceComponent } from './task-finance.component';
 export interface TaskFinanceDialogData {
   taskId?: number;
   eventId?: number;
+  creatorEventScope?: boolean;
   taskName: string;
   ownerName: string | null;
 }
@@ -23,7 +24,9 @@ export interface TaskFinanceDialogData {
         <div class="drawer-title-group">
           <div class="drawer-title-copy">
             <h2>{{ data.taskName | titlecase }}</h2>
-            @if (data.eventId === undefined) {
+            @if (data.creatorEventScope) {
+              <p class="drawer-owner-subtitle">Budget requests for subtasks you created</p>
+            } @else if (data.taskId !== undefined) {
               <p class="drawer-owner-subtitle">Owner: {{ data.ownerName ? (data.ownerName | titlecase) : 'Unassigned' }}</p>
             }
           </div>
@@ -33,7 +36,12 @@ export interface TaskFinanceDialogData {
         </button>
       </mat-toolbar>
       <div class="dialog-body">
-        <app-task-finance [taskId]="data.taskId ?? null" [eventId]="data.eventId ?? null" [loadOnInit]="true" />
+        <app-task-finance
+          [taskId]="data.taskId ?? null"
+          [eventId]="data.eventId ?? null"
+          [creatorEventScope]="data.creatorEventScope ?? false"
+          [loadOnInit]="true"
+        />
       </div>
       <footer class="drawer-action-footer">
         <button mat-button type="button" class="btn-cancel-flat" (click)="close()">Close</button>

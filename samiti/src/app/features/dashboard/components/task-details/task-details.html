@@ -48,21 +48,25 @@
 
             <div class="task-header-budget-controls">
               <span class="task-budget-pills task-header-budget-pills">
+                @let actualBudgetRemaining = taskBudgetRemaining();
                 <span
                   class="task-budget-metric task-budget-remaining"
-                  [matTooltip]="getTaskBudgetRemainingTooltip(taskDetails.taskId, taskDetails.budgetAmount)"
+                  [matTooltip]="actualBudgetRemaining !== null
+                    ? 'Budget Left After Confirmed Checklist Expenses'
+                    : getTaskBudgetRemainingTooltip(taskDetails.taskId, taskDetails.budgetAmount)"
                 >
-                  {{ formatTaskBudgetAmount(getTaskBudgetRemainingAmount(taskDetails.taskId, taskDetails.budgetAmount)) }}
+                  {{ formatTaskBudgetAmount(actualBudgetRemaining
+                    ?? getTaskBudgetRemainingAmount(taskDetails.taskId, taskDetails.budgetAmount)) }}
                 </span>
-                @let inHandAmount = taskInHand();
+                @let availableInHand = taskAvailableInHand();
                 <span
                   class="task-budget-metric task-budget-total"
-                  [matTooltip]="taskDetails.canAccessFinance && inHandAmount !== null
-                    ? 'In-Hand / Sanctioned Amount'
+                  [matTooltip]="taskDetails.canAccessFinance && availableInHand !== null
+                    ? 'Available to Spend / Sanctioned Amount'
                     : 'Sanctioned Amount - ' + formatTaskBudgetAmount(taskDetails.budgetAmount)"
                 >
-                  @if (taskDetails.canAccessFinance && inHandAmount !== null) {
-                    {{ formatInHandAndSanctionedBudget(inHandAmount, taskDetails.budgetAmount) }}
+                  @if (taskDetails.canAccessFinance && availableInHand !== null) {
+                    {{ formatAvailableAndSanctionedBudget(availableInHand, taskDetails.budgetAmount) }}
                   } @else {
                     {{ formatTaskBudgetAmount(taskDetails.budgetAmount) }}
                   }
@@ -194,7 +198,7 @@
                   type="button"
                   [attr.aria-label]="taskDetails.needsFinanceAction ? 'Action required — view task finance' : 'No action required — view task finance'"
                   [matTooltip]="taskDetails.needsFinanceAction ? 'Action required' : 'No action required'"
-                  (click)="openTaskFinanceDialog(taskDetails.taskId, taskDetails.taskName, taskDetails.ownerName, $event)"
+                  (click)="openTaskFinanceDialog(taskDetails.taskId, taskDetails.taskName, taskDetails.ownerName, taskDetails.eventId, $event)"
                 >
                   <mat-icon>currency_rupee</mat-icon>
                 </button>
@@ -561,7 +565,10 @@
                               <mat-icon>edit</mat-icon>
                             </button>
                           }
-                          @if (child.canAccessFinance) {
+                          @if (
+                            child.canAccessFinance &&
+                            !(child.isTaskCreator && taskDetails.canViewCreatedSubtaskFinance)
+                          ) {
                             <button
                               mat-icon-button
                               class="task-panel-finance-icon"
@@ -569,7 +576,7 @@
                               type="button"
                               [attr.aria-label]="child.needsFinanceAction ? 'Action required — view task finance' : 'No action required — view task finance'"
                               [matTooltip]="child.needsFinanceAction ? 'Action required' : 'No action required'"
-                              (click)="openTaskFinanceDialog(child.taskId, child.taskName, child.ownerName, $event)"
+                              (click)="openTaskFinanceDialog(child.taskId, child.taskName, child.ownerName, taskDetails.eventId, $event)"
                             >
                               <mat-icon>currency_rupee</mat-icon>
                             </button>

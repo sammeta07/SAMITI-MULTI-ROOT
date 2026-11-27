@@ -53,6 +53,10 @@ export class ProgramDetailsService {
           id
           title
           expenseAmount
+          expenseStatus
+          expenseConfirmedByName
+          expenseConfirmedAt
+          canConfirmExpense
           status
           isCompleted
           createdBy

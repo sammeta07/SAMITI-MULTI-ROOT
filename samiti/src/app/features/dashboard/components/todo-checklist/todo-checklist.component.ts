@@ -78,6 +78,19 @@ export class TodoChecklistComponent {
     return item.canManage;
   }
 
+  public canDeleteItem(item: TodoItem): boolean {
+    return this.canManageItem(item) &&
+      !(item.expenseStatus === 'CONFIRMED' && Number(item.expenseAmount) > 0);
+  }
+
+  public canConfirmExpenseItem(item: TodoItem): boolean {
+    return this.parentType === 'TASK' &&
+      item.canConfirmExpense &&
+      item.expenseStatus === 'RESERVED' &&
+      item.status !== 'CANCELLED' &&
+      Number(item.expenseAmount) > 0;
+  }
+
   public canUpdateStatusItem(item: TodoItem): boolean {
     return item.canUpdateStatus;
   }
@@ -383,8 +396,38 @@ export class TodoChecklistComponent {
     });
   }
 
+  public confirmExpense(item: TodoItem): void {
+    if (!this.canConfirmExpenseItem(item) || this.pendingIds.has(item.id)) return;
+    const dialogData: ConfirmDialogData = {
+      title: 'Confirm checklist expense?',
+      message: `Confirm that ₹ ${this.formatExpenseAmount(item.expenseAmount)} has been paid. This will update available cash.`,
+      confirmText: 'Mark as paid',
+      cancelText: 'Cancel',
+      iconType: 'warning',
+      highlightText: this.toSentenceCase(item.title)
+    };
+
+    this.confirmDialog.open(dialogData).afterClosed().subscribe((result) => {
+      if (!result?.confirmed || this.pendingIds.has(item.id)) return;
+      this.pendingIds.add(item.id);
+      this.service.confirmExpense(item.id).subscribe({
+        next: (updated) => {
+          this.items = this.items.map((entry) => (entry.id === updated.id ? updated : entry));
+          this.itemsChange.emit(this.items);
+          this.pendingIds.delete(item.id);
+        },
+        error: (error) => {
+          this.pendingIds.delete(item.id);
+          this.notifier.error(
+            error?.error?.errors?.[0]?.message || error?.message || 'Failed to confirm checklist expense.'
+          );
+        }
+      });
+    });
+  }
+
   public remove(item: TodoItem): void {
-    if (!this.canManageItem(item) || this.pendingIds.has(item.id)) return;
+    if (!this.canDeleteItem(item) || this.pendingIds.has(item.id)) return;
 
     const dialogData: ConfirmDialogData = {
       title: 'Delete checklist item?',

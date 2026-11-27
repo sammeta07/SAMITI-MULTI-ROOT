@@ -22,6 +22,10 @@ export class TodoChecklistService {
         id
         title
         expenseAmount
+        expenseStatus
+        expenseConfirmedByName
+        expenseConfirmedAt
+        canConfirmExpense
         status
         isCompleted
         createdBy
@@ -51,6 +55,10 @@ export class TodoChecklistService {
         id
         title
         expenseAmount
+        expenseStatus
+        expenseConfirmedByName
+        expenseConfirmedAt
+        canConfirmExpense
         status
         isCompleted
         createdBy
@@ -80,6 +88,10 @@ export class TodoChecklistService {
         id
         title
         expenseAmount
+        expenseStatus
+        expenseConfirmedByName
+        expenseConfirmedAt
+        canConfirmExpense
         status
         isCompleted
         createdBy
@@ -109,6 +121,10 @@ export class TodoChecklistService {
         id
         title
         expenseAmount
+        expenseStatus
+        expenseConfirmedByName
+        expenseConfirmedAt
+        canConfirmExpense
         status
         isCompleted
         createdBy
@@ -138,6 +154,10 @@ export class TodoChecklistService {
         id
         title
         expenseAmount
+        expenseStatus
+        expenseConfirmedByName
+        expenseConfirmedAt
+        canConfirmExpense
         status
         isCompleted
         createdBy
@@ -159,6 +179,38 @@ export class TodoChecklistService {
       { query: mutation, variables: { todoId, ownerUserId } },
       { withCredentials: true }
     ).pipe(map((response) => this.extract(response, 'assignTodo')));
+  }
+
+  public confirmExpense(todoId: number): Observable<TodoItem> {
+    const mutation = `mutation ConfirmTodoExpense($todoId: Int!) {
+      confirmTodoExpense(todoId: $todoId) {
+        id
+        title
+        expenseAmount
+        expenseStatus
+        expenseConfirmedByName
+        expenseConfirmedAt
+        canConfirmExpense
+        status
+        isCompleted
+        createdBy
+        canManage
+        canUpdateStatus
+        assignedUserId
+        assignedUserName
+        createdByName
+        createdAt
+        assignedByName
+        assignedAt
+        updatedByName
+        updatedAt
+      }
+    }`;
+    return this.http.post<GraphqlResponse<{ confirmTodoExpense: TodoItem }>>(
+      this.graphqlUrl,
+      { query: mutation, variables: { todoId } },
+      { withCredentials: true }
+    ).pipe(map((response) => this.extract(response, 'confirmTodoExpense')));
   }
 
   public delete(todoId: number): Observable<boolean> {

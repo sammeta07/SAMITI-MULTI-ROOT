@@ -6,8 +6,7 @@ import {
   TaskFinancePayload,
   TaskFinanceRequest,
   TaskFinanceTransaction,
-  TaskFinanceTransactionType,
-  TaskSubtaskTransfer
+  TaskFinanceTransactionType
 } from './task-finance.models';
 
 interface GraphqlResponse<T> {
@@ -24,43 +23,30 @@ export class TaskFinanceService {
     const query = `query TaskFinance($taskId: Int!) {
       taskFinance(taskId: $taskId) {
         requests {
-          id taskId sourceBudgetRequestId taskName taskBudgetAmount budgetAvailableForDisbursement remainingSanctionedBudget checklistExpenseAmount taskOwnerName taskOwnerUserId requestType approvalStage
+          id taskId isSubtask sourceBudgetRequestId taskName taskBudgetAmount budgetAvailableForDisbursement remainingSanctionedBudget checklistExpenseAmount taskOwnerName taskOwnerUserId requestType approvalStage
           requestedAmount approvedAmount reason status requestedByName reviewedByName reviewNote
           authorityDecision authorityReviewedByName authorityReviewNote authorityReviewedAt
           canReviewAuthority createdAt taskCreatedAt reviewedAt
         }
         budgetRequests {
-          id taskId taskName taskOwnerName remainingSanctionedBudget checklistExpenseAmount requestedAmount budgetBeforeRequest requestedIncrease
+          id taskId isSubtask taskName taskOwnerName remainingSanctionedBudget checklistExpenseAmount requestedAmount budgetBeforeRequest requestedIncrease
           requestedByName actionByName status approvalStage creatorDecision creatorReviewedByName
           creatorReviewerDesignation creatorReviewedAt authorityDecision
           authorityReviewedByName authorityReviewerDesignation authorityReviewedAt
           createdAt taskCreatedAt canReviewCreator canReviewAuthority canCancel
         }
         transactions {
-          id taskId taskName taskOwnerName requestId transactionType amount description status checklistExpenseAmount
+          id taskId isSubtask taskName taskOwnerName requestId transactionType amount description status checklistExpenseAmount checklistReservedAmount
           createdByName confirmedByName createdAt taskCreatedAt confirmedAt
           recipientName receivedByName receivedAt canConfirmReceipt canConfirmReturn canCancel
         }
-        subtaskTransferOptions {
-          subtaskId subtaskName ownerName budgetAmount availableAmount
-        }
-        incomingSubtaskTransfers {
-          id parentTaskId parentTaskName subtaskId subtaskName
-          senderName recipientName amount description status createdAt
-          confirmedByName confirmedAt canConfirmReceipt
-        }
-        outgoingSubtaskTransfers {
-          id parentTaskId parentTaskName subtaskId subtaskName
-          senderName recipientName amount description status createdAt
-          confirmedByName confirmedAt canConfirmReceipt
-        }
         summary {
-          sanctionedBudget checklistExpenses subtaskSpent remainingBudget
-          advanceIssued advanceSpent returnPending returnConfirmed advanceBalance
+          sanctionedBudget checklistExpenses checklistReserved subtaskSpent remainingBudget
+          advanceIssued advanceSpent returnPending returnConfirmed advanceBalance availableInHand
         }
         budgetAmount budgetRequestId requestedBudgetAmount budgetRequestStatus budgetRequestedByName
         canEditBudget canReduceBudget maxBudgetReduction canRequestBudgetIncrease canReviewBudgetRequest canCancelBudgetRequest
-        canRequest canApprove isBudgetAuthority canViewBudgetIncreaseRequests canViewTaskAssignee canCreateSubtaskTransfers isEventScope
+        canRequest canApprove isBudgetAuthority canViewBudgetIncreaseRequests canViewTaskAssignee canViewCreatedSubtaskFinance isEventScope
       }
     }`;
 
@@ -72,43 +58,106 @@ export class TaskFinanceService {
     const query = `query EventTaskFinance($eventId: Int!) {
       eventTaskFinance(eventId: $eventId) {
         requests {
-          id taskId sourceBudgetRequestId taskName taskBudgetAmount budgetAvailableForDisbursement remainingSanctionedBudget checklistExpenseAmount taskOwnerName taskOwnerUserId requestType approvalStage
+          id taskId isSubtask sourceBudgetRequestId taskName taskBudgetAmount budgetAvailableForDisbursement remainingSanctionedBudget checklistExpenseAmount taskOwnerName taskOwnerUserId requestType approvalStage
           requestedAmount approvedAmount reason status requestedByName reviewedByName reviewNote
           authorityDecision authorityReviewedByName authorityReviewNote authorityReviewedAt
           canReviewAuthority createdAt taskCreatedAt reviewedAt
         }
         budgetRequests {
-          id taskId taskName taskOwnerName remainingSanctionedBudget checklistExpenseAmount requestedAmount budgetBeforeRequest requestedIncrease
+          id taskId isSubtask taskName taskOwnerName remainingSanctionedBudget checklistExpenseAmount requestedAmount budgetBeforeRequest requestedIncrease
           requestedByName actionByName status approvalStage creatorDecision creatorReviewedByName
           creatorReviewerDesignation creatorReviewedAt authorityDecision
           authorityReviewedByName authorityReviewerDesignation authorityReviewedAt
           createdAt taskCreatedAt canReviewCreator canReviewAuthority canCancel
         }
         transactions {
-          id taskId taskName taskOwnerName requestId transactionType amount description status checklistExpenseAmount
+          id taskId isSubtask taskName taskOwnerName requestId transactionType amount description status checklistExpenseAmount checklistReservedAmount
           createdByName confirmedByName createdAt taskCreatedAt confirmedAt
           recipientName receivedByName receivedAt canConfirmReceipt canConfirmReturn canCancel
         }
-        subtaskTransferOptions { subtaskId subtaskName ownerName budgetAmount availableAmount }
-        incomingSubtaskTransfers {
-          id parentTaskId parentTaskName subtaskId subtaskName senderName recipientName
-          amount description status createdAt confirmedByName confirmedAt canConfirmReceipt
-        }
-        outgoingSubtaskTransfers {
-          id parentTaskId parentTaskName subtaskId subtaskName senderName recipientName
-          amount description status createdAt confirmedByName confirmedAt canConfirmReceipt
-        }
         summary {
-          sanctionedBudget checklistExpenses subtaskSpent remainingBudget
-          advanceIssued advanceSpent returnPending returnConfirmed advanceBalance
+          sanctionedBudget checklistExpenses checklistReserved subtaskSpent remainingBudget
+          advanceIssued advanceSpent returnPending returnConfirmed advanceBalance availableInHand
         }
         budgetAmount budgetRequestId requestedBudgetAmount budgetRequestStatus budgetRequestedByName
         canEditBudget canReduceBudget maxBudgetReduction canRequestBudgetIncrease canReviewBudgetRequest canCancelBudgetRequest
-        canRequest canApprove isBudgetAuthority canViewBudgetIncreaseRequests canViewTaskAssignee canCreateSubtaskTransfers isEventScope
+        canRequest canApprove isBudgetAuthority canViewBudgetIncreaseRequests canViewTaskAssignee canViewCreatedSubtaskFinance isEventScope
       }
     }`;
     return this.request<{ eventTaskFinance: TaskFinancePayload }>(query, { eventId })
       .pipe(map((response) => response.eventTaskFinance));
+  }
+
+  public getCreatorSubtaskFinance(eventId: number, parentTaskId: number): Observable<TaskFinancePayload> {
+    const query = `query CreatorSubtaskFinance($eventId: Int!, $parentTaskId: Int!) {
+      creatorSubtaskFinance(eventId: $eventId, parentTaskId: $parentTaskId) {
+        requests {
+          id taskId isSubtask sourceBudgetRequestId taskName taskBudgetAmount budgetAvailableForDisbursement remainingSanctionedBudget checklistExpenseAmount taskOwnerName taskOwnerUserId requestType approvalStage
+          requestedAmount approvedAmount reason status requestedByName reviewedByName reviewNote
+          authorityDecision authorityReviewedByName authorityReviewNote authorityReviewedAt
+          canReviewAuthority createdAt taskCreatedAt reviewedAt
+        }
+        budgetRequests {
+          id taskId isSubtask taskName taskOwnerName remainingSanctionedBudget checklistExpenseAmount requestedAmount budgetBeforeRequest requestedIncrease
+          requestedByName actionByName status approvalStage creatorDecision creatorReviewedByName
+          creatorReviewerDesignation creatorReviewedAt authorityDecision
+          authorityReviewedByName authorityReviewerDesignation authorityReviewedAt
+          createdAt taskCreatedAt canReviewCreator canReviewAuthority canCancel
+        }
+        transactions {
+          id taskId isSubtask taskName taskOwnerName requestId transactionType amount description status checklistExpenseAmount checklistReservedAmount
+          createdByName confirmedByName createdAt taskCreatedAt confirmedAt
+          recipientName receivedByName receivedAt canConfirmReceipt canConfirmReturn canCancel
+        }
+        summary {
+          sanctionedBudget checklistExpenses checklistReserved subtaskSpent remainingBudget
+          advanceIssued advanceSpent returnPending returnConfirmed advanceBalance availableInHand
+        }
+        budgetAmount budgetRequestId requestedBudgetAmount budgetRequestStatus budgetRequestedByName
+        canEditBudget canReduceBudget maxBudgetReduction canRequestBudgetIncrease canReviewBudgetRequest canCancelBudgetRequest
+        canRequest canApprove isBudgetAuthority canViewBudgetIncreaseRequests canViewTaskAssignee canViewCreatedSubtaskFinance isEventScope
+      }
+    }`;
+    return this.request<{ creatorSubtaskFinance: TaskFinancePayload }>(
+      query,
+      { eventId, parentTaskId }
+    ).pipe(map((response) => response.creatorSubtaskFinance));
+  }
+
+  public getCreatorEventSubtaskFinance(eventId: number): Observable<TaskFinancePayload> {
+    const query = `query CreatorEventSubtaskFinance($eventId: Int!) {
+      creatorEventSubtaskFinance(eventId: $eventId) {
+        requests {
+          id taskId isSubtask sourceBudgetRequestId taskName taskBudgetAmount budgetAvailableForDisbursement remainingSanctionedBudget checklistExpenseAmount taskOwnerName taskOwnerUserId requestType approvalStage
+          requestedAmount approvedAmount reason status requestedByName reviewedByName reviewNote
+          authorityDecision authorityReviewedByName authorityReviewNote authorityReviewedAt
+          canReviewAuthority createdAt taskCreatedAt reviewedAt
+        }
+        budgetRequests {
+          id taskId isSubtask taskName taskOwnerName remainingSanctionedBudget checklistExpenseAmount requestedAmount budgetBeforeRequest requestedIncrease
+          requestedByName actionByName status approvalStage creatorDecision creatorReviewedByName
+          creatorReviewerDesignation creatorReviewedAt authorityDecision
+          authorityReviewedByName authorityReviewerDesignation authorityReviewedAt
+          createdAt taskCreatedAt canReviewCreator canReviewAuthority canCancel
+        }
+        transactions {
+          id taskId isSubtask taskName taskOwnerName requestId transactionType amount description status checklistExpenseAmount checklistReservedAmount
+          createdByName confirmedByName createdAt taskCreatedAt confirmedAt
+          recipientName receivedByName receivedAt canConfirmReceipt canConfirmReturn canCancel
+        }
+        summary {
+          sanctionedBudget checklistExpenses checklistReserved subtaskSpent remainingBudget
+          advanceIssued advanceSpent returnPending returnConfirmed advanceBalance availableInHand
+        }
+        budgetAmount budgetRequestId requestedBudgetAmount budgetRequestStatus budgetRequestedByName
+        canEditBudget canReduceBudget maxBudgetReduction canRequestBudgetIncrease canReviewBudgetRequest canCancelBudgetRequest
+        canRequest canApprove isBudgetAuthority canViewBudgetIncreaseRequests canViewTaskAssignee canViewCreatedSubtaskFinance isEventScope
+      }
+    }`;
+    return this.request<{ creatorEventSubtaskFinance: TaskFinancePayload }>(
+      query,
+      { eventId }
+    ).pipe(map((response) => response.creatorEventSubtaskFinance));
   }
 
   public reviewBudgetRequest(requestId: number, decision: 'APPROVE' | 'REJECT'): Observable<unknown> {
@@ -219,36 +268,6 @@ export class TaskFinanceService {
     }`;
     return this.request<{ cancelTaskFinanceReturn: TaskFinanceTransaction }>(mutation, { transactionId })
       .pipe(map((response) => response.cancelTaskFinanceReturn));
-  }
-
-  public createSubtaskTransfer(
-    parentTaskId: number,
-    subtaskId: number,
-    amount: string,
-    description: string
-  ): Observable<TaskSubtaskTransfer> {
-    const mutation = `mutation CreateSubtaskTransfer($input: CreateSubtaskTransferInput!) {
-      createSubtaskTransfer(input: $input) {
-        id parentTaskId parentTaskName subtaskId subtaskName
-        senderName recipientName amount description status createdAt
-        confirmedByName confirmedAt canConfirmReceipt
-      }
-    }`;
-    return this.request<{ createSubtaskTransfer: TaskSubtaskTransfer }>(mutation, {
-      input: { parentTaskId, subtaskId, amount: String(amount), description }
-    }).pipe(map((response) => response.createSubtaskTransfer));
-  }
-
-  public confirmSubtaskTransferReceipt(transferId: number): Observable<TaskSubtaskTransfer> {
-    const mutation = `mutation ConfirmSubtaskTransferReceipt($transferId: Int!) {
-      confirmSubtaskTransferReceipt(transferId: $transferId) {
-        id parentTaskId parentTaskName subtaskId subtaskName
-        senderName recipientName amount description status createdAt
-        confirmedByName confirmedAt canConfirmReceipt
-      }
-    }`;
-    return this.request<{ confirmSubtaskTransferReceipt: TaskSubtaskTransfer }>(mutation, { transferId })
-      .pipe(map((response) => response.confirmSubtaskTransferReceipt));
   }
 
   private request<T>(query: string, variables: Record<string, unknown>): Observable<T> {

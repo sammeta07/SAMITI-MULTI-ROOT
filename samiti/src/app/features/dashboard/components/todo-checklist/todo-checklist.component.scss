@@ -63,7 +63,7 @@
   min-height: 42px;
   padding: 0 12px;
   align-items: center;
-  grid-template-columns: minmax(0, 1fr) 130px minmax(0, 360px) 94px;
+  grid-template-columns: minmax(0, 1fr) 168px minmax(0, 360px) 128px;
   gap: 6px;
   box-sizing: border-box;
 }
@@ -362,7 +362,7 @@
 .todo-panel-actions {
   grid-column: 4;
   display: flex;
-  min-width: 94px;
+  min-width: 128px;
   align-items: center;
   justify-content: flex-end;
   gap: 4px;
@@ -513,6 +513,21 @@
       background: #f0fdf4;
     }
   }
+
+  .todo-paid-action {
+    width: 28px;
+    height: 28px;
+    flex-basis: 28px;
+    border-color: #bbf7d0;
+    border-radius: 6px;
+    background: #f0fdf4;
+    color: #15803d;
+
+    &:hover:not(:disabled) {
+      border-color: #86efac;
+      background: #dcfce7;
+    }
+  }
 }
 
 .todo-expansion-panel .todo-status-label {
@@ -520,9 +535,10 @@
   min-height: 24px;
   flex: 0 0 auto;
   width: 120px;
-  padding: 0 8px;
-  justify-content: center;
+  padding: 0 7px;
+  justify-content: flex-start;
   font-size: 0.65rem;
+  text-align: left;
 }
 
 .todo-status-dropdown-wrapper {
@@ -560,6 +576,7 @@
   font-weight: 600;
   letter-spacing: 0.02em;
   text-transform: uppercase;
+  white-space: nowrap;
   cursor: pointer;
 
   &.todo-status-new,
@@ -631,10 +648,10 @@
     justify-content: flex-end;
   }
 
-  .todo-panel-expense,
-  .todo-panel-expense-edit {
+  .todo-panel-expense-cell {
     grid-column: 1;
     grid-row: 3;
+    justify-content: flex-start;
   }
 
   .todo-panel-actions {
@@ -914,18 +931,33 @@
   grid-column: 2;
 }
 
+.todo-panel-expense-cell {
+  display: inline-flex;
+  width: 100%;
+  min-width: 0;
+  grid-column: 2;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 5px;
+}
+
 .todo-panel-expense {
   display: inline-flex;
+  box-sizing: border-box;
+  width: 90px;
+  min-width: 90px;
+  height: 24px;
+  flex: 0 0 90px;
   align-items: center;
   justify-content: center;
-  gap: 4px;
-  padding: 2px 8px;
+  padding: 0 5px;
   border: 1px solid #fecaca;
-  border-radius: 999px;
+  border-radius: 5px;
   background: #fef2f2;
   color: #b91c1c;
-  font-size: 0.76rem;
+  font-size: 0.68rem;
   font-weight: 700;
+  font-variant-numeric: tabular-nums;
   white-space: nowrap;
 }
 
@@ -939,11 +971,49 @@
   white-space: nowrap;
 }
 
-.todo-panel-expense-edit {
+.todo-expense-cell {
   display: inline-flex;
   align-items: center;
+  gap: 5px;
+}
+
+.todo-expense-state {
+  display: inline-flex;
+  box-sizing: border-box;
+  width: 68px;
+  min-width: 68px;
+  height: 22px;
+  flex: 0 0 68px;
+  align-items: center;
+  justify-content: center;
+  padding: 0 4px;
+  border: 1px solid #bfdbfe;
+  border-radius: 999px;
+  background: #eff6ff;
+  color: #1d4ed8;
+  font-size: 0.6rem;
+  font-weight: 700;
+  line-height: 1;
+  text-align: center;
+  white-space: nowrap;
+}
+
+.todo-expense-confirmed {
+  border-color: #86efac;
+  background: #f0fdf4;
+  color: #15803d;
+}
+
+.todo-panel-expense-edit {
+  display: inline-flex;
+  box-sizing: border-box;
+  width: 90px;
+  min-width: 90px;
+  height: 24px;
+  flex: 0 0 90px;
+  align-items: center;
   gap: 4px;
-  padding: 1px 5px;
+  padding: 0 5px;
   border: 1px solid #fecaca;
   border-radius: 4px;
   background: #fef2f2;
@@ -955,10 +1025,11 @@
   }
 
   .todo-expense-input {
-    width: 96px;
-    min-width: 76px;
-    height: 26px;
-    padding: 0 5px;
+    width: 0;
+    min-width: 0;
+    height: 22px;
+    flex: 1 1 auto;
+    padding: 0;
     border: 0;
     border-radius: 0;
     background: transparent;
@@ -1076,6 +1147,10 @@
 .todo-clear-button:hover {
   background: #f1f5f9;
   color: #1e293b;
+}
+
+.todo-paid-action {
+  color: #15803d;
 }
 
 .todo-add-form button:hover {

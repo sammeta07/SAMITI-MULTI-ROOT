@@ -42,6 +42,8 @@ export interface EventTaskEntry {
   canAssignOwner: boolean;
   canDelete: boolean;
   canAccessFinance?: boolean;
+  isTaskCreator?: boolean;
+  canViewCreatedSubtaskFinance?: boolean;
   needsFinanceAction?: boolean;
 }
 

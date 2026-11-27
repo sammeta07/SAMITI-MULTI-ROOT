@@ -70,6 +70,7 @@ export class EventDetailsOverviewService {
         totalApprovedBudget
         hasFinanceAction
         canAccessTaskFinance
+        canAccessCreatedSubtaskFinance
         canEditEvent
         canDeleteEvent
         type

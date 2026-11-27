@@ -29,6 +29,7 @@ export interface TaskChild {
   canAssignOwner: boolean;
   canDelete: boolean;
   canAccessFinance?: boolean;
+  isTaskCreator: boolean;
   needsFinanceAction?: boolean;
 }
 
@@ -36,6 +37,7 @@ export interface TaskDetailsPayload {
   taskId: number;
   taskName: string;
   budgetAmount: string;
+  remainingBudgetAfterExpenses: string;
   budgetRequestId: number | null;
   requestedBudgetAmount: string | null;
   budgetRequestStatus: string | null;
@@ -70,5 +72,6 @@ export interface TaskDetailsPayload {
   canManageTodos: boolean;
   canToggleTodos: boolean;
   canAccessFinance: boolean;
+  canViewCreatedSubtaskFinance: boolean;
   needsFinanceAction?: boolean;
 }
