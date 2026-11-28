@@ -50,6 +50,7 @@ export interface TaskDetailsPayload {
   eventName: string;
   parentTaskId: number | null;
   parentTaskName: string | null;
+  parentOwnerUserId: number | null;
   ownerUserId: number | null;
   ownerName: string | null;
   assignedByName: string | null;

@@ -17,6 +17,7 @@
             <div class="task-create-title">
               <span class="task-create-input-wrapper">
                 <input
+                  #newTaskTitleInput
                   type="text"
                   maxlength="255"
                   placeholder="Enter task title"
@@ -49,6 +50,8 @@
                 appWholeRupee
                 [value]="newTaskBudget"
                 (input)="newTaskBudget = $any($event.target).value"
+                (focus)="onNewTaskBudgetFocus()"
+                (blur)="onNewTaskBudgetBlur()"
                 [disabled]="isSavingTask"
                 aria-label="Task budget in rupees"
                 (keydown.enter)="onSaveTask()"
@@ -63,7 +66,7 @@
                 aria-label="Save task"
                 matTooltip="Save task"
               >
-                <mat-icon>{{ isSavingTask ? 'hourglass_top' : 'save' }}</mat-icon>
+                <mat-icon>{{ isSavingTask ? 'hourglass_top' : 'check' }}</mat-icon>
               </button>
               <button
                 type="button"

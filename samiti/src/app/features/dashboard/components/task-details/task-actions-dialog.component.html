@@ -1,10 +1,23 @@
 <div class="drawer-layout-shell">
   <mat-toolbar class="drawer-synchronized-header">
     <div class="drawer-title-group">
-      <h2>{{ task.taskName | titlecase }}</h2>
+      <div class="header-icon-badge">
+        <mat-icon>assignment</mat-icon>
+      </div>
+      <div class="header-title-stack">
+        <h2>{{ task.taskName | titlecase }}</h2>
+        <span class="header-task-id">Task #{{ task.taskId }}</span>
+      </div>
     </div>
 
-    <button mat-icon-button type="button" class="drawer-close-btn" (click)="onClose()" aria-label="Close dialog" matTooltip="Close">
+    <button
+      mat-icon-button
+      type="button"
+      class="drawer-close-btn"
+      (click)="onClose()"
+      aria-label="Close dialog"
+      matTooltip="Close"
+    >
       <mat-icon>close</mat-icon>
     </button>
   </mat-toolbar>
@@ -13,9 +26,13 @@
     <!-- Task Information Card -->
     <section class="task-dialog-card" aria-label="Task details">
       <div class="section-header-row">
-        <span class="section-label-tag"><mat-icon>info</mat-icon> Task Information</span>
+        <span class="section-label-tag">
+          <mat-icon>info_outline</mat-icon>
+          Task Information
+        </span>
         @if (!task.canUpdateStatus) {
           <span class="task-status-pill" [ngClass]="'task-status-' + statusClass(task.status)">
+            <span class="status-dot"></span>
             {{ displayStatus(task.status) }}
           </span>
         }
@@ -28,7 +45,7 @@
         </div>
         <div class="task-dialog-detail">
           <span>Parent task</span>
-          <strong>{{ task.parentTaskName || 'None' }}</strong>
+          <strong>{{ task.parentTaskName ? (task.parentTaskName | titlecase) : 'None' }}</strong>
         </div>
         <div class="task-dialog-detail">
           <span>Created by</span>
@@ -61,7 +78,10 @@
     @if (canOpenTaskActions()) {
       <section class="task-dialog-card">
         <div class="section-header-row">
-          <span class="section-label-tag"><mat-icon>tune</mat-icon> Manage & Edit</span>
+          <span class="section-label-tag">
+            <mat-icon>tune</mat-icon>
+            Manage &amp; Edit
+          </span>
         </div>
 
         <div class="action-rows-stack">
@@ -69,9 +89,25 @@
             <div class="task-dialog-action-row">
               <label for="task-dialog-name">Task name</label>
               <div class="task-dialog-control">
-                <input id="task-dialog-name" [(ngModel)]="taskName" maxlength="255" placeholder="Task name" aria-label="Task name" [disabled]="isSavingAction()" />
-                <button mat-icon-button type="button" class="icon-action-button" [disabled]="isSavingAction() || !taskName.trim() || taskName.trim() === task.taskName" (click)="submitRename()" aria-label="Save task name" title="Save task name">
-                  <mat-icon>save</mat-icon>
+                <input
+                  id="task-dialog-name"
+                  class="uniform-control-input"
+                  [(ngModel)]="taskName"
+                  maxlength="255"
+                  placeholder="Enter task name"
+                  aria-label="Task name"
+                  [disabled]="isSavingAction()"
+                />
+                <button
+                  mat-icon-button
+                  type="button"
+                  class="icon-action-button"
+                  [disabled]="isSavingAction() || !taskName.trim() || taskName.trim() === task.taskName"
+                  (click)="submitRename()"
+                  aria-label="Save task name"
+                  matTooltip="Save task name"
+                >
+                  <mat-icon>check</mat-icon>
                 </button>
               </div>
             </div>
@@ -138,7 +174,8 @@
                       @for (assignee of getFilteredOwnerAssignees(); track assignee.userId) {
                         <mat-option
                           [value]="assignee.userId"
-                          [disabled]="isCurrentOwnerAssignee(assignee.userId)"
+                          [disabled]="isDisabledOwnerAssignee(assignee.userId)"
+                          [matTooltip]="isParentTaskOwner(assignee.userId) ? 'Subtasks cannot be assigned to their parent task owner' : ''"
                           class="da-opt-row"
                           [ngClass]="getRoleColorClass(assignee.committeeRole)"
                         >
@@ -167,15 +204,23 @@
                     </mat-autocomplete>
                   </mat-form-field>
                 </span>
-                <button mat-icon-button type="button" class="icon-action-button" [disabled]="isSavingAction() || !hasOwnerChanged()" (click)="submitOwner()" aria-label="Save task owner" title="Save task owner">
-                  <mat-icon>save</mat-icon>
+                <button
+                  mat-icon-button
+                  type="button"
+                  class="icon-action-button"
+                  [disabled]="isSavingAction() || !hasOwnerChanged()"
+                  (click)="submitOwner()"
+                  aria-label="Save task owner"
+                  matTooltip="Save task owner"
+                >
+                  <mat-icon>check</mat-icon>
                 </button>
               </div>
             </div>
           } @else {
             <div class="task-dialog-action-row readonly-row">
               <span class="task-dialog-row-label">Owner</span>
-              <strong>{{ task.ownerName || 'Unassigned' }}</strong>
+              <strong>{{ task.ownerName ? (task.ownerName | titlecase) : 'Unassigned' }}</strong>
             </div>
           }
 
@@ -183,7 +228,13 @@
             <div class="task-dialog-action-row">
               <label for="task-dialog-status">Status</label>
               <div class="task-dialog-control">
-                <select id="task-dialog-status" [(ngModel)]="status" aria-label="Task status" [disabled]="isSavingAction()">
+                <select
+                  id="task-dialog-status"
+                  class="uniform-control-input"
+                  [(ngModel)]="status"
+                  aria-label="Task status"
+                  [disabled]="isSavingAction()"
+                >
                   @if (!isSupportedStatus(task.status) && task.status) {
                     <option [value]="currentStatusValue()" disabled>{{ displayStatus(task.status) }} (LEGACY)</option>
                   }
@@ -191,17 +242,23 @@
                     <option [value]="taskStatus">{{ displayStatus(taskStatus) }}</option>
                   }
                 </select>
-                <button mat-icon-button type="button" class="icon-action-button" [disabled]="isSavingAction() || status === currentStatusValue()" (click)="submitStatus()" aria-label="Save task status" title="Save task status">
-                  <mat-icon>save</mat-icon>
+                <button
+                  mat-icon-button
+                  type="button"
+                  class="icon-action-button"
+                  [disabled]="isSavingAction() || status === currentStatusValue()"
+                  (click)="submitStatus()"
+                  aria-label="Save task status"
+                  matTooltip="Save task status"
+                >
+                  <mat-icon>check</mat-icon>
                 </button>
               </div>
             </div>
           }
-
         </div>
       </section>
     }
-
   </div>
 
   <footer class="drawer-action-footer">

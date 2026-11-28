@@ -517,14 +517,12 @@ export const todoResolvers = {
              ${parentColumn}, title, expense_amount, expense_status, status,
              assigned_user_id, assigned_by, assigned_at, created_by, updated_by
            )
-           VALUES (?, ?, ?, ?, 'NEW', ?, ?, CURRENT_TIMESTAMP, ?, ?)`,
+           VALUES (?, ?, ?, ?, 'NEW', NULL, NULL, NULL, ?, ?)`,
           [
             parentId,
             title,
             expenseAmount,
             parentType === 'TASK' ? 'RESERVED' : 'CONFIRMED',
-            userId,
-            userId,
             userId,
             userId
           ]

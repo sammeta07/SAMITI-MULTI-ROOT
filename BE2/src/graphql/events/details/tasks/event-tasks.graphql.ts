@@ -887,9 +887,11 @@ export const eventTasksResolvers = {
       const loggedInUserId = await getLoggedInUserId(context);
       const taskRows = await query<any[]>(
         `SELECT t.event_id AS eventId, e.committee_id AS committeeId,
-                t.owner_user_id AS ownerUserId
+                t.owner_user_id AS ownerUserId, t.parent_id AS parentTaskId,
+                parent.owner_user_id AS parentOwnerUserId
          FROM tasks t
          INNER JOIN events e ON e.id = t.event_id
+         LEFT JOIN tasks parent ON parent.id = t.parent_id
          WHERE t.id = ?
          LIMIT 1`,
         [taskId]
@@ -900,6 +902,14 @@ export const eventTasksResolvers = {
 
       const task = taskRows[0];
       await assertCanAssignTask(taskId, loggedInUserId);
+
+      if (
+        task.parentTaskId !== null &&
+        ownerUserId !== null &&
+        Number(task.parentOwnerUserId) === ownerUserId
+      ) {
+        throwEventError('BAD_REQUEST', 'A subtask cannot be assigned to its parent task owner');
+      }
 
       if (ownerUserId !== null) {
         const ownerRows = await query<any[]>(

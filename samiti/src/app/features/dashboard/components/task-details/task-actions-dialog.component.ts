@@ -81,10 +81,15 @@ export class TaskActionsDialogComponent {
   }
 
   public submitOwner(): void {
-    if (!this.task.canAssignOwner || !this.hasOwnerChanged()) return;
+    const selectedOwnerId = this.ownerUserId ? Number(this.ownerUserId) : null;
+    if (
+      !this.task.canAssignOwner ||
+      !this.hasOwnerChanged() ||
+      (selectedOwnerId !== null && this.isDisabledOwnerAssignee(selectedOwnerId))
+    ) return;
     void this.runAction({
       action: 'assign-owner',
-      ownerUserId: this.ownerUserId ? Number(this.ownerUserId) : null
+      ownerUserId: selectedOwnerId
     });
   }
 
@@ -138,14 +143,24 @@ export class TaskActionsDialogComponent {
 
   public onOwnerSelected(event: MatAutocompleteSelectedEvent): void {
     const selectedValue = event.option.value;
+    if (event.option.disabled || this.isDisabledOwnerAssignee(Number(selectedValue))) return;
     this.ownerUserId = selectedValue === '' ? '' : String(selectedValue);
     this.ownerSearchText = selectedValue === ''
       ? 'Unassigned'
       : this.task.taskAssignees.find((member) => Number(member.userId) === Number(selectedValue))?.name || '';
   }
 
-  public isCurrentOwnerAssignee(userId: number): boolean {
-    return this.task.ownerUserId !== null && Number(this.task.ownerUserId) === Number(userId);
+  public isDisabledOwnerAssignee(userId: number): boolean {
+    return (
+      this.task.ownerUserId !== null &&
+      Number(this.task.ownerUserId) === Number(userId)
+    ) || this.isParentTaskOwner(userId);
+  }
+
+  public isParentTaskOwner(userId: number): boolean {
+    return this.task.parentTaskId !== null &&
+      this.task.parentOwnerUserId !== null &&
+      Number(this.task.parentOwnerUserId) === Number(userId);
   }
 
   public getSelectedOwnerAssignee(): TaskAssignee | undefined {
@@ -198,6 +213,11 @@ export class TaskActionsDialogComponent {
 
   private async runAction(result: TaskActionsDialogResult): Promise<void> {
     if (this.isSavingAction()) return;
+    if (
+      result.action === 'assign-owner' &&
+      result.ownerUserId !== null &&
+      this.isDisabledOwnerAssignee(result.ownerUserId)
+    ) return;
 
     this.isSavingAction.set(true);
     try {

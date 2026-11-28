@@ -1,4 +1,4 @@
-import { Component, inject, signal, OnInit, OnDestroy, QueryList, ViewChildren } from '@angular/core';
+import { Component, ElementRef, inject, signal, OnInit, OnDestroy, QueryList, ViewChild, ViewChildren } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { MatIconModule } from '@angular/material/icon';
@@ -47,6 +47,7 @@ import { TaskFinanceDialogService } from '../../task-finance/task-finance-dialog
 })
 export class EventTasksComponent implements OnInit, OnDestroy {
   @ViewChildren(MatExpansionPanel) private taskPanels!: QueryList<MatExpansionPanel>;
+  @ViewChild('newTaskTitleInput') private newTaskTitleInput?: ElementRef<HTMLInputElement>;
 
   private readonly route = inject(ActivatedRoute);
   private readonly router = inject(Router);
@@ -967,6 +968,19 @@ export class EventTasksComponent implements OnInit, OnDestroy {
     this.newTaskName = '';
     this.newTaskBudget = '0';
     this.isCreatingTask = true;
+    setTimeout(() => this.newTaskTitleInput?.nativeElement.focus());
+  }
+
+  public onNewTaskBudgetFocus(): void {
+    if (this.newTaskBudget === '0') {
+      this.newTaskBudget = '';
+    }
+  }
+
+  public onNewTaskBudgetBlur(): void {
+    if (!this.newTaskBudget.trim()) {
+      this.newTaskBudget = '0';
+    }
   }
 
   public onCancelTask(): void {

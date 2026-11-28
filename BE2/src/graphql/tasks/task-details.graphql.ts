@@ -76,6 +76,7 @@ export const taskDetailsTypes = `
     eventName: String!
     parentTaskId: Int
     parentTaskName: String
+    parentOwnerUserId: Int
     ownerUserId: Int
     ownerName: String
     assignedByName: String
@@ -435,6 +436,7 @@ export const taskDetailsResolvers = {
         eventName: String(task.eventName || ''),
         parentTaskId: task.parentTaskId === null ? null : Number(task.parentTaskId),
         parentTaskName: task.parentTaskName || null,
+        parentOwnerUserId: task.parentOwnerUserId === null ? null : Number(task.parentOwnerUserId),
         ownerUserId: task.ownerUserId === null ? null : Number(task.ownerUserId),
         ownerName: task.ownerName || null,
         assignedByName: task.assignedByName || null,

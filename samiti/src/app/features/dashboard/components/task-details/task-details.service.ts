@@ -36,6 +36,7 @@ export class TaskDetailsService {
         eventName
         parentTaskId
         parentTaskName
+        parentOwnerUserId
         ownerUserId
         ownerName
         assignedByName
