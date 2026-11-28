@@ -48,21 +48,11 @@
 
             <div class="task-header-budget-controls">
               <span class="task-budget-pills task-header-budget-pills">
-                @let actualBudgetRemaining = taskBudgetRemaining();
-                <span
-                  class="task-budget-metric task-budget-remaining"
-                  [matTooltip]="actualBudgetRemaining !== null
-                    ? 'Budget Left After Confirmed Checklist Expenses'
-                    : getTaskBudgetRemainingTooltip(taskDetails.taskId, taskDetails.budgetAmount)"
-                >
-                  {{ formatTaskBudgetAmount(actualBudgetRemaining
-                    ?? getTaskBudgetRemainingAmount(taskDetails.taskId, taskDetails.budgetAmount)) }}
-                </span>
                 @let availableInHand = taskAvailableInHand();
                 <span
                   class="task-budget-metric task-budget-total"
                   [matTooltip]="taskDetails.canAccessFinance && availableInHand !== null
-                    ? 'Available to Spend / Sanctioned Amount'
+                    ? 'In-hand / Sanctioned Amount'
                     : 'Sanctioned Amount - ' + formatTaskBudgetAmount(taskDetails.budgetAmount)"
                 >
                   @if (taskDetails.canAccessFinance && availableInHand !== null) {
@@ -245,9 +235,10 @@
             </ng-template>
 
               @if (isCreatingChecklist) {
-                <form class="task-subtask-create-row" (ngSubmit)="checklistComponent.add(newChecklistName)">
+                <form class="task-subtask-create-row" (ngSubmit)="onAddChecklistItem(checklistComponent)">
                   <div class="task-subtask-create-fields">
                     <input
+                      #newChecklistTitleInput
                       type="text"
                       maxlength="255"
                       placeholder="Enter checklist title"
@@ -266,23 +257,31 @@
                         appWholeRupee
                         name="newChecklistExpenseAmount"
                         [(ngModel)]="checklistComponent.newExpenseAmount"
+                        [max]="taskAvailableInHand()"
                         [disabled]="checklistComponent.isAdding"
                         aria-label="Checklist budget in rupees"
-                        (keydown.enter)="checklistComponent.add(newChecklistName)"
+                        (focus)="onChecklistBudgetFocus(checklistComponent)"
+                        (blur)="onChecklistBudgetBlur(checklistComponent)"
+                        (keydown.enter)="onAddChecklistItem(checklistComponent)"
                         (keydown.escape)="onCancelChecklistItem(checklistComponent)"
                       />
                     </label>
                   </div>
                   <div class="task-subtask-create-actions">
-                    <button
-                      type="submit"
-                      class="task-subtask-create-button task-subtask-save-button"
-                      [disabled]="!newChecklistName.trim() || !checklistComponent.isValidExpenseAmount(checklistComponent.newExpenseAmount) || checklistComponent.isAdding"
-                      aria-label="Save checklist item"
-                      matTooltip="Save checklist item"
+                    <span
+                      class="task-subtask-save-tooltip"
+                      [matTooltip]="getChecklistAddTooltip(checklistComponent)"
+                      [matTooltipDisabled]="!isChecklistAddDisabled(checklistComponent)"
                     >
-                      <mat-icon>{{ checklistComponent.isAdding ? 'hourglass_top' : 'save' }}</mat-icon>
-                    </button>
+                      <button
+                        type="submit"
+                        class="task-subtask-create-button task-subtask-save-button"
+                        [disabled]="isChecklistAddDisabled(checklistComponent)"
+                        aria-label="Save checklist item"
+                      >
+                        <mat-icon>{{ checklistComponent.isAdding ? 'hourglass_top' : 'check' }}</mat-icon>
+                      </button>
+                    </span>
                     <button
                       type="button"
                       class="task-subtask-create-button task-subtask-cancel-button"
@@ -349,6 +348,7 @@
                   <div class="task-subtask-create-row">
                     <div class="task-subtask-create-fields">
                       <input
+                        #newSubtaskTitleInput
                         type="text"
                         maxlength="255"
                         placeholder="Enter subtask title"
@@ -366,23 +366,31 @@
                           step="1"
                           appWholeRupee
                           [(ngModel)]="newSubtaskBudget"
+                          [max]="getAvailableSubtaskBudget(taskDetails)"
                           [disabled]="isSavingSubtask"
-                          aria-label="Subtask budget in rupees"
+                          aria-label="Subtask budget in rupees, limited to available in-hand"
+                          (focus)="onNewSubtaskBudgetFocus()"
+                          (blur)="onNewSubtaskBudgetBlur()"
                           (keydown.enter)="onSaveSubtask(taskDetails)"
                         />
                       </label>
                     </div>
                     <div class="task-subtask-create-actions">
-                      <button
-                        type="button"
-                        class="task-subtask-create-button task-subtask-save-button"
-                        [disabled]="!newSubtaskName.trim() || !isValidTaskBudgetAmount(newSubtaskBudget) || isSavingSubtask"
-                        aria-label="Save subtask"
-                        matTooltip="Save subtask"
-                        (click)="onSaveSubtask(taskDetails)"
+                      <span
+                        class="task-subtask-save-tooltip"
+                        [matTooltip]="getSubtaskSaveTooltip(taskDetails)"
+                        [matTooltipDisabled]="!isSubtaskSaveDisabled(taskDetails)"
                       >
-                        <mat-icon>{{ isSavingSubtask ? 'hourglass_top' : 'save' }}</mat-icon>
-                      </button>
+                        <button
+                          type="button"
+                          class="task-subtask-create-button task-subtask-save-button"
+                          [disabled]="isSubtaskSaveDisabled(taskDetails)"
+                          aria-label="Create subtask"
+                          (click)="onSaveSubtask(taskDetails)"
+                        >
+                          <mat-icon>{{ isSavingSubtask ? 'hourglass_top' : 'check' }}</mat-icon>
+                        </button>
+                      </span>
                       <button
                         type="button"
                         class="task-subtask-create-button task-subtask-cancel-button"
@@ -465,12 +473,6 @@
                             </span>
                           }
                           <span class="task-budget-pills">
-                            <span
-                              class="task-budget-metric task-budget-remaining"
-                              [matTooltip]="getTaskBudgetRemainingTooltip(child.taskId, child.budgetAmount)"
-                            >
-                              {{ getTaskBudgetRemainingDisplay(child.taskId, child.budgetAmount) }}
-                            </span>
                             <span
                               class="task-budget-metric task-budget-total"
                               [matTooltip]="'Sanctioned Amount - ' + formatTaskBudgetAmount(child.budgetAmount)"

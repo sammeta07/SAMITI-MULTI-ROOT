@@ -17,9 +17,9 @@ export class EventTasksService {
   private readonly http = inject(HttpClient);
   private readonly graphqlUrl = environment.graphqlUrl;
 
-  public getEventTasks(eventId: string): Observable<EventTasksPayload> {
+  public getEventTasks(eventId: string, drafts = false): Observable<EventTasksPayload> {
     const query = `query {
-      eventTasks(id: ${eventId}) {
+      eventTasks(id: ${eventId}, drafts: ${drafts}) {
         entries {
           id
           taskId
@@ -28,7 +28,11 @@ export class EventTasksService {
           parentTaskName
           taskName
           budgetAmount
-          issuedAmount
+          availableInHand
+          initialBudgetRequestedAmount
+          initialBudgetRequestStatus
+          initialBudgetRequestId
+          canReviewInitialBudgetRequest
           budgetRequestId
           requestedBudgetAmount
           budgetRequestStatus

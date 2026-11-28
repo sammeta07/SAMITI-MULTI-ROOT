@@ -274,6 +274,36 @@ export class TaskDetailsService {
     );
   }
 
+  public updateInitialTaskBudgetRequest(
+    taskId: number,
+    amount: string
+  ): Observable<{ requestedAmount: string }> {
+    const mutation = `mutation UpdateInitialTaskBudgetRequest($taskId: Int!, $amount: String!) {
+      updateInitialTaskBudgetRequest(taskId: $taskId, amount: $amount) {
+        requestedAmount
+      }
+    }`;
+
+    return this.http.post<GraphqlResponse<{
+      updateInitialTaskBudgetRequest: { requestedAmount: string };
+    }>>(
+      this.graphqlUrl,
+      { query: mutation, variables: { taskId, amount } },
+      { withCredentials: true }
+    ).pipe(
+      map((response) => {
+        if (response.errors?.length) {
+          throw new Error(response.errors.map((error) => error.message).join('; '));
+        }
+        const updatedRequest = response.data?.updateInitialTaskBudgetRequest;
+        if (!updatedRequest) {
+          throw new Error('GraphQL response is missing updateInitialTaskBudgetRequest');
+        }
+        return updatedRequest;
+      })
+    );
+  }
+
   public requestTaskBudgetIncrease(taskId: number, amount: string): Observable<TaskBudgetUpdateResult> {
     const mutation = `mutation RequestTaskBudgetIncrease($taskId: Int!, $amount: String!) {
       requestTaskBudgetIncrease(taskId: $taskId, amount: $amount) {

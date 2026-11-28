@@ -5,14 +5,20 @@ import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { MatToolbarModule } from '@angular/material/toolbar';
 import { MatTooltipModule } from '@angular/material/tooltip';
-import { TaskFinanceTransaction } from './task-finance.models';
+import { TaskFinanceTransaction, TaskSubtaskTransfer } from './task-finance.models';
+
+type TaskFinanceHistoryRow =
+  | { kind: 'transaction'; id: number; transaction: TaskFinanceTransaction }
+  | { kind: 'subtask-transfer'; id: number; transfer: TaskSubtaskTransfer };
 
 export interface TaskFinanceRequestsDialogData {
   taskName: string;
   assigneeName: string | null;
   transactions: Signal<TaskFinanceTransaction[]>;
+  subtaskTransfers: Signal<TaskSubtaskTransfer[]>;
   isSaving: Signal<boolean>;
   confirmReceipt: (transaction: TaskFinanceTransaction) => void;
+  confirmSubtaskTransfer: (transfer: TaskSubtaskTransfer) => void;
 }
 
 @Component({
@@ -42,7 +48,7 @@ export interface TaskFinanceRequestsDialogData {
       <main class="dialog-body">
         <!-- Combined Disbursement Ledger -->
         <section class="panel ledger-panel">
-          @if (taskTransactions().length > 0) {
+          @if (paymentRows().length > 0) {
             <div class="ledger-list">
               <table class="ledger-table">
                 <thead>
@@ -55,40 +61,68 @@ export interface TaskFinanceRequestsDialogData {
                   </tr>
                 </thead>
                 <tbody>
-                  @for (transaction of taskTransactions(); track transaction.id; let index = $index) {
+                  @for (row of paymentRows(); track row.kind + ':' + row.id; let index = $index) {
                     <tr
-                      [class.cash-in]="transaction.transactionType === 'ADVANCE_RETURN'"
-                      [class.cash-out]="transaction.transactionType !== 'ADVANCE_RETURN'"
+                      [class.cash-in]="row.kind === 'transaction' && row.transaction.transactionType === 'ADVANCE_RETURN'"
+                      [class.cash-out]="row.kind === 'subtask-transfer' || (row.kind === 'transaction' && row.transaction.transactionType !== 'ADVANCE_RETURN')"
                     >
                       <td>{{ index + 1 }}</td>
-                      <td class="amount">₹{{ money(transaction.amount) }}</td>
-                      <td>{{ transaction.createdAt | date: 'dd MMM, h:mm a' }}</td>
-                      <td>{{ transaction.createdByName | titlecase }}</td>
-                      <td class="ledger-status">
-                        @if (transaction.transactionType === 'ADVANCE_RETURN' && transaction.status === 'CONFIRMED') {
-                          <span class="pill approved receipt-status">
-                            <mat-icon>check</mat-icon> Return Accepted
-                          </span>
-                        } @else if (transaction.receivedByName && transaction.receivedAt) {
-                          <span class="pill approved receipt-status">
-                            <mat-icon>check</mat-icon> Received
-                          </span>
-                        } @else if (transaction.canConfirmReceipt) {
-                          <button
-                            mat-flat-button
-                            type="button"
-                            class="btn-confirm-xs"
-                            [disabled]="data.isSaving()"
-                            (click)="confirmReceipt(transaction)"
-                          >
-                            Confirm Receipt
-                          </button>
-                        } @else if (transaction.transactionType === 'ADVANCE_ISSUED') {
-                          <span class="pill pending receipt-status">Awaiting Receipt</span>
-                        } @else {
-                          <span class="pill neutral receipt-status">{{ formatLabel(transaction.transactionType) }}</span>
-                        }
-                      </td>
+                      @if (row.kind === 'transaction') {
+                        <td class="amount">₹{{ money(row.transaction.amount) }}</td>
+                        <td>{{ row.transaction.createdAt | date: 'dd MMM, h:mm a' }}</td>
+                        <td>{{ row.transaction.createdByName | titlecase }}</td>
+                        <td class="ledger-status">
+                          @if (row.transaction.transactionType === 'ADVANCE_RETURN' && row.transaction.status === 'CONFIRMED') {
+                            <span class="pill approved receipt-status">
+                              <mat-icon>check</mat-icon> Return Accepted
+                            </span>
+                          } @else if (row.transaction.receivedByName && row.transaction.receivedAt) {
+                            <span class="pill approved receipt-status">
+                              <mat-icon>check</mat-icon> Received
+                            </span>
+                          } @else if (row.transaction.canConfirmReceipt) {
+                            <button
+                              mat-flat-button
+                              type="button"
+                              class="btn-confirm-xs"
+                              [disabled]="data.isSaving()"
+                              (click)="confirmReceipt(row.transaction)"
+                            >
+                              Confirm Receipt
+                            </button>
+                          } @else if (row.transaction.transactionType === 'ADVANCE_ISSUED') {
+                            <span class="pill pending receipt-status">Awaiting Receipt</span>
+                          } @else {
+                            <span class="pill neutral receipt-status">{{ formatLabel(row.transaction.transactionType) }}</span>
+                          }
+                        </td>
+                      } @else {
+                        <td class="amount">₹{{ money(row.transfer.amount) }}</td>
+                        <td>{{ row.transfer.createdAt | date: 'dd MMM, h:mm a' }}</td>
+                        <td>
+                          {{ row.transfer.senderName || 'Task creator' | titlecase }}
+                          <small>{{ row.transfer.parentTaskName | titlecase }}</small>
+                        </td>
+                        <td class="ledger-status">
+                          @if (row.transfer.status === 'CONFIRMED') {
+                            <span class="pill approved receipt-status">
+                              <mat-icon>check</mat-icon> Received
+                            </span>
+                          } @else if (row.transfer.canConfirm) {
+                            <button
+                              mat-flat-button
+                              type="button"
+                              class="btn-confirm-xs"
+                              [disabled]="data.isSaving()"
+                              (click)="confirmSubtaskTransfer(row.transfer)"
+                            >
+                              Confirm Receipt
+                            </button>
+                          } @else {
+                            <span class="pill pending receipt-status">Awaiting Receipt</span>
+                          }
+                        </td>
+                      }
                     </tr>
                   }
                 </tbody>
@@ -430,11 +464,31 @@ export class TaskFinanceRequestsDialogComponent {
     this.data.confirmReceipt(transaction);
   }
 
-  public taskTransactions(): TaskFinanceTransaction[] {
-    return [...this.data.transactions()]
-      .sort((left, right) =>
-        left.createdAt.localeCompare(right.createdAt) || left.id - right.id
-      );
+  public confirmSubtaskTransfer(transfer: TaskSubtaskTransfer): void {
+    this.data.confirmSubtaskTransfer(transfer);
+  }
+
+  public paymentRows(): TaskFinanceHistoryRow[] {
+    return [
+      ...this.data.transactions().map((transaction) => ({
+        kind: 'transaction' as const,
+        id: transaction.id,
+        transaction
+      })),
+      ...this.data.subtaskTransfers().map((transfer) => ({
+        kind: 'subtask-transfer' as const,
+        id: transfer.id,
+        transfer
+      }))
+    ].sort((left, right) => {
+      const leftCreatedAt = left.kind === 'transaction'
+        ? left.transaction.createdAt
+        : left.transfer.createdAt;
+      const rightCreatedAt = right.kind === 'transaction'
+        ? right.transaction.createdAt
+        : right.transfer.createdAt;
+      return leftCreatedAt.localeCompare(rightCreatedAt) || left.id - right.id;
+    });
   }
 
   public money(value: string | number | null | undefined): string {

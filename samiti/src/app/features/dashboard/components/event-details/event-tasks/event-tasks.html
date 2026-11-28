@@ -166,16 +166,10 @@
                   } @else {
                     <span class="task-budget-pills">
                       <span
-                        class="task-budget-metric task-budget-remaining"
-                        [matTooltip]="getTaskBudgetRemainingTooltip(task)"
-                      >
-                        {{ getTaskBudgetRemainingDisplay(task) }}
-                      </span>
-                      <span
                         class="task-budget-metric task-budget-total"
-                        matTooltip="Issued Amount / Sanctioned Amount"
+                        matTooltip="In-hand / Sanctioned Amount"
                       >
-                        {{ formatIssuedAndSanctionedTaskBudget(task.issuedAmount, task.budgetAmount) }}
+                        {{ formatInHandAndSanctionedTaskBudget(task.availableInHand, task.budgetAmount) }}
                       </span>
                     </span>
                   }
@@ -237,50 +231,69 @@
                 </div>
 
                 <div class="task-row-actions" (click)="$event.stopPropagation()" (keydown)="$event.stopPropagation()">
-                  @if (task.canDelete) {
-                    <span
-                      class="task-delete-tooltip-host"
-                      [class.task-delete-disabled]="deletingTaskIds.has(task.taskId) || !!getTaskDeletionBlockReason(task)"
-                      [matTooltip]="getTaskDeletionTooltip(task)"
-                      (click)="$event.stopPropagation()"
-                      (keydown)="$event.stopPropagation()"
-                    >
+                  @if (!isDraftTab || task.initialBudgetRequestStatus !== 'REJECTED') {
+                    @if (task.canDelete) {
+                      <span
+                        class="task-delete-tooltip-host"
+                        [class.task-delete-disabled]="deletingTaskIds.has(task.taskId) || !!getTaskDeletionBlockReason(task)"
+                        [matTooltip]="getTaskDeletionTooltip(task)"
+                        (click)="$event.stopPropagation()"
+                        (keydown)="$event.stopPropagation()"
+                      >
+                        <button
+                          mat-icon-button
+                          type="button"
+                          class="task-panel-delete-icon"
+                          aria-label="Delete task"
+                          [disabled]="deletingTaskIds.has(task.taskId) || !!getTaskDeletionBlockReason(task)"
+                          (click)="onDeleteTask(task, $event)"
+                        >
+                          <mat-icon>{{ deletingTaskIds.has(task.taskId) ? 'hourglass_top' : 'delete_outline' }}</mat-icon>
+                        </button>
+                      </span>
+                    }
+                    @if (canOpenTaskActions(task)) {
                       <button
                         mat-icon-button
                         type="button"
-                        class="task-panel-delete-icon"
-                        aria-label="Delete task"
-                        [disabled]="deletingTaskIds.has(task.taskId) || !!getTaskDeletionBlockReason(task)"
-                        (click)="onDeleteTask(task, $event)"
+                        class="task-panel-edit-icon"
+                        aria-label="Edit task"
+                        matTooltip="Edit task"
+                        (click)="openTaskActionsDialog(task, $event)"
                       >
-                        <mat-icon>{{ deletingTaskIds.has(task.taskId) ? 'hourglass_top' : 'delete_outline' }}</mat-icon>
+                        <mat-icon>edit</mat-icon>
                       </button>
-                    </span>
+                    }
+                    @if (shouldShowTaskFinanceButton(task)) {
+                      <button
+                        mat-icon-button
+                        class="task-panel-finance-icon"
+                        [class.task-panel-finance-action-required]="task.needsFinanceAction"
+                        type="button"
+                        [attr.aria-label]="task.needsFinanceAction ? 'Action required — view task finance' : 'No action required — view task finance'"
+                        [matTooltip]="task.needsFinanceAction ? 'Action required' : 'No action required'"
+                        (click)="openTaskFinanceDialog(task.taskId, task.taskName, task.ownerName, $event)"
+                      >
+                        <mat-icon>currency_rupee</mat-icon>
+                      </button>
+                    }
+                    @if (isDraftTab && task.canReviewInitialBudgetRequest && task.initialBudgetRequestId) {
+                      <button
+                        type="button"
+                        class="task-initial-budget-review task-initial-budget-approve"
+                        [disabled]="reviewingInitialBudgetRequestIds().has(task.taskId)"
+                        (click)="reviewInitialTaskBudgetRequest(task, 'APPROVE')"
+                      >Approve</button>
+                      <button
+                        type="button"
+                        class="task-initial-budget-review task-initial-budget-reject"
+                        [disabled]="reviewingInitialBudgetRequestIds().has(task.taskId)"
+                        (click)="reviewInitialTaskBudgetRequest(task, 'REJECT')"
+                      >Reject</button>
+                    }
                   }
-                  @if (canOpenTaskActions(task)) {
-                    <button
-                      mat-icon-button
-                      class="task-panel-edit-icon"
-                      type="button"
-                      aria-label="Edit task"
-                      matTooltip="Edit task"
-                      (click)="openTaskActionsDialog(task, $event)"
-                    >
-                      <mat-icon>edit</mat-icon>
-                    </button>
-                  }
-                  @if (shouldShowTaskFinanceButton(task)) {
-                    <button
-                      mat-icon-button
-                      class="task-panel-finance-icon"
-                      [class.task-panel-finance-action-required]="task.needsFinanceAction"
-                      type="button"
-                      [attr.aria-label]="task.needsFinanceAction ? 'Action required — view task finance' : 'No action required — view task finance'"
-                      [matTooltip]="task.needsFinanceAction ? 'Action required' : 'No action required'"
-                      (click)="openTaskFinanceDialog(task.taskId, task.taskName, task.ownerName, $event)"
-                    >
-                      <mat-icon>currency_rupee</mat-icon>
-                    </button>
+                  @if (isDraftTab && task.initialBudgetRequestStatus === 'REJECTED') {
+                    <span class="task-initial-budget-rejected-label" role="status">Rejected</span>
                   }
                   <span class="task-panel-info-container">
                     <button
@@ -372,8 +385,12 @@
     } @else {
       <div class="dashed-empty-state">
         <mat-icon class="empty-state-icon">task_alt</mat-icon>
-        <span class="empty-state-title">No tasks available</span>
-        <span class="empty-state-sub">Tasks created for this event will appear here.</span>
+        <span class="empty-state-title">{{ isDraftTab ? 'No draft tasks' : 'No tasks available' }}</span>
+        <span class="empty-state-sub">
+          {{ isDraftTab
+            ? 'Tasks awaiting initial budget approval will appear here.'
+            : 'Approved tasks created for this event will appear here.' }}
+        </span>
       </div>
     }
   }

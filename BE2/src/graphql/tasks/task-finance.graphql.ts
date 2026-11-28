@@ -1,4 +1,4 @@
-import { RowDataPacket } from 'mysql2/promise';
+import { PoolConnection, RowDataPacket } from 'mysql2/promise';
 import { getConnection, query } from '../../config/db';
 import {
   hasCommitteeTaskProgramCreationRole,
@@ -17,6 +17,88 @@ const transactionTypes = [
 ] as const;
 
 type TransactionType = typeof transactionTypes[number];
+const SUBTASK_BUDGET_TRANSFER_DESCRIPTION = 'Subtask budget transfer';
+
+export async function ensureSubtaskBudgetTransfer(
+  connection: PoolConnection,
+  input: {
+    parentTaskId: number;
+    subtaskId: number;
+    senderUserId: number;
+    recipientUserId: number | null;
+    amount: string;
+  }
+): Promise<void> {
+  const amount = decimalCents(input.amount);
+  const [rows] = await connection.query<any[]>(
+    `SELECT id, status
+     FROM task_subtask_transfers
+     WHERE subtask_id = ?
+     ORDER BY id DESC
+     LIMIT 1
+     FOR UPDATE`,
+    [input.subtaskId]
+  );
+  const existing = rows[0];
+  if (existing?.status === 'CONFIRMED') return;
+  if (existing?.status === 'PENDING') {
+    if (input.recipientUserId === null || amount <= 0n) {
+      await connection.execute(
+        `DELETE FROM task_subtask_transfers
+         WHERE id = ? AND status = 'PENDING'`,
+        [Number(existing.id)]
+      );
+      return;
+    }
+    await connection.execute(
+      `UPDATE task_subtask_transfers
+       SET sender_user_id = ?, recipient_user_id = ?, amount = ?, description = ?
+       WHERE id = ? AND status = 'PENDING'`,
+      [
+        input.senderUserId,
+        input.recipientUserId,
+        input.amount,
+        SUBTASK_BUDGET_TRANSFER_DESCRIPTION,
+        Number(existing.id)
+      ]
+    );
+    return;
+  }
+  if (input.recipientUserId === null || amount <= 0n) return;
+
+  const [issuedRows] = await connection.query<any[]>(
+    `SELECT id
+     FROM task_finance_transactions
+     WHERE task_id = ? AND transaction_type = 'ADVANCE_ISSUED'
+     LIMIT 1
+     FOR UPDATE`,
+    [input.subtaskId]
+  );
+  if (issuedRows.length > 0) return;
+
+  await connection.execute(
+    `INSERT INTO task_subtask_transfers
+       (parent_task_id, subtask_id, sender_user_id, recipient_user_id, amount, description, status)
+     VALUES (?, ?, ?, ?, ?, ?, 'PENDING')`,
+    [
+      input.parentTaskId,
+      input.subtaskId,
+      input.senderUserId,
+      input.recipientUserId,
+      input.amount,
+      SUBTASK_BUDGET_TRANSFER_DESCRIPTION
+    ]
+  );
+}
+
+const unapprovedInitialTaskFinanceExclusion = `NOT EXISTS (
+  SELECT 1
+  FROM task_finance_requests unapprovedInitialRequest
+  WHERE unapprovedInitialRequest.task_id = COALESCE(task.parent_id, task.id)
+    AND unapprovedInitialRequest.request_type = 'ADVANCE'
+    AND unapprovedInitialRequest.reason = 'Initial sanctioned task budget'
+    AND unapprovedInitialRequest.status <> 'APPROVED'
+)`;
 
 export async function getFinanceActionTaskIds(taskIds: number[]): Promise<Set<number>> {
   const ids = [...new Set(taskIds.filter((taskId) => Number.isInteger(taskId) && taskId > 0))];
@@ -69,13 +151,20 @@ export async function getPendingReceiptTaskIds(taskIds: number[], userId: number
 
   const placeholders = ids.map(() => '?').join(', ');
   const rows = await query<Array<RowDataPacket & { taskId: number }>>(
-    `SELECT DISTINCT task_id AS taskId
-     FROM task_finance_transactions
-     WHERE task_id IN (${placeholders})
-       AND recipient_user_id = ?
-       AND received_at IS NULL
-       AND transaction_type = 'ADVANCE_ISSUED' AND status = 'CONFIRMED'`,
-    [...ids, userId]
+    `SELECT taskId FROM (
+       SELECT task_id AS taskId
+       FROM task_finance_transactions
+       WHERE task_id IN (${placeholders})
+         AND recipient_user_id = ?
+         AND received_at IS NULL
+         AND transaction_type = 'ADVANCE_ISSUED' AND status = 'CONFIRMED'
+       UNION
+       SELECT subtask_id AS taskId
+       FROM task_subtask_transfers
+       WHERE subtask_id IN (${placeholders})
+         AND recipient_user_id = ? AND status = 'PENDING'
+     ) pendingReceipts`,
+    [...ids, userId, ...ids, userId]
   );
   return new Set(rows.map((row) => Number(row.taskId)));
 }
@@ -98,8 +187,23 @@ export async function getFinanceParticipantTaskIds(taskIds: number[], userId: nu
        SELECT task_id AS taskId
        FROM task_finance_transactions
        WHERE task_id IN (${placeholders}) AND recipient_user_id = ?
+       UNION
+       SELECT subtask_id AS taskId
+       FROM task_subtask_transfers
+       WHERE subtask_id IN (${placeholders}) AND recipient_user_id = ?
+       UNION
+       SELECT subtask_id AS taskId
+       FROM task_subtask_transfers
+       WHERE subtask_id IN (${placeholders}) AND sender_user_id = ?
+       UNION
+       SELECT parent_task_id AS taskId
+       FROM task_subtask_transfers
+       WHERE parent_task_id IN (${placeholders}) AND sender_user_id = ?
      ) financeParticipants`,
     [
+      ...ids, userId,
+      ...ids, userId,
+      ...ids, userId,
       ...ids, userId,
       ...ids, userId,
       ...ids, userId
@@ -170,6 +274,37 @@ export const taskFinanceTypes = `
     canCancel: Boolean!
   }
 
+  type TaskSubtaskTransfer {
+    id: Int!
+    parentTaskId: Int!
+    subtaskId: Int!
+    sourceBudgetRequestId: Int
+    parentTaskName: String!
+    subtaskName: String!
+    senderName: String
+    recipientName: String
+    amount: String!
+    description: String!
+    status: String!
+    createdAt: String!
+    confirmedByName: String
+    confirmedAt: String
+    canConfirm: Boolean!
+  }
+
+  type TaskFinanceSubtaskEntry {
+    taskId: Int!
+    parentTaskId: Int!
+    taskName: String!
+    taskOwnerName: String
+    taskOwnerUserId: Int
+    budgetAmount: String!
+    budgetAvailableForDisbursement: String!
+    remainingSanctionedBudget: String!
+    checklistExpenseAmount: String!
+    taskCreatedAt: String!
+  }
+
   type TaskBudgetRequest {
     id: Int!
     taskId: Int!
@@ -200,6 +335,7 @@ export const taskFinanceTypes = `
     canReviewCreator: Boolean!
     canReviewAuthority: Boolean!
     canCancel: Boolean!
+    canDisburse: Boolean!
   }
 
   type TaskFinanceSummary {
@@ -220,6 +356,8 @@ export const taskFinanceTypes = `
     requests: [TaskFinanceRequest!]!
     budgetRequests: [TaskBudgetRequest!]!
     transactions: [TaskFinanceTransaction!]!
+    subtaskTransfers: [TaskSubtaskTransfer!]!
+    subtasks: [TaskFinanceSubtaskEntry!]!
     summary: TaskFinanceSummary!
     budgetAmount: String!
     budgetRequestId: Int
@@ -274,6 +412,8 @@ export const taskFinanceMutationFields = `
   reviewTaskFinanceRequest(input: TaskFinanceReviewInput!): TaskFinanceRequest!
   recordTaskFinanceTransaction(input: TaskFinanceTransactionInput!): TaskFinanceTransaction!
   confirmTaskFinanceReceipt(transactionId: Int!): TaskFinanceTransaction!
+  confirmTaskSubtaskTransfer(transferId: Int!): TaskSubtaskTransfer!
+  disburseTaskBudgetRequest(requestId: Int!): TaskSubtaskTransfer!
   reviewTaskFinanceReturn(input: TaskFinanceReturnReviewInput!): TaskFinanceTransaction!
   cancelTaskFinanceReturn(transactionId: Int!): TaskFinanceTransaction!
 `;
@@ -323,7 +463,9 @@ async function loadTaskBudgetCapacityCents(
               COALESCE(expenses.checklistBudgetUsage, 0) + COALESCE(children.allocated, 0),
               GREATEST(
                 0,
-                COALESCE(cash.issued, 0) - COALESCE(cash.returned, 0)
+                COALESCE(cash.issued, 0) +
+                  COALESCE(transferIn.amount, 0) -
+                  COALESCE(cash.returned, 0)
               )
             )) AS CHAR) AS budgetAvailable,
             CAST(GREATEST(
@@ -360,8 +502,14 @@ async function loadTaskBudgetCapacityCents(
        WHERE task_id IN (${placeholders})
        GROUP BY task_id
      ) cash ON cash.task_id = task.id
+     LEFT JOIN (
+       SELECT subtask_id AS task_id, SUM(amount) AS amount
+       FROM task_subtask_transfers
+       WHERE subtask_id IN (${placeholders}) AND status IN ('PENDING', 'CONFIRMED')
+       GROUP BY subtask_id
+     ) transferIn ON transferIn.task_id = task.id
      WHERE task.id IN (${placeholders})`,
-    [...ids, ...ids, ...ids, ...ids]
+    [...ids, ...ids, ...ids, ...ids, ...ids]
   );
   return new Map(rows.map((row) => [Number(row.taskId), {
     available: decimalCents(row.budgetAvailable),
@@ -384,6 +532,50 @@ function cleanText(value: unknown, field: string, maximum = 1000): string {
     throwEventError('BAD_REQUEST', `${field} is required and must be at most ${maximum} characters`);
   }
   return text;
+}
+
+async function loadTaskSubtaskTransfers(taskId: number, userId: number): Promise<any[]> {
+  const rows = await query<any[]>(
+    `SELECT transfer.id,
+            transfer.parent_task_id AS parentTaskId,
+            transfer.subtask_id AS subtaskId,
+            transfer.source_budget_request_id AS sourceBudgetRequestId,
+            parent.name AS parentTaskName,
+            subtask.name AS subtaskName,
+            sender.name AS senderName,
+            recipient.name AS recipientName,
+            CAST(transfer.amount AS CHAR) AS amount,
+            transfer.description,
+            transfer.status,
+            DATE_FORMAT(transfer.created_at, '%Y-%m-%d %H:%i:%s') AS createdAt,
+            confirmer.name AS confirmedByName,
+            DATE_FORMAT(transfer.confirmed_at, '%Y-%m-%d %H:%i:%s') AS confirmedAt,
+            transfer.recipient_user_id AS recipientUserId
+     FROM task_subtask_transfers transfer
+     INNER JOIN tasks parent ON parent.id = transfer.parent_task_id
+     INNER JOIN tasks subtask ON subtask.id = transfer.subtask_id
+     LEFT JOIN users sender ON sender.id = transfer.sender_user_id
+     LEFT JOIN users recipient ON recipient.id = transfer.recipient_user_id
+     LEFT JOIN users confirmer ON confirmer.id = transfer.confirmed_by
+     WHERE transfer.parent_task_id = ? OR transfer.subtask_id = ?
+     ORDER BY transfer.created_at DESC, transfer.id DESC`,
+    [taskId, taskId]
+  );
+  return rows.map((transfer) => {
+    const { recipientUserId, ...visibleTransfer } = transfer;
+    return {
+      ...visibleTransfer,
+      id: Number(transfer.id),
+      parentTaskId: Number(transfer.parentTaskId),
+      subtaskId: Number(transfer.subtaskId),
+      sourceBudgetRequestId: transfer.sourceBudgetRequestId === null
+        ? null
+        : Number(transfer.sourceBudgetRequestId),
+      amount: String(transfer.amount),
+      status: String(transfer.status),
+      canConfirm: transfer.status === 'PENDING' && Number(recipientUserId) === userId
+    };
+  });
 }
 
 async function getFinanceAccess(taskId: number, userId: number, allowReadOnly = false): Promise<{
@@ -451,6 +643,15 @@ async function getFinanceAccess(taskId: number, userId: number, allowReadOnly = 
   const isParticipant = (await getFinanceParticipantTaskIds([taskId], userId)).has(taskId);
   const isCreator = Number(task.createdBy) === userId;
   const isSubtaskCreator = task.parentTaskId !== null && isCreator;
+  const isDirectSubtaskFinanceParticipant = isOwner || isCreator;
+  if (
+    allowReadOnly &&
+    task.parentTaskId !== null &&
+    (isCashier || isBudgetAuthority) &&
+    !isDirectSubtaskFinanceParticipant
+  ) {
+    throwEventError('FORBIDDEN', 'Subtask finance is available to its creator and assignee');
+  }
   const createdSubtaskRows = allowReadOnly
     ? await query<any[]>(
         `SELECT id FROM tasks WHERE parent_id = ? AND created_by = ? LIMIT 1`,
@@ -620,14 +821,19 @@ async function loadBudgetRequests(
 ): Promise<any[]> {
   const isEventScope = eventId !== undefined;
   const isCreatedSubtaskScope = creatorParentTaskId !== undefined;
-  const scopeFilter = isCreatedSubtaskScope
+  const baseScopeFilter = isCreatedSubtaskScope
     ? `task.event_id = ? AND task.parent_id = ? AND task.created_by = ?`
     : creatorEventScope
     ? 'task.event_id = ? AND task.parent_id IS NOT NULL AND task.created_by = ?'
     : isEventScope
     ? `task.event_id = ? AND task.parent_id IS NULL
-       AND (? = 1 OR task.owner_user_id = ? OR task.created_by = ? OR request.requested_by = ?)`
+       AND (
+         ? = 1 OR task.owner_user_id = ? OR task.created_by = ? OR request.requested_by = ?
+       )`
     : 'request.task_id = ?';
+  const scopeFilter = isEventScope
+    ? `${baseScopeFilter} AND ${unapprovedInitialTaskFinanceExclusion}`
+    : baseScopeFilter;
   const scopeParams = isCreatedSubtaskScope
     ? [Number(eventId), Number(creatorParentTaskId), userId]
     : creatorEventScope
@@ -648,6 +854,7 @@ async function loadBudgetRequests(
             COALESCE(NULLIF(TRIM(task.name), ''), 'Untitled Task') AS taskName,
             taskOwner.name AS taskOwnerName,
             taskCreator.name AS taskCreatedByName,
+            task.owner_user_id AS taskOwnerUserId,
             CAST(task.budget_amount AS CHAR) AS taskBudgetAmount,
             CAST(request.requested_amount AS CHAR) AS requestedAmount,
             CAST(request.budget_before_request AS CHAR) AS budgetBeforeRequest,
@@ -677,7 +884,15 @@ async function loadBudgetRequests(
             DATE_FORMAT(request.authority_reviewed_at, '%Y-%m-%d %H:%i:%s') AS authorityReviewedAt,
             DATE_FORMAT(request.created_at, '%Y-%m-%d %H:%i:%s') AS createdAt,
             DATE_FORMAT(task.created_at, '%Y-%m-%d %H:%i:%s') AS taskCreatedAt,
-            task.created_by AS taskCreatedBy
+            task.created_by AS taskCreatedBy,
+            EXISTS (
+              SELECT 1 FROM task_subtask_transfers transfer
+              WHERE transfer.source_budget_request_id = request.id
+            ) AS hasBudgetTransfer,
+            EXISTS (
+              SELECT 1 FROM task_finance_requests financeRequest
+              WHERE financeRequest.source_budget_request_id = request.id
+            ) AS hasFinanceAllocation
      FROM task_budget_requests request
      INNER JOIN tasks task ON task.id = request.task_id
      INNER JOIN events event ON event.id = task.event_id
@@ -756,7 +971,18 @@ async function loadBudgetRequests(
         request.parentTaskId === null &&
         access.isBudgetAuthority,
       canCancel: request.status === 'PENDING' &&
-        (Number(request.requestedBy) === userId || access.isMasterAdmin)
+        !(request.parentTaskId !== null &&
+          baselineCents === 0n &&
+          requestedCents === decimalCents(request.taskBudgetAmount)) &&
+        (Number(request.requestedBy) === userId || access.isMasterAdmin),
+      canDisburse: request.parentTaskId !== null &&
+        request.status === 'APPROVED' &&
+        requestedCents > baselineCents &&
+        Number(request.taskOwnerUserId) > 0 &&
+        Number(request.hasBudgetTransfer) !== 1 &&
+        Number(request.hasFinanceAllocation) !== 1 &&
+        (request.approvalStage === 'CREATOR' || request.approvalStage === 'AUTHORITY') &&
+        Number(request.taskCreatedBy) === userId
     };
   });
 }
@@ -833,7 +1059,8 @@ async function loadFinance(taskId: number, userId: number): Promise<any> {
     ),
     query<any[]>(
       `SELECT
-         COALESCE(SUM(CASE WHEN transaction_type = 'ADVANCE_ISSUED' AND status = 'CONFIRMED' THEN amount ELSE 0 END), 0) AS advanceIssued,
+         COALESCE(SUM(CASE WHEN transaction_type = 'ADVANCE_ISSUED' AND status = 'CONFIRMED'
+           AND received_at IS NOT NULL THEN amount ELSE 0 END), 0) AS advanceIssued,
          COALESCE(SUM(CASE WHEN transaction_type = 'ADVANCE_EXPENSE' AND status = 'CONFIRMED' THEN amount ELSE 0 END), 0) AS advanceSpent,
          COALESCE(SUM(CASE WHEN transaction_type = 'ADVANCE_RETURN' AND status = 'PENDING' THEN amount ELSE 0 END), 0) AS returnPending,
          COALESCE(SUM(CASE WHEN transaction_type = 'ADVANCE_RETURN' AND status = 'CONFIRMED' THEN amount ELSE 0 END), 0) AS returnConfirmed
@@ -882,6 +1109,7 @@ async function loadFinance(taskId: number, userId: number): Promise<any> {
       [taskId]
     ),
   ]);
+  const subtaskTransfers = await loadTaskSubtaskTransfers(taskId, userId);
   const capacityByTask = await loadTaskBudgetCapacityCents([taskId]);
   const taskBudgetCapacity = capacityByTask.get(taskId);
   const budgetAvailableForDisbursement = taskBudgetCapacity?.available ?? 0n;
@@ -923,7 +1151,23 @@ async function loadFinance(taskId: number, userId: number): Promise<any> {
     };
   });
   const aggregate = aggregates[0] ?? {};
-  const advanceIssued = decimalCents(aggregate.advanceIssued);
+  const incomingSubtaskTransfers = subtaskTransfers.reduce(
+    (total, transfer) => total + (
+      Number(transfer.subtaskId) === taskId && transfer.status === 'CONFIRMED'
+        ? decimalCents(transfer.amount)
+        : 0n
+    ),
+    0n
+  );
+  const outgoingSubtaskTransfers = subtaskTransfers.reduce(
+    (total, transfer) => total + (
+      Number(transfer.parentTaskId) === taskId && transfer.status === 'CONFIRMED'
+        ? decimalCents(transfer.amount)
+        : 0n
+    ),
+    0n
+  );
+  const advanceIssued = decimalCents(aggregate.advanceIssued) + incomingSubtaskTransfers;
   const advanceSpent = decimalCents(aggregate.advanceSpent);
   const returnPending = decimalCents(aggregate.returnPending);
   const returnConfirmed = decimalCents(aggregate.returnConfirmed);
@@ -934,7 +1178,7 @@ async function loadFinance(taskId: number, userId: number): Promise<any> {
   const directChecklistExpenses = taskBudgetCapacity?.checklistExpenses ?? 0n;
   const directChecklistReserved = taskBudgetCapacity?.checklistReserved ?? 0n;
   const advanceBalance =
-    advanceIssued - advanceSpent - returnConfirmed - directChecklistExpenses;
+    advanceIssued - advanceSpent - returnConfirmed - directChecklistExpenses - outgoingSubtaskTransfers;
   const availableInHand =
     advanceBalance - returnPending - directChecklistReserved;
   const allocatedChildBudgets = decimalCents(childBudgetRows[0]?.allocatedChildBudgets);
@@ -954,6 +1198,8 @@ async function loadFinance(taskId: number, userId: number): Promise<any> {
     requests: financeRequests,
     budgetRequests,
     transactions: financeTransactions,
+    subtaskTransfers,
+    subtasks: [],
     summary: {
       sanctionedBudget: centsToWholeRupees(sanctionedBudget),
       checklistExpenses: centsToWholeRupees(checklistExpenses),
@@ -1081,31 +1327,60 @@ async function loadEventFinance(
   if (!isBroadAccess && !isCreatorScope) {
     throwEventError('FORBIDDEN', 'You are not allowed to view event-wide task finance');
   }
-  const financeRequestScope = isCreatedSubtaskScope
+  const baseFinanceRequestScope = isCreatedSubtaskScope
     ? 'task.event_id = ? AND task.parent_id = ? AND task.created_by = ?'
     : creatorEventScope
     ? 'task.event_id = ? AND task.parent_id IS NOT NULL AND task.created_by = ?'
     : `task.event_id = ? AND task.parent_id IS NULL
-       AND (? = 1 OR task.owner_user_id = ? OR task.created_by = ? OR request.requested_by = ?)`;
+       AND (
+         ? = 1 OR task.owner_user_id = ? OR task.created_by = ? OR request.requested_by = ?
+       )`;
+  const financeRequestScope =
+    `${baseFinanceRequestScope} AND ${unapprovedInitialTaskFinanceExclusion}`;
   const financeRequestScopeParams = isCreatedSubtaskScope
     ? [eventId, creatorParentTaskId, userId]
     : creatorEventScope
     ? [eventId, userId]
     : [eventId, isBroadAccess ? 1 : 0, userId, userId, userId];
-  const transactionScope = isCreatedSubtaskScope
+  const baseTransactionScope = isCreatedSubtaskScope
     ? 'task.event_id = ? AND task.parent_id = ? AND task.created_by = ?'
     : creatorEventScope
     ? 'task.event_id = ? AND task.parent_id IS NOT NULL AND task.created_by = ?'
     : `task.event_id = ? AND task.parent_id IS NULL
-       AND (? = 1 OR task.owner_user_id = ? OR task.created_by = ?
-            OR tx.recipient_user_id = ?)`;
+       AND (
+         ? = 1 OR task.owner_user_id = ? OR task.created_by = ? OR tx.recipient_user_id = ?
+       )`;
+  const transactionScope =
+    `${baseTransactionScope} AND ${unapprovedInitialTaskFinanceExclusion}`;
   const transactionScopeParams = isCreatedSubtaskScope
     ? [eventId, creatorParentTaskId, userId]
     : creatorEventScope
     ? [eventId, userId]
     : [eventId, isBroadAccess ? 1 : 0, userId, userId, userId];
+  const transferScope = isCreatedSubtaskScope
+    ? 'transfer.parent_task_id = ? AND subtask.created_by = ?'
+    : creatorEventScope
+    ? 'parentTask.event_id = ? AND subtask.created_by = ?'
+    : `parentTask.event_id = ? AND parentTask.parent_id IS NULL
+       AND (? = 1 OR parentTask.owner_user_id = ? OR parentTask.created_by = ?
+            OR transfer.sender_user_id = ? OR transfer.recipient_user_id = ?)`;
+  const transferScopeParams = isCreatedSubtaskScope
+    ? [creatorParentTaskId, userId]
+    : creatorEventScope
+    ? [eventId, userId]
+    : [eventId, isBroadAccess ? 1 : 0, userId, userId, userId, userId];
 
-  const [requests, budgetRequests, transactions] = await Promise.all([
+  const subtaskListScope = isCreatedSubtaskScope
+    ? 'subtask.event_id = ? AND subtask.parent_id = ? AND subtask.created_by = ?'
+    : creatorEventScope
+    ? 'subtask.event_id = ? AND subtask.parent_id IS NOT NULL AND subtask.created_by = ?'
+    : 'subtask.event_id = ? AND subtask.parent_id IS NOT NULL';
+  const subtaskListParams = isCreatedSubtaskScope
+    ? [eventId, creatorParentTaskId, userId]
+    : creatorEventScope
+    ? [eventId, userId]
+    : [eventId];
+  const [requests, budgetRequests, transactions, subtaskTransfers, subtaskRows] = await Promise.all([
     query<any[]>(
       `SELECT request.id, request.task_id AS taskId,
               task.parent_id AS parentTaskId,
@@ -1177,35 +1452,101 @@ async function loadEventFinance(
          )
        ORDER BY tx.created_at DESC, tx.id DESC`,
       [...transactionScopeParams, isCashier ? 1 : 0]
+    ),
+    isCreatorScope
+      ? query<any[]>(
+      `SELECT transfer.id,
+              transfer.parent_task_id AS parentTaskId,
+              transfer.subtask_id AS subtaskId,
+              transfer.source_budget_request_id AS sourceBudgetRequestId,
+              COALESCE(NULLIF(TRIM(parentTask.name), ''), 'Untitled Task') AS parentTaskName,
+              COALESCE(NULLIF(TRIM(subtask.name), ''), 'Untitled Task') AS subtaskName,
+              sender.name AS senderName,
+              recipient.name AS recipientName,
+              CAST(transfer.amount AS CHAR) AS amount,
+              transfer.description,
+              transfer.status,
+              DATE_FORMAT(transfer.created_at, '%Y-%m-%d %H:%i:%s') AS createdAt,
+              confirmer.name AS confirmedByName,
+              DATE_FORMAT(transfer.confirmed_at, '%Y-%m-%d %H:%i:%s') AS confirmedAt,
+              transfer.recipient_user_id AS recipientUserId
+       FROM task_subtask_transfers transfer
+       INNER JOIN tasks parentTask ON parentTask.id = transfer.parent_task_id
+       INNER JOIN tasks subtask ON subtask.id = transfer.subtask_id
+       LEFT JOIN users sender ON sender.id = transfer.sender_user_id
+       LEFT JOIN users recipient ON recipient.id = transfer.recipient_user_id
+       LEFT JOIN users confirmer ON confirmer.id = transfer.confirmed_by
+       WHERE ${transferScope}
+         AND NOT EXISTS (
+           SELECT 1
+           FROM task_finance_requests unapprovedInitialRequest
+           WHERE unapprovedInitialRequest.task_id = parentTask.id
+             AND unapprovedInitialRequest.request_type = 'ADVANCE'
+             AND unapprovedInitialRequest.reason = 'Initial sanctioned task budget'
+             AND unapprovedInitialRequest.status <> 'APPROVED'
+         )
+       ORDER BY transfer.created_at DESC, transfer.id DESC`,
+      transferScopeParams
     )
+      : Promise.resolve([]),
+    isCreatorScope
+      ? query<any[]>(
+          `SELECT subtask.id AS taskId,
+                  subtask.parent_id AS parentTaskId,
+                  COALESCE(NULLIF(TRIM(subtask.name), ''), 'Untitled Task') AS taskName,
+                  subtask.owner_user_id AS taskOwnerUserId,
+                  taskOwner.name AS taskOwnerName,
+                  CAST(subtask.budget_amount AS CHAR) AS budgetAmount,
+                  DATE_FORMAT(subtask.created_at, '%Y-%m-%d %H:%i:%s') AS taskCreatedAt
+           FROM tasks subtask
+           LEFT JOIN users taskOwner ON taskOwner.id = subtask.owner_user_id
+           WHERE ${subtaskListScope}
+           ORDER BY subtask.created_at ASC, subtask.id ASC`,
+          subtaskListParams
+        )
+      : Promise.resolve([])
   ]);
   const capacityByTask = await loadTaskBudgetCapacityCents(
     [
       ...requests.map((request: any) => Number(request.taskId)),
       ...budgetRequests.map((request: any) => Number(request.taskId)),
-      ...transactions.map((transaction: any) => Number(transaction.taskId))
+      ...transactions.map((transaction: any) => Number(transaction.taskId)),
+      ...subtaskRows.map((subtask: any) => Number(subtask.taskId))
     ]
   );
-  return {
-    requests: requests.map((request: any) => ({
-      ...request,
-      isSubtask: request.parentTaskId !== null,
-      budgetAvailableForDisbursement: centsToWholeRupees(
-        capacityByTask.get(Number(request.taskId))?.available ?? 0n
-      ),
-      remainingSanctionedBudget: centsToWholeRupees(
-        capacityByTask.get(Number(request.taskId))?.reducible ?? 0n
-      ),
-      checklistExpenseAmount: centsToWholeRupees(
-        capacityByTask.get(Number(request.taskId))?.checklistExpenses ?? 0n
-      ),
-      canReviewAuthority: request.status === 'PENDING' &&
-        request.approvalStage === 'AUTHORITY' &&
-        request.requestType === 'ADVANCE' &&
-        isBudgetAuthority &&
+  const unapprovedInitialBudgetTaskIds = new Set(
+    requests
+      .filter((request: any) =>
         request.parentTaskId === null &&
-        Number(request.taskOwnerUserId) !== userId
-    })),
+        request.requestType === 'ADVANCE' &&
+        request.reason === 'Initial sanctioned task budget' &&
+        request.status !== 'APPROVED'
+      )
+      .map((request: any) => Number(request.taskId))
+  );
+  return {
+    requests: requests.map((request: any) => {
+      const taskId = Number(request.taskId);
+      const taskCapacity = capacityByTask.get(taskId);
+      const hasUnapprovedInitialBudget = unapprovedInitialBudgetTaskIds.has(taskId);
+      return {
+        ...request,
+        isSubtask: request.parentTaskId !== null,
+        budgetAvailableForDisbursement: centsToWholeRupees(
+          hasUnapprovedInitialBudget ? 0n : (taskCapacity?.available ?? 0n)
+        ),
+        remainingSanctionedBudget: centsToWholeRupees(
+          hasUnapprovedInitialBudget ? 0n : (taskCapacity?.reducible ?? 0n)
+        ),
+        checklistExpenseAmount: centsToWholeRupees(taskCapacity?.checklistExpenses ?? 0n),
+        canReviewAuthority: request.status === 'PENDING' &&
+          request.approvalStage === 'AUTHORITY' &&
+          request.requestType === 'ADVANCE' &&
+          isBudgetAuthority &&
+          request.parentTaskId === null &&
+          Number(request.taskOwnerUserId) !== userId
+      };
+    }),
     budgetRequests,
     transactions: transactions.map((transaction) => {
       const { recipientUserId, taskOwnerUserId, ...visibleTransaction } = transaction;
@@ -1229,6 +1570,36 @@ async function loadEventFinance(
         canCancel: transaction.transactionType === 'ADVANCE_RETURN' &&
           transaction.status === 'PENDING' &&
           Number(taskOwnerUserId) === userId
+      };
+    }),
+    subtaskTransfers: subtaskTransfers.map((transfer) => {
+      const { recipientUserId, ...visibleTransfer } = transfer;
+      return {
+        ...visibleTransfer,
+        id: Number(transfer.id),
+        parentTaskId: Number(transfer.parentTaskId),
+        subtaskId: Number(transfer.subtaskId),
+        amount: String(transfer.amount),
+        status: String(transfer.status),
+        canConfirm: Number(recipientUserId) === userId
+      };
+    }),
+    subtasks: subtaskRows.map((subtask: any) => {
+      const taskId = Number(subtask.taskId);
+      const capacity = capacityByTask.get(taskId);
+      return {
+        taskId,
+        parentTaskId: Number(subtask.parentTaskId),
+        taskName: String(subtask.taskName),
+        taskOwnerName: subtask.taskOwnerName || null,
+        taskOwnerUserId: subtask.taskOwnerUserId === null
+          ? null
+          : Number(subtask.taskOwnerUserId),
+        budgetAmount: String(subtask.budgetAmount),
+        budgetAvailableForDisbursement: centsToWholeRupees(capacity?.available ?? 0n),
+        remainingSanctionedBudget: centsToWholeRupees(capacity?.reducible ?? 0n),
+        checklistExpenseAmount: centsToWholeRupees(capacity?.checklistExpenses ?? 0n),
+        taskCreatedAt: String(subtask.taskCreatedAt)
       };
     }),
     summary: {
@@ -1577,6 +1948,200 @@ export const taskFinanceResolvers = {
         connection.release();
       }
       return loadTransaction(transactionId, userId);
+    },
+
+    async confirmTaskSubtaskTransfer(_: unknown, args: { transferId: number }, context: unknown) {
+      const userId = await getLoggedInUserId(context);
+      const transferId = Number(args.transferId);
+      if (!Number.isInteger(transferId) || transferId <= 0) {
+        throwEventError('BAD_REQUEST', 'transferId must be a positive integer');
+      }
+
+      const connection = await getConnection();
+      let subtaskId = 0;
+      try {
+        await connection.beginTransaction();
+        const [rows] = await connection.query<any[]>(
+          `SELECT parent_task_id AS parentTaskId, subtask_id AS subtaskId
+           FROM task_subtask_transfers
+           WHERE id = ?`,
+          [transferId]
+        );
+        const transferRef = rows[0];
+        if (!transferRef) throwEventError('NOT_FOUND', 'Subtask budget transfer not found');
+        const parentTaskId = Number(transferRef.parentTaskId);
+        subtaskId = Number(transferRef.subtaskId);
+        await connection.query('SELECT id FROM tasks WHERE id = ? FOR UPDATE', [parentTaskId]);
+        const [lockedRows] = await connection.query<any[]>(
+          `SELECT recipient_user_id AS recipientUserId, CAST(amount AS CHAR) AS amount, status
+           FROM task_subtask_transfers
+           WHERE id = ?
+           FOR UPDATE`,
+          [transferId]
+        );
+        const transfer = lockedRows[0];
+        if (!transfer) throwEventError('NOT_FOUND', 'Subtask budget transfer not found');
+        if (Number(transfer.recipientUserId) !== userId) {
+          throwEventError('FORBIDDEN', 'Only the subtask assignee can confirm this transfer');
+        }
+        if (transfer.status !== 'PENDING') {
+          throwEventError('CONFLICT', 'This subtask transfer is no longer pending');
+        }
+
+        const capacity = await loadTodoReservationCapacity(connection, parentTaskId, null);
+        if (decimalCents(transfer.amount) > capacity.availableInHand) {
+          throwEventError('BAD_REQUEST', 'The parent task no longer has enough available in-hand cash for this transfer');
+        }
+
+        const [update] = await connection.execute<any>(
+          `UPDATE task_subtask_transfers
+           SET status = 'CONFIRMED', confirmed_by = ?, confirmed_at = CURRENT_TIMESTAMP
+           WHERE id = ? AND recipient_user_id = ? AND status = 'PENDING'`,
+          [userId, transferId, userId]
+        );
+        if (update.affectedRows !== 1) {
+          throwEventError('CONFLICT', 'This subtask transfer is no longer pending');
+        }
+        await connection.commit();
+      } catch (error) {
+        await connection.rollback();
+        throw error;
+      } finally {
+        connection.release();
+      }
+
+      const transfers = await loadTaskSubtaskTransfers(subtaskId, userId);
+      const confirmedTransfer = transfers.find((transfer) => transfer.id === transferId);
+      if (!confirmedTransfer) throwEventError('NOT_FOUND', 'Subtask budget transfer not found');
+      return confirmedTransfer;
+    },
+
+    async disburseTaskBudgetRequest(_: unknown, args: { requestId: number }, context: unknown) {
+      const requestId = Number(args.requestId);
+      if (!Number.isInteger(requestId) || requestId <= 0) {
+        throwEventError('BAD_REQUEST', 'requestId must be a positive integer');
+      }
+      const userId = await getLoggedInUserId(context);
+      const requestRefs = await query<any[]>(
+        `SELECT task_id AS taskId
+         FROM task_budget_requests
+         WHERE id = ? LIMIT 1`,
+        [requestId]
+      );
+      if (requestRefs.length === 0) throwEventError('NOT_FOUND', 'Budget request not found');
+      const taskId = Number(requestRefs[0].taskId);
+      const access = await getFinanceAccess(taskId, userId);
+      if (access.parentTaskId === null) {
+        throwEventError('BAD_REQUEST', 'This disbursement flow is only for subtasks');
+      }
+
+      const connection = await getConnection();
+      let transferId = 0;
+      try {
+        await connection.beginTransaction();
+        await connection.query(
+          'SELECT id FROM tasks WHERE id IN (?, ?) ORDER BY id FOR UPDATE',
+          [access.parentTaskId, taskId]
+        );
+        const [requestRows] = await connection.query<any[]>(
+          `SELECT request.status, request.approval_stage AS approvalStage,
+                  request.requested_amount AS requestedAmount,
+                  request.budget_before_request AS budgetBeforeRequest,
+                  task.parent_id AS parentTaskId, task.owner_user_id AS recipientUserId,
+                  task.budget_amount AS currentBudget
+           FROM task_budget_requests request
+           INNER JOIN tasks task ON task.id = request.task_id
+           WHERE request.id = ? AND request.task_id = ?
+           FOR UPDATE`,
+          [requestId, taskId]
+        );
+        const request = requestRows[0];
+        if (!request) throwEventError('NOT_FOUND', 'Budget request not found');
+        if (request.status !== 'APPROVED') {
+          throwEventError('CONFLICT', 'Only an approved subtask budget request can be disbursed');
+        }
+        const canDisburse = access.isSubtaskCreator &&
+          (request.approvalStage === 'CREATOR' || request.approvalStage === 'AUTHORITY');
+        if (!canDisburse) {
+          throwEventError(
+            'FORBIDDEN',
+            'Only the subtask creator can disburse its approved budget'
+          );
+        }
+        if (request.recipientUserId === null) {
+          throwEventError('CONFLICT', 'Assign a subtask owner before disbursing its budget');
+        }
+        const budgetBefore = decimalCents(request.budgetBeforeRequest);
+        const requestedAmount = decimalCents(request.requestedAmount);
+        const transferAmount = requestedAmount - budgetBefore;
+        if (transferAmount <= 0n) {
+          throwEventError('BAD_REQUEST', 'This budget request does not contain an amount to disburse');
+        }
+        if (decimalCents(request.currentBudget) < requestedAmount) {
+          throwEventError('CONFLICT', 'The approved subtask budget has changed; refresh and review it again');
+        }
+        const [existingTransfers] = await connection.query<any[]>(
+          `SELECT id
+           FROM task_subtask_transfers
+           WHERE source_budget_request_id = ?
+           LIMIT 1 FOR UPDATE`,
+          [requestId]
+        );
+        if (existingTransfers.length > 0) {
+          throwEventError('CONFLICT', 'This approved budget request has already been disbursed');
+        }
+        const [existingFinanceAllocations] = await connection.query<any[]>(
+          `SELECT id
+           FROM task_finance_requests
+           WHERE source_budget_request_id = ?
+           LIMIT 1 FOR UPDATE`,
+          [requestId]
+        );
+        if (existingFinanceAllocations.length > 0) {
+          throwEventError('CONFLICT', 'This approved budget request has already been disbursed');
+        }
+
+        const parentCash = await loadTodoReservationCapacity(connection, access.parentTaskId, null);
+        const [pendingTransfers] = await connection.query<any[]>(
+          `SELECT COALESCE(SUM(amount), 0) AS pendingAmount
+           FROM task_subtask_transfers
+           WHERE parent_task_id = ? AND status = 'PENDING'`,
+          [access.parentTaskId]
+        );
+        const availableCash =
+          parentCash.availableInHand - decimalCents(pendingTransfers[0]?.pendingAmount);
+        if (transferAmount > (availableCash > 0n ? availableCash : 0n)) {
+          throwEventError('BAD_REQUEST', 'The parent task does not have enough available in-hand cash to disburse this budget');
+        }
+
+        const [insertResult] = await connection.execute<any>(
+          `INSERT INTO task_subtask_transfers
+             (parent_task_id, subtask_id, source_budget_request_id, sender_user_id,
+              recipient_user_id, amount, description, status)
+           VALUES (?, ?, ?, ?, ?, ?, ?, 'PENDING')`,
+          [
+            access.parentTaskId,
+            taskId,
+            requestId,
+            userId,
+            Number(request.recipientUserId),
+            String(transferAmount / 100n),
+            `${SUBTASK_BUDGET_TRANSFER_DESCRIPTION} · request #${requestId}`
+          ]
+        );
+        transferId = Number(insertResult.insertId);
+        await connection.commit();
+      } catch (error) {
+        await connection.rollback();
+        throw error;
+      } finally {
+        connection.release();
+      }
+
+      const transfers = await loadTaskSubtaskTransfers(taskId, userId);
+      const transfer = transfers.find((entry) => entry.id === transferId);
+      if (!transfer) throwEventError('NOT_FOUND', 'Subtask budget transfer not found');
+      return transfer;
     },
 
     async reviewTaskFinanceReturn(_: unknown, args: { input: { transactionId: number; decision: string } }, context: unknown) {

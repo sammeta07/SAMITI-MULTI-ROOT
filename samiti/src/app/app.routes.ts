@@ -97,6 +97,11 @@ export const routes: Routes = [
             loadComponent: () => import('./features/dashboard/components/event-details/event-tasks/event-tasks').then(m => m.EventTasksComponent)
           },
           {
+            path: 'drafts',
+            data: { drafts: true },
+            loadComponent: () => import('./features/dashboard/components/event-details/event-tasks/event-tasks').then(m => m.EventTasksComponent)
+          },
+          {
             path: '',
             redirectTo: 'voting',
             pathMatch: 'full'

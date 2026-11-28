@@ -189,7 +189,7 @@
             <span>Program</span>
           </button>
         }
-        @if (selectedTabIndex === 3 && canCreateTask) {
+        @if ((selectedTabIndex === 3 || selectedTabIndex === 4) && canCreateTask) {
           <button mat-stroked-button class="btn-action btn-add-task" type="button"
                   (click)="onCreateTask()" aria-label="Add task">
             <mat-icon>add</mat-icon>
@@ -244,6 +244,13 @@
                 aria-label="Action required"
               >priority_high</mat-icon>
             }
+          </ng-template>
+        </mat-tab>
+
+        <mat-tab [disabled]="!tabsEnabled">
+          <ng-template mat-tab-label>
+            <mat-icon class="tab-leading-icon">drafts</mat-icon>
+            <span>Draft</span>
           </ng-template>
         </mat-tab>
       </mat-tab-group>

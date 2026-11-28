@@ -4,6 +4,7 @@ import {
   getEffectiveApprovedFinanceTotal,
   getInitialSubtaskBudgetHistoryEntry,
   getSanctionedBudgetDisplayTotal,
+  getTaskAdvanceReceiptSummary,
   isCashReturnWithinAvailableCash,
   getTaskCashSummary,
   getTaskFinanceRequestRevision,
@@ -132,7 +133,8 @@ function approvedBudgetRequest(
     taskCreatedAt: '2026-11-01 10:00:00',
     canReviewCreator: false,
     canReviewAuthority: false,
-    canCancel: false
+    canCancel: false,
+    canDisburse: false
   };
 }
 
@@ -157,7 +159,7 @@ function combinedDispatch(amount: string): TaskFinanceTransaction {
     confirmedAt: '2026-11-18 10:00:00',
     recipientName: 'Task owner',
     receivedByName: null,
-    receivedAt: null,
+    receivedAt: '2026-11-18 10:00:00',
     canConfirmReceipt: false,
     canConfirmReturn: false,
     canCancel: false
@@ -233,6 +235,86 @@ describe('initial subtask budget history', () => {
 });
 
 describe('cash return finance history', () => {
+  it('updates received and pending amounts only after recipient confirmation', () => {
+    const dispatched = {
+      ...combinedDispatch('100'),
+      receivedAt: null
+    };
+
+    expect(getTaskAdvanceReceiptSummary(1000, 900, [dispatched])).toEqual({
+      dispatchedAmount: 100,
+      receivedAmount: 0,
+      dispatchableAmount: 900,
+      pendingReceiptAmount: 1000
+    });
+    expect(getTaskAdvanceReceiptSummary(1000, 900, [
+      { ...dispatched, receivedAt: '2026-11-18 10:00:00' }
+    ])).toEqual({
+      dispatchedAmount: 100,
+      receivedAmount: 100,
+      dispatchableAmount: 900,
+      pendingReceiptAmount: 900
+    });
+  });
+
+  it('does not count a dispatched advance until the recipient confirms receipt', () => {
+    const dispatched = {
+      ...combinedDispatch('1000'),
+      receivedAt: null,
+      canConfirmReceipt: true
+    };
+
+    expect(getTaskCashSummary([dispatched])).toEqual({
+      confirmedReturns: 0,
+      inHand: 0,
+      availableInHand: 0
+    });
+  });
+
+  it('moves a subtask budget into the recipient in-hand only after receipt confirmation', () => {
+    const pendingTransfer = {
+      id: 1,
+      parentTaskId: 7,
+      subtaskId: 8,
+      parentTaskName: 'Root task',
+      subtaskName: 'Subtask',
+      senderName: 'Root owner',
+      recipientName: 'Subtask owner',
+      amount: '20',
+      description: 'Subtask budget transfer',
+      status: 'PENDING' as const,
+      createdAt: '2026-11-18 10:00:00',
+      confirmedByName: null,
+      confirmedAt: null,
+      canConfirm: true
+    };
+
+    expect(getTaskCashSummary([combinedDispatch('100')], [pendingTransfer], 7)).toEqual({
+      confirmedReturns: 0,
+      inHand: 100,
+      availableInHand: 100
+    });
+    expect(getTaskCashSummary([], [pendingTransfer], 8)).toEqual({
+      confirmedReturns: 0,
+      inHand: 0,
+      availableInHand: 0
+    });
+    expect(getTaskCashSummary([combinedDispatch('100')], [
+      { ...pendingTransfer, status: 'CONFIRMED', canConfirm: false }
+    ], 7)).toEqual({
+      confirmedReturns: 0,
+      inHand: 80,
+      availableInHand: 80
+    });
+    expect(getTaskCashSummary([], [
+      { ...pendingTransfer, status: 'CONFIRMED', canConfirm: false }
+    ], 8)).toEqual({
+      confirmedReturns: 0,
+      inHand: 20,
+      availableInHand: 20
+    });
+  });
+
   it('allows returning up to available cash and rejects an excess amount', () => {
     expect(isCashReturnWithinAvailableCash('35489', 35489)).toBe(true);
     expect(isCashReturnWithinAvailableCash('35490', 35489)).toBe(false);

@@ -346,6 +346,14 @@ export async function loadTodoReservationCapacity(
      WHERE task_id = ?`,
     [taskId]
   );
+  const [transferRows] = await connection.query<any[]>(
+    `SELECT
+       COALESCE(SUM(CASE WHEN subtask_id = ? THEN amount ELSE 0 END), 0) AS incoming,
+       COALESCE(SUM(CASE WHEN parent_task_id = ? THEN amount ELSE 0 END), 0) AS outgoing
+     FROM task_subtask_transfers
+     WHERE status = 'CONFIRMED' AND (parent_task_id = ? OR subtask_id = ?)`,
+    [taskId, taskId, taskId, taskId]
+  );
   const budgetLeft = todoAmountCents(taskRows[0].budgetAmount) -
     todoAmountCents(allocationRows[0]?.allocated) -
     todoAmountCents(todoRows[0]?.budgetUsage);
@@ -354,7 +362,9 @@ export async function loadTodoReservationCapacity(
     todoAmountCents(todoRows[0]?.confirmedExpenses) -
     todoAmountCents(cashRows[0]?.returned) -
     todoAmountCents(cashRows[0]?.pendingReturns) -
-    todoAmountCents(todoRows[0]?.reservedExpenses);
+    todoAmountCents(todoRows[0]?.reservedExpenses) +
+    todoAmountCents(transferRows[0]?.incoming) -
+    todoAmountCents(transferRows[0]?.outgoing);
 
   return {
     remainingTaskBudget: budgetLeft > 0n ? budgetLeft : 0n,

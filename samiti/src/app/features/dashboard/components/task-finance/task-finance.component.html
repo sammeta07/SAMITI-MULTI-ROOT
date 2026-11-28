@@ -34,16 +34,22 @@
            ===================================================================== -->
       @if (!finance.isEventScope) {
         @let visibleBudgetRequests = budgetRequestsForLedger(finance);
-        @let requestGroups = groupRequestsByTask(finance.requests, visibleBudgetRequests, finance.transactions);
+        @let requestGroups = groupRequestsByTask(
+          finance.requests,
+          visibleBudgetRequests,
+          finance.transactions,
+          finance.subtaskTransfers ?? []
+        );
         @let primaryGroup = getPrimaryGroup(requestGroups);
         @let pendingReceipts = getPendingReceipts(finance.transactions);
+        @let subtaskTransfers = finance.subtaskTransfers ?? [];
         @let sanctionedNum = toNum(finance.summary.sanctionedBudget);
         @let expenseNum = toNum(finance.summary.checklistExpenses);
         @let remBudgetNum = toNum(finance.summary.remainingBudget);
-        @let issuedNum = primaryGroup ? primaryGroup.issuedAdvance : toNum(finance.summary.advanceIssued);
+        @let issuedNum = toNum(finance.summary.advanceIssued);
         @let balanceToReceiveNum = primaryGroup ? primaryGroup.remainingAdvance : maxZero(sanctionedNum - issuedNum);
         @let confirmedReturnsNum = primaryGroup ? primaryGroup.confirmedReturns : toNum(finance.summary.returnConfirmed);
-        @let inHandNum = primaryGroup ? primaryGroup.availableInHand : toNum(finance.summary.availableInHand);
+        @let inHandNum = toNum(finance.summary.availableInHand);
 
         <div class="tf-assignee-scroll">
           <!-- 1. KPI METRIC CARDS -->
@@ -191,6 +197,44 @@
                       [disabled]="isSaving()"
                       (click)="confirmReceipt(tx)"
                     >Confirm Receipt</button>
+                  </div>
+                }
+              </div>
+            </div>
+          }
+
+          @if (shouldShowSubtaskTransferBanner(subtaskTransfers)) {
+            <div class="tf-alert-card">
+              <div class="tf-alert-left">
+                <mat-icon>swap_horiz</mat-icon>
+                <div>
+                  <strong>Subtask Budget Transfers</strong>
+                  <small>Subtask budget amounts are sent to their assignees for receipt confirmation.</small>
+                </div>
+              </div>
+              <div class="tf-alert-list">
+                @for (transfer of subtaskTransfers; track transfer.id) {
+                  <div class="tf-alert-item">
+                    <span class="tf-num fw-600 val-received">₹{{ money(transfer.amount) }}</span>
+                    <small class="text-muted">
+                      {{ taskId === transfer.parentTaskId ? transfer.subtaskName : transfer.parentTaskName }}
+                      · by {{ (transfer.senderName || 'Task creator') | titlecase }}
+                      · {{ transfer.createdAt | date: 'dd MMM, h:mm a' }}
+                    </small>
+                    @if (transfer.canConfirm) {
+                      <button
+                        type="button"
+                        class="tf-btn tf-btn-success tf-btn-xs"
+                        [disabled]="isSaving()"
+                        (click)="confirmSubtaskTransfer(transfer)"
+                      >Confirm Receipt</button>
+                    } @else if (transfer.status === 'CONFIRMED') {
+                      <span class="tf-pill pill-success pill-xs">
+                        Received{{ transfer.confirmedByName ? ' by ' + (transfer.confirmedByName | titlecase) : '' }}
+                      </span>
+                    } @else {
+                      <span class="tf-pill pill-warning pill-xs">Awaiting receipt</span>
+                    }
                   </div>
                 }
               </div>
@@ -380,9 +424,15 @@
 
               <div class="tf-tab-scroll-area">
                 @let visibleBudgetRequests = budgetRequestsForLedger(finance);
-                @let requestGroups = groupRequestsByTask(finance.requests, visibleBudgetRequests, finance.transactions);
+                @let requestGroups = groupRequestsByTask(
+                  finance.requests,
+                  visibleBudgetRequests,
+                  finance.transactions,
+                  creatorScope ? (finance.subtaskTransfers ?? []) : [],
+                  creatorScope ? (finance.subtasks ?? []) : []
+                );
                 @let otherTransactions = getOtherTransactions(finance.requests, finance.transactions, requestGroups);
-                @let showBudgetReviewColumn = shouldShowBudgetReviewColumn(finance) && visibleBudgetRequests.length > 0;
+                @let showBudgetReviewColumn = shouldShowBudgetReviewColumn(finance);
                 @let showFinanceActionColumn = finance.canApprove
                   || showBudgetReviewColumn
                   || (!finance.canViewBudgetIncreaseRequests
@@ -455,6 +505,22 @@
                                     {{ (group.taskOwnerName || 'Unassigned') | titlecase }}
                                   </small>
                                 }
+                                @for (transfer of group.subtaskTransfers; track transfer.id) {
+                                  <small class="tf-subtask-transfer-meta">
+                                    ₹{{ money(transfer.amount) }}
+                                    · {{ transfer.status === 'CONFIRMED'
+                                      ? 'Received by ' + (transfer.recipientName || 'assignee')
+                                      : 'Awaiting receipt from ' + (transfer.recipientName || 'assignee') }}
+                                  </small>
+                                  @if (transfer.canConfirm) {
+                                    <button
+                                      type="button"
+                                      class="tf-btn tf-btn-success tf-btn-xs"
+                                      [disabled]="isSaving()"
+                                      (click)="confirmSubtaskTransfer(transfer)"
+                                    >Confirm Receipt</button>
+                                  }
+                                }
                               </div>
                             </div>
 
@@ -510,6 +576,8 @@
                                     class="tf-budget-review-amount"
                                     [ngClass]="budgetRequestChangeClass(budgetRequest)"
                                   >{{ budgetRequestChangeLabel(budgetRequest) }}</span>
+                                } @else if (pendingInitialTaskBudgetReviewItem(group); as initialRequest) {
+                                  <span class="tf-budget-review-amount">{{ taskBudgetReviewAmount(initialRequest) }}</span>
                                 } @else {
                                   <span class="cell-settled">—</span>
                                 }
@@ -523,7 +591,7 @@
                                     <strong class="tf-num val-expense">{{ money(cashReturn.amount) }}</strong>
                                   }
                                 } @else if (
-                                  group.remainingAdvance > 0
+                                  group.dispatchableAdvance > 0
                                   && group.taskOwnerUserId !== null
                                   && (!group.isSubtask || creatorScope)
                                 ) {
@@ -531,7 +599,7 @@
                                     <input
                                       type="number"
                                       min="1"
-                                      [max]="group.remainingAdvance"
+                                      [max]="group.dispatchableAdvance"
                                       step="1"
                                       appWholeRupee
                                       [name]="'dispatch-task-' + group.taskId"
@@ -593,9 +661,20 @@
                                   } @else if (
                                     item.kind === 'budget'
                                     && item.request.status === 'APPROVED'
+                                    && item.request.canDisburse
+                                  ) {
+                                    <button
+                                      type="button"
+                                      class="tf-btn tf-btn-primary tf-btn-xs"
+                                      [disabled]="isSaving()"
+                                      (click)="disburseBudgetRequest(item.request)"
+                                    >Disburse</button>
+                                  } @else if (
+                                    item.kind === 'budget'
+                                    && item.request.status === 'APPROVED'
                                     && finance.canApprove
                                     && group.taskOwnerUserId !== null
-                                    && group.remainingAdvance > 0
+                                    && group.dispatchableAdvance > 0
                                     && (!group.isSubtask || creatorScope)
                                   ) {
                                     <button
@@ -633,7 +712,7 @@
                                 } @else if (group.taskOwnerUserId === null && hasApprovedFinanceRequest(group)) {
                                   <span class="tf-pill pill-danger tf-status-pill">Unassigned</span>
                                 } @else if (
-                                  group.remainingAdvance > 0
+                                  group.dispatchableAdvance > 0
                                   && finance.canApprove
                                   && group.taskOwnerUserId !== null
                                   && (!group.isSubtask || creatorScope)
@@ -653,9 +732,22 @@
                                 } @else if (group.remainingAdvance > 0) {
                                   <span class="tf-pill pill-warning tf-status-pill">Pending</span>
                                 } @else if (budgetReviewItem; as item) {
-                                  <span class="tf-pill tf-status-pill" [ngClass]="getStatusClass(taskBudgetReviewStatus(item))">
-                                    {{ formatLabel(taskBudgetReviewStatus(item)) }}
-                                  </span>
+                                  @if (
+                                    item.kind === 'budget'
+                                    && item.request.status === 'APPROVED'
+                                    && item.request.canDisburse
+                                  ) {
+                                    <button
+                                      type="button"
+                                      class="tf-btn tf-btn-primary tf-btn-xs"
+                                      [disabled]="isSaving()"
+                                      (click)="disburseBudgetRequest(item.request)"
+                                    >Disburse</button>
+                                  } @else {
+                                    <span class="tf-pill tf-status-pill" [ngClass]="getStatusClass(taskBudgetReviewStatus(item))">
+                                      {{ formatLabel(taskBudgetReviewStatus(item)) }}
+                                    </span>
+                                  }
                                 } @else {
                                   <span class="cell-settled">—</span>
                                 }
@@ -708,7 +800,7 @@
                   </div>
                 }
 
-                @if (visibleBudgetRequests.length === 0 && finance.requests.length === 0 && otherTransactions.length === 0) {
+                @if (requestGroups.length === 0 && visibleBudgetRequests.length === 0 && finance.requests.length === 0 && otherTransactions.length === 0 && !finance.subtaskTransfers?.length) {
                   <div class="tf-empty-state">No requests or cash/expense entries yet.</div>
                 }
 

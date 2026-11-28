@@ -6,6 +6,8 @@ import {
   TaskFinancePayload,
   TaskFinanceRequest,
   TaskFinanceTransaction,
+  TaskFinanceSubtaskEntry,
+  TaskSubtaskTransfer,
   TaskFinanceTransactionType
 } from './task-finance.models';
 
@@ -33,12 +35,16 @@ export class TaskFinanceService {
           requestedByName actionByName status approvalStage creatorDecision creatorReviewedByName
           creatorReviewerDesignation creatorReviewedAt authorityDecision
           authorityReviewedByName authorityReviewerDesignation authorityReviewedAt
-          createdAt taskCreatedAt canReviewCreator canReviewAuthority canCancel
+          createdAt taskCreatedAt canReviewCreator canReviewAuthority canCancel canDisburse
         }
         transactions {
           id taskId isSubtask taskName taskOwnerName requestId transactionType amount description status checklistExpenseAmount checklistReservedAmount
           createdByName confirmedByName createdAt taskCreatedAt confirmedAt
           recipientName receivedByName receivedAt canConfirmReceipt canConfirmReturn canCancel
+        }
+        subtaskTransfers {
+          id parentTaskId subtaskId sourceBudgetRequestId parentTaskName subtaskName senderName recipientName
+          amount description status createdAt confirmedByName confirmedAt canConfirm
         }
         summary {
           sanctionedBudget checklistExpenses checklistReserved subtaskSpent remainingBudget
@@ -68,7 +74,7 @@ export class TaskFinanceService {
           requestedByName actionByName status approvalStage creatorDecision creatorReviewedByName
           creatorReviewerDesignation creatorReviewedAt authorityDecision
           authorityReviewedByName authorityReviewerDesignation authorityReviewedAt
-          createdAt taskCreatedAt canReviewCreator canReviewAuthority canCancel
+          createdAt taskCreatedAt canReviewCreator canReviewAuthority canCancel canDisburse
         }
         transactions {
           id taskId isSubtask taskName taskOwnerName requestId transactionType amount description status checklistExpenseAmount checklistReservedAmount
@@ -102,12 +108,20 @@ export class TaskFinanceService {
           requestedByName actionByName status approvalStage creatorDecision creatorReviewedByName
           creatorReviewerDesignation creatorReviewedAt authorityDecision
           authorityReviewedByName authorityReviewerDesignation authorityReviewedAt
-          createdAt taskCreatedAt canReviewCreator canReviewAuthority canCancel
+          createdAt taskCreatedAt canReviewCreator canReviewAuthority canCancel canDisburse
         }
         transactions {
           id taskId isSubtask taskName taskOwnerName requestId transactionType amount description status checklistExpenseAmount checklistReservedAmount
           createdByName confirmedByName createdAt taskCreatedAt confirmedAt
           recipientName receivedByName receivedAt canConfirmReceipt canConfirmReturn canCancel
+        }
+        subtaskTransfers {
+          id parentTaskId subtaskId sourceBudgetRequestId parentTaskName subtaskName senderName recipientName
+          amount description status createdAt confirmedByName confirmedAt canConfirm
+        }
+        subtasks {
+          taskId parentTaskId taskName taskOwnerName taskOwnerUserId budgetAmount
+          budgetAvailableForDisbursement remainingSanctionedBudget checklistExpenseAmount taskCreatedAt
         }
         summary {
           sanctionedBudget checklistExpenses checklistReserved subtaskSpent remainingBudget
@@ -138,12 +152,20 @@ export class TaskFinanceService {
           requestedByName actionByName status approvalStage creatorDecision creatorReviewedByName
           creatorReviewerDesignation creatorReviewedAt authorityDecision
           authorityReviewedByName authorityReviewerDesignation authorityReviewedAt
-          createdAt taskCreatedAt canReviewCreator canReviewAuthority canCancel
+          createdAt taskCreatedAt canReviewCreator canReviewAuthority canCancel canDisburse
         }
         transactions {
           id taskId isSubtask taskName taskOwnerName requestId transactionType amount description status checklistExpenseAmount checklistReservedAmount
           createdByName confirmedByName createdAt taskCreatedAt confirmedAt
           recipientName receivedByName receivedAt canConfirmReceipt canConfirmReturn canCancel
+        }
+        subtaskTransfers {
+          id parentTaskId subtaskId sourceBudgetRequestId parentTaskName subtaskName senderName recipientName
+          amount description status createdAt confirmedByName confirmedAt canConfirm
+        }
+        subtasks {
+          taskId parentTaskId taskName taskOwnerName taskOwnerUserId budgetAmount
+          budgetAvailableForDisbursement remainingSanctionedBudget checklistExpenseAmount taskCreatedAt
         }
         summary {
           sanctionedBudget checklistExpenses checklistReserved subtaskSpent remainingBudget
@@ -243,6 +265,28 @@ export class TaskFinanceService {
     }`;
     return this.request<{ confirmTaskFinanceReceipt: TaskFinanceTransaction }>(mutation, { transactionId })
       .pipe(map((response) => response.confirmTaskFinanceReceipt));
+  }
+
+  public confirmSubtaskTransfer(transferId: number): Observable<TaskSubtaskTransfer> {
+    const mutation = `mutation ConfirmTaskSubtaskTransfer($transferId: Int!) {
+      confirmTaskSubtaskTransfer(transferId: $transferId) {
+        id parentTaskId subtaskId sourceBudgetRequestId parentTaskName subtaskName senderName recipientName
+        amount description status createdAt confirmedByName confirmedAt canConfirm
+      }
+    }`;
+    return this.request<{ confirmTaskSubtaskTransfer: TaskSubtaskTransfer }>(mutation, { transferId })
+      .pipe(map((response) => response.confirmTaskSubtaskTransfer));
+  }
+
+  public disburseTaskBudgetRequest(requestId: number): Observable<TaskSubtaskTransfer> {
+    const mutation = `mutation DisburseTaskBudgetRequest($requestId: Int!) {
+      disburseTaskBudgetRequest(requestId: $requestId) {
+        id parentTaskId subtaskId sourceBudgetRequestId parentTaskName subtaskName senderName recipientName
+        amount description status createdAt confirmedByName confirmedAt canConfirm
+      }
+    }`;
+    return this.request<{ disburseTaskBudgetRequest: TaskSubtaskTransfer }>(mutation, { requestId })
+      .pipe(map((response) => response.disburseTaskBudgetRequest));
   }
 
   public acceptCashReturn(transactionId: number): Observable<TaskFinanceTransaction> {

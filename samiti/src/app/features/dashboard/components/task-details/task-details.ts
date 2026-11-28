@@ -1,5 +1,5 @@
 import { CommonModule } from '@angular/common';
-import { Component, DestroyRef, inject, OnInit, QueryList, signal, ViewChildren } from '@angular/core';
+import { Component, DestroyRef, ElementRef, inject, OnInit, QueryList, signal, ViewChild, ViewChildren } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { FormsModule } from '@angular/forms';
@@ -54,7 +54,9 @@ import { TaskActionsDialogService } from './task-actions-dialog.service';
   styleUrl: './task-details.scss'
 })
 export class TaskDetailsComponent implements OnInit {
+  @ViewChild('newChecklistTitleInput') private newChecklistTitleInput?: ElementRef<HTMLInputElement>;
   @ViewChildren(MatExpansionPanel) private subtaskPanels!: QueryList<MatExpansionPanel>;
+  @ViewChild('newSubtaskTitleInput') private newSubtaskTitleInput?: ElementRef<HTMLInputElement>;
 
   private readonly route = inject(ActivatedRoute);
   private readonly router = inject(Router);
@@ -73,6 +75,7 @@ export class TaskDetailsComponent implements OnInit {
   public readonly isLoading = signal(true);
   public readonly task = signal<TaskDetailsPayload | null>(null);
   public readonly taskAvailableInHand = signal<number | null>(null);
+  public readonly taskConfirmedSubtaskTransferAmount = signal(0);
   public readonly taskBudgetRemaining = signal<number | null>(null);
   public readonly taskStatuses = TASK_STATUSES;
   public readonly isSavingTaskName = signal(false);
@@ -150,6 +153,57 @@ export class TaskDetailsComponent implements OnInit {
     if (!task.canManageTodos) return;
     this.newChecklistName = '';
     this.isCreatingChecklist = true;
+    setTimeout(() => this.newChecklistTitleInput?.nativeElement.focus());
+  }
+
+  public onChecklistBudgetFocus(checklist: TodoChecklistComponent): void {
+    if (String(checklist.newExpenseAmount).trim() === '0') {
+      checklist.newExpenseAmount = '';
+    }
+  }
+
+  public onChecklistBudgetBlur(checklist: TodoChecklistComponent): void {
+    if (!String(checklist.newExpenseAmount).trim()) {
+      checklist.newExpenseAmount = '0';
+    }
+  }
+
+  public isChecklistBudgetWithinAvailable(checklist: TodoChecklistComponent): boolean {
+    const availableInHand = this.taskAvailableInHand();
+    return availableInHand === null ||
+      !checklist.isValidExpenseAmount(checklist.newExpenseAmount) ||
+      Number(checklist.newExpenseAmount) <= availableInHand;
+  }
+
+  public isChecklistAddDisabled(checklist: TodoChecklistComponent): boolean {
+    return !this.newChecklistName.trim() ||
+      !checklist.isValidExpenseAmount(checklist.newExpenseAmount) ||
+      !this.isChecklistBudgetWithinAvailable(checklist) ||
+      checklist.isAdding;
+  }
+
+  public getChecklistAddTooltip(checklist: TodoChecklistComponent): string {
+    if (checklist.isAdding) return 'Adding checklist item...';
+    if (!this.newChecklistName.trim()) return 'Enter a checklist item title.';
+    if (!checklist.isValidExpenseAmount(checklist.newExpenseAmount)) {
+      return 'Enter a valid non-negative whole-number budget.';
+    }
+    const availableInHand = this.taskAvailableInHand();
+    if (availableInHand !== null && !this.isChecklistBudgetWithinAvailable(checklist)) {
+      return `Budget cannot exceed the available in-hand amount of ${formatTaskBudgetAmount(availableInHand)}.`;
+    }
+    return '';
+  }
+
+  public onAddChecklistItem(checklist: TodoChecklistComponent): void {
+    if (!this.isChecklistBudgetWithinAvailable(checklist)) {
+      const availableInHand = this.taskAvailableInHand();
+      this.notifier.error(
+        `Checklist budget cannot exceed available in-hand${availableInHand === null ? '' : ` amount of ${formatTaskBudgetAmount(availableInHand)}`}.`
+      );
+      return;
+    }
+    checklist.add(this.newChecklistName);
   }
 
   public onCancelChecklistItem(checklist: TodoChecklistComponent): void {
@@ -184,6 +238,60 @@ export class TaskDetailsComponent implements OnInit {
     this.newSubtaskName = '';
     this.newSubtaskBudget = '0';
     this.isCreatingSubtask = true;
+    setTimeout(() => this.newSubtaskTitleInput?.nativeElement.focus());
+  }
+
+  public onNewSubtaskBudgetFocus(): void {
+    if (String(this.newSubtaskBudget).trim() === '0') {
+      this.newSubtaskBudget = '';
+    }
+  }
+
+  public onNewSubtaskBudgetBlur(): void {
+    if (!String(this.newSubtaskBudget).trim()) {
+      this.newSubtaskBudget = '0';
+    }
+  }
+
+  public getAvailableSubtaskBudget(task: TaskDetailsPayload): number | null {
+    const availableInHand = this.taskAvailableInHand();
+    if (availableInHand === null || !Number.isFinite(availableInHand)) return null;
+
+    const allocatedToSubtasks = task.children.reduce((total, child) => {
+      const amount = Number(child.budgetAmount);
+      return total + (Number.isFinite(amount) && amount > 0 ? amount : 0);
+    }, 0);
+    const notYetTransferred = Math.max(
+      0,
+      allocatedToSubtasks - this.taskConfirmedSubtaskTransferAmount()
+    );
+    return Math.max(0, availableInHand - notYetTransferred);
+  }
+
+  public isSubtaskBudgetWithinAvailable(task: TaskDetailsPayload): boolean {
+    const availableBudget = this.getAvailableSubtaskBudget(task);
+    const amount = String(this.newSubtaskBudget).trim();
+    return availableBudget === null ||
+      !isValidTaskBudgetAmount(amount) ||
+      Number(amount) <= availableBudget;
+  }
+
+  public isSubtaskSaveDisabled(task: TaskDetailsPayload): boolean {
+    return !this.newSubtaskName.trim() ||
+      !isValidTaskBudgetAmount(this.newSubtaskBudget) ||
+      !this.isSubtaskBudgetWithinAvailable(task) ||
+      this.isSavingSubtask;
+  }
+
+  public getSubtaskSaveTooltip(task: TaskDetailsPayload): string {
+    if (this.isSavingSubtask) return 'Creating subtask...';
+    if (!this.newSubtaskName.trim()) return 'Enter a subtask title.';
+    if (!isValidTaskBudgetAmount(this.newSubtaskBudget)) return 'Enter a valid non-negative whole-number budget.';
+    const availableBudget = this.getAvailableSubtaskBudget(task);
+    if (availableBudget !== null && !this.isSubtaskBudgetWithinAvailable(task)) {
+      return `Budget cannot exceed the available in-hand amount of ${formatTaskBudgetAmount(availableBudget)}.`;
+    }
+    return '';
   }
 
   public onCancelSubtask(): void {
@@ -196,7 +304,9 @@ export class TaskDetailsComponent implements OnInit {
   public async onSaveSubtask(task: TaskDetailsPayload): Promise<void> {
     const taskName = this.newSubtaskName.trim();
     if (!task.canCreateTasks || task.parentTaskId !== null || !taskName || taskName.length > 255 ||
-      !isValidTaskBudgetAmount(this.newSubtaskBudget) || this.isSavingSubtask) return;
+      !isValidTaskBudgetAmount(this.newSubtaskBudget) ||
+      !this.isSubtaskBudgetWithinAvailable(task) ||
+      this.isSavingSubtask) return;
 
     this.isSavingSubtask = true;
     try {
@@ -305,15 +415,27 @@ export class TaskDetailsComponent implements OnInit {
     event: Event
   ): void {
     event.stopPropagation();
-    const rootTaskId = this.task()?.taskId;
+    const rootTask = this.task();
+    const rootTaskId = rootTask?.taskId;
+    const canRefreshRootFinance = rootTask?.canAccessFinance === true;
     this.taskFinanceDialog.open(taskId, taskName, ownerName, eventId).subscribe(() => {
       if (rootTaskId === undefined || this.task()?.taskId !== rootTaskId) return;
       this.taskFinanceService.getTaskFinance(taskId).subscribe({
         next: (finance) => {
           if (this.task()?.taskId !== rootTaskId) return;
           if (taskId === rootTaskId) {
-            this.taskAvailableInHand.set(Number(finance.summary.availableInHand));
-            this.taskBudgetRemaining.set(Number(finance.summary.remainingBudget));
+            this.applyTaskFinanceSnapshot(finance);
+          } else if (canRefreshRootFinance) {
+            this.taskFinanceService.getTaskFinance(rootTaskId).subscribe({
+              next: (rootFinance) => {
+                if (this.task()?.taskId === rootTaskId) {
+                  this.applyTaskFinanceSnapshot(rootFinance);
+                }
+              },
+              error: (error) => this.notifier.error(
+                error?.error?.errors?.[0]?.message || error?.message || 'Failed to refresh parent task finance.'
+              )
+            });
           }
           const needsFinanceAction = hasPendingFinanceAction(finance);
           this.task.update((current) => current && current.taskId === rootTaskId
@@ -1516,6 +1638,7 @@ export class TaskDetailsComponent implements OnInit {
     this.isLoading.set(true);
     this.task.set(null);
     this.taskAvailableInHand.set(null);
+    this.taskConfirmedSubtaskTransferAmount.set(0);
     this.taskBudgetRemaining.set(null);
     this.pendingSubtaskOwnerIds = {};
     this.subtaskAssigneeSearchText = {};
@@ -1549,8 +1672,7 @@ export class TaskDetailsComponent implements OnInit {
     this.taskFinanceService.getTaskFinance(taskId).subscribe({
       next: (finance) => {
         if (requestId !== this.requestId || this.task()?.taskId !== taskId) return;
-        this.taskAvailableInHand.set(Number(finance.summary.availableInHand));
-        this.taskBudgetRemaining.set(Number(finance.summary.remainingBudget));
+        this.applyTaskFinanceSnapshot(finance);
       },
       error: (error) => {
         if (requestId !== this.requestId || this.task()?.taskId !== taskId) return;
@@ -1559,5 +1681,21 @@ export class TaskDetailsComponent implements OnInit {
         );
       }
     });
+  }
+
+  private applyTaskFinanceSnapshot(finance: {
+    summary: { availableInHand: string; remainingBudget: string };
+    subtaskTransfers?: Array<{ parentTaskId: number; amount: string; status: string }>;
+  }): void {
+    const rootTaskId = this.task()?.taskId;
+    this.taskAvailableInHand.set(Number(finance.summary.availableInHand));
+    this.taskBudgetRemaining.set(Number(finance.summary.remainingBudget));
+    this.taskConfirmedSubtaskTransferAmount.set(
+      (finance.subtaskTransfers ?? [])
+        .filter((transfer) =>
+          transfer.parentTaskId === rootTaskId && transfer.status === 'CONFIRMED'
+        )
+        .reduce((total, transfer) => total + Number(transfer.amount || 0), 0)
+    );
   }
 }

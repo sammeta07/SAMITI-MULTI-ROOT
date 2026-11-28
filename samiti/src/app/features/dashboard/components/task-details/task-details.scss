@@ -2300,6 +2300,11 @@
   font-size: 0.65rem;
   font-weight: 600;
 
+  > span {
+    flex: 0 0 auto;
+    white-space: nowrap;
+  }
+
   input {
     width: 120px;
     max-width: 120px;
@@ -2311,6 +2316,10 @@
   align-items: center;
   justify-content: flex-end;
   gap: 4px;
+}
+
+.task-subtask-save-tooltip {
+  display: inline-flex;
 }
 
 .task-subtask-create-button {

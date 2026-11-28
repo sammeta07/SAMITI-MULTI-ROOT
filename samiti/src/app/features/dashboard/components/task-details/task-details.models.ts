@@ -37,6 +37,8 @@ export interface TaskDetailsPayload {
   taskId: number;
   taskName: string;
   budgetAmount: string;
+  isDraft?: boolean;
+  initialBudgetRequestedAmount?: string | null;
   remainingBudgetAfterExpenses: string;
   budgetRequestId: number | null;
   requestedBudgetAmount: string | null;

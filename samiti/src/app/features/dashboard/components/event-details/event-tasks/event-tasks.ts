@@ -1,4 +1,4 @@
-import { Component, ElementRef, inject, signal, OnInit, OnDestroy, QueryList, ViewChild, ViewChildren } from '@angular/core';
+import { Component, ElementRef, effect, inject, signal, OnInit, OnDestroy, QueryList, ViewChild, ViewChildren } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { MatIconModule } from '@angular/material/icon';
@@ -13,10 +13,10 @@ import { firstValueFrom, Subscription } from 'rxjs';
 import { WholeRupeeDirective } from '../../../../../shared/directives/whole-rupee.directive';
 
 import { EventTasksService } from './event-tasks.service';
-import { calculateTaskBudgetRemaining, EventTaskEntry, EventTasksPayload, formatIssuedAndSanctionedTaskBudget, formatTaskBudgetAmount, isValidTaskBudgetAmount, TaskAssignee, TASK_STATUSES, TaskStatus, taskHierarchyLevelBackground } from './event-tasks.models';
+import { EventTaskEntry, EventTasksPayload, formatInHandAndSanctionedTaskBudget, formatTaskBudgetAmount, isValidTaskBudgetAmount, TaskAssignee, TASK_STATUSES, TaskStatus, taskHierarchyLevelBackground } from './event-tasks.models';
 import { NotifierService } from '../../../../../shared/notifier/notifier.service';
 import { ConfirmDialogService } from '../../../../../components/dialog/confirm/confirm-dialog.service';
-import { ConfirmDialogData } from '../../../../../components/dialog/confirm/confirm-dialog.models';
+import { ConfirmDialogData, ConfirmDialogResponse } from '../../../../../components/dialog/confirm/confirm-dialog.models';
 import { DashboardHierarchyTreeService } from '../../dashboard-hierarchy-tree/dashboard-hierarchy-tree.service';
 import { EventDetailsStateService } from '../event-details-state.service';
 import { TaskDetailsService } from '../../task-details/task-details.service';
@@ -25,6 +25,7 @@ import { TaskDetailsPayload } from '../../task-details/task-details.models';
 import { hasPendingFinanceAction } from '../../task-finance/task-finance.models';
 import { TaskFinanceService } from '../../task-finance/task-finance.service';
 import { TaskFinanceDialogService } from '../../task-finance/task-finance-dialog.service';
+import { EventDetailsOverviewService } from '../event-details-overview.service';
 
 @Component({
   selector: 'app-event-tasks',
@@ -60,10 +61,22 @@ export class EventTasksComponent implements OnInit, OnDestroy {
   private readonly taskActionsDialog = inject(TaskActionsDialogService);
   private readonly taskFinanceService = inject(TaskFinanceService);
   private readonly taskFinanceDialog = inject(TaskFinanceDialogService);
+  private readonly eventOverviewService = inject(EventDetailsOverviewService);
 
   private parentParamsSub?: Subscription;
   private currentEventId: number | null = null;
   private taskLoadRequestId = 0;
+  private lastTaskListRevision = this.eventDetailsState.taskListRevision();
+  private readonly taskListRefreshEffect = effect(() => {
+    const revision = this.eventDetailsState.taskListRevision();
+    if (revision === this.lastTaskListRevision) return;
+    this.lastTaskListRevision = revision;
+    const eventId = this.currentEventId;
+    if (eventId !== null) {
+      this.hierarchyTreeService.triggerHierarchyTreeRefresh();
+      this.loadEventTasks(String(eventId), true);
+    }
+  });
 
   private readonly eventDataState = signal<EventTaskEntry[] | null>(null);
   public taskAssignees: TaskAssignee[] = [];
@@ -79,6 +92,7 @@ export class EventTasksComponent implements OnInit, OnDestroy {
   public readonly editingTaskBudgetIds = new Set<number>();
   public readonly savingTaskBudgetIds = new Set<number>();
   public readonly reviewingTaskBudgetRequestIds = new Set<number>();
+  public readonly reviewingInitialBudgetRequestIds = signal<Set<number>>(new Set<number>());
   public readonly cancellingTaskBudgetRequestIds = new Set<number>();
   public readonly requestingTaskBudgetIncreaseIds = new Set<number>();
   public taskBudgetEditAmounts: Record<number, string | number> = {};
@@ -94,6 +108,7 @@ export class EventTasksComponent implements OnInit, OnDestroy {
   public newTaskBudget = '0';
   public isLoading = true;
   public hasLoadError = false;
+  public isDraftTab = false;
 
   public get tasks(): EventTaskEntry[] {
     return this.eventDataState() ?? [];
@@ -135,7 +150,17 @@ export class EventTasksComponent implements OnInit, OnDestroy {
 
   public openTaskActionsDialog(task: EventTaskEntry, event: Event): void {
     event.stopPropagation();
-    void this.taskActionsDialog.open(task.taskId, (updatedTask) => this.updateTaskFromDialog(task, updatedTask));
+    void this.taskActionsDialog.open(
+      task.taskId,
+      (updatedTask) => this.updateTaskFromDialog(task, updatedTask),
+      this.isDraftTab
+        ? {
+            initialBudgetRequestedAmount: task.parentTaskId === null
+              ? task.initialBudgetRequestedAmount
+              : null
+          }
+        : undefined
+    );
   }
 
   private updateTaskFromDialog(originalTask: EventTaskEntry, updatedTask: TaskDetailsPayload): void {
@@ -145,6 +170,7 @@ export class EventTasksComponent implements OnInit, OnDestroy {
           ...task,
           taskName: updatedTask.taskName,
           budgetAmount: updatedTask.budgetAmount,
+          initialBudgetRequestedAmount: updatedTask.initialBudgetRequestedAmount ?? task.initialBudgetRequestedAmount,
           budgetRequestId: updatedTask.budgetRequestId,
           requestedBudgetAmount: updatedTask.requestedBudgetAmount,
           budgetRequestStatus: updatedTask.budgetRequestStatus,
@@ -169,6 +195,9 @@ export class EventTasksComponent implements OnInit, OnDestroy {
           canAccessFinance: updatedTask.canAccessFinance
         }
       : task);
+    if (this.isDraftTab && originalTask.parentTaskId === null) {
+      this.eventDetailsState.refreshTaskList();
+    }
   }
 
   public openTaskFinanceDialog(taskId: number, taskName: string, ownerName: string | null | undefined, event: Event): void {
@@ -181,11 +210,8 @@ export class EventTasksComponent implements OnInit, OnDestroy {
         next: (finance) => {
           if (eventId !== this.currentEventId) return;
           const needsFinanceAction = hasPendingFinanceAction(finance);
-          const issuedAmount = finance.transactions
-            .filter((transaction) => transaction.transactionType === 'ADVANCE_ISSUED' && transaction.status === 'CONFIRMED')
-            .reduce((total, transaction) => total + Number(transaction.amount), 0);
           this.eventData = this.tasks.map((task) => task.taskId === taskId
-            ? { ...task, needsFinanceAction, issuedAmount: String(issuedAmount) }
+            ? { ...task, needsFinanceAction, availableInHand: finance.summary.availableInHand }
             : task);
         },
         error: (error) => {
@@ -242,7 +268,8 @@ export class EventTasksComponent implements OnInit, OnDestroy {
   }
 
   public getTaskDeletionBlockReason(task: EventTaskEntry): string | null {
-    if (String(task.status || '').toUpperCase() !== 'NEW') {
+    const isDraftRoot = this.isDraftTab && task.parentTaskId === null;
+    if (String(task.status || '').toUpperCase() !== 'NEW' && !isDraftRoot) {
       return this.formatTaskDeletionBlockReason([task]);
     }
 
@@ -336,6 +363,7 @@ export class EventTasksComponent implements OnInit, OnDestroy {
   }
 
   public ngOnInit(): void {
+    this.isDraftTab = this.route.snapshot.data['drafts'] === true;
     const parentParams$ = this.route.parent?.params;
     if (!parentParams$) return;
 
@@ -781,7 +809,9 @@ export class EventTasksComponent implements OnInit, OnDestroy {
 
     const dialogData: ConfirmDialogData = {
       title: 'Delete Task',
-      message: `Delete "${task.taskName}" and its subtasks? Only NEW tasks can be deleted, and all descendants must also be NEW.`,
+      message: this.isDraftTab && task.parentTaskId === null
+        ? `Delete draft "${task.taskName}" and its subtasks? All descendants must be NEW.`
+        : `Delete "${task.taskName}" and its subtasks? Only NEW tasks can be deleted, and all descendants must also be NEW.`,
       confirmText: 'Delete',
       cancelText: 'Cancel'
     };
@@ -795,7 +825,9 @@ export class EventTasksComponent implements OnInit, OnDestroy {
       if (this.currentEventId !== task.eventId) return;
 
       this.eventData = this.tasks.filter((entry) => !deletedTaskIds.has(entry.taskId));
-      this.eventDetailsState.decrementTaskCounts(task.parentTaskId === null, deletedTaskIds.size);
+      if (!this.isDraftTab) {
+        this.eventDetailsState.decrementTaskCounts(task.parentTaskId === null, deletedTaskIds.size);
+      }
       this.hierarchyTreeService.triggerHierarchyTreeRefresh();
       this.notifier.success(`Task "${task.taskName}" deleted successfully.`);
     } catch (error) {
@@ -830,21 +862,11 @@ export class EventTasksComponent implements OnInit, OnDestroy {
     return `${change < 0 ? '−' : '+'}${formatTaskBudgetAmount(Math.abs(change))}`;
   }
 
-  public formatIssuedAndSanctionedTaskBudget(
-    issuedAmount: string | number | null | undefined,
+  public formatInHandAndSanctionedTaskBudget(
+    inHandAmount: string | number | null | undefined,
     sanctionedAmount: string | number | null | undefined
   ): string {
-    return formatIssuedAndSanctionedTaskBudget(issuedAmount, sanctionedAmount);
-  }
-
-  public getTaskBudgetRemainingDisplay(task: EventTaskEntry): string {
-    const remaining = calculateTaskBudgetRemaining(task.taskId, task.budgetAmount, this.tasks);
-    return formatTaskBudgetAmount(remaining);
-  }
-
-  public getTaskBudgetRemainingTooltip(task: EventTaskEntry): string {
-    const remaining = calculateTaskBudgetRemaining(task.taskId, task.budgetAmount, this.tasks);
-    return `Remaining Amount - ${formatTaskBudgetAmount(remaining)}`;
+    return formatInHandAndSanctionedTaskBudget(inHandAmount, sanctionedAmount);
   }
 
   public statusValue(status: string | null | undefined): string {
@@ -883,6 +905,82 @@ export class EventTasksComponent implements OnInit, OnDestroy {
         this.reviewingTaskBudgetRequestIds.delete(task.taskId);
         this.notifier.error(error.message || 'Failed to review budget request.');
       }
+    });
+  }
+
+  public async reviewInitialTaskBudgetRequest(
+    task: EventTaskEntry,
+    decision: 'APPROVE' | 'REJECT'
+  ): Promise<void> {
+    const requestId = task.initialBudgetRequestId;
+    if (
+      !this.isDraftTab ||
+      task.parentTaskId !== null ||
+      !requestId ||
+      !task.canReviewInitialBudgetRequest ||
+      this.reviewingInitialBudgetRequestIds().has(task.taskId)
+    ) return;
+
+    this.setInitialBudgetReviewPending(task.taskId, true);
+    const dialogData: ConfirmDialogData = {
+      title: decision === 'APPROVE' ? 'Approve Initial Budget?' : 'Reject Initial Budget?',
+      message: `${decision === 'APPROVE' ? 'Approve' : 'Reject'} the initial budget request of ${
+        this.formatTaskBudgetAmount(task.initialBudgetRequestedAmount)
+      } for "${task.taskName}"?`,
+      confirmText: decision === 'APPROVE' ? 'Approve' : 'Reject',
+      cancelText: 'Cancel',
+      iconType: decision === 'APPROVE' ? 'success' : 'warning',
+      highlightText: task.taskName
+    };
+    let confirmation: ConfirmDialogResponse | undefined;
+    try {
+      confirmation = await firstValueFrom(this.confirmDialog.open(dialogData).afterClosed());
+    } catch (error) {
+      this.setInitialBudgetReviewPending(task.taskId, false);
+      this.notifier.error(error instanceof Error ? error.message : 'Failed to open confirmation dialog.');
+      return;
+    }
+    if (!confirmation?.confirmed) {
+      this.setInitialBudgetReviewPending(task.taskId, false);
+      return;
+    }
+
+    this.taskFinanceService.reviewRequest(requestId, decision).subscribe({
+      next: () => {
+        this.setInitialBudgetReviewPending(task.taskId, false);
+        this.notifier.success(
+          decision === 'APPROVE' ? 'Initial budget approved.' : 'Initial budget rejected.'
+        );
+        const eventId = this.currentEventId;
+        this.eventDetailsState.refreshTaskList();
+        if (eventId === null) return;
+        if (decision === 'APPROVE') {
+          void this.router.navigate(['/dashboard', 'event', eventId, 'tasks']);
+        }
+        this.eventOverviewService.getEventDetailsHeader(String(eventId)).subscribe({
+          next: (header) => {
+            if (eventId === this.currentEventId) {
+              this.eventDetailsState.headerData.set(header ?? null);
+            }
+          },
+          error: (error: Error) => this.notifier.error(
+            error.message || 'Failed to refresh event task counts.'
+          )
+        });
+      },
+      error: (error: Error) => {
+        this.setInitialBudgetReviewPending(task.taskId, false);
+        this.notifier.error(error.message || 'Failed to review the initial budget request.');
+      }
+    });
+  }
+
+  private setInitialBudgetReviewPending(taskId: number, pending: boolean): void {
+    this.reviewingInitialBudgetRequestIds.update((taskIds) => {
+      const updatedTaskIds = new Set(taskIds);
+      if (pending) updatedTaskIds.add(taskId);
+      else updatedTaskIds.delete(taskId);
+      return updatedTaskIds;
     });
   }
 
@@ -1005,15 +1103,19 @@ export class EventTasksComponent implements OnInit, OnDestroy {
     }).subscribe({
       next: (task) => {
         if (this.currentEventId === eventId) {
-          this.eventData = [...this.tasks, task];
           this.isCreatingTask = false;
           this.newTaskName = '';
           this.newTaskBudget = '0';
-          this.eventDetailsState.incrementTaskCounts(true);
+          if (this.isDraftTab) {
+            this.loadEventTasks(String(eventId), true);
+          } else {
+            void this.router.navigate(['/dashboard', 'event', eventId, 'drafts']);
+          }
         }
         this.isSavingTask = false;
-        this.hierarchyTreeService.triggerHierarchyTreeRefresh();
-        this.notifier.success(`Task "${task.taskName}" created.`);
+        this.notifier.success(
+          `Task "${task.taskName}" saved as a draft. It will move to Tasks after its initial budget is approved.`
+        );
       },
       error: (error) => {
         this.isSavingTask = false;
@@ -1055,7 +1157,7 @@ export class EventTasksComponent implements OnInit, OnDestroy {
       this.hasLoadError = false;
     }
 
-    this.tasksService.getEventTasks(eventId).subscribe({
+    this.tasksService.getEventTasks(eventId, this.isDraftTab).subscribe({
       next: (data: EventTasksPayload) => {
         if (requestId !== this.taskLoadRequestId) return;
         this.eventData = data.entries ?? [];

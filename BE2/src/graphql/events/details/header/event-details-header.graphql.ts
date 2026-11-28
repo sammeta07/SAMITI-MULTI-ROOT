@@ -68,11 +68,47 @@ export const eventDetailsHeaderResolvers = {
           e.category,
           e.event_year AS eventYear,
           (SELECT COUNT(*) FROM programs p WHERE p.event_id = e.id) AS programsCount,
-          (SELECT COUNT(*) FROM tasks t WHERE t.event_id = e.id) AS tasksCount,
-          (SELECT COUNT(*) FROM tasks t WHERE t.event_id = e.id AND t.parent_id IS NULL) AS parentTasksCount,
+          (SELECT COUNT(*)
+           FROM tasks t
+           WHERE t.event_id = e.id
+             AND (
+               (t.parent_id IS NULL AND NOT EXISTS (
+                 SELECT 1 FROM task_finance_requests initialRequest
+                 WHERE initialRequest.task_id = t.id
+                   AND initialRequest.request_type = 'ADVANCE'
+                   AND initialRequest.reason = 'Initial sanctioned task budget'
+                   AND initialRequest.status <> 'APPROVED'
+               ))
+               OR (t.parent_id IS NOT NULL AND NOT EXISTS (
+                 SELECT 1 FROM task_finance_requests initialRequest
+                 WHERE initialRequest.task_id = t.parent_id
+                   AND initialRequest.request_type = 'ADVANCE'
+                   AND initialRequest.reason = 'Initial sanctioned task budget'
+                   AND initialRequest.status <> 'APPROVED'
+               ))
+             )) AS tasksCount,
+          (SELECT COUNT(*)
+           FROM tasks t
+           WHERE t.event_id = e.id
+             AND t.parent_id IS NULL
+             AND NOT EXISTS (
+               SELECT 1 FROM task_finance_requests initialRequest
+               WHERE initialRequest.task_id = t.id
+                 AND initialRequest.request_type = 'ADVANCE'
+                 AND initialRequest.reason = 'Initial sanctioned task budget'
+                 AND initialRequest.status <> 'APPROVED'
+             )) AS parentTasksCount,
           (SELECT COALESCE(SUM(t.budget_amount), 0)
            FROM tasks t
-           WHERE t.event_id = e.id AND t.parent_id IS NULL) AS totalApprovedBudget,
+           WHERE t.event_id = e.id
+             AND t.parent_id IS NULL
+             AND NOT EXISTS (
+               SELECT 1 FROM task_finance_requests initialRequest
+               WHERE initialRequest.task_id = t.id
+                 AND initialRequest.request_type = 'ADVANCE'
+                 AND initialRequest.reason = 'Initial sanctioned task budget'
+                 AND initialRequest.status <> 'APPROVED'
+             )) AS totalApprovedBudget,
           e.type,
           DATE_FORMAT(e.start_date, '%Y-%m-%d') AS startDate,
           DATE_FORMAT(e.end_date, '%Y-%m-%d') AS endDate,

@@ -120,12 +120,19 @@ export class EventDetailsComponent implements OnInit, OnDestroy {
     const url = this.router.url;
     if (url.includes('/overview')) this.selectedTabIndex = 1;
     else if (url.includes('/programs')) this.selectedTabIndex = 2;
+    else if (url.includes('/drafts')) this.selectedTabIndex = 4;
     else if (url.includes('/tasks')) this.selectedTabIndex = 3;
     else this.selectedTabIndex = 0;
   }
 
   public onTabChange(index: number): void {
-    const tabs: Array<'voting' | 'overview' | 'programs' | 'tasks'> = ['voting', 'overview', 'programs', 'tasks'];
+    const tabs: Array<'voting' | 'overview' | 'programs' | 'tasks' | 'drafts'> = [
+      'voting',
+      'overview',
+      'programs',
+      'tasks',
+      'drafts'
+    ];
     const tab = tabs[index];
     const eventId = this.eventData?.eventId ?? this.route.snapshot.params['id'];
     if (!eventId) return;

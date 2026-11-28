@@ -19,10 +19,18 @@ export class TaskActionsDialogService {
 
   public async open(
     taskId: number,
-    onUpdated?: (task: TaskDetailsPayload) => void
+    onUpdated?: (task: TaskDetailsPayload) => void,
+    draftBudget?: { initialBudgetRequestedAmount: string | null }
   ): Promise<void> {
     try {
-      const task = await firstValueFrom(this.taskDetailsService.getTaskDetails(String(taskId)));
+      const taskDetails = await firstValueFrom(this.taskDetailsService.getTaskDetails(String(taskId)));
+      const task: TaskDetailsPayload = draftBudget
+        ? {
+            ...taskDetails,
+            isDraft: true,
+            initialBudgetRequestedAmount: draftBudget.initialBudgetRequestedAmount
+          }
+        : taskDetails;
       if (!this.canOpenTaskActions(task)) return;
 
       document.body.classList.add('dialog-open');
@@ -64,6 +72,13 @@ export class TaskActionsDialogService {
           await firstValueFrom(this.taskDetailsService.updateTaskName(task.taskId, result.taskName));
           this.notifier.success('Task updated successfully.');
           break;
+        case 'update-draft-budget':
+          if (!task.isDraft || !task.canEditTask) return null;
+          await firstValueFrom(
+            this.taskDetailsService.updateInitialTaskBudgetRequest(task.taskId, result.amount)
+          );
+          this.notifier.success('Initial budget request updated.');
+          break;
         case 'assign-owner':
           if (!task.canAssignOwner || result.ownerUserId === task.ownerUserId) return null;
           await firstValueFrom(this.eventTasksService.assignEventTask(task.taskId, result.ownerUserId));
@@ -79,7 +94,18 @@ export class TaskActionsDialogService {
           break;
       }
 
-      const updatedTask = await firstValueFrom(this.taskDetailsService.getTaskDetails(String(task.taskId)));
+      const refreshedTask = await firstValueFrom(this.taskDetailsService.getTaskDetails(String(task.taskId)));
+      const updatedTask: TaskDetailsPayload = {
+        ...refreshedTask,
+        ...(task.isDraft
+          ? {
+              isDraft: true,
+              initialBudgetRequestedAmount: result.action === 'update-draft-budget'
+                ? result.amount
+                : task.initialBudgetRequestedAmount
+            }
+          : {})
+      };
       this.hierarchyTreeService.triggerHierarchyTreeRefresh();
       onUpdated?.(updatedTask);
       return { task: updatedTask };

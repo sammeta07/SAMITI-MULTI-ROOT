@@ -9,11 +9,16 @@ import { finalize, map, Observable, of, switchMap } from 'rxjs';
 import { NotifierService } from '../../../../shared/notifier/notifier.service';
 import { WholeRupeeDirective } from '../../../../shared/directives/whole-rupee.directive';
 import { isValidTaskBudgetAmount } from '../event-details/event-tasks/event-tasks.models';
+import { EventDetailsOverviewService } from '../event-details/event-details-overview.service';
+import { EventDetailsStateService } from '../event-details/event-details-state.service';
 import { TaskDetailsService } from '../task-details/task-details.service';
 import {
   TaskFinancePayload,
   TaskFinanceRequest,
   TaskFinanceTransaction,
+  TaskFinanceSubtaskEntry,
+  TaskSubtaskTransfer,
+  getTaskAdvanceReceiptSummary,
   isCashReturnWithinAvailableCash,
   getEffectiveApprovedFinanceTotal,
   getSanctionedBudgetDisplayTotal,
@@ -34,6 +39,7 @@ export interface TaskFinanceRequestGroup {
   taskName: string;
   taskOwnerName: string | null;
   taskOwnerUserId: number | null;
+  subtaskTransfers: TaskSubtaskTransfer[];
   requests: TaskFinanceRequest[];
   budgetRequests: TaskBudgetRequest[];
   pendingReturns: TaskFinanceTransaction[];
@@ -41,6 +47,8 @@ export interface TaskFinanceRequestGroup {
   approvedTotal: number;
   sanctionedTotal: number;
   issuedAdvance: number;
+  dispatchedAdvance: number;
+  dispatchableAdvance: number;
   remainingAdvance: number;
   confirmedReturns: number;
   availableInHand: number;
@@ -70,6 +78,8 @@ export class TaskFinanceComponent implements OnInit {
   private readonly dialog = inject(MatDialog);
   private readonly taskDetailsService = inject(TaskDetailsService);
   private readonly notifier = inject(NotifierService);
+  private readonly eventOverviewService = inject(EventDetailsOverviewService);
+  private readonly eventDetailsState = inject(EventDetailsStateService);
 
   public readonly payload = signal<TaskFinancePayload | null>(null);
   public readonly creatorSubtaskFinance = signal<TaskFinancePayload | null>(null);
@@ -150,13 +160,33 @@ export class TaskFinanceComponent implements OnInit {
     return transactions.filter((transaction) => transaction.canConfirmReceipt);
   }
 
+  public getPendingSubtaskTransfers(
+    transfers: TaskSubtaskTransfer[] = this.payload()?.subtaskTransfers ?? []
+  ): TaskSubtaskTransfer[] {
+    return transfers.filter((transfer) => transfer.canConfirm);
+  }
+
+  public getAwaitingSubtaskTransfers(
+    transfers: TaskSubtaskTransfer[] = this.payload()?.subtaskTransfers ?? []
+  ): TaskSubtaskTransfer[] {
+    return transfers.filter((transfer) => transfer.status === 'PENDING');
+  }
+
+  public shouldShowSubtaskTransferBanner(
+    transfers: TaskSubtaskTransfer[] = this.payload()?.subtaskTransfers ?? []
+  ): boolean {
+    return this.taskId !== null &&
+      transfers.some((transfer) => transfer.subtaskId === this.taskId);
+  }
+
   public availableCashForReturn(): number {
     const finance = this.payload();
     if (!finance) return 0;
     const groups = this.groupRequestsByTask(
       finance.requests,
       this.budgetRequestsForLedger(finance),
-      finance.transactions
+      finance.transactions,
+      finance.subtaskTransfers ?? []
     );
     return this.getPrimaryGroup(groups)?.availableInHand
       ?? this.toNum(finance.summary.availableInHand);
@@ -194,11 +224,26 @@ export class TaskFinanceComponent implements OnInit {
 
   public reviewRequest(request: TaskFinanceRequest, decision: 'APPROVE' | 'REJECT'): void {
     if (!request.canReviewAuthority || this.isSaving()) return;
+    const eventId = this.eventId;
+    const onSuccess = decision === 'APPROVE' &&
+      eventId !== null &&
+      isInitialTaskBudgetFinanceRequest(request)
+      ? () => {
+          this.eventDetailsState.refreshTaskList();
+          this.eventOverviewService.getEventDetailsHeader(String(eventId)).subscribe({
+            next: (header) => this.eventDetailsState.headerData.set(header ?? null),
+            error: (error: Error) => this.notifier.error(
+              error.message || 'Failed to refresh event task counts.'
+            )
+          });
+        }
+      : undefined;
     this.runAction(
       this.service.reviewRequest(request.id, decision),
       decision === 'REJECT'
         ? 'Finance request rejected.'
-        : 'Finance request approved and sent to the Treasurer.'
+        : 'Finance request approved and sent to the Treasurer.',
+      onSuccess
     );
   }
 
@@ -230,16 +275,18 @@ export class TaskFinanceComponent implements OnInit {
     return (!group.isSubtask || creatorScope)
       && group.taskOwnerUserId !== null
       && !!finance?.canApprove
-      && group.remainingAdvance > 0
+      && group.dispatchableAdvance > 0
       && isValidTaskBudgetAmount(amount)
       && Number(amount) > 0
-      && Number(amount) <= group.remainingAdvance;
+      && Number(amount) <= group.dispatchableAdvance;
   }
 
   public groupRequestsByTask(
     requests: TaskFinanceRequest[],
     budgetRequests: TaskBudgetRequest[],
-    transactions: TaskFinanceTransaction[]
+    transactions: TaskFinanceTransaction[],
+    subtaskTransfers: TaskSubtaskTransfer[] = [],
+    subtasks: TaskFinanceSubtaskEntry[] = []
   ): TaskFinanceRequestGroup[] {
     const groups = new Map<number, {
       requests: TaskFinanceRequest[];
@@ -247,6 +294,14 @@ export class TaskFinanceComponent implements OnInit {
       isSubtask: boolean;
       taskCreatedAt: string;
       pendingReturnTaskName?: string;
+      taskName?: string;
+      taskOwnerName?: string | null;
+      taskOwnerUserId?: number | null;
+      taskBudgetAmount?: string;
+      remainingSanctionedBudget?: string;
+      checklistExpenseAmount?: string;
+      budgetAvailableForDisbursement?: string;
+      subtaskTransfers?: TaskSubtaskTransfer[];
     }>();
     requests.forEach((request) => {
       const taskGroup = groups.get(request.taskId) ?? {
@@ -282,30 +337,77 @@ export class TaskFinanceComponent implements OnInit {
         taskGroup.pendingReturnTaskName = transaction.taskName;
         groups.set(transaction.taskId, taskGroup);
       });
+    subtasks.forEach((subtask) => {
+      const taskGroup = groups.get(subtask.taskId) ?? {
+        requests: [],
+        budgetRequests: [],
+        isSubtask: true,
+        taskCreatedAt: subtask.taskCreatedAt
+      };
+      taskGroup.taskName = subtask.taskName;
+      taskGroup.taskOwnerName = subtask.taskOwnerName;
+      taskGroup.taskOwnerUserId = subtask.taskOwnerUserId;
+      taskGroup.taskBudgetAmount = subtask.budgetAmount;
+      taskGroup.remainingSanctionedBudget = subtask.remainingSanctionedBudget;
+      taskGroup.checklistExpenseAmount = subtask.checklistExpenseAmount;
+      taskGroup.budgetAvailableForDisbursement = subtask.budgetAvailableForDisbursement;
+      groups.set(subtask.taskId, taskGroup);
+    });
+    const listedSubtaskIds = new Set(subtasks.map((subtask) => subtask.taskId));
+    subtaskTransfers.forEach((transfer) => {
+      if (!listedSubtaskIds.has(transfer.subtaskId)) return;
+      const taskGroup = groups.get(transfer.subtaskId);
+      if (!taskGroup) return;
+      taskGroup.subtaskTransfers = taskGroup.subtaskTransfers ?? [];
+      taskGroup.subtaskTransfers.push(transfer);
+    });
 
     return Array.from(groups.entries()).map(([taskId, taskGroup]) => {
       const approvedTotal = getEffectiveApprovedFinanceTotal(taskGroup.requests);
       const taskTransactions = transactions.filter((transaction) => transaction.taskId === taskId);
-      const issuedAdvance = taskTransactions
-        .filter((transaction) => transaction.transactionType === 'ADVANCE_ISSUED')
-        .reduce((sum, transaction) => sum + Number(transaction.amount), 0);
-      const { confirmedReturns, availableInHand } = getTaskCashSummary(taskTransactions);
+      const { confirmedReturns, availableInHand } = getTaskCashSummary(
+        taskTransactions,
+        subtaskTransfers,
+        taskId
+      );
       const firstRequest = taskGroup.requests[0];
       const firstBudgetRequest = taskGroup.budgetRequests[0];
-      const taskBudgetAmount = firstRequest?.taskBudgetAmount ?? firstBudgetRequest?.taskBudgetAmount;
+      const taskBudgetAmount = firstRequest?.taskBudgetAmount
+        ?? firstBudgetRequest?.taskBudgetAmount
+        ?? taskGroup.taskBudgetAmount;
       const remainingSanctionedBudget = Number(
-        firstRequest?.remainingSanctionedBudget ?? firstBudgetRequest?.remainingSanctionedBudget
+        firstRequest?.remainingSanctionedBudget
+        ?? firstBudgetRequest?.remainingSanctionedBudget
+        ?? taskGroup.remainingSanctionedBudget
       );
       const checklistExpenseAmount = Number(
         firstRequest?.checklistExpenseAmount
         ?? firstBudgetRequest?.checklistExpenseAmount
         ?? taskTransactions.find((transaction) => transaction.checklistExpenseAmount)?.checklistExpenseAmount
+        ?? taskGroup.checklistExpenseAmount
       );
-      const budgetAvailableForDisbursement = Number(firstRequest?.budgetAvailableForDisbursement ?? 0);
-      const remainingAdvance = Math.min(
-        Math.max(0, approvedTotal - issuedAdvance),
-        budgetAvailableForDisbursement
+      const budgetAvailableForDisbursement = Number(
+        firstRequest?.budgetAvailableForDisbursement
+        ?? taskGroup.budgetAvailableForDisbursement
+        ?? 0
       );
+      const taskTransfers = taskGroup.subtaskTransfers ?? [];
+      const transferAmount = taskTransfers.reduce(
+        (sum, transfer) => sum + this.toNum(transfer.amount),
+        0
+      );
+      const transferReceived = taskTransfers
+        .filter((transfer) => transfer.status === 'CONFIRMED')
+        .reduce((sum, transfer) => sum + this.toNum(transfer.amount), 0);
+      const transferPending = taskTransfers
+        .filter((transfer) => transfer.status === 'PENDING')
+        .reduce((sum, transfer) => sum + this.toNum(transfer.amount), 0);
+      const advanceReceipt = getTaskAdvanceReceiptSummary(
+        approvedTotal,
+        budgetAvailableForDisbursement,
+        taskTransactions
+      );
+      const remainingAdvance = advanceReceipt.pendingReceiptAmount;
       const visiblePaymentTransactions = taskTransactions.filter(isVisibleInPaymentHistory);
       const pendingReturns = taskTransactions.filter((transaction) =>
         transaction.transactionType === 'ADVANCE_RETURN' && transaction.status === 'PENDING'
@@ -318,24 +420,29 @@ export class TaskFinanceComponent implements OnInit {
         taskName: firstRequest?.taskName
           ?? firstBudgetRequest?.taskName
           ?? taskGroup.pendingReturnTaskName
+          ?? taskGroup.taskName
           ?? 'Untitled Task',
         taskOwnerName: taskGroup.requests.find((request) => request.taskOwnerName)?.taskOwnerName
           ?? taskGroup.budgetRequests.find((request) => request.taskOwnerName)?.taskOwnerName
           ?? taskTransactions.find((transaction) => transaction.taskOwnerName)?.taskOwnerName
+          ?? taskGroup.taskOwnerName
           ?? null,
-        taskOwnerUserId: firstRequest?.taskOwnerUserId ?? null,
+        taskOwnerUserId: firstRequest?.taskOwnerUserId ?? taskGroup.taskOwnerUserId ?? null,
+        subtaskTransfers: taskTransfers,
         requests: taskGroup.requests,
         budgetRequests: taskGroup.budgetRequests,
         pendingReturns,
-        transactionCount: visiblePaymentTransactions.length,
+        transactionCount: visiblePaymentTransactions.length + taskTransfers.length,
         approvedTotal,
         sanctionedTotal: getSanctionedBudgetDisplayTotal(
           taskGroup.isSubtask,
           approvedTotal,
           taskBudgetAmount
         ),
-        issuedAdvance,
-        remainingAdvance,
+        issuedAdvance: advanceReceipt.receivedAmount + transferReceived,
+        dispatchedAdvance: advanceReceipt.dispatchedAmount + transferAmount,
+        dispatchableAdvance: Math.max(0, advanceReceipt.dispatchableAmount - transferAmount),
+        remainingAdvance: Math.max(0, remainingAdvance - transferReceived) + transferPending,
         confirmedReturns,
         availableInHand,
         remainingSanctionedBudget: Number.isFinite(remainingSanctionedBudget)
@@ -368,8 +475,21 @@ export class TaskFinanceComponent implements OnInit {
   }
 
   public shouldShowBudgetReviewColumn(finance: TaskFinancePayload): boolean {
+    const hasPendingInitialRequest = finance.requests.some((request) =>
+      request.status === 'PENDING' && isInitialTaskBudgetFinanceRequest(request)
+    );
     return finance.isEventScope &&
-      (finance.canViewBudgetIncreaseRequests || finance.canReviewBudgetRequest);
+      (finance.canViewBudgetIncreaseRequests || finance.canReviewBudgetRequest) &&
+      (this.budgetRequestsForLedger(finance).length > 0 || hasPendingInitialRequest);
+  }
+
+  public pendingInitialTaskBudgetReviewItem(group: TaskFinanceRequestGroup): TaskBudgetReviewItem | null {
+    const request = [...group.requests]
+      .filter((entry) => entry.status === 'PENDING' && isInitialTaskBudgetFinanceRequest(entry))
+      .sort((left, right) =>
+        right.createdAt.localeCompare(left.createdAt) || right.id - left.id
+      )[0] ?? null;
+    return request ? { kind: 'finance', request } : null;
   }
 
   public pendingBudgetIncreaseRequest(group: TaskFinanceRequestGroup): TaskBudgetRequest | null {
@@ -496,11 +616,25 @@ export class TaskFinanceComponent implements OnInit {
               transaction.taskId === group.taskId && isVisibleInPaymentHistory(transaction)
           ) ?? []
         ),
+        subtaskTransfers: computed(() =>
+          financeSource()?.subtaskTransfers?.filter(
+            (transfer) => transfer.subtaskId === group.taskId
+          ) ?? []
+        ),
         isSaving: this.isSaving,
-        confirmReceipt: (transaction: TaskFinanceTransaction) => this.confirmReceipt(transaction)
+        confirmReceipt: (transaction: TaskFinanceTransaction) => this.confirmReceipt(transaction),
+        confirmSubtaskTransfer: (transfer: TaskSubtaskTransfer) => this.confirmSubtaskTransfer(transfer)
       },
       panelClass: ['slide-in-dialog', 'finance-requests-history-drawer']
     });
+  }
+
+  public disburseBudgetRequest(request: TaskBudgetRequest): void {
+    if (!request.canDisburse || this.isSaving()) return;
+    this.runAction(
+      this.service.disburseTaskBudgetRequest(request.id),
+      'Subtask budget disbursed. Awaiting receipt confirmation.'
+    );
   }
 
   public getOtherTransactions(
@@ -534,6 +668,14 @@ export class TaskFinanceComponent implements OnInit {
     this.runAction(
       this.service.confirmReceipt(transaction.id),
       'Receipt confirmed.'
+    );
+  }
+
+  public confirmSubtaskTransfer(transfer: TaskSubtaskTransfer): void {
+    if (!transfer.canConfirm || this.isSaving()) return;
+    this.runAction(
+      this.service.confirmSubtaskTransfer(transfer.id),
+      'Subtask budget receipt confirmed.'
     );
   }
 

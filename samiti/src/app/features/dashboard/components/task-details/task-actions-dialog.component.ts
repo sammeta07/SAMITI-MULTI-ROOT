@@ -9,7 +9,7 @@ import { MatTooltipModule } from '@angular/material/tooltip';
 import { MatAutocompleteModule, MatAutocompleteSelectedEvent, MatAutocompleteTrigger } from '@angular/material/autocomplete';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
-import { TaskAssignee, TaskStatus, TASK_STATUSES } from '../event-details/event-tasks/event-tasks.models';
+import { isValidTaskBudgetAmount, TaskAssignee, TaskStatus, TASK_STATUSES } from '../event-details/event-tasks/event-tasks.models';
 import { TaskDetailsPayload } from './task-details.models';
 
 export interface TaskActionsDialogData {
@@ -23,6 +23,7 @@ export interface TaskActionsDialogUpdate {
 
 export type TaskActionsDialogResult =
   | { action: 'rename'; taskName: string }
+  | { action: 'update-draft-budget'; amount: string }
   | { action: 'assign-owner'; ownerUserId: number | null }
   | { action: 'update-status'; status: TaskStatus };
 
@@ -51,6 +52,7 @@ export class TaskActionsDialogComponent {
   public readonly taskStatuses = TASK_STATUSES;
   public readonly isSavingAction = signal(false);
   public taskName = this.task.taskName;
+  public initialBudgetAmount: string | number | null = this.task.initialBudgetRequestedAmount ?? '0';
   public ownerUserId = this.task.ownerUserId === null ? '' : String(this.task.ownerUserId);
   public ownerSearchText = this.task.ownerName || 'Unassigned';
   public status = this.currentStatusValue();
@@ -80,9 +82,31 @@ export class TaskActionsDialogComponent {
     void this.runAction({ action: 'rename', taskName });
   }
 
+  public hasDraftBudgetChanged(): boolean {
+    return String(this.initialBudgetAmount ?? '').trim() !==
+      String(this.task.initialBudgetRequestedAmount ?? '0').trim();
+  }
+
+  public isValidTaskBudgetAmount(value: string | number | null | undefined): boolean {
+    return isValidTaskBudgetAmount(value);
+  }
+
+  public submitDraftBudget(): void {
+    const amount = String(this.initialBudgetAmount ?? '').trim();
+    if (
+      !this.task.isDraft ||
+      this.task.parentTaskId !== null ||
+      !this.task.canEditTask ||
+      !isValidTaskBudgetAmount(amount) ||
+      !this.hasDraftBudgetChanged()
+    ) return;
+    void this.runAction({ action: 'update-draft-budget', amount });
+  }
+
   public submitOwner(): void {
     const selectedOwnerId = this.ownerUserId ? Number(this.ownerUserId) : null;
     if (
+      this.task.isDraft ||
       !this.task.canAssignOwner ||
       !this.hasOwnerChanged() ||
       (selectedOwnerId !== null && this.isDisabledOwnerAssignee(selectedOwnerId))
@@ -226,6 +250,7 @@ export class TaskActionsDialogComponent {
 
       Object.assign(this.task, update.task);
       this.taskName = this.task.taskName;
+      this.initialBudgetAmount = this.task.initialBudgetRequestedAmount ?? '0';
       this.ownerUserId = this.task.ownerUserId === null ? '' : String(this.task.ownerUserId);
       this.ownerSearchText = this.task.ownerName || 'Unassigned';
       this.status = this.currentStatusValue();

@@ -113,7 +113,36 @@
             </div>
           }
 
-          @if (task.canAssignOwner) {
+          @if (task.isDraft && task.parentTaskId === null && task.canEditTask) {
+            <div class="task-dialog-action-row">
+              <label for="task-dialog-draft-budget">Initial budget request (₹)</label>
+              <div class="task-dialog-control">
+                <input
+                  id="task-dialog-draft-budget"
+                  class="uniform-control-input"
+                  type="number"
+                  min="0"
+                  step="1"
+                  [(ngModel)]="initialBudgetAmount"
+                  aria-label="Initial budget request in rupees"
+                  [disabled]="isSavingAction()"
+                />
+                <button
+                  mat-icon-button
+                  type="button"
+                  class="icon-action-button"
+                  [disabled]="isSavingAction() || !isValidTaskBudgetAmount(initialBudgetAmount) || !hasDraftBudgetChanged()"
+                  (click)="submitDraftBudget()"
+                  aria-label="Save initial budget request"
+                  matTooltip="Save initial budget request"
+                >
+                  <mat-icon>check</mat-icon>
+                </button>
+              </div>
+            </div>
+          }
+
+          @if (task.canAssignOwner || task.isDraft) {
             <div class="task-dialog-action-row">
               <label for="task-dialog-owner">Owner</label>
               <div class="task-dialog-control">
@@ -141,14 +170,15 @@
                       autocomplete="off"
                       placeholder="Search member..."
                       [value]="ownerSearchText"
-                      [disabled]="isSavingAction()"
+                      [disabled]="isSavingAction() || task.isDraft"
+                      [matTooltip]="task.isDraft ? 'Owner assignment is available after budget approval.' : ''"
                       (input)="onOwnerSearch($any($event.target).value)"
                       (focus)="onOwnerFocus(ownerAutocompleteTrigger)"
                       [matAutocomplete]="ownerAutocomplete"
                       #ownerAutocompleteTrigger="matAutocompleteTrigger"
                       aria-label="Task owner"
                     />
-                    @if (!isSavingAction()) {
+                    @if (!isSavingAction() && !task.isDraft) {
                       <span matSuffix class="task-assignee-input-suffix">
                         @if (ownerSearchText) {
                           <button
@@ -208,7 +238,7 @@
                   mat-icon-button
                   type="button"
                   class="icon-action-button"
-                  [disabled]="isSavingAction() || !hasOwnerChanged()"
+                  [disabled]="isSavingAction() || task.isDraft || !hasOwnerChanged()"
                   (click)="submitOwner()"
                   aria-label="Save task owner"
                   matTooltip="Save task owner"

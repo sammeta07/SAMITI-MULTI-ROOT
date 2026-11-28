@@ -102,6 +102,7 @@ export interface TaskBudgetRequest {
   canReviewCreator: boolean;
   canReviewAuthority: boolean;
   canCancel: boolean;
+  canDisburse: boolean;
 }
 
 export interface InitialSubtaskBudgetHistoryEntry {
@@ -172,7 +173,41 @@ export interface TaskFinanceTransaction {
   canCancel: boolean;
 }
 
-export function getTaskCashSummary(transactions: TaskFinanceTransaction[]): {
+export interface TaskSubtaskTransfer {
+  id: number;
+  parentTaskId: number;
+  subtaskId: number;
+  parentTaskName: string;
+  subtaskName: string;
+  senderName: string | null;
+  recipientName: string | null;
+  amount: string;
+  description: string;
+  status: 'PENDING' | 'CONFIRMED';
+  createdAt: string;
+  confirmedByName: string | null;
+  confirmedAt: string | null;
+  canConfirm: boolean;
+}
+
+export interface TaskFinanceSubtaskEntry {
+  taskId: number;
+  parentTaskId: number;
+  taskName: string;
+  taskOwnerName: string | null;
+  taskOwnerUserId: number | null;
+  budgetAmount: string;
+  budgetAvailableForDisbursement: string;
+  remainingSanctionedBudget: string;
+  checklistExpenseAmount: string;
+  taskCreatedAt: string;
+}
+
+export function getTaskCashSummary(
+  transactions: TaskFinanceTransaction[],
+  subtaskTransfers: TaskSubtaskTransfer[] = [],
+  taskId?: number
+): {
   confirmedReturns: number;
   inHand: number;
   availableInHand: number;
@@ -184,13 +219,24 @@ export function getTaskCashSummary(transactions: TaskFinanceTransaction[]): {
   transactions.forEach((transaction) => {
     const amount = Number(transaction.amount);
     if (transaction.status === 'CONFIRMED') {
-      if (transaction.transactionType === 'ADVANCE_ISSUED') issued += amount;
+      if (transaction.transactionType === 'ADVANCE_ISSUED' && transaction.receivedAt !== null) {
+        issued += amount;
+      }
       if (transaction.transactionType === 'ADVANCE_EXPENSE') confirmedExpenses += amount;
       if (transaction.transactionType === 'ADVANCE_RETURN') confirmedReturns += amount;
     } else if (transaction.transactionType === 'ADVANCE_RETURN' && transaction.status === 'PENDING') {
       pendingReturns += amount;
     }
   });
+  if (taskId !== undefined) {
+    subtaskTransfers.forEach((transfer) => {
+      if (transfer.status !== 'CONFIRMED') return;
+      const amount = Number(transfer.amount);
+      if (!Number.isFinite(amount)) return;
+      if (transfer.subtaskId === taskId) issued += amount;
+      if (transfer.parentTaskId === taskId) confirmedExpenses += amount;
+    });
+  }
   const checklistExpenses = Number(transactions[0]?.checklistExpenseAmount ?? 0);
   const checklistReserved = Number(transactions[0]?.checklistReservedAmount ?? 0);
   const inHand = Math.max(
@@ -201,6 +247,36 @@ export function getTaskCashSummary(transactions: TaskFinanceTransaction[]): {
     confirmedReturns,
     inHand,
     availableInHand: Math.max(0, inHand - pendingReturns - checklistReserved)
+  };
+}
+
+export function getTaskAdvanceReceiptSummary(
+  approvedAmount: number,
+  availableForDispatch: number,
+  transactions: TaskFinanceTransaction[]
+): {
+  dispatchedAmount: number;
+  receivedAmount: number;
+  dispatchableAmount: number;
+  pendingReceiptAmount: number;
+} {
+  const advanceTransactions = transactions.filter(
+    (transaction) => transaction.transactionType === 'ADVANCE_ISSUED'
+  );
+  const dispatchedAmount = advanceTransactions
+    .reduce((sum, transaction) => sum + Number(transaction.amount), 0);
+  const receivedAmount = advanceTransactions
+    .filter((transaction) => transaction.receivedAt !== null)
+    .reduce((sum, transaction) => sum + Number(transaction.amount), 0);
+
+  return {
+    dispatchedAmount,
+    receivedAmount,
+    dispatchableAmount: Math.min(
+      Math.max(0, approvedAmount - dispatchedAmount),
+      availableForDispatch
+    ),
+    pendingReceiptAmount: Math.max(0, approvedAmount - receivedAmount)
   };
 }
 
@@ -234,6 +310,8 @@ export interface TaskFinancePayload {
   requests: TaskFinanceRequest[];
   budgetRequests: TaskBudgetRequest[];
   transactions: TaskFinanceTransaction[];
+  subtaskTransfers?: TaskSubtaskTransfer[];
+  subtasks?: TaskFinanceSubtaskEntry[];
   summary: TaskFinanceSummary;
   budgetAmount: string;
   budgetRequestId: number | null;
@@ -368,6 +446,7 @@ function parseRupees(value: string): number | null {
 }
 
 export function hasPendingFinanceAction(finance: TaskFinancePayload): boolean {
+  if (finance.subtaskTransfers?.some((transfer) => transfer.canConfirm)) return true;
   if (finance.transactions.some((transaction) => transaction.canConfirmReceipt)) return true;
   if (finance.canReviewBudgetRequest) return true;
   if (finance.requests.some((request) =>

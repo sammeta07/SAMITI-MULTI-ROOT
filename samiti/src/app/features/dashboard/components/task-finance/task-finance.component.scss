@@ -672,6 +672,48 @@
   }
 }
 
+.tf-awaiting-receipt-block {
+  flex: 0 0 auto;
+  max-height: 190px;
+}
+
+.tf-transfer-list {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-height: 0;
+  overflow-y: auto;
+}
+
+.tf-transfer-panel {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.tf-transfer-details {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+
+  strong,
+  small {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  strong {
+    font-size: 0.7rem;
+  }
+
+  small {
+    color: #64748b;
+    font-size: 0.62rem;
+  }
+}
+
 .tf-col-sno {
   display: flex;
   align-items: center;
@@ -734,6 +776,13 @@
   line-height: 1.2;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+.tf-subtask-transfer-meta {
+  color: #a16207;
+  font-size: 0.61rem;
+  font-weight: 600;
+  line-height: 1.2;
 }
 
 /* =========================================================================
